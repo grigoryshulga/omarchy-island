@@ -1,4 +1,6 @@
 {
+  "dictation.listening": "Слушаю",
+  "dictation.transcribing": "Распознаю",
   "downloads.title": "Downloads",
   "downloads.downloading": "Загрузка",
   "downloads.complete": "Файл скачан",

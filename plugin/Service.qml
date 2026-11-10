@@ -19,6 +19,8 @@ Item {
   WeatherService { id: weatherService }
   readonly property alias indicators: indicatorState
   IndicatorState {id:indicatorState}
+  DictationState {id:dictationState;active:indicatorState.consumers.length>0}
+  readonly property alias dictation:dictationState
   ShellIpc {
     target: "island-update"
     function refresh(): void {indicatorState.refreshUpdate()}

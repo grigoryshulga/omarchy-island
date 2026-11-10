@@ -136,7 +136,7 @@ BarWidget {
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
   Connections { target: root.service; function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
   Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
-  Timer { id: hoverDelay; interval: 140; onTriggered: if (!root.pinned && !root.showOsd && root.isHovered) { root.contentExpanded = false; root.hoverOpen = true } }
+  Timer { id: hoverDelay; interval: 140; onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; interval: 3000; onTriggered: root.alertKind = "" }
   PlainText {id:osdMeasure;visible:false;text:root.indicators && ("osdMessage" in root.indicators) ? root.indicators.osdMessage : "";font.pixelSize:Style.font.body}
@@ -244,6 +244,21 @@ BarWidget {
       PlainText {objectName:"islandNightLightIndicator";visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
       PlainText {objectName:"islandStayAwakeIndicator";visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
     }
+  }
+  Loader {
+    id:dictationOverlay
+    property bool retaining:false
+    function release() {if(item && !item.open && item.shown===0) retaining=false}
+    readonly property var dictation:root.service && ("dictation" in root.service) ? root.service.dictation : null
+    readonly property bool requested:!!dictation && dictation.showing && (!dictation.screenName || dictation.screenName===root.screenName)
+    active:requested || retaining
+    onLoaded:retaining=true
+    Component.onCompleted:setSource(Qt.resolvedUrl("DictationOsd.qml"),{dictation:Qt.binding(function(){return dictationOverlay.dictation}),anchorItem:trigger,bar:root.bar,open:Qt.binding(function(){return dictationOverlay.requested})})
+  }
+  Connections {
+    target:dictationOverlay.item
+    function onShownChanged() {Qt.callLater(dictationOverlay.release)}
+    function onOpenChanged() {Qt.callLater(dictationOverlay.release)}
   }
   IslandPopup {
     id: preview

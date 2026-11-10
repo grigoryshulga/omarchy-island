@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const m=require('../plugin/Dictation.js');
+for(const value of ['',null,'error','Recording','idle']) assert.equal(m.state(value),'idle');
+assert.equal(m.state('recording\n'),'recording');
+assert.equal(m.state('transcribing'),'transcribing');
+for(const raw of ['{}','null','[]','broken','{"peak":"1"}','{"status":"connected"}','{"peak":1e999}']) assert.equal(m.frame(raw),null);
+assert.equal(m.frame('{"peak":0.4,"rms":0.2,"vad":1}'),0.4);
+assert.equal(m.frame('{"peak":2}'),1);
+assert.equal(m.frame('{"peak":-2}'),0);
+let history=m.empty();
+for(let i=0;i<60;i++) history=m.push(history,i/100);
+assert.equal(history.length,48);assert.equal(history[0],0.12);assert.equal(history[47],0.59);
+console.log('PASS: dictation states, malformed audio frames, bounded history.');

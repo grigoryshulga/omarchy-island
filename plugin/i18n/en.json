@@ -1,4 +1,6 @@
 {
+  "dictation.listening": "Listening",
+  "dictation.transcribing": "Transcribing",
   "downloads.title": "Downloads",
   "downloads.downloading": "Downloading",
   "downloads.complete": "Download complete",
