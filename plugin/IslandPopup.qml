@@ -35,6 +35,9 @@ PanelWindow {
   readonly property real insetRight: padding+Border.right(borderSpec)
   property real settledWidth: contentWidth
   property real settledHeight: contentHeight
+  // Keep the destination layout while hover/alert state clears on exit.
+  property real layoutWidth: contentWidth
+  property real layoutHeight: contentHeight
   readonly property real drawnWidth: reveal.drawnWidth
   readonly property real drawnHeight: reveal.drawnHeight
   property bool paintOpen: false
@@ -62,13 +65,15 @@ PanelWindow {
   // outside clicks for dismissal. The closing fade takes no input.
   mask: Region { item: !root.open ? null : root.pinned ? canvas : card }
 
-  onContentWidthChanged: if (open) settledWidth = contentWidth
-  onContentHeightChanged: if (open) settledHeight = contentHeight
+  onContentWidthChanged: if (open) { settledWidth = contentWidth; layoutWidth = contentWidth }
+  onContentHeightChanged: if (open) { settledHeight = contentHeight; layoutHeight = contentHeight }
   onOpenChanged: {
     if (open) {
       frameSuppressed=frameless
       settledWidth = contentWidth
       settledHeight = contentHeight
+      layoutWidth = contentWidth
+      layoutHeight = contentHeight
       if (bar) bar.requestPopout(owner || root)
       // Wait for the actual output-sized Wayland configure before painting;
       // the provisional 500x500 surface must never flash on the first frame.
@@ -145,13 +150,13 @@ PanelWindow {
       MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
       Item {
         id: contentHolder
-        x: (card.width-root.contentWidth)/2+root.insetLeft
+        x: (card.width-root.layoutWidth)/2+root.insetLeft
         y: root.insetTop
         opacity: reveal.contentShown
         // Measure content at its destination width. No re-wrapping on every
         // animation frame, and no size/height feedback loop through the host.
-        width: Math.max(1,root.contentWidth-root.insetLeft-root.insetRight)
-        height: Math.max(1,root.contentHeight-root.insetTop-root.insetBottom)
+        width: Math.max(1,root.layoutWidth-root.insetLeft-root.insetRight)
+        height: Math.max(1,root.layoutHeight-root.insetTop-root.insetBottom)
         LayoutMirroring.enabled: Commons.I18n.rightToLeft
         LayoutMirroring.childrenInherit: true
       }

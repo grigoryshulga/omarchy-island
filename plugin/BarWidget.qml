@@ -28,6 +28,13 @@ BarWidget {
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
   function activateWeather() { if(service && ("weather" in service)) service.weather.activate() }
+  function syncContentPresentation() {
+    // Coalesce interaction changes so an exit never applies the closed
+    // presentation before its fade. A reopen uses the latest state instead.
+    if (!preview.open) return
+    previewContent.hovering = hoverOpen || pinned
+    previewContent.alertKind = alertKind
+  }
   function open() { weatherMode = false; calendarMode = false; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""; activateWeather(); Qt.callLater(function() { previewContent.forceActiveFocus() }) }
   function openCalendar() {
     weatherMode = false; calendarMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
@@ -55,7 +62,9 @@ BarWidget {
       service.weather.refreshOverride=Number(setting("weatherRefreshMinutes",0)) || 0
     }
   }
-  onHoverOpenChanged: if(hoverOpen) activateWeather()
+  onHoverOpenChanged: { if(hoverOpen) activateWeather(); Qt.callLater(syncContentPresentation) }
+  onPinnedChanged: Qt.callLater(syncContentPresentation)
+  onAlertKindChanged: Qt.callLater(syncContentPresentation)
   onServiceChanged: syncSettings()
   onSettingsChanged: syncSettings()
   onSignatureChanged: {
@@ -130,7 +139,7 @@ BarWidget {
       anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
       height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 250 : 145)+previewContent.contentTop)
       reveal: 1-previewContent.pageProgress
-      visible: reveal>0 && (root.pinned || root.hoverOpen || root.alertKind === "media")
+      visible: reveal>0 && preview.visible && !preview.frameSuppressed
       service: root.service
     }
     PopupPages {
@@ -142,8 +151,6 @@ BarWidget {
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       service: root.service; strings: strings; bar: root.bar
       expanded: root.contentExpanded
-      hovering: root.hoverOpen || root.pinned
-      alertKind: root.alertKind
       focus: root.pinned
       Keys.onEscapePressed: root.close()
       Keys.onSpacePressed: event => { if (!root.calendarMode && !root.weatherMode && root.service) root.service.media("toggle"); else event.accepted = false }

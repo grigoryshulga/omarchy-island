@@ -87,18 +87,101 @@ ShellRoot {
     exclusionMode: ExclusionMode.Ignore
     Island.BarWidget { id: widget; anchors.centerIn: parent; width: implicitWidth; height: implicitHeight; bar: fakeBar }
   }
-  TestCase { id: test; when: false }
+  TestCase {
+    id: test
+    when: false
+    function checkExit(ok,message) {
+      if(!ok) {console.log("ISLAND_MOTION_FAIL:",message);Qt.quit();throw new Error(message)}
+    }
+    property int exitTick: 0
+    property real startWidth: 0
+    property real playerWidth: 0
+    property string nativeSize: ""
+    function sampleExit(popup) {
+      checkExit(popup.visible && popup.backingWindowVisible && popup.shown>0.1 && popup.shown<0.95,"close has no perceptible intermediate frame")
+      checkExit(popup.drawnWidth<startWidth-1 && popup.drawnWidth>startWidth*0.9,"close does not gently contract")
+      checkExit(popup.width+"x"+popup.height===nativeSize,"closing resized the native surface")
+    }
+    function test_exit() {
+      service.latest=service.allEntries[0]
+      service.player=p;p.trackTitle="A test track";p.trackArtist="Test artist";p.playbackState=MprisPlaybackState.Playing;p.isPlaying=true;service.playing=true
+      widget.open()
+      exitClock.start()
+    }
+    // Sample real exit frames, interrupt them with the next mode, then
+    // verify the final completed close unmaps the native surface.
+    function test_exit_step() {
+      var popup=findChild(widget,"islandPopup"),tabs=findChild(widget,"islandTabs"),player=findChild(widget,"islandMediaPlayer"),art=findChild(widget,"islandPopupArtwork")
+      exitTick++
+      if(exitTick===20) {
+        startWidth=popup.drawnWidth;nativeSize=popup.width+"x"+popup.height
+        widget.close()
+        checkExit(tabs.visible && player.visible && art.visible,"pinned close discarded its contents or backdrop before fading")
+      }
+      if([25,65,105,145,185].indexOf(exitTick)>=0) sampleExit(popup)
+      if(exitTick===26) {widget.contentExpanded=false;widget.hoverOpen=true}
+      if(exitTick===50) {var card=findChild(popup,"islandPopupCard");mouseMove(card,card.width/2,card.height/2)}
+      if(exitTick===60) {
+        startWidth=popup.drawnWidth;playerWidth=player.width
+        widget.hoverOpen=false
+        checkExit(tabs.visible && player.visible && art.visible,"hover close discarded its contents or backdrop before fading")
+      }
+      if(exitTick===65) checkExit(Math.abs(player.width-playerWidth)<1,"hover close reflowed its content")
+      if(exitTick===66) widget.showNotification()
+      if(exitTick===100) {
+        var toast=findChild(tabs.parent,"notificationGroup-Test")
+        var toastHeight=toast ? toast.height : -1
+        startWidth=popup.drawnWidth
+        widget.alertKind=""
+        checkExit(toast && toast.visible && toast.height===toastHeight && popup.frameSuppressed,"toast expiry removed its text before fading")
+      }
+      if(exitTick===106) widget.alertKind="media"
+      if(exitTick===140) {
+        startWidth=popup.drawnWidth
+        widget.alertKind=""
+        checkExit(player.visible && art.visible,"media alert removed its player before fading")
+      }
+      if(exitTick===146) widget.openCalendar()
+      if(exitTick===180) {
+        startWidth=popup.drawnWidth
+        widget.close()
+        checkExit(tabs.visible && Math.abs(findChild(widget,"islandCalendar").mapToItem(findChild(widget,"islandPageSwipe"),0,0).x)<1,"calendar close switched its content before fading")
+      }
+      if(exitTick===185) widget.openCalendar()
+      if(exitTick===210) {
+        checkExit(popup.visible && popup.shown>0.99 && Math.abs(popup.drawnWidth-popup.settledWidth)<1,"reopening interrupted exit did not restore the full panel")
+        Commons.Style.reduceMotion=true
+        reducedReveal.open=true
+        checkExit(reducedReveal.shown===1,"reduced motion still animated opening")
+        reducedReveal.open=false
+        checkExit(reducedReveal.shown===0,"reduced motion still animated closing")
+        Commons.Style.reduceMotion=false
+        widget.close()
+      }
+      if(exitTick===226) {
+        checkExit(!popup.visible && !popup.backingWindowVisible,"closed panel kept its native surface")
+        console.log("ANIMATED_CLOSE_PASS")
+        console.log("ISLAND_MOTION_PASS")
+        Qt.quit()
+      }
+    }
+  }
+  Island.PopupReveal {id:reducedReveal;targetWidth:200;targetHeight:100}
+  Timer {id:exitClock;interval:16;repeat:true;onTriggered:test.test_exit_step()}
+
   property int tick: 0
   property var sizes: []
   property int offCenter: 0
   property var entrance: []
   property bool motionPassed: false
   Timer {
+    id: motionClock
     interval: 16; repeat: true; running: true
     onTriggered: {
       var popup = test.findChild(widget,"islandPopup")
       if (!popup) return
       tick++
+      if(tick===1 && Quickshell.env("ISLAND_EXIT_ONLY")) {motionClock.stop();test.test_exit();return}
       if(tick === 10) { service.latest=service.allEntries[0]; service.arrivalChanged() }
       if(tick===30) {
         if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0 || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast retained a background or navigation");widget.close();Qt.quit();return }
@@ -166,7 +249,6 @@ ShellRoot {
       }
       if(tick===260) {
         if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0) { console.log("ISLAND_MOTION_FAIL: background flashed while closing toast");widget.close();Qt.quit();return }
-        console.log("ISLAND_MOTION_PASS")
         console.log("CALENDAR_ROUTING_PASS")
         console.log("MUSIC_BACKDROP_PASS")
         console.log("TOP_TABS_AND_TRANSPARENT_TOAST_PASS")
@@ -184,7 +266,8 @@ ShellRoot {
       if(tick===340) {
         if(widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: wheel did not return visible overview");widget.close();Qt.quit();return}
         console.log("RESIZING_PAGE_WHEEL_PASS")
-        widget.close();Qt.quit()
+        motionClock.stop()
+        test.test_exit()
       }
     }
   }
