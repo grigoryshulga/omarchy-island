@@ -46,13 +46,16 @@ void main() {
     float glyph = mix(step(1.0-coverage,a),step(1.0-coverage,b),transition);
     float stableGlyph = step(1.0-coverage,noise(dotPosition,0u));
     float audio = clamp(level*0.75+bass*0.35+treble*0.15,0.0,1.0);
-    float dots = mix(stableGlyph,glyph,smoothstep(0.015,0.25,audio));
+    // Keep a gentle shimmer when the audio monitor is silent or unavailable.
+    // Sound increases the glyph changes rather than enabling them from zero.
+    float dots = mix(stableGlyph,glyph,mix(0.32,1.0,smoothstep(0.015,0.25,audio)));
     // Rare bright bits crossfade into new braille characters like glitter.
     float sparkle = mix(pow(a,18.0),pow(b,18.0),transition)*audio;
     float mask = 1.0-smoothstep(1.08,1.40,length(local-center));
     vec3 color = mix(cover.rgb,vec3(max(luminance,0.5)),0.20);
     color = mix(color,vec3(0.96),sparkle*0.8);
     color = mix(color,accent.rgb,mix(0.18,1.0,monochrome));
-    float alpha = mask*clamp(dots*(0.26+audio*0.35)+sparkle*0.85,0.0,0.9);
+    float gain = mix(1.20,1.0,monochrome);
+    float alpha = mask*clamp((dots*(0.26+audio*0.35)+sparkle*0.85)*gain,0.0,0.9);
     fragColor = vec4(color*alpha,alpha)*qt_Opacity;
 }

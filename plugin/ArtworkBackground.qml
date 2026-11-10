@@ -37,7 +37,7 @@ Item {
     anchors.fill: parent
     property var source: artwork
     property vector2d size: Qt.vector2d(width,height)
-    property real phase: root.phase
+    property real phase: Style.reduceMotion ? 0 : root.phase
     property real level: root.service ? root.service.audioLevel : 0
     property real bass: root.service ? root.service.audioBass : 0
     property real treble: root.service ? root.service.audioTreble : 0

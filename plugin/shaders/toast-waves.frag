@@ -22,13 +22,13 @@ float noise(uvec2 site,uint frame) {
 }
 void main() {
   vec2 pixel=qt_TexCoord0*size;
-  vec2 center=vec2(size.x+18.0,size.y*0.5);
-  // Increasing radius carries broad arcs from the right edge to the left.
-  float distanceFromRight=length((pixel-center)*vec2(1.0,1.8));
-  float band=mod(distanceFromRight-phase*speed,spacing)-spacing*0.5;
+  vec2 center=vec2(-18.0,size.y*0.5);
+  // Pixel-space circular fronts travel from the left edge to the right.
+  float distanceFromOrigin=length(pixel-center);
+  float band=mod(distanceFromOrigin-phase*speed,spacing)-spacing*0.5;
   float wave=exp(-pow(band/bandWidth,2.0));
-  float edgeFade=smoothstep(0.0,0.20,qt_TexCoord0.x);
-  float strength=wave*edgeFade*mix(0.35,1.0,qt_TexCoord0.x);
+  float edgeFade=smoothstep(0.0,0.20,1.0-qt_TexCoord0.x);
+  float strength=wave*edgeFade*mix(1.0,0.35,qt_TexCoord0.x);
   uvec2 site=uvec2(floor(pixel/3.0));
   vec2 local=mod(pixel,3.0)-vec2(1.5);
   float clock=phase*0.65+noise(site,31u);
