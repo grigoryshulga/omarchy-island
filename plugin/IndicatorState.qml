@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
 import qs.Commons
+import qs.Commons as Commons
 import "Osd.js" as Osd
 import "osd-bridge/OsdModel.js" as NativeOsd
 
@@ -14,6 +15,13 @@ Item {
   property bool remoteActive: false
   property bool nightLight: false
   property bool stayAwake: false
+  property bool nightLightKnown: false
+  property bool stayAwakeKnown: false
+  Commons.Translations {id:strings;directory:Qt.resolvedUrl("i18n")}
+  function announceMode(mode,on) {
+    var icons={dnd:on ? "󰂛" : "󰂚",nightLight:"󰔎",stayAwake:""}
+    showOsd(JSON.stringify({icon:icons[mode],message:strings.t("osd."+mode+(on ? ".on" : ".off")),duration:1400}))
+  }
   readonly property var microphone: Pipewire.defaultAudioSource
   readonly property bool microphoneMuted: !!microphone && (UntypedInput.active ? (UntypedInput.known && UntypedInput.muted) : (!!microphone.audio && microphone.audio.muted))
   property bool osdActive: false
@@ -34,8 +42,15 @@ Item {
     try {return reply.ran ? JSON.parse(reply.output) : {}} catch(e) {return {}}
   }
   function refreshControls() {
-    nightLight=status("nightlight").enabled===true
-    stayAwake=status("idle").stayAwake===true
+    var night=status("nightlight").enabled,awake=status("idle").stayAwake
+    if(typeof night==="boolean") {
+      if(nightLightKnown && night!==nightLight) announceMode("nightLight",night)
+      nightLight=night;nightLightKnown=true
+    }
+    if(typeof awake==="boolean") {
+      if(stayAwakeKnown && awake!==stayAwake) announceMode("stayAwake",awake)
+      stayAwake=awake;stayAwakeKnown=true
+    }
   }
   function refresh() {
     if(!consumers.length) return

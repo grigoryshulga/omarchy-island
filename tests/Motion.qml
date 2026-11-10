@@ -218,11 +218,16 @@ ShellRoot {
         console.log("ISLAND_PREFERENCES_PASS")
       }
       if(tick===1 && Quickshell.env("ISLAND_EXIT_ONLY")) {motionClock.stop();test.test_exit();return}
-      if(tick===5) test.findChild(widget,"islandClock").triggerPress(Qt.RightButton)
+      if(tick===5) {
+        test.findChild(widget,"islandClock").triggerPress(Qt.RightButton)
+        if(service.doNotDisturb || widget.settings.format!=="dddd h:mm AP") {console.log("ISLAND_MOTION_FAIL: right click did not cycle the native clock format or toggled DND");Qt.quit();return}
+        widget.updateSetting("format","dddd HH:mm")
+        service.setDoNotDisturb(true)
+      }
       if(tick===7) {
         var dnd=test.findChild(widget,"islandDndIndicator"),clock=test.findChild(widget,"islandClock"),at=dnd.mapToItem(clock,0,0)
         if(!dnd.visible || dnd.height<Commons.Style.font.bodySmall || at.x<0 || at.x+dnd.width>clock.width || at.y<0 || at.y+dnd.height>clock.height) {console.log("ISLAND_MOTION_FAIL: DND indicator is tiny or outside the clock",JSON.stringify({x:at.x,y:at.y,w:dnd.width,h:dnd.height,cw:clock.width,ch:clock.height}));Qt.quit();return}
-        clock.triggerPress(Qt.RightButton)
+        service.setDoNotDisturb(false)
       }
       if(tick === 10) { test.mouseMove(widget.parent,1,1);service.latest=service.allEntries[0]; service.arrivalChanged() }
       if(tick===30) {
@@ -330,6 +335,12 @@ ShellRoot {
       if(tick===400) {
         if(widget.controlsMode || widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls wheel did not return Overview");widget.close();Qt.quit();return}
         console.log("CONTROLS_NAVIGATION_PASS")
+        var clock=test.findChild(widget,"islandClock")
+        test.mouseWheel(clock,clock.width/2,clock.height/2,0,-120,Qt.NoButton)
+        if(!widget.calendarMode || !widget.pinned) {console.log("ISLAND_MOTION_FAIL: clock wheel did not open the next tab");Qt.quit();return}
+        test.mouseWheel(clock,clock.width/2,clock.height/2,0,120,Qt.NoButton)
+        if(widget.calendarMode || widget.controlsMode || widget.weatherMode) {console.log("ISLAND_MOTION_FAIL: reverse clock wheel did not return to Overview");Qt.quit();return}
+        console.log("CLOCK_WHEEL_PASS")
         motionClock.stop()
         test.test_exit()
       }

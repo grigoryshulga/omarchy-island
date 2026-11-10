@@ -202,7 +202,7 @@ ShellRoot {
       wait(220)
       check(Math.abs(group.implicitHeight-stableGroupHeight)<1,"grouped notifications changed height on hover")
       check(findChild(findChild(composed,"notification-n2"),"notificationDivider").visible,"grouped notifications lack a divider")
-      check(findChild(first,"notificationTime").mapToItem(first,0,0).y>first.height/2,"message timestamp is not in its footer")
+      check(findChild(first,"notificationTime").mapToItem(first,0,0).y<first.height/2,"message timestamp is not at the top")
       check(findChild(group,"groupSpotlight").shown>0.9,"group spotlight did not fade in")
       mouseClick(first,first.width*0.4,first.height*0.25)
       check(service.activateCalls===1,"notification click did not open app")
@@ -243,11 +243,15 @@ ShellRoot {
       service.allEntries=[{key:"single",app:"Test",summary:"Screenshot saved and copied",body:"583 × 684 · 56.7 kB",ts:1}]
       wait(40)
       var single=findChild(composed,"notificationGroup-Test"),singleHeight=single.implicitHeight
+      mouseMove(win.contentItem,1,1);wait(180)
+      var singleStamp=findChild(single,"groupTime"),idleStampX=singleStamp.mapToItem(single,0,0).x
+      check(idleStampX+singleStamp.width>=single.width-Commons.Style.space(14),"timestamp does not reach the top-right corner at rest")
       check(findChild(single,"groupTime").visible,"single notification timestamp is not in its source header")
       check(!findChild(single,"notificationFooter").visible,"single notification reserves an empty footer")
       check(singleHeight<=Commons.Style.space(100),"single notification is still too tall: "+singleHeight)
       mouseMove(single,single.width/2,single.height/2);wait(160)
       check(single.implicitHeight===singleHeight,"compact single notification changes height on hover")
+      check(singleStamp.mapToItem(single,0,0).x<idleStampX-Commons.Style.space(15),"timestamp did not make room for hover actions")
       console.log("COMPACT_SINGLE_NOTIFICATION_PASS",singleHeight)
       service.allEntries=[]
       wait(20)
@@ -368,10 +372,13 @@ ShellRoot {
       var calendarTab=findChild(pages,"calendarOpen")
       calendarTab.clicked()
       wait(350)
+      var calendarPageHeight=pages.implicitHeight
+      check(findChild(calendarTab,"tabLabel").color===Commons.Color.accent,"active tab label did not use the theme accent")
       check(pages.calendar && Math.abs(findChild(pages,"islandCalendar").mapToItem(pager,0,0).x)<1,"weather-to-calendar tab switched height without contents")
       var weatherTab=findChild(pages,"weatherOpen")
       weatherTab.clicked()
       wait(350)
+      check(Math.abs(pages.implicitHeight-calendarPageHeight)<1,"Calendar and Weather have different popup heights")
       check(pages.weather && Math.abs(weatherView.mapToItem(pager,0,0).x)<1,"calendar-to-weather tab switched height without contents")
       var overviewTab=findChild(pages,"islandTabOverview")
       overviewTab.clicked()

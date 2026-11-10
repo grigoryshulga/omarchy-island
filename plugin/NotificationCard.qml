@@ -27,6 +27,8 @@ Rectangle {
   property bool separated: false
   property bool individualDismiss: true
   property bool showTimestamp: true
+  property real dismissShown: hover.hovered || keyboardFocused ? 1 : 0
+  Behavior on dismissShown {NumberAnimation {duration:Style.duration(150);easing.type:Easing.OutCubic}}
   readonly property bool hasActions: !grouped || !!row.link || String(row.codes || "").trim()!=="" || service.actions(row).some(function(action){return action.id!=="default"}) || (Security.parseExecActions(row.execActions) || []).length>0
   property var feedback: brailleFeedback
   property string copied: ""
@@ -68,26 +70,25 @@ Rectangle {
     RowLayout {
       Layout.fillWidth: true
       PlainText { Layout.fillWidth: true; text: root.row.summary; font.pixelSize: root.compact ? Style.font.body : Style.font.subtitle; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 8 : 1; elide: Text.ElideRight }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      PlainText {objectName:"notificationTime";Layout.alignment:Qt.AlignTop;visible:root.grouped && root.showTimestamp;text:new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm");color:Commons.Color.muted;font.pixelSize:Style.font.caption}
+      Item {
+        visible:root.grouped && root.expanded && root.individualDismiss
+        Layout.preferredWidth:rowDismiss.implicitWidth*root.dismissShown
+        Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
+        Layout.preferredHeight:rowDismiss.implicitHeight
+        clip:true
+      FeedbackButton { id:rowDismiss; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      }
     }
     PlainText { Layout.fillWidth: true; visible: text !== ""; text: Model.plain(root.row.body); font.pixelSize: Style.font.bodySmall; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
     Item {
       objectName:"notificationFooter"
       Layout.fillWidth: true
       property real reveal: !root.compact && (hover.hovered || root.keyboardFocused) ? 1 : 0
-      implicitHeight: Math.max(stamp.visible ? stamp.implicitHeight : 0,actions.implicitHeight)
-      visible: !root.compact && ((root.grouped && root.showTimestamp) || root.hasActions)
+      implicitHeight: actions.implicitHeight
+      visible: !root.compact && root.hasActions
       clip: true
       Behavior on reveal { NumberAnimation { duration: Style.duration(150); easing.type: Easing.OutCubic } }
-      PlainText {
-        id: stamp
-        objectName: "notificationTime"
-        anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
-        visible: root.grouped && root.showTimestamp
-        text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm")
-        color: Commons.Color.muted
-        font.pixelSize: Style.font.caption
-      }
       Flow {
         id: actions
         anchors.right: parent.right
@@ -99,7 +100,7 @@ Rectangle {
           }
           return total+Math.max(0,count-1)*spacing
         }
-        width: Math.max(0,Math.min(parent.width-(stamp.visible ? stamp.implicitWidth+Style.space(10) : 0),naturalWidth))
+        width: Math.max(0,Math.min(parent.width,naturalWidth))
         opacity: parent.reveal
         enabled: parent.reveal>0
       spacing: Style.space(4)

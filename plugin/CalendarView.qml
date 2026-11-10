@@ -126,11 +126,13 @@ Item {
       }
     }
     GridLayout {
+      id:calendarGrid
       Layout.fillWidth: true
       columns: 8
       columnSpacing: Style.space(3)
       rowSpacing: Style.space(3)
       PlainText {
+        id:weekHeading
         objectName: "calendarWeekHeading"
         Layout.row: 0; Layout.column: 0
         Layout.preferredWidth: Style.space(28)
@@ -191,7 +193,7 @@ Item {
           active: root.selectedDay.key===modelData.key
           Loader {
             anchors.centerIn: parent
-            width: Math.max(dayButton.width,dayButton.height)+Style.space(28)
+            width: Math.max(dayButton.width,dayButton.height)+Style.space(40)
             height: width
             z: -1
             active: dayButton.modelData.today
@@ -199,7 +201,7 @@ Item {
               objectName: "calendarTodayGlow"
               width: parent.width; height: parent.height
               active: root.active && root.visible
-              intensity: 1.8
+              intensity: 3.8
             }
           }
           focusable: true
@@ -222,6 +224,13 @@ Item {
       }
       Button { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
     }
+  }
+  Rectangle {
+    objectName:"calendarWeekDivider"
+    x:calendarGrid.x+(Commons.I18n.rightToLeft ? calendarGrid.width-weekHeading.width : weekHeading.width)+Style.space(1)
+    y:calendarGrid.y
+    width:Math.max(1,Style.space(1));height:calendarGrid.height
+    color:Util.alpha(Commons.Color.muted,0.3)
   }
   Controls.Popup {
     id: settingsMenu

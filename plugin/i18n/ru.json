@@ -104,5 +104,11 @@
   "battery.profile": "Профиль питания",
   "battery.profileFailed": "Не удалось сменить профиль питания",
   "battery.hoursMinutes": "%1 ч %2 мин",
-  "battery.minutes": "%1 мин"
+  "battery.minutes": "%1 мин",
+  "osd.dnd.on": "Не беспокоить: вкл.",
+  "osd.dnd.off": "Не беспокоить: выкл.",
+  "osd.nightLight.on": "Ночной свет включён",
+  "osd.nightLight.off": "Ночной свет выключен",
+  "osd.stayAwake.on": "Режим без сна включён",
+  "osd.stayAwake.off": "Режим без сна выключен"
 }

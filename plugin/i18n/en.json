@@ -100,5 +100,11 @@
   "battery.profile": "Power profile",
   "battery.profileFailed": "Could not change the power profile",
   "battery.hoursMinutes": "%1 h %2 min",
-  "battery.minutes": "%1 min"
+  "battery.minutes": "%1 min",
+  "osd.dnd.on": "Do not disturb on",
+  "osd.dnd.off": "Do not disturb off",
+  "osd.nightLight.on": "Night light on",
+  "osd.nightLight.off": "Night light off",
+  "osd.stayAwake.on": "Stay awake on",
+  "osd.stayAwake.off": "Stay awake off"
 }

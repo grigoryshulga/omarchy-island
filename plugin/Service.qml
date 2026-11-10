@@ -144,7 +144,7 @@ Item {
     if (latest && Model.source(latest) === source && mutedSources.indexOf(source) >= 0) latest = null
     saveSoon.restart()
   }
-  function setDoNotDisturb(value) { doNotDisturb = !!value; saveSoon.restart() }
+  function setDoNotDisturb(value) {if(doNotDisturb===!!value)return;doNotDisturb=!!value;indicatorState.announceMode("dnd",doNotDisturb);saveSoon.restart()}
   function actions(row) {
     var tick = revision
     var n = refs[row.key]

@@ -125,9 +125,20 @@ ShellRoot {
       tryVerify(function(){return !widget.osdTransitioning && !gauge.visible},300)
       check(!backend.osdActive && label.visible && !gauge.visible,"clock did not return after layout OSD: "+JSON.stringify({active:backend.osdActive,shown:widget.osdShown,clock:label.visible,gauge:gauge.visible}))
       check(!findChild(widget,"islandRecordingIndicator").visible && !findChild(widget,"islandMicrophoneIndicator").visible,"inactive indicators are visible")
+      if(Quickshell.env("ISLAND_TEST_GPU")) {
+        var frozen=new Date(2026,10,10,19,47),saved=widget.now
+        widget.now=frozen;wait(30)
+        var beforeClock=grabImage(label)
+        backend.stayAwake=true;wait(80);widget.now=frozen
+        check(beforeClock.equals(grabImage(label)),"Awake indicator changed clock glyph rasterization")
+        backend.stayAwake=false;widget.now=saved;wait(30)
+        console.log("STABLE_CLOCK_PIXELS_PASS")
+      }
       states.recording=true;states.remoteActive=true;states.microphoneMuted=true;scene.mockNightLight=true;scene.mockStayAwake=true;backend.refreshControls();service.doNotDisturb=true
       check(backend.nightLight && backend.stayAwake,"native idle/nightlight IPC state was not read")
-      wait(240)
+      check(backend.osdActive && backend.osdIcon==="","mode toggle did not show its OSD")
+      backend.hideOsd()
+      wait(260)
       var recording=findChild(widget,"islandRecordingIndicator"),remote=findChild(widget,"islandRemoteIndicator"),left=findChild(widget,"islandLeftIndicators"),right=findChild(widget,"islandRightIndicators")
       check(recording.visible && remote.visible && recording.tint.r>recording.tint.g && remote.tint.g>remote.tint.r,"capture indicator colors or states are wrong")
       var at=label.mapToItem(clock,0,0)
@@ -136,6 +147,7 @@ ShellRoot {
       for(var name of ["islandMicrophoneIndicator","islandDndIndicator","islandNightLightIndicator","islandStayAwakeIndicator"]) check(findChild(widget,name).visible,"active indicator missing: "+name)
       check(osd("volume-muted",75,100,700).output==="ok" && backend.osdActive && !bridge.opened,"native volume OSD was not routed to Island")
       wait(270)
+      tryVerify(function(){return !label.visible},300)
       check(gauge.muted && gauge.visible && !label.visible && gauge.kind==="volume" && Math.abs(gauge.value-0.75)<0.01,"volume gauge did not replace clock: "+JSON.stringify({muted:gauge.muted,visible:gauge.visible,clock:label.visible,opacity:label.opacity,kind:gauge.kind,value:gauge.value}))
       wait(180)
       osd("brightness",40,200,600)
@@ -204,6 +216,14 @@ ShellRoot {
       check(gauge.eventShown===textOpacity,"closing OSD reset a message dissolve to full opacity")
       wait(240)
       tryVerify(function(){return !gauge.visible},300)
+      for(var mode of ["dnd","nightLight","stayAwake"]) {
+        backend.announceMode(mode,true)
+        var onMessage=backend.osdMessage
+        check(backend.osdActive && !backend.osdHasProgress && onMessage!=="","mode-on OSD is missing: "+mode)
+        backend.announceMode(mode,false)
+        check(backend.osdMessage!==onMessage && backend.osdMessage!=="","mode-off OSD is missing: "+mode)
+      }
+      console.log("MODE_OSD_PROMPTS_PASS")
       Commons.IpcRegistry.call("osd","show",[JSON.stringify({icon:"keyboard",value:1,max:2,progressText:"On",duration:0})])
       wait(700)
       check(backend.osdActive && gauge.valueText==="On" && Math.abs(gauge.value-0.5)<0.01,"persistent/custom progress OSD was lost")

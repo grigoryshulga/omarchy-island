@@ -43,7 +43,8 @@ Item {
   signal inboxRequested()
   readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(1) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(1).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
   readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(24)+tabDivider.implicitHeight : 0
-  implicitHeight: contentTop+(controls ? controlsPage.implicitHeight : weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight)
+  implicitHeight: contentTop+(controls ? controlsPage.implicitHeight : weather ? calendarWeatherHeight : calendar ? calendarWeatherHeight : inbox.implicitHeight)
+  readonly property real calendarWeatherHeight:Math.max(calendarPage.implicitHeight,weatherPage.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
   function cancelEdits() {weatherPage.cancelEditing()}
@@ -168,7 +169,7 @@ Item {
     visible: root.expanded
     spacing: Style.space(4)
     uniformCellSizes: true
-    FeedbackButton {
+    TabButton {
       feedback: root.externalFeedback
       color: "transparent"; borderSpec: Border.none()
       objectName: "islandTabControls"
@@ -176,15 +177,14 @@ Item {
       Layout.fillHeight: true
       Layout.preferredWidth: 1
       Layout.minimumWidth: 0
-      text: root.strings.t("tabs.controls")
-      selected: root.controls
-      foreground: selected ? Commons.Color.accent : Commons.Color.foreground
+      label: root.strings.t("tabs.controls")
+      tabActive: root.controls
       fontSize: Style.font.bodySmall
       radius: Math.min(Style.cornerRadius,Style.space(6))
       focusable: true
       onClicked: root.requestPage(0)
     }
-    FeedbackButton {
+    TabButton {
       feedback: root.externalFeedback
       color: "transparent"; borderSpec: Border.none()
       objectName: "islandTabOverview"
@@ -192,15 +192,14 @@ Item {
       Layout.fillHeight: true
       Layout.preferredWidth: 1
       Layout.minimumWidth: 0
-      text: root.strings.t("tabs.overview")
-      selected: !root.controls && !root.calendar && !root.weather
-      foreground: selected ? Commons.Color.accent : Commons.Color.foreground
+      label: root.strings.t("tabs.overview")
+      tabActive: !root.controls && !root.calendar && !root.weather
       fontSize: Style.font.bodySmall
       radius: Math.min(Style.cornerRadius,Style.space(6))
       focusable: true
       onClicked: root.requestPage(1)
     }
-    FeedbackButton {
+    TabButton {
       feedback: root.externalFeedback
       color: "transparent"; borderSpec: Border.none()
       objectName: "calendarOpen"
@@ -208,9 +207,8 @@ Item {
       Layout.fillHeight: true
       Layout.preferredWidth: 1
       Layout.minimumWidth: 0
-      text: root.strings.t("calendar.open")
-      selected: root.calendar
-      foreground: selected ? Commons.Color.accent : Commons.Color.foreground
+      label: root.strings.t("calendar.open")
+      tabActive: root.calendar
       fontSize: Style.font.bodySmall
       radius: Math.min(Style.cornerRadius,Style.space(6))
       focusable: true

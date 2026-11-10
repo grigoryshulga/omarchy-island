@@ -4,6 +4,8 @@
 
 `IslandSlider.qml` is adapted from Omarchy `Ui/PanelSlider.qml`, preserving its interactions and applying the system corner policy.
 
+`ClockModel.js` is copied from Omarchy’s clock panel to preserve its format ring, alternative formats and ISO week formatting.
+
 `KeyboardLayoutModel.js` is adapted from Omarchy’s keyboard-layout widget: keyboard filtering and initial device selection follow its conventions, while Island shows full language names transiently.
 
 `PowerModel.js` is copied from Omarchy’s power panel. Battery state follows UPower; profile selection uses the native Omarchy commands and their AC/battery persistence.

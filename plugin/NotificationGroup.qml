@@ -15,6 +15,8 @@ Rectangle {
   KeyboardNavigation {id:focusWatch;scope:root}
   readonly property bool keyboardFocused:focusWatch.contains(root,focusWatch.focused)
   property bool compact: false
+  property real toolsShown:!compact && (hover.hovered || keyboardFocused) ? 1 : 0
+  Behavior on toolsShown {NumberAnimation {duration:Style.duration(150);easing.type:Easing.OutCubic}}
   property var externalFeedback: null
   property bool radialBraille: true
   property int limit: 3
@@ -46,8 +48,14 @@ Rectangle {
         PlainText { anchors.centerIn: parent; text: "󰂚"; font.pixelSize: root.compact ? Style.font.caption : Style.font.body; color: Commons.Color.accent; visible: icon.status !== Image.Ready }
         Image { id: icon; anchors.fill: parent; source: root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
-      PlainText { Layout.fillWidth: true; text: root.group.source; color: Commons.Color.accent; font.pixelSize: Style.font.caption }
+      PlainText { Layout.fillWidth: true; Layout.minimumWidth:0; text: root.group.source; color: Commons.Color.accent; font.pixelSize: Style.font.caption }
       PlainText { objectName:"groupTime";visible: root.compact || root.group.total===1; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+      Item {
+        Layout.preferredWidth:tools.implicitWidth*root.toolsShown
+        Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
+        Layout.preferredHeight:tools.implicitHeight
+        clip:true
+        RowLayout {id:tools;anchors.right:parent.right;spacing:Style.space(4)
       ActionButton {
         feedback: root.feedback
         objectName: "groupMute"
@@ -71,6 +79,8 @@ Rectangle {
         horizontalPadding: Style.space(5); verticalPadding: 0
         onClicked: root.dismissGroup()
         Behavior on opacity { NumberAnimation { duration: Style.duration(120) } }
+      }
+        }
       }
     }
     Repeater {

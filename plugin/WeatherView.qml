@@ -63,6 +63,7 @@ Item {
   ColumnLayout {
     id: body
     width: parent.width
+    height:Math.max(implicitHeight,root.height)
     spacing: Style.space(10)
     RowLayout {
       Layout.fillWidth: true
@@ -140,13 +141,14 @@ Item {
     }
     Item {
       Layout.fillWidth: true
+      Layout.fillHeight:true
       implicitHeight: Style.space(184)
       WeatherScene {
         objectName: "weatherHeroScene"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         width: Math.min(parent.width,Style.space(240))
-        height: Style.space(168)
+        height:Math.max(Style.space(168),parent.height-Style.space(16))
         condition: root.condition<0 ? 2 : root.condition
         isDay: root.current ? root.current.isDay : true
         animated: root.active && root.current!==null

@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
+import "ClockModel.js" as Clock
 
 BarWidget {
   id: root
@@ -40,7 +41,21 @@ BarWidget {
   readonly property bool alertOnScreen: !service || !service.targetScreen || service.targetScreen === screenName
   readonly property bool showAlert: alertKind !== "" && alertOnScreen
   readonly property bool notificationToast: alertKind==="notification" && !pinned && !hoverOpen
-  readonly property string clockText: now.toLocaleString(Qt.locale(Commons.I18n.formatLocale), setting("format", "dddd HH:mm"))
+  readonly property real displayScale: root.QsWindow.window ? root.QsWindow.window.devicePixelRatio : 1
+  readonly property string configuredFormat: String(setting(vertical ? "verticalFormat" : "format",vertical ? "HH\n—\nmm" : "dddd HH:mm"))
+  readonly property string clockText: formattedClock(configuredFormat)
+  function formattedClock(format) {
+    var week=Clock.isoWeekLiteral(now.getFullYear(),now.getMonth(),now.getDate()).split("").map(function(d){return Commons.I18n.formatNumber(d)}).join("")
+    return now.toLocaleString(Qt.locale(Commons.I18n.formatLocale),format.replace(/ww/g,week))
+  }
+  function cycleClockFormat() {
+    var ring=Clock.clockFormatRing(configuredFormat,setting(vertical ? "verticalFormatAlt" : "formatAlt",vertical ? "dd\nMMM\n'W'ww\n''yy" : "d MMMM 'W'ww yyyy"),Clock.clockFormats(vertical))
+    updateSetting(vertical ? "verticalFormat" : "format",Clock.nextClockFormat(ring,configuredFormat))
+  }
+  function cyclePage(step) {
+    var index=controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1
+    previewContent.requestPage((index+step+previewContent.lastPage+1)%(previewContent.lastPage+1))
+  }
   readonly property string barText: showAlert && service ? (alertKind === "notification" && service.latest ? "󰂚  " + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
@@ -88,7 +103,7 @@ BarWidget {
   function updateSetting(key,value) {
     if(key==="calendarWeekStart" && value!=="sunday" && value!=="monday") return
     if(key==="weatherTemperatureUnit" && ["celsius","fahrenheit","kelvin"].indexOf(value)<0) return
-    if(["recentMullvadRegions","calendarWeekStart","weatherTemperatureUnit"].indexOf(key)<0) return
+    if(["recentMullvadRegions","calendarWeekStart","weatherTemperatureUnit","format","verticalFormat"].indexOf(key)<0) return
     var entry={id:root.moduleName}
     for(var name in root.settings) if(name!=="id") entry[name]=root.settings[name]
     entry[key]=value
@@ -137,7 +152,8 @@ BarWidget {
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
     tooltipText: [root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : ""].filter(function(s){return s!==""}).join(" · ")
-    onPressed: button => { if (button === Qt.RightButton && root.service) root.service.setDoNotDisturb(!root.service.doNotDisturb); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
+    onPressed: button => { if (button === Qt.RightButton) root.cycleClockFormat(); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
+    onWheelMoved: delta => {if(delta) root.cyclePage(delta<0 ? 1 : -1)}
     ArtworkBackground {
       objectName: "islandClockArtwork"
       anchors.fill: parent
@@ -160,8 +176,10 @@ BarWidget {
     Item {
       id:centerContent
       objectName:"islandClockDisplay"
-      anchors.centerIn:parent
-      width:Math.max(1,parent.width-2*root.indicatorGutter-Style.space(18));height:parent.height
+      width:Math.floor(Math.max(1,parent.width-2*root.indicatorGutter-Style.space(18))*root.displayScale)/root.displayScale
+      height:Math.floor(parent.height*root.displayScale)/root.displayScale
+      x:Math.round((parent.width-width)*root.displayScale/2)/root.displayScale
+      y:Math.round((parent.height-height)*root.displayScale/2)/root.displayScale
       z:1
       readonly property real indicatorSpan: Math.min(width,clockLabel.contentWidth)*(1-root.osdShown)+osdGauge.contentWidth*root.osdShown
       // Keep a small cached surface so text antialiasing stays consistent
@@ -179,11 +197,13 @@ BarWidget {
       PlainText {
         id:clockLabel
         objectName:"islandClockText"
-        anchors.fill:parent
+        width:Math.min(parent.width,Math.ceil(implicitWidth*root.displayScale)/root.displayScale)
+        height:parent.height
+        x:Math.round((centerContent.parent.width-width)*root.displayScale/2)/root.displayScale-centerContent.x
         horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter
         opacity:1-root.osdShown
         visible:opacity>0
-        text: root.vertical ? root.now.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH\nmm") : root.barText
+        text: root.barText
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         color: root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
       }
