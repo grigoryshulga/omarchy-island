@@ -86,7 +86,7 @@ ShellRoot {
     anchors { top: true; left: true; right: true }
     implicitHeight: 26
     exclusionMode: ExclusionMode.Ignore
-    Island.BarWidget { id: widget; anchors.centerIn: parent; width: implicitWidth; height: implicitHeight; bar: fakeBar }
+    Island.BarWidget { id: widget; hoverSuppressed:true; anchors.centerIn: parent; width: implicitWidth; height: implicitHeight; bar: fakeBar }
   }
   TestCase {
     id: test
@@ -186,12 +186,12 @@ ShellRoot {
       if(tick===5) test.findChild(widget,"islandClock").triggerPress(Qt.RightButton)
       if(tick===7) {
         var dnd=test.findChild(widget,"islandDndIndicator"),clock=test.findChild(widget,"islandClock"),at=dnd.mapToItem(clock,0,0)
-        if(!dnd.visible || dnd.height<Commons.Style.font.bodySmall || at.x<0 || at.x+dnd.width>clock.width || at.y<0 || at.y+dnd.height>clock.height) {console.log("ISLAND_MOTION_FAIL: DND indicator is tiny or outside the clock");Qt.quit();return}
+        if(!dnd.visible || dnd.height<Commons.Style.font.bodySmall || at.x<0 || at.x+dnd.width>clock.width || at.y<0 || at.y+dnd.height>clock.height) {console.log("ISLAND_MOTION_FAIL: DND indicator is tiny or outside the clock",JSON.stringify({x:at.x,y:at.y,w:dnd.width,h:dnd.height,cw:clock.width,ch:clock.height}));Qt.quit();return}
         clock.triggerPress(Qt.RightButton)
       }
-      if(tick === 10) { service.latest=service.allEntries[0]; service.arrivalChanged() }
+      if(tick === 10) { test.mouseMove(widget.parent,1,1);service.latest=service.allEntries[0]; service.arrivalChanged() }
       if(tick===30) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation");widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
       }
       if(tick===30 && !test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: incoming notification has no radio waves");Qt.quit();return}
       if(tick === 40) widget.open()
@@ -253,10 +253,10 @@ ShellRoot {
       }
       if(tick===225) {
         if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: disconnected player left its backdrop"); widget.close(); Qt.quit(); return }
-        widget.close(); service.latest=service.allEntries[1]; service.arrivalChanged()
+        widget.close();test.mouseMove(widget.parent,1,1);service.latest=service.allEntries[1];service.arrivalChanged()
       }
       if(tick===255) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString()) { console.log("ISLAND_MOTION_FAIL: incoming toast lost its themed background");widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString()) { console.log("ISLAND_MOTION_FAIL: incoming toast lost its themed background",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
         widget.close()
       }
       if(tick===260) {

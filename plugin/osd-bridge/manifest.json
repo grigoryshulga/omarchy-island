@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "gshulga.island-osd",
+  "name": "Island OSD adapter",
+  "version": "0.3.0",
+  "author": "gshulga",
+  "description": "Routes volume and brightness to Island; keeps other Omarchy OSD messages",
+  "kinds": [
+    "panel"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "panel": "Panel.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.osd"
+  }
+}

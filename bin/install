@@ -48,4 +48,5 @@ if 'gshulga.island' in disabled: disabled.remove('gshulga.island')
 tmp=config.with_suffix('.json.island-tmp');tmp.write_text(json.dumps(settings,ensure_ascii=False,indent=2)+'\n');os.replace(tmp,config)
 print(f'Installed gshulga.island. Backup: {backup}')
 PY
+python3 "$project/plugin/bin/configure-indicators"
 omarchy restart shell

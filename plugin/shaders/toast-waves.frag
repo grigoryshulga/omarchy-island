@@ -5,6 +5,7 @@ layout(std140, binding = 0) uniform buf {
   mat4 qt_Matrix;
   float qt_Opacity;
   vec2 size;
+  vec2 origin;
   float phase;
   float spacing;
   float bandWidth;
@@ -22,7 +23,7 @@ float noise(uvec2 site,uint frame) {
 }
 void main() {
   vec2 pixel=qt_TexCoord0*size;
-  vec2 center=vec2(-18.0,size.y*0.5);
+  vec2 center=origin;
   // Pixel-space circular fronts travel from the left edge to the right.
   float distanceFromOrigin=length(pixel-center);
   float band=mod(distanceFromOrigin-phase*speed,spacing)-spacing*0.5;

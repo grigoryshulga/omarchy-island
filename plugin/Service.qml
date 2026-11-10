@@ -16,6 +16,12 @@ Item {
   property var shell: null
   readonly property alias weather: weatherService
   WeatherService { id: weatherService }
+  readonly property alias indicators: indicatorState
+  IndicatorState {id:indicatorState}
+  ShellIpc {
+    target: "island-osd"
+    function show(payload: string): string {return indicatorState.showOsd(payload) ? "ok" : "unavailable"}
+  }
   property var entries: []
   readonly property string sessionKey: Date.now().toString(36)
   property var refs: ({})

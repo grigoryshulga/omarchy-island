@@ -65,5 +65,10 @@
   "weather.condition.6": "Снег",
   "weather.condition.7": "Гроза",
   "tabs.overview": "Обзор",
-  "deleteGroup": "Удалить уведомления этого источника"
+  "deleteGroup": "Удалить уведомления этого источника",
+  "indicator.recording": "Запись экрана",
+  "indicator.remote": "Активное удалённое подключение",
+  "indicator.microphoneMuted": "Микрофон выключен",
+  "indicator.nightLight": "Ночной свет",
+  "indicator.stayAwake": "Режим без сна"
 }

@@ -17,8 +17,10 @@ ShellRoot {
   }
   FloatingWindow {
     visible: true
-    implicitWidth: 320; implicitHeight: 160
-    Island.ArtworkBackground { id: artwork; anchors.fill: parent; service: service }
+    color: "black"
+    implicitWidth: 320; implicitHeight: 200
+    Island.ArtworkBackground { id: artwork; anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top;height:160; service: service }
+    Island.BrailleGauge {id:gauge;anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom;height:24;value:0.2}
   }
   TestCase {
     id: test
@@ -48,6 +50,15 @@ ShellRoot {
       service.visualPhase=1.5
       wait(80)
       check(still.equals(grabImage(artwork)),"artwork ignores reduced motion")
+      var field=findChild(gauge,"brailleGaugeField")
+      var thin=grabImage(gauge)
+      gauge.value=0.9;wait(80)
+      var thick=grabImage(gauge),a=0,b=0
+      // Both values fill this region: increased ink here proves that dots
+      // become thicker, rather than merely lighting more columns.
+      for(var y=Math.ceil(field.y);y<field.y+field.height;y++) for(var x=Math.ceil(field.x);x<field.x+field.width*0.15;x++) {a+=thin.red(x,y)+thin.green(x,y)+thin.blue(x,y);b+=thick.red(x,y)+thick.green(x,y)+thick.blue(x,y)}
+      check(b>a*1.2,"gauge dots did not become thicker: "+a+" -> "+b+", amount="+field.amount)
+      console.log("GAUGE_FRAMES_PASS")
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()
     }

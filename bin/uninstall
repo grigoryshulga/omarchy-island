@@ -4,6 +4,10 @@ if command -v omarchy-hyprland-session-locked >/dev/null 2>&1 && omarchy-hyprlan
   echo "Unlock the desktop before uninstalling Island so the shell can restart safely." >&2
   exit 1
 fi
+project=$(cd -- "$(dirname -- "$0")/.." && pwd)
+if [[ -f $HOME/.local/state/omarchy/island/indicators-install.json ]]; then
+  python3 "$project/plugin/bin/configure-indicators" --disable
+fi
 python3 - <<'PY'
 import json,os,pathlib
 home=pathlib.Path.home();config=home/'.config/omarchy/shell.json';state=home/'.local/state/omarchy/island/install.json'

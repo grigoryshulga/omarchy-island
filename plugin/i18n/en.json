@@ -61,5 +61,10 @@
   "weather.condition.6": "Snow",
   "weather.condition.7": "Thunderstorm",
   "tabs.overview": "Overview",
-  "deleteGroup": "Dismiss notifications from this source"
+  "deleteGroup": "Dismiss notifications from this source",
+  "indicator.recording": "Screen recording",
+  "indicator.remote": "Remote connection active",
+  "indicator.microphoneMuted": "Microphone muted",
+  "indicator.nightLight": "Night light",
+  "indicator.stayAwake": "Stay awake"
 }

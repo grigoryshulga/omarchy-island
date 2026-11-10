@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Install/remove Island's optional native OSD adapter and migrate indicators."""
+import argparse
+import datetime
+import json
+import os
+from pathlib import Path
+import shutil
+
+parser=argparse.ArgumentParser()
+parser.add_argument('--disable',action='store_true')
+args=parser.parse_args()
+home=Path.home();config=home/'.config/omarchy/shell.json'
+state=home/'.local/state/omarchy/island';state.mkdir(parents=True,exist_ok=True,mode=0o700)
+record=state/'indicators-install.json'
+target=home/'.config/omarchy/plugins/gshulga.island-osd'
+source=Path(__file__).resolve().parents[1]/'osd-bridge'
+data=json.loads(config.read_text())
+stamp=datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+shutil.copy2(config,state/f'shell-indicators-{stamp}.json')
+def entry_id(entry):return entry if isinstance(entry,str) else entry.get('id','')
+saved=json.loads(record.read_text()) if record.exists() else None
+if not args.disable and saved and saved.get('enabled') is False:saved=None
+if args.disable:
+    if not saved:raise SystemExit('No Island indicator installation to restore.')
+    data['plugins']=[e for e in data.get('plugins',[]) if entry_id(e)!='gshulga.island-osd']
+    disabled=data.setdefault('disabledPlugins',[])
+    if 'gshulga.island-osd' not in disabled:disabled.append('gshulga.island-osd')
+    if not saved['osdDisabled'] and 'omarchy.osd' in disabled:disabled.remove('omarchy.osd')
+    for change in saved['entries']:
+        entries=data.get('bar',{}).get('layout',{}).get(change['section'],[])
+        if change.get('removed'):
+            if not any(entry.get('id')==change['before']['id'] for entry in entries):entries.insert(min(change['index'],len(entries)),change['before'])
+            continue
+        for entry in entries:
+            if entry.get('id')==change['before']['id'] and entry.get('items')==change['afterItems']:
+                for key in ['items','indicators']:
+                    if key in change['before']:entry[key]=change['before'][key]
+                    else:entry.pop(key,None)
+else:
+    if target.is_symlink() or (target/'.git').exists():raise SystemExit('OSD adapter is managed elsewhere; refusing to overwrite it.')
+    if target.exists() and not record.exists():raise SystemExit('Existing OSD adapter has no installation record; refusing to overwrite it.')
+    if not saved:
+        saved={'osdDisabled':'omarchy.osd' in data.get('disabledPlugins',[]),'entries':[]}
+        migrated={'ScreenRecording','RemoteSession','NightLight','Dnd','StayAwake'}
+        defaults=['PasswordlessSudo','ScreenRecording','RemoteSession','Reminder','NightLight','Dnd','StayAwake']
+        for section,entries in data.get('bar',{}).get('layout',{}).items():
+            for index,entry in enumerate(list(entries)):
+                if entry.get('id')!='omarchy.indicators':continue
+                before=json.loads(json.dumps(entry))
+                items=entry.get('items') or entry.get('indicators') or defaults
+                remaining=[e for e in items if entry_id(e) not in migrated]
+                # An empty list means "all defaults" in Omarchy.
+                if remaining:entry['items']=remaining
+                else:entries.remove(entry)
+                saved['entries'].append({'section':section,'index':index,'before':before,'afterItems':remaining,'removed':not remaining})
+    shutil.copytree(source,target,dirs_exist_ok=True)
+    plugins=data.setdefault('plugins',[])
+    if not any(entry_id(e)=='gshulga.island-osd' for e in plugins):plugins.append({'id':'gshulga.island-osd'})
+    disabled=data.setdefault('disabledPlugins',[])
+    if 'omarchy.osd' not in disabled:disabled.append('omarchy.osd')
+    if 'gshulga.island-osd' in disabled:disabled.remove('gshulga.island-osd')
+saved['enabled']=not args.disable
+record.write_text(json.dumps(saved,indent=2)+'\n');os.chmod(record,0o600)
+tmp=config.with_suffix('.json.island-indicators-tmp')
+tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n');os.replace(tmp,config)
+print('Restored stock indicators and OSD.' if args.disable else 'Installed Island indicators and native OSD adapter.')

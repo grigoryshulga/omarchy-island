@@ -10,6 +10,19 @@ BarWidget {
   id: root
   moduleName: "gshulga.island"
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
+  readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
+  property var registeredIndicators: null
+  readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
+  readonly property real indicatorGutter: Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(6) : 0
+  function connectIndicators() {
+    if(registeredIndicators===indicators) return
+    if(registeredIndicators) registeredIndicators.detach(root)
+    registeredIndicators=indicators
+    if(registeredIndicators) registeredIndicators.attach(root)
+  }
+  onIndicatorsChanged: connectIndicators()
+  Component.onCompleted: connectIndicators()
+  Component.onDestruction: if(registeredIndicators) registeredIndicators.detach(root)
   property bool pinned: false
   property bool contentExpanded: false
   property bool calendarMode: false
@@ -77,13 +90,13 @@ BarWidget {
     if (isHovered) { leaveGrace.stop(); if (!pinned && !hoverSuppressed) hoverDelay.restart() }
     else { hoverSuppressed = false; hoverDelay.stop(); leaveGrace.restart() }
   }
-  implicitWidth: vertical ? barSize : Math.min(Style.space(360),Math.max(Style.space(190), clockMeasure.implicitWidth + Style.space(42), showAlert ? Style.space(290) : 0))
+  implicitWidth: vertical ? barSize : Math.min(Style.space(420),Math.max(Style.space(190), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(18), showAlert ? Style.space(290) : 0))
   implicitHeight: vertical ? Style.space(80) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
   Connections { target: root.service; function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
   Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
-  Timer { id: hoverDelay; interval: 140; onTriggered: if (!root.pinned && root.isHovered) { root.contentExpanded = false; root.hoverOpen = true } }
+  Timer { id: hoverDelay; interval: 140; onTriggered: if (!root.pinned && !root.showOsd && root.isHovered) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; interval: 3000; onTriggered: root.alertKind = "" }
   PlainText { id: clockMeasure; text: root.clockText; visible: false }
@@ -97,7 +110,7 @@ BarWidget {
     fixedWidth: root.implicitWidth
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
-    tooltipText: root.service && root.service.doNotDisturb ? strings.t("dnd") : ""
+    tooltipText: [root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : ""].filter(function(s){return s!==""}).join(" · ")
     onPressed: button => { if (button === Qt.RightButton && root.service) root.service.setDoNotDisturb(!root.service.doNotDisturb); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     ArtworkBackground {
       objectName: "islandClockArtwork"
@@ -108,24 +121,39 @@ BarWidget {
       horizontalFade: true
     }
     RowLayout {
-      anchors.centerIn: parent
-      width: Math.min(implicitWidth,parent.width-Style.space(18))
-      spacing: Style.space(6)
+      id:leftIndicators
+      objectName:"islandLeftIndicators"
+      anchors.right:centerContent.left;anchors.rightMargin:Style.space(6);anchors.verticalCenter:parent.verticalCenter
+      spacing:Style.space(5)
+      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator";Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
+      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.remoteActive;tint:"#9ece6a";waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
+    }
+    Item {
+      id:centerContent
+      anchors.centerIn:parent
+      width:Math.max(1,parent.width-2*root.indicatorGutter-Style.space(18));height:parent.height
+      z:1
       PlainText {
-        Layout.fillWidth: true
-        Layout.minimumWidth: 0
-        horizontalAlignment: Text.AlignHCenter
+        objectName:"islandClockText"
+        anchors.fill:parent
+        horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter
+        visible:!root.showOsd
         text: root.vertical ? root.now.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH\nmm") : root.barText
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         color: root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
       }
-      PlainText {
-        objectName: "islandDndIndicator"
-        visible: root.service !== null && root.service.doNotDisturb
-        text: "󰂛"
-        font.pixelSize: Style.font.icon
-        color: Commons.Color.accent
-      }
+      BrailleGauge {objectName:"islandOsdGauge";anchors.fill:parent;visible:root.showOsd;kind:root.indicators ? root.indicators.osdKind : "volume";value:root.indicators ? root.indicators.osdValue : 0;muted:root.indicators ? root.indicators.osdMuted : false}
+    }
+    RowLayout {
+      id:rightIndicators
+      objectName:"islandRightIndicators"
+      anchors.right:parent.right;anchors.rightMargin:Style.space(9);anchors.verticalCenter:parent.verticalCenter
+      spacing:Style.space(5)
+      z:1
+      PlainText {objectName:"islandMicrophoneIndicator";visible:root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Style.font.icon;color:Commons.Color.accent}
+      PlainText {objectName:"islandDndIndicator";visible:root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Style.font.icon;color:Commons.Color.accent}
+      PlainText {objectName:"islandNightLightIndicator";visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Style.font.icon;color:Commons.Color.accent}
+      PlainText {objectName:"islandStayAwakeIndicator";visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Style.font.icon;color:Commons.Color.accent}
     }
   }
   IslandPopup {

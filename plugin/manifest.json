@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "gshulga.island",
   "name": "Island",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "author": "gshulga",
-  "description": "Omarchy clock, notifications, music, calendar and braille weather",
+  "description": "Omarchy clock, notifications, music, calendar, braille weather and status indicators",
   "kinds": [
     "bar-widget",
     "service"

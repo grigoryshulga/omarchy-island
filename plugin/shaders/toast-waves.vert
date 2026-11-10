@@ -7,6 +7,7 @@ layout(std140, binding = 0) uniform buf {
   mat4 qt_Matrix;
   float qt_Opacity;
   vec2 size;
+  vec2 origin;
   float phase;
   float spacing;
   float bandWidth;
