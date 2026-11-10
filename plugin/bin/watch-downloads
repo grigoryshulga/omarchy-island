@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Recursive Linux download watcher. JSON lines on stdout; no extra packages.
+
+Completion means close-after-write or an atomic move to a final filename.
+Browser partial files remain active until renamed, removed, or moved away.
+Existing files are not announced on startup. Symlink directories are not followed.
+"""
+import ctypes
+import json
+import os
+from pathlib import Path
+import select
+import struct
+import sys
+import time
+
+CREATE, MODIFY, CLOSE_WRITE = 0x100, 0x2, 0x8
+MOVED_FROM, MOVED_TO, DELETE = 0x40, 0x80, 0x200
+DELETE_SELF, MOVE_SELF, IGNORED, OVERFLOW, ISDIR = 0x400, 0x800, 0x8000, 0x4000, 0x40000000
+MASK = CREATE | MODIFY | CLOSE_WRITE | MOVED_FROM | MOVED_TO | DELETE | DELETE_SELF | MOVE_SELF
+PARTIAL = ('.crdownload', '.part', '.partial', '.download', '.tmp')
+
+
+class Watcher:
+    def __init__(self, root, emit):
+        self.root = Path(root).absolute()
+        self.emit = emit
+        self.lib = ctypes.CDLL(None, use_errno=True)
+        self.lib.inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+        self.fd = self.lib.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
+        if self.fd < 0:
+            raise OSError(ctypes.get_errno(), 'inotify_init1')
+        self.dirs = {}
+        self.active = {}
+        self.moves = {}
+        self.snapshot = None
+        self.published_at = 0
+
+    def close(self):
+        os.close(self.fd)
+
+    def publish(self):
+        now = time.monotonic()
+        if now - self.published_at < 0.25:
+            return
+        files = []
+        for path in self.active:
+            try:
+                files.append({'path': str(path), 'bytes': path.stat().st_size})
+            except FileNotFoundError:
+                pass
+        if files != self.snapshot:
+            self.snapshot = files
+            self.emit({'event': 'active', 'count': len(files), 'files': files})
+        self.published_at = now
+
+    def add_tree(self, directory, discover=False):
+        if directory.is_symlink() or not directory.is_dir():
+            return
+        wd = self.lib.inotify_add_watch(self.fd, os.fsencode(directory), MASK)
+        if wd < 0:
+            raise OSError(ctypes.get_errno(), f'Cannot watch {directory}')
+        self.dirs[wd] = directory
+        try:
+            for child in directory.iterdir():
+                if child.is_symlink():
+                    continue
+                if child.is_dir():
+                    self.add_tree(child, discover)
+                elif discover and child.is_file():
+                    # A populated directory may have arrived in one rename.
+                    self.active.setdefault(child, time.monotonic() + 1)
+        except FileNotFoundError:
+            pass
+
+    def forget(self, path):
+        self.active = {p: due for p, due in self.active.items() if p != path and path not in p.parents}
+        for wd, directory in list(self.dirs.items()):
+            if directory == path or path in directory.parents:
+                self.lib.inotify_rm_watch(self.fd, wd)
+                self.dirs.pop(wd, None)
+
+    def read(self):
+        try:
+            data = os.read(self.fd, 1024 * 1024)
+        except BlockingIOError:
+            return
+        offset = 0
+        while offset < len(data):
+            wd, mask, cookie, size = struct.unpack_from('iIII', data, offset)
+            name = os.fsdecode(data[offset + 16:offset + 16 + size].split(b'\0', 1)[0])
+            offset += 16 + size
+            if mask & OVERFLOW:
+                raise RuntimeError('Download watcher event queue overflow')
+            directory = self.dirs.get(wd)
+            if directory is None:
+                continue
+            path = directory / name if name else directory
+            if mask & IGNORED:
+                self.dirs.pop(wd, None)
+                continue
+            if mask & (DELETE_SELF | MOVE_SELF) and path == self.root:
+                self.forget(path)
+                continue
+            if mask & MOVED_FROM:
+                self.moves[cookie] = (path, time.monotonic())
+                continue
+            if mask & MOVED_TO:
+                old = self.moves.pop(cookie, (None, 0))[0]
+                if old is not None:
+                    self.forget(old)
+                if mask & ISDIR:
+                    self.add_tree(path, True)
+                elif not path.is_symlink() and path.is_file():
+                    self.active[path] = time.monotonic() + 1
+                continue
+            if mask & DELETE:
+                self.forget(path)
+                continue
+            if mask & ISDIR:
+                if mask & CREATE:
+                    self.add_tree(path, True)
+                continue
+            if not path.is_symlink() and mask & (CREATE | MODIFY | CLOSE_WRITE):
+                self.active[path] = time.monotonic() + 1 if mask & CLOSE_WRITE else None
+        self.publish()
+
+    def tick(self):
+        now = time.monotonic()
+        for cookie, (path, stamp) in list(self.moves.items()):
+            if now - stamp > 0.25:
+                self.forget(path)
+                self.moves.pop(cookie)
+        for path, due in list(self.active.items()):
+            if not path.exists() or path.is_symlink():
+                self.active.pop(path, None)
+            elif due is not None and now >= due and not path.name.lower().endswith(PARTIAL):
+                self.active.pop(path, None)
+                try:
+                    self.emit({'event': 'complete', 'path': str(path), 'bytes': path.stat().st_size})
+                except FileNotFoundError:
+                    pass
+        self.publish()
+
+    def run(self):
+        while True:
+            if self.root not in self.dirs.values():
+                self.add_tree(self.root)
+            if select.select([self.fd], [], [], 0.2)[0]:
+                self.read()
+            self.tick()
+
+
+if __name__ == '__main__':
+    watcher = Watcher(sys.argv[1] if len(sys.argv) > 1 else Path.home() / 'downloads',
+                      lambda value: print(json.dumps(value, ensure_ascii=True), flush=True))
+    try:
+        watcher.run()
+    finally:
+        watcher.close()

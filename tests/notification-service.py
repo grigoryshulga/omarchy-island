@@ -127,10 +127,12 @@ else:
             (root / name).symlink_to(Path('/usr/share/omarchy/shell') / name)
         module = root / 'Island'
         module.mkdir()
-        for name in ['Service.qml', 'Store.js', 'Security.js', 'Markup.js', 'Detect.js', 'Model.js']:
+        for name in ['Service.qml', 'Store.js', 'Security.js', 'Markup.js', 'Detect.js', 'Model.js', 'Downloads.js']:
             shutil.copy2(project / 'plugin' / name, module / name)
+        (module / 'bin').mkdir()
+        shutil.copy2(project / 'plugin/bin/watch-downloads', module / 'bin/watch-downloads')
         (module / 'WeatherService.qml').write_text('import QtQuick\nItem {}\n')
-        (module / 'IndicatorState.qml').write_text('import QtQuick\nItem {function showOsd(payload){return false} function hideOsd(){}}\n')
+        (module / 'IndicatorState.qml').write_text('import QtQuick\nItem {property bool downloading:false; function announceMode(mode,on){} function showOsd(payload){return false} function hideOsd(){}}\n')
         (root / 'shell.qml').write_text('''import QtQuick
 import Quickshell
 import Quickshell.Io

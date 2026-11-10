@@ -16,3 +16,5 @@ assert.equal(read({icon:'keyboard',value:1,max:2,progressText:'On'}).progressTex
 assert.equal(read({message:'x'.repeat(4000)}).message.length,2048);
 assert.equal(parse('x'.repeat(8193)),null);
 console.log('PASS: all OSD messages/progress, native timing, bounds and malformed payloads.');
+
+assert.equal(read({icon:'download',message:'Downloading file...',duration:0}).kind,'download');

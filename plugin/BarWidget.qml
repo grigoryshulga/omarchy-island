@@ -56,7 +56,7 @@ BarWidget {
     var index=controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1
     previewContent.requestPage((index+step+previewContent.lastPage+1)%(previewContent.lastPage+1))
   }
-  readonly property string barText: showAlert && service ? (alertKind === "notification" && service.latest ? "󰂚  " + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
+  readonly property string barText: showAlert && service ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 

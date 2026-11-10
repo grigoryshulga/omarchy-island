@@ -29,7 +29,8 @@ Item {
   onExpandedChanged: if (!expanded) historyOpen = false
   readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
   readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
-  readonly property var displayedRows: !expanded && !hovering && service && service.latest ? [service.latest] : rows
+  readonly property var displayedRows: !expanded && !hovering && service && service.latest ? (service.latest.downloadPath ? [] : [service.latest]) : rows
+  readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
   implicitHeight: body.implicitHeight
   MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   ColumnLayout {
@@ -125,7 +126,19 @@ Item {
         topPadding: Style.space(4)
         bottomPadding: Style.space(4)
       }
-      PlainText { width: parent.width; visible: root.rows.length === 0; text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty"); color: Commons.Color.muted; horizontalAlignment: Text.AlignHCenter; height: visible ? Style.space(48) : 0; verticalAlignment: Text.AlignVCenter }
+      Column {
+        objectName:"islandDownloads"
+        width:parent.width
+        spacing:Style.space(6)
+        visible:(root.expanded || root.hovering) ? root.downloads.length>0 : !!(root.service && root.service.latest && root.service.latest.downloadPath)
+        PlainText {visible:root.expanded || root.hovering;text:root.strings.t("downloads.title");color:Commons.Color.muted;font.pixelSize:Style.font.caption}
+        DownloadList {
+          width:parent.width
+          rows:root.expanded || root.hovering ? root.downloads : root.service && root.service.latest && root.service.latest.downloadPath ? [root.service.latest] : []
+          service:root.service;strings:root.strings;expanded:root.expanded
+        }
+      }
+      PlainText { width: parent.width; visible: root.rows.length === 0 && root.downloads.length === 0 && !(root.service && root.service.latest && root.service.latest.downloadPath && !root.expanded && !root.hovering); text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty"); color: Commons.Color.muted; horizontalAlignment: Text.AlignHCenter; height: visible ? Style.space(48) : 0; verticalAlignment: Text.AlignVCenter }
     }
   }
   Flow {

@@ -27,7 +27,7 @@ function parse(raw) {
     duration=duration<=0 ? 0 : Math.max(200,Math.min(60000,duration))
   }
   var name=icon.toLowerCase()
-  var kind=name==="layout" ? "layout" : name.indexOf("volume")===0 || ["mute","muted"].indexOf(name)>=0 ? "volume" : ["brightness","display"].indexOf(name)>=0 ? "brightness" : name==="keyboard" ? "keyboard" : name.indexOf("mic")===0 ? "microphone" : "message"
+  var kind=name==="download" ? "download" : name==="layout" ? "layout" : name.indexOf("volume")===0 || ["mute","muted"].indexOf(name)>=0 ? "volume" : ["brightness","display"].indexOf(name)>=0 ? "brightness" : name==="keyboard" ? "keyboard" : name.indexOf("mic")===0 ? "microphone" : "message"
   return {iconName:icon,message:message,progressText:progressText,hasProgress:hasProgress,value:value,duration:duration,kind:kind,muted:kind==="volume" && name.indexOf("mute")>=0}
 }
 if(typeof module!=="undefined") module.exports={parse:parse}

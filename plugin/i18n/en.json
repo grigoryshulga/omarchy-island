@@ -1,4 +1,8 @@
 {
+  "downloads.title": "Downloads",
+  "downloads.downloading": "Downloading",
+  "downloads.complete": "Download complete",
+  "downloads.openFolder": "Open folder",
   "island": "ISLAND",
   "untitled": "Untitled",
   "noMusic": "Nothing playing",

@@ -1,4 +1,8 @@
 {
+  "downloads.title": "Downloads",
+  "downloads.downloading": "Загрузка",
+  "downloads.complete": "Файл скачан",
+  "downloads.openFolder": "Открыть папку",
   "island": "ISLAND",
   "untitled": "Без названия",
   "noMusic": "Музыка не играет",

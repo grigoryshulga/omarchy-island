@@ -4,6 +4,8 @@ project=$(cd -- "$(dirname -- "$0")/.." && pwd)
 node "$project/tests/model.test.cjs"
 node "$project/tests/osd.test.cjs"
 node "$project/tests/layout.test.cjs"
+python3 "$project/tests/downloads.py"
+python3 "$project/tests/downloads-service.py"
 python3 "$project/tests/weather.py"
 python3 "$project/tests/weather-service.py"
 python3 "$project/tests/notification-service.py"

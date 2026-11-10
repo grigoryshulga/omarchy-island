@@ -10,6 +10,7 @@ import "Store.js" as Store
 import "Security.js" as Security
 import "Markup.js" as Markup
 import "Model.js" as Model
+import "Downloads.js" as Downloads
 
 Item {
   id: root
@@ -23,6 +24,48 @@ Item {
     function show(payload: string): string {return indicatorState.showOsd(payload) ? "ok" : "unavailable"}
     function hide(): string {indicatorState.hideOsd();return "ok"}
   }
+  readonly property string downloadsDir: Quickshell.env("HOME") + "/downloads"
+  property var downloads: []
+  property int activeDownloads: 0
+  property int downloadSequence: 0
+  function downloadEvent(data) {
+    var event
+    try {event=JSON.parse(data)} catch(e) {return}
+    if(!event || typeof event!=="object") return
+    if(event.event==="active" && Array.isArray(event.files)) {
+      var previous=downloads
+      var active=event.files.filter(function(f){return f && Downloads.validPath(f.path,root.downloadsDir)}).map(function(f){
+        var old=previous.find(function(r){return r.active && r.downloadPath===f.path})
+        return Downloads.row(f.path,old ? old.ts : Date.now()/1000,f.bytes,true)
+      })
+      downloads=active.concat(downloads.filter(function(r){return !r.active}))
+      activeDownloads=active.length
+      indicatorState.downloading=activeDownloads>0
+    } else if(event.event==="complete" && Downloads.validPath(event.path,downloadsDir)) {
+      var row=Downloads.row(event.path,Date.now()/1000+(++downloadSequence)/1000000,event.bytes,false)
+      var remaining=downloads.filter(function(r){return r.downloadPath!==event.path})
+      downloads=remaining.filter(function(r){return r.active}).concat(Downloads.retain([row].concat(remaining.filter(function(r){return !r.active})),downloadsDir,Date.now()/1000))
+      if(!doNotDisturb) {
+        targetScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+        latest=row;arrival++
+      }
+      saveSoon.restart()
+    }
+  }
+  function openDownload(row) {
+    if(!Downloads.validPath(row.downloadPath,downloadsDir)) return false
+    Util.execArgv(["xdg-open",row.downloadPath.substring(0,row.downloadPath.lastIndexOf("/"))])
+    if(!row.active) remove(row.key)
+    return true
+  }
+  Process {
+    id:downloadWatcher
+    running:root.loaded
+    command:["python3",String(Qt.resolvedUrl("bin/watch-downloads")).replace(/^file:\/\//,""),root.downloadsDir]
+    stdout:SplitParser {onRead:data=>root.downloadEvent(data)}
+    onExited:code=>{root.activeDownloads=0;root.downloads=root.downloads.filter(function(r){return !r.active});indicatorState.downloading=false;if(code!==0) root.error="download watcher";downloadRetry.restart()}
+  }
+  Timer {id:downloadRetry;interval:5000;onTriggered:downloadWatcher.running=true}
   property var entries: []
   readonly property string sessionKey: Date.now().toString(36)
   property var refs: ({})
@@ -159,6 +202,7 @@ Item {
     revision++
     entries = entries.filter(function(r) { return r.key !== key })
     history = history.filter(function(r) { return r.key !== key })
+    downloads = downloads.filter(function(r) { return r.key !== key })
     if (latest && latest.key === key) latest = null
     if (n) { try { n.dismiss() } catch(e) {} }
     saveSoon.restart()
@@ -178,12 +222,14 @@ Item {
   }
   function setDoNotDisturb(value) {if(doNotDisturb===!!value)return;doNotDisturb=!!value;indicatorState.announceMode("dnd",doNotDisturb);saveSoon.restart()}
   function actions(row) {
+    if(row.downloadPath) return [{id:"openFolder",text:"Open folder"}]
     var tick = revision
     var n = refs[row.key]
     if (!n) return []
     return (n.actions || []).slice(0,16).map(function(a) { return {id:a.identifier, text:String(a.text || a.identifier).slice(0,256)} })
   }
   function invoke(row, identifier) {
+    if(row.downloadPath) return identifier==="openFolder" ? openDownload(row) : false
     var n = refs[row.key]
     if (!n) return false
     var a = (n.actions || []).find(function(a) { return a.identifier === identifier })
@@ -191,6 +237,7 @@ Item {
     a.invoke(); archive(row.key, "activated"); return true
   }
   function activate(row) {
+    if(row.downloadPath) {openDownload(row);return}
     if (invoke(row,"default")) return
     var argv = Security.parseExecArgv(row.execArgv)
     if (argv) Util.execArgv(argv)
@@ -223,7 +270,7 @@ Item {
     var cutoff = Date.now()/1000 - Store.RETENTION_HOURS*3600
     var rows = allEntries.filter(function(r) { return !r.transient && r.ts > cutoff }).map(function(r) { return Store.closedEntry(r,r.closed_reason || "restart",r.closed_ts || r.ts) })
     rows = Store.retain(rows.sort(function(a,b) { return b.closed_ts-a.closed_ts }), Date.now()/1000)
-    stateFile.setText(JSON.stringify({version:1, history:rows, muted:mutedSources, dnd:doNotDisturb}))
+    stateFile.setText(JSON.stringify({version:1, history:rows, downloads:Downloads.retain(downloads,downloadsDir,Date.now()/1000), muted:mutedSources, dnd:doNotDisturb}))
   }
   function load(text) {
     if (loaded) return
@@ -232,6 +279,7 @@ Item {
         var data = JSON.parse(text || "{}")
         history = Store.retain(Store.parseHistory(JSON.stringify(data.history || [])),Date.now()/1000)
         mutedSources = Array.isArray(data.muted) ? data.muted.filter(function(s) { return typeof s === "string" && s.length <= 256 }).slice(0,100) : []
+        downloads = Downloads.retain(data.downloads || data.recents,downloadsDir,Date.now()/1000)
         doNotDisturb = data.dnd === true
       }
     } catch(e) { error = "state" }
@@ -272,6 +320,7 @@ Item {
       }
     }
   }
+  Timer {interval:1000;repeat:true;running:root.loaded && root.downloads.length>0;onTriggered:{var kept=root.downloads.filter(function(r){return r.active || r.ts>Date.now()/1000-1800});if(kept.length!==root.downloads.length) {root.downloads=kept;saveSoon.restart()}}}
   Timer { id: saveSoon; interval: 300; onTriggered: root.save() }
   FileView {
     id: stateFile
