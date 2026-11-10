@@ -242,7 +242,7 @@ BarWidget {
     owner: root
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: true
-    open: root.pinned || root.hoverOpen || root.showAlert
+    open: root.pinned || (root.hoverOpen && previewContent.implicitHeight > 0) || root.showAlert
     frameless: root.notificationToast
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
     onVisibleChanged: if (!visible) { root.contentExpanded = false; root.calendarMode = false; root.weatherMode = false; root.controlsMode = false }

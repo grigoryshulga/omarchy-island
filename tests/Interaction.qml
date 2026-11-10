@@ -300,8 +300,13 @@ ShellRoot {
       service.actionRows=[]
       console.log("MERGED_NOTIFICATIONS_PASS")
       service.allEntries=[]
+      composed.expanded=false;composed.hovering=true
       wait(20)
       check(!findChild(composed,"notificationCount").visible,"zero notification count is visible")
+      check(!findChild(composed,"notificationsEmpty").visible,"empty state appeared in hover preview")
+      check(!findChild(composed,"notificationsScroll").visible,"empty notifications left a scroll area in hover preview")
+      if (!findChild(composed,"islandBatteryOverview").present)
+        check(composed.implicitHeight===0,"empty hover preview retained blank space")
       composed.expanded=true
       service.historyEntries=[{key:"old",app:"Archive",summary:"Old notification",body:"old",ts:1}]
       wait(30)

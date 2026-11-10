@@ -50,7 +50,7 @@ Item {
     radialBraille: root.radialBraille
     onExpandRequested: root.expandRequested()
   }
-  PanelSeparator { objectName: "islandMediaSeparator"; Layout.fillWidth: true; visible: root.showPlayer && (root.expanded || root.hovering) }
+  PanelSeparator { objectName: "islandMediaSeparator"; Layout.fillWidth: true; visible: root.showPlayer && (root.expanded || root.hovering) && (battery.visible || scroll.visible) }
   BatteryOverview {
     id:battery
     objectName:"islandBatteryOverview"
@@ -84,13 +84,14 @@ Item {
   }
   RowLayout {
     Layout.fillWidth: true
-    visible: !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
+    visible: root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
     Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
   }
   Controls.ScrollView {
     id: scroll
-    visible: root.expanded || root.hovering || root.alertKind === "notification"
+    objectName: "notificationsScroll"
+    visible: root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification")
     Layout.fillWidth: true
     Layout.preferredHeight: Math.min(cards.implicitHeight,Style.space(root.compactNotifications ? 96 : root.expanded ? 360 : 330))
     clip: true
@@ -141,14 +142,14 @@ Item {
       Column {
         objectName: "notificationsEmpty"
         width: parent.width
-        visible: root.rows.length === 0 && root.downloads.length === 0 && !(root.service && root.service.latest && root.service.latest.downloadPath && !root.expanded && !root.hovering)
+        visible: root.expanded && root.rows.length === 0 && root.downloads.length === 0
         spacing: Style.space(4)
         BrailleClap {
           objectName: "notificationsEmptyClap"
           anchors.horizontalCenter: parent.horizontalCenter
           width: Math.min(parent.width,Style.space(220))
           height: Style.space(150)
-          active: root.overviewActive && root.visible && (root.expanded || root.hovering)
+          active: root.overviewActive && root.visible && root.expanded
         }
         PlainText {
           width: parent.width
