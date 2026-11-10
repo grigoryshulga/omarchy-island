@@ -15,6 +15,7 @@ ShellRoot {
   Island.IndicatorState {id:backend;layouts.observeSystem:false}
   QtObject {
     id:states
+    property bool updateAvailable:false
     property bool recording:false
     property bool remoteActive:false
     property bool microphoneMuted:false
@@ -136,6 +137,15 @@ ShellRoot {
         backend.stayAwake=false;widget.now=saved;wait(30)
         console.log("STABLE_CLOCK_PIXELS_PASS")
       }
+      var update=findChild(widget,"islandUpdateIndicator")
+      check(!update.visible,"inactive update indicator is visible")
+      states.updateAvailable=true;wait(220)
+      check(update.visible && update.bidirectional && update.glyph!=="", "update indicator or bidirectional wave missing")
+      var wave=update.children[0],origin=wave.mapToItem(clock,wave.origin.x,wave.origin.y),icon=update.mapToItem(clock,update.width/2,update.height/2)
+      check(Math.abs(origin.x-icon.x)<1 && wave.x<0 && wave.x+wave.width>update.width,"update waves do not spread from the icon in both directions")
+      check(update.mapToItem(clock,0,0).x>clock.width/2+label.contentWidth/2,"update indicator is not right of clock")
+      states.updateAvailable=false;wait(220)
+      check(!update.visible,"update indicator did not clear")
       states.recording=true;states.remoteActive=true;states.microphoneMuted=true;scene.mockNightLight=true;scene.mockStayAwake=true;backend.refreshControls();service.doNotDisturb=true
       check(backend.nightLight && backend.stayAwake,"native idle/nightlight IPC state was not read")
       check(backend.osdActive && backend.osdIcon==="","mode toggle did not show its OSD")

@@ -4,6 +4,7 @@ import Quickshell
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "controls/monitors" as NativeMonitors
 import "controls/audio" as NativeAudio
 import "controls/bluetooth" as NativeBluetooth
 import "controls/network" as NativeNetwork
@@ -33,7 +34,7 @@ Item {
   implicitHeight:section ? detailHeight : landing.implicitHeight
 
   function openSection(name) {
-    if(["audio","bluetooth","network","tailscale"].indexOf(name)<0) return
+    if(["audio","bluetooth","network","tailscale","monitors"].indexOf(name)<0) return
     if(!section) detailHeight=landing.implicitHeight
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
@@ -87,7 +88,7 @@ Item {
       uniformCellWidths:true
       columnSpacing:Style.space(8);rowSpacing:Style.space(8)
       Repeater {
-        model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"}]
+        model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"}]
         ControlTile {
         onHovered:on=>root.tileHover(objectName,on)
           required property var modelData
@@ -176,7 +177,7 @@ Item {
     active:root.active && !!root.section
     visible:active
     HoverHandler {id:nativeHover}
-    sourceComponent:root.section==="audio" ? audioPanel : root.section==="bluetooth" ? bluetoothPanel : root.section==="network" ? networkPanel : root.section==="tailscale" ? tailscalePanel : null
+    sourceComponent:root.section==="audio" ? audioPanel : root.section==="bluetooth" ? bluetoothPanel : root.section==="network" ? networkPanel : root.section==="tailscale" ? tailscalePanel : root.section==="monitors" ? monitorsPanel : null
     onLoaded:{item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
     onStatusChanged:if(status===Loader.Error) root.error=root.strings.t("controls.unavailable")
     TapHandler {
@@ -185,6 +186,7 @@ Item {
       onTapped:eventPoint=>{if(root.externalFeedback) root.externalFeedback.pulseFrom(nativeLoader,eventPoint.position)}
     }
   }
+  Component {id:monitorsPanel;NativeMonitors.Panel {bar:root.bar}}
   Component {id:audioPanel;NativeAudio.Panel {bar:root.bar}}
   Component {id:bluetoothPanel;NativeBluetooth.Panel {bar:root.bar}}
   Component {id:networkPanel;NativeNetwork.Panel {bar:root.bar;onExternalPanelRequested:(id,payload)=>root.launchExternalPanel(id,payload)}}

@@ -11,6 +11,9 @@ import "osd-bridge/OsdModel.js" as NativeOsd
 Item {
   id: root
   property var consumers: []
+  property bool updateAvailable: false
+  function refreshUpdate() {if(!updateProbe.running) updateProbe.running=true}
+  function clearUpdate() {updateAvailable=false}
   property bool recording: false
   property bool remoteActive: false
   property bool nightLight: false
@@ -98,6 +101,20 @@ Item {
     onFileChanged:{reload();captureChange.restart()}
     onLoaded:captureChange.restart()
     onLoadFailed:captureChange.restart()
+  }
+  // Match the default widget's six-hour check; package changes refresh sooner.
+  Timer {interval:21600000;repeat:true;triggeredOnStart:true;running:root.consumers.length>0;onTriggered:root.refreshUpdate()}
+  FileView {
+    path:"/var/log/pacman.log"
+    watchChanges:true;printErrors:false
+    onFileChanged: {reload();updateDebounce.restart()}
+  }
+  Timer {id:updateDebounce;interval:3000;onTriggered:if(root.consumers.length) root.refreshUpdate()}
+  Process {
+    id:updateProbe
+    command:["omarchy-update-available"]
+    // QProcess::NormalExit is 0; Quickshell does not export its enum.
+    onExited:(code,status)=>{if(status===0 && (code===0 || code===1)) root.updateAvailable=code===0}
   }
   Process {
     id:recordingProbe

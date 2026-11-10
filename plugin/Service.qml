@@ -20,6 +20,11 @@ Item {
   readonly property alias indicators: indicatorState
   IndicatorState {id:indicatorState}
   ShellIpc {
+    target: "island-update"
+    function refresh(): void {indicatorState.refreshUpdate()}
+    function clear(): void {indicatorState.clearUpdate()}
+  }
+  ShellIpc {
     target: "island-osd"
     function show(payload: string): string {return indicatorState.showOsd(payload) ? "ok" : "unavailable"}
     function hide(): string {indicatorState.hideOsd();return "ok"}

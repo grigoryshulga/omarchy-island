@@ -113,5 +113,8 @@
   "osd.nightLight.on": "Night light on",
   "osd.nightLight.off": "Night light off",
   "osd.stayAwake.on": "Stay awake on",
-  "osd.stayAwake.off": "Stay awake off"
+  "osd.stayAwake.off": "Stay awake off",
+  "controls.monitors": "Monitors",
+  "controls.monitorsHint": "Brightness, scale and displays",
+  "indicator.updateAvailable": "Omarchy update available"
 }

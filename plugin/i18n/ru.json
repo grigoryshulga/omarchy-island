@@ -117,5 +117,8 @@
   "osd.nightLight.on": "Ночной свет включён",
   "osd.nightLight.off": "Ночной свет выключен",
   "osd.stayAwake.on": "Режим без сна включён",
-  "osd.stayAwake.off": "Режим без сна выключен"
+  "osd.stayAwake.off": "Режим без сна выключен",
+  "controls.monitors": "Мониторы",
+  "controls.monitorsHint": "Яркость, масштаб и экраны",
+  "indicator.updateAvailable": "Доступно обновление Omarchy"
 }

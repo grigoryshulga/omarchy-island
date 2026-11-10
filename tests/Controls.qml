@@ -75,7 +75,7 @@ ShellRoot {
       check(scene.commands[1][0]==="omarchy-menu" && scene.commands[2][1]==="--stop-recording","capture actions differ from stock")
       var loader=findChild(view,"islandNativeControl")
       var stableHeight=view.implicitHeight
-      for(var section of ["audio","bluetooth","network","tailscale"]){
+      for(var section of ["audio","bluetooth","network","tailscale","monitors"]){
         view.openSection(section)
         check(view.implicitHeight===stableHeight,"opening a native section resized Controls: "+section)
         wait(500)

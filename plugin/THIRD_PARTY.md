@@ -14,7 +14,7 @@
 
 `osd-bridge/Panel.qml` and `osd-bridge/OsdModel.js` are adapted from Omarchy’s OSD. Native progress and status messages are forwarded to Island, including close requests; the original interface is retained as a fallback when Island is unavailable.
 
-`controls/{audio,bluetooth,network,tailscale}/` are adapted snapshots of the installed Omarchy panels (4.5.0-3). Their device/connection logic and content are preserved; Island replaces the standalone window with `InlinePanel`, hides the bar trigger and disables the copied IPC handlers. OSD, external panel requests and preferences are routed through Island. Active switches gain the local braille glow; Bluetooth section headers use their natural height to avoid a Text binding loop. `controls/ControlKeyCatcher.qml` adapts Omarchy’s `PanelKeyCatcher` for equivalent H/J/K/L positions on a Russian keyboard layout. The native sources remain untouched.
+`controls/{audio,bluetooth,network,tailscale,monitors}/` are adapted snapshots of the installed Omarchy panels (4.5.0-3). Their device/connection logic and content are preserved; Island replaces the standalone window with `InlinePanel`, hides the bar trigger and disables the copied IPC handlers. OSD, external panel requests and preferences are routed through Island. Active switches gain the local braille glow; Bluetooth section headers use their natural height to avoid a Text binding loop. `controls/ControlKeyCatcher.qml` adapts Omarchy’s `PanelKeyCatcher` for equivalent H/J/K/L positions on a Russian keyboard layout. The native sources remain untouched.
 
 Sources: https://github.com/omacom/omarchy and https://github.com/omacom/omapager
 
