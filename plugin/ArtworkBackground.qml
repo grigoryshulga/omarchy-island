@@ -7,8 +7,9 @@ Item {
   required property var service
   property bool monochrome: false
   property bool horizontalFade: false
+  property real reveal: 1
   readonly property real phase: service ? service.visualPhase : 0
-  readonly property bool active: service !== null && service.playing
+  readonly property bool active: service !== null && service.hasMedia && service.playing
   clip: true
   layer.enabled: true
   layer.effect: ShaderEffect {
@@ -18,7 +19,7 @@ Item {
     vertexShader: Qt.resolvedUrl("shaders/fade.vert.qsb")
     fragmentShader: Qt.resolvedUrl("shaders/fade.frag.qsb")
   }
-  opacity: active ? 1 : 0
+  opacity: active ? reveal : 0
   Behavior on opacity { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
   Image {
     id: artwork

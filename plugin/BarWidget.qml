@@ -74,6 +74,7 @@ BarWidget {
     pressFeedbackButtons: Qt.NoButton
     onPressed: button => { if (button === Qt.RightButton && root.service) root.service.setDoNotDisturb(!root.service.doNotDisturb); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     ArtworkBackground {
+      objectName: "islandClockArtwork"
       anchors.fill: parent
       visible: !root.showAlert
       service: root.service
@@ -108,11 +109,12 @@ BarWidget {
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.hoverOpen ? 420 : 370))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
     ArtworkBackground {
+      objectName: "islandPopupArtwork"
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
       height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 250 : 145))
-      opacity: 1-previewContent.pageProgress
-      visible: opacity>0 && (root.pinned || root.hoverOpen || root.alertKind === "media")
+      reveal: 1-previewContent.pageProgress
+      visible: reveal>0 && (root.pinned || root.hoverOpen || root.alertKind === "media")
       service: root.service
     }
     PopupPages {

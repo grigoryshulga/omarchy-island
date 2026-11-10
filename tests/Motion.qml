@@ -105,6 +105,12 @@ ShellRoot {
       if(tick >= 10 && tick < 36 && popup.shown > 0.01) entrance.push({w:popup.drawnWidth,h:popup.drawnHeight,target:popup.contentWidth})
       if(popup.open && popup.shown > 0.01 && popup.cardOrigin !== undefined && Math.abs(popup.cardOrigin.x+popup.drawnWidth/2-popup.screen.width/2)>1) offCenter++
       if(tick === 70) {
+        var artwork = test.findChild(widget,"islandPopupArtwork")
+        if(!service.playing && (artwork.opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01)) {
+          console.log("ISLAND_MOTION_FAIL: music backdrop visible while playback is paused",artwork.opacity)
+          widget.close(); Qt.quit(); return
+        }
+        if(!test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: paused player was hidden"); widget.close(); Qt.quit(); return }
         var distinct = sizes.filter(function(s,i) {return sizes.indexOf(s) === i})
         console.log("MOTION_NATIVE_SIZES",distinct.length,JSON.stringify(distinct.slice(0,8)))
         var seed = entrance[0], grown = entrance[entrance.length-1]
@@ -130,8 +136,25 @@ ShellRoot {
         if(widget.pinned || widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: middle click did not close calendar"); widget.close(); Qt.quit(); return }
         test.findChild(widget,"islandClock").triggerPress(Qt.LeftButton)
         if(!widget.pinned || widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: normal click did not reopen inbox"); widget.close(); Qt.quit(); return }
+        p.playbackState=MprisPlaybackState.Playing; p.isPlaying=true; service.playing=true
+      }
+      if(tick===175) {
+        if(test.findChild(widget,"islandPopupArtwork").opacity<0.99) { console.log("ISLAND_MOTION_FAIL: playback did not reveal music backdrop",test.findChild(widget,"islandPopupArtwork").opacity,test.findChild(widget,"islandPopupArtwork").active,test.findChild(widget,"islandPopupArtwork").reveal); widget.close(); Qt.quit(); return }
+        p.playbackState=MprisPlaybackState.Stopped; p.isPlaying=false; service.playing=false
+      }
+      if(tick===195) {
+        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: stopped music left its backdrop or player"); widget.close(); Qt.quit(); return }
+        p.trackTitle=""; p.trackArtist=""; p.playbackState=MprisPlaybackState.Playing; p.isPlaying=true; service.playing=true
+      }
+      if(tick===215) {
+        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: empty track left its backdrop or player"); widget.close(); Qt.quit(); return }
+        service.player=null; service.playing=false
+      }
+      if(tick===225) {
+        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: disconnected player left its backdrop"); widget.close(); Qt.quit(); return }
         console.log("ISLAND_MOTION_PASS")
         console.log("CALENDAR_ROUTING_PASS")
+        console.log("MUSIC_BACKDROP_PASS")
         widget.close(); Qt.quit()
       }
     }
