@@ -60,5 +60,6 @@
   "weather.condition.5": "Rain",
   "weather.condition.6": "Snow",
   "weather.condition.7": "Thunderstorm",
-  "tabs.overview": "Overview"
+  "tabs.overview": "Overview",
+  "deleteGroup": "Dismiss notifications from this source"
 }

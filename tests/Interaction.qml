@@ -60,11 +60,13 @@ ShellRoot {
     property int activateCalls: 0
     property string copied: ""
     property string muted: ""
+    property var removed: []
     function media(action) { mediaCalls++; p.isPlaying = !p.isPlaying }
     function actions(row) { return [] }
     function activate(row) { activateCalls++ }
     function copyCode(row,code) { copied = code }
     function mute(s) { muted = s }
+    function remove(key) { removed=removed.concat([key]);allEntries=allEntries.filter(function(row){return row.key!==key}) }
   }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("Island/i18n") }
   FloatingWindow {
@@ -87,7 +89,7 @@ ShellRoot {
   FloatingWindow {
     id: calendarWin
     visible: false
-    implicitWidth: 450; implicitHeight: 440
+    implicitWidth: 450; implicitHeight: calendarSurface.testPages ? pages.implicitHeight+24 : 440
     color: Commons.Color.popups.background
     Item {
       id: calendarSurface
@@ -97,7 +99,7 @@ ShellRoot {
       Island.CalendarView { id: calendar; visible: !calendarSurface.testPages; x: 12; y: 12; width: parent.width-24; strings: strings }
       Island.PopupPages {
         id: pages
-        anchors.fill: parent; anchors.margins: 12
+        x: 12; y: 12; width: parent.width-24; height: implicitHeight
         visible: calendarSurface.testPages
         service: service; strings: strings; expanded: true; hovering: true
         onCalendarRequested: {pages.weather=false;pages.calendar=true}
@@ -115,6 +117,7 @@ ShellRoot {
       wait(200)
       var toggle=findChild(media,"mediaToggle")
       check(toggle !== null,"missing toggle")
+      check(findChild(media,"mediaTitle").font.pixelSize===Math.round(Commons.Style.font.title*1.25),"track title did not use its larger size")
       mouseClick(toggle)
       check(service.mediaCalls===1,"toggle click did not reach player: " + service.mediaCalls)
       var musicGlow=findChild(media,"mediaSpotlight")
@@ -216,6 +219,13 @@ ShellRoot {
       service.player=null
       wait(20)
       check(!panelPlayer.visible,"disconnected player is visible")
+      group=findChild(composed,"notificationGroup-Test")
+      mouseMove(group,group.width/2,10)
+      wait(160)
+      var groupDismiss=findChild(group,"groupDismiss"), groupBell=findChild(group,"groupMute")
+      check(groupDismiss.x>groupBell.x && groupDismiss.opacity>0.9,"group close is not to the right of mute")
+      mouseClick(groupDismiss)
+      check(service.removed.length===4 && service.allEntries.length===0,"group close did not dismiss all source notifications")
       service.allEntries=[]
       wait(20)
       check(!findChild(composed,"notificationCount").visible,"zero notification count is visible")
@@ -253,20 +263,25 @@ ShellRoot {
       wait(100)
       var pager=findChild(pages,"islandPageSwipe")
       mouseDrag(pager,pager.width*0.8,pager.height*0.85,-pager.width*0.65,0,Qt.LeftButton)
-      wait(350)
+      tryVerify(function(){return pages.calendar && Math.abs(findChild(pages,"islandCalendar").mapToItem(pager,0,0).x)<1},1200)
       check(pages.calendar,"horizontal swipe did not open calendar")
+      check(Math.abs(findChild(pages,"islandCalendar").mapToItem(pager,0,0).x)<1,"calendar content did not move into view after swipe")
       mouseWheel(pager,pager.width/2,pager.height/2,120,0,Qt.NoButton)
       wait(350)
       check(!pages.calendar,"horizontal wheel did not return to inbox")
+      check(Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(pager,0,0).x)<1,"inbox content did not move into view after wheel")
       mouseWheel(pager,pager.width/2,pager.height*0.85,0,-120,Qt.NoButton)
       wait(350)
       check(!pages.calendar,"vertical scrolling switched popup pages")
+      check(Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(pager,0,0).x)<1,"vertical wheel moved page contents")
       mouseWheel(pager,pager.width/2,pager.height/2,0,-120,Qt.NoButton,Qt.ShiftModifier)
       wait(350)
       check(pages.calendar,"Shift+wheel did not open calendar")
-      mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
-      wait(350)
-      check(pages.weather && !pages.calendar,"horizontal wheel did not open weather")
+      check(Math.abs(findChild(pages,"islandCalendar").mapToItem(pager,0,0).x)<1,"calendar content did not move into view after wheel")
+      mouseDrag(pager,pager.width*0.8,pager.height*0.85,-pager.width*0.65,0,Qt.LeftButton)
+      tryVerify(function(){return pages.weather && Math.abs(findChild(pages,"islandWeather").mapToItem(pager,0,0).x)<1},1200)
+      check(pages.weather && !pages.calendar,"horizontal swipe did not open weather")
+      check(Math.abs(findChild(pages,"islandWeather").mapToItem(pager,0,0).x)<1,"weather content did not move into view after swipe")
       var weatherView=findChild(pages,"islandWeather")
       check(findChild(weatherView,"weatherHeroScene").condition===5,"weather did not select rain scene")
       check(findChild(weatherView,"weatherTemperature").text.indexOf("7")>=0,"weather temperature missing")
@@ -277,15 +292,25 @@ ShellRoot {
       check(fakeWeather.searched==="Paris","weather city search did not run")
       mouseClick(findChild(weatherView,"weatherAuto"))
       check(fakeWeather.autoCalls===1,"weather auto-location control failed")
-      mouseClick(findChild(pages,"islandTabOverview"))
+      var calendarTab=findChild(pages,"calendarOpen")
+      calendarTab.clicked()
+      wait(350)
+      check(pages.calendar && Math.abs(findChild(pages,"islandCalendar").mapToItem(pager,0,0).x)<1,"weather-to-calendar tab switched height without contents")
+      var weatherTab=findChild(pages,"weatherOpen")
+      weatherTab.clicked()
+      wait(350)
+      check(pages.weather && Math.abs(weatherView.mapToItem(pager,0,0).x)<1,"calendar-to-weather tab switched height without contents")
+      var overviewTab=findChild(pages,"islandTabOverview")
+      overviewTab.clicked()
       wait(350)
       check(!pages.weather && !pages.calendar,"weather back did not return to inbox")
+      check(Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(pager,0,0).x)<1,"overview tab did not move contents into view")
       mouseWheel(pager,pager.width/2,pager.height/2,0,-120,Qt.NoButton,Qt.ShiftModifier)
       wait(350)
       check(pages.calendar,"calendar did not reopen after weather")
       var pageCalendar=findChild(pages,"islandCalendar")
       mouseDrag(pager,pager.width*0.15,pager.height*0.45,pager.width*0.65,0,Qt.LeftButton)
-      wait(350)
+      tryVerify(function(){return !pages.calendar && Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(pager,0,0).x)<1},1200)
       check(!pages.calendar,"reverse swipe did not return to inbox")
       check(!findChild(pageCalendar,"calendarSpotlight").rippling,"swipe triggered a calendar click wave")
       var pageSeek=findChild(pages,"mediaSeek")
@@ -300,5 +325,5 @@ ShellRoot {
     }
   }
   Timer { interval: 300; running: true; onTriggered: test.test_controls() }
-  Timer { interval: 10000; running: true; onTriggered: { console.log("ISLAND_INTERACTION_TIMEOUT"); Qt.quit() } }
+  Timer { interval: 13000; running: true; onTriggered: { console.log("ISLAND_INTERACTION_TIMEOUT"); Qt.quit() } }
 }

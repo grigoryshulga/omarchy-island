@@ -23,20 +23,49 @@ Item {
   property real wheelDistance: 0
   property int wheelDirection: 0
   property bool wheelLatched: false
+  property bool positioned: false
+  property bool navigating: false
+  property bool gesturing: false
   signal expandRequested()
   signal calendarRequested()
   signal weatherRequested()
   signal inboxRequested()
-  readonly property real pageProgress: pager.width>0 ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.contentItem.originX)/pager.width))) : (calendar ? 1 : 0)
+  readonly property real pageProgress: pager.width>0 && pager.itemAt(0) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(0).x)/pager.width))) : (calendar || weather ? 1 : 0)
   readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(8) : 0
   implicitHeight: contentTop+(weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
   function handleCalendarKey(event) { return calendarPage.handleKey(event) }
   function syncPage() {
-    if (!ready) return
+    if(!ready || pager.width<=0) return
+    var view=pager.contentItem
+    if(view.dragging || view.flicking) return
     var next=Math.min(lastPage,weather ? 2 : calendar ? 1 : 0)
-    if (pager.currentIndex!==next) { pager.contentItem.cancelFlick(); pager.setCurrentIndex(next) }
+    pageMotion.stop()
+    var from=view.contentX
+    pager.setCurrentIndex(next)
+    view.forceLayout()
+    var page=pager.itemAt(next)
+    if(!page) return
+    var target=page.x
+    if(!positioned || Math.abs(from-target)<0.5 || Style.reduceMotion) view.contentX=target
+    else {
+      view.contentX=from
+      pageMotion.from=from;pageMotion.to=target;pageMotion.restart()
+    }
+    positioned=true
+  }
+  function scheduleSync() { if(ready) Qt.callLater(syncPage) }
+  function finishGesture() {
+    if(navigating || !gesturing) return
+    gesturing=false
+    var closest=0,distance=Infinity
+    pager.contentItem.forceLayout()
+    for(var i=0;i<=lastPage;i++) {
+      var page=pager.itemAt(i),delta=page ? Math.abs(pager.contentItem.contentX-page.x) : Infinity
+      if(delta<distance) {distance=delta;closest=i}
+    }
+    requestPage(closest)
   }
   function handleWheel(event) {
     var x=event.pixelDelta.x || event.angleDelta.x
@@ -58,14 +87,22 @@ Item {
     requestPage(next)
   }
   function requestPage(index) {
+    gesturing=false
+    navigating=true
+    pageMotion.stop()
+    pager.contentItem.cancelFlick()
+    navigating=false
     if(index===2 && !weather) weatherRequested()
     else if(index===1 && !calendar) calendarRequested()
     else if(index===0 && (calendar || weather)) inboxRequested()
+    scheduleSync()
   }
-  onCalendarChanged: syncPage()
-  onWeatherChanged: syncPage()
-  onLastPageChanged: if(ready) {if(weather && lastPage<2) inboxRequested();else syncPage()}
-  Component.onCompleted: { ready = true; syncPage() }
+  onCalendarChanged: scheduleSync()
+  onWeatherChanged: scheduleSync()
+  onWidthChanged: scheduleSync()
+  onHeightChanged: scheduleSync()
+  onLastPageChanged: if(ready) {if(weather && lastPage<2) inboxRequested();else scheduleSync()}
+  Component.onCompleted: { ready = true; scheduleSync() }
 
   RowLayout {
     id: tabs
@@ -110,12 +147,10 @@ Item {
     x: 0; y: root.contentTop
     width: parent.width; height: Math.max(0,parent.height-y)
     interactive: root.expanded || root.hovering
-    onCurrentIndexChanged: {
-      if(!root.ready) return
-      if(currentIndex>root.lastPage) { setCurrentIndex(root.lastPage); return }
-      root.requestPage(currentIndex)
-    }
-    Binding { target: pager.contentItem; property: "highlightMoveDuration"; value: Style.duration(230) }
+    // Native flicking owns gestures; explicit navigation owns the settled
+    // position. Do not let ListView's highlight fight the page transition.
+    Binding { target: pager.contentItem; property: "highlightRangeMode"; value: ListView.NoHighlightRange }
+    Binding { target: pager.contentItem; property: "highlightFollowsCurrentItem"; value: false }
     IslandContent {
       id: inbox
       service: root.service; strings: root.strings; bar: root.bar
@@ -145,6 +180,13 @@ Item {
       radialBraille: root.radialBraille
       onBackRequested: root.inboxRequested()
     }
+  }
+  NumberAnimation { id: pageMotion; target: pager.contentItem; property: "contentX"; duration: Style.duration(230); easing.type: Easing.OutCubic }
+  Connections {
+    target: pager.contentItem
+    function onDraggingChanged() {if(pager.contentItem.dragging) {root.gesturing=true;pageMotion.stop()}}
+    function onMovementEnded() {root.finishGesture()}
+    function onContentWidthChanged() {root.scheduleSync()}
   }
   // Wheel-only overlay: horizontal events reach us before child Flickables;
   // pointer presses and vertical scrolling continue to the page underneath.

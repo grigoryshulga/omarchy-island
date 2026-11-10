@@ -127,8 +127,8 @@ BarWidget {
     ArtworkBackground {
       objectName: "islandPopupArtwork"
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-      anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: previewContent.contentTop>0 ? previewContent.contentTop : -preview.padding
-      height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 250 : 145))
+      anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
+      height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 250 : 145)+previewContent.contentTop)
       reveal: 1-previewContent.pageProgress
       visible: reveal>0 && (root.pinned || root.hoverOpen || root.alertKind === "media")
       service: root.service

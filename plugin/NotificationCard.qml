@@ -17,6 +17,7 @@ Rectangle {
   property bool radialBraille: true
   property bool grouped: false
   property bool compact: false
+  property bool individualDismiss: true
   property var feedback: brailleFeedback
   property string copied: ""
   signal expandRequested()
@@ -55,7 +56,7 @@ Rectangle {
       Layout.fillWidth: true
       PlainText { Layout.fillWidth: true; text: root.row.summary; font.pixelSize: root.compact ? Style.font.bodySmall : Style.font.body; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 8 : 1; elide: Text.ElideRight }
       PlainText { visible: root.grouped && !root.compact; text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
     }
     PlainText { Layout.fillWidth: true; visible: text !== ""; text: Model.plain(root.row.body); font.pixelSize: Style.font.caption; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
     Item {

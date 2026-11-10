@@ -43,7 +43,7 @@ Item {
       ColumnLayout {
         Layout.fillWidth: true
         spacing: Style.space(4)
-        PlainText { Layout.fillWidth: true; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); font.pixelSize: Style.font.title }
+        PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); font.pixelSize: Math.round(Style.font.title*1.25) }
         PlainText { Layout.fillWidth: true; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Commons.Color.accent : Commons.Color.muted; font.pixelSize: Style.font.bodySmall }
         PlainText { Layout.fillWidth: true; visible: root.expanded && root.player !== null; text: root.player ? root.player.identity : ""; font.pixelSize: Style.font.caption; color: Commons.Color.accent }
       }

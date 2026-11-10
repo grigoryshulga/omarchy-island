@@ -18,6 +18,10 @@ Rectangle {
   property int limit: 3
   readonly property var feedback: brailleFeedback
   signal expandRequested()
+  function dismissGroup() {
+    var backend=service,keys=group.rows.map(function(row){return row.key})
+    keys.forEach(function(key){backend.remove(key)})
+  }
   objectName: "notificationGroup-" + group.source
   color: compact ? "transparent" : Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
   border.width: compact ? 0 : Math.max(1,Style.space(1))
@@ -55,6 +59,18 @@ Rectangle {
         onClicked: root.service.mute(root.group.source)
         Behavior on opacity { NumberAnimation { duration: Style.duration(120) } }
       }
+      ActionButton {
+        objectName: "groupDismiss"
+        feedback: root.feedback
+        visible: !root.compact
+        opacity: hover.hovered ? 1 : 0
+        enabled: hover.hovered
+        iconText: "󰅖"
+        tooltipText: root.strings.t("deleteGroup")
+        horizontalPadding: Style.space(5); verticalPadding: Style.space(2)
+        onClicked: root.dismissGroup()
+        Behavior on opacity { NumberAnimation { duration: Style.duration(120) } }
+      }
     }
     Repeater {
       model: root.group.rows
@@ -74,6 +90,7 @@ Rectangle {
           expanded: root.expanded
           grouped: true
           compact: root.compact
+          individualDismiss: root.group.total>1
           radialBraille: root.radialBraille
           feedback: root.feedback
           onExpandRequested: root.expandRequested()

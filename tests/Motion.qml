@@ -111,6 +111,7 @@ ShellRoot {
         var tabs=test.findChild(widget,"islandTabs"), player=test.findChild(widget,"islandMediaPlayer")
         if(!tabs.visible || player.mapToItem(tabs.parent,0,0).y<tabs.y+tabs.height || popup.frameSuppressed) { console.log("ISLAND_MOTION_FAIL: tabs are not above music or persistent frame is missing");widget.close();Qt.quit();return }
         var artwork = test.findChild(widget,"islandPopupArtwork")
+        if(artwork.mapToItem(tabs.parent,0,0).y>tabs.y || artwork.height<tabs.height+player.height) { console.log("ISLAND_MOTION_FAIL: music backdrop does not extend behind tabs");widget.close();Qt.quit();return }
         if(!service.playing && (artwork.opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01)) {
           console.log("ISLAND_MOTION_FAIL: music backdrop visible while playback is paused",artwork.opacity)
           widget.close(); Qt.quit(); return
@@ -130,11 +131,11 @@ ShellRoot {
         test.findChild(widget,"islandTabOverview").clicked()
       }
       if(tick===106) {
-        if(widget.calendarMode || !widget.pinned) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }
+        if(widget.calendarMode || !widget.pinned || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }
         test.findChild(widget,"calendarOpen").clicked()
       }
       if(tick===122) {
-        if(!widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: calendar glyph did not switch page"); widget.close(); Qt.quit(); return }
+        if(!widget.calendarMode || Math.abs(test.findChild(widget,"islandCalendar").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar glyph did not switch visible page"); widget.close(); Qt.quit(); return }
         test.findChild(widget,"islandClock").triggerPress(Qt.MiddleButton)
       }
       if(tick===140) {
@@ -169,7 +170,21 @@ ShellRoot {
         console.log("CALENDAR_ROUTING_PASS")
         console.log("MUSIC_BACKDROP_PASS")
         console.log("TOP_TABS_AND_TRANSPARENT_TOAST_PASS")
-        widget.close(); Qt.quit()
+        widget.close(); widget.contentExpanded=false; widget.hoverOpen=true
+      }
+      if(tick===280) {
+        var pager=test.findChild(widget,"islandPageSwipe")
+        test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
+      }
+      if(tick===310) {
+        var pager=test.findChild(widget,"islandPageSwipe")
+        if(!widget.calendarMode || Math.abs(test.findChild(widget,"islandCalendar").mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: hover-to-pinned wheel resized without moving calendar contents");widget.close();Qt.quit();return}
+        test.mouseWheel(pager,pager.width/2,pager.height/2,120,0,Qt.NoButton)
+      }
+      if(tick===340) {
+        if(widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: wheel did not return visible overview");widget.close();Qt.quit();return}
+        console.log("RESIZING_PAGE_WHEEL_PASS")
+        widget.close();Qt.quit()
       }
     }
   }
