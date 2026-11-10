@@ -306,15 +306,19 @@ ShellRoot {
       service.historyEntries=[{key:"old",app:"Archive",summary:"Old notification",body:"old",ts:1}]
       wait(30)
       check(composed.rows.length===0,"history leaked into active notifications")
+      check(findChild(composed,"notificationsEmpty").visible,"empty notifications did not show clapping hands")
       mouseClick(findChild(composed,"notificationsHistory"));wait(30)
       check(composed.historyOpen && composed.rows.length===1,"history toggle did not reveal archived notifications")
       check(findChild(composed,"notification-old")!==null,"archived notification did not render")
+      check(!findChild(composed,"notificationsEmpty").visible,"clapping hands remained above archived notifications")
       service.allEntries=[{key:"unread",app:"Current",summary:"Unread",body:"",ts:2}]
       mouseClick(findChild(composed,"notificationsClear"));wait(30)
       check(service.allEntries.length===1,"history clear removed active notifications")
       check(composed.rows.length===0,"history did not clear")
+      check(findChild(composed,"notificationsEmpty").visible,"empty history did not show clapping hands")
       composed.expanded=false;composed.hovering=true;wait(30)
       check(!composed.historyOpen && composed.rows.length===1 && composed.rows[0].key==="unread","hover preview retained the history view")
+      check(!findChild(composed,"notificationsEmpty").visible,"clapping hands remained above active notifications")
       console.log("NOTIFICATION_HISTORY_UI_PASS")
       calendarWin.visible=true
       calendar.today=new Date(2024,1,29,12)

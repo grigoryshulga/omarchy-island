@@ -138,7 +138,27 @@ Item {
           service:root.service;strings:root.strings;expanded:root.expanded
         }
       }
-      PlainText { width: parent.width; visible: root.rows.length === 0 && root.downloads.length === 0 && !(root.service && root.service.latest && root.service.latest.downloadPath && !root.expanded && !root.hovering); text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty"); color: Commons.Color.muted; horizontalAlignment: Text.AlignHCenter; height: visible ? Style.space(48) : 0; verticalAlignment: Text.AlignVCenter }
+      Column {
+        objectName: "notificationsEmpty"
+        width: parent.width
+        visible: root.rows.length === 0 && root.downloads.length === 0 && !(root.service && root.service.latest && root.service.latest.downloadPath && !root.expanded && !root.hovering)
+        spacing: Style.space(4)
+        BrailleClap {
+          objectName: "notificationsEmptyClap"
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: Math.min(parent.width,Style.space(220))
+          height: Style.space(150)
+          active: root.overviewActive && root.visible && (root.expanded || root.hovering)
+        }
+        PlainText {
+          width: parent.width
+          text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty")
+          color: Commons.Color.muted
+          horizontalAlignment: Text.AlignHCenter
+          height: Style.space(32)
+          verticalAlignment: Text.AlignVCenter
+        }
+      }
     }
   }
   Flow {

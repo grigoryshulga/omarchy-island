@@ -21,6 +21,7 @@ ShellRoot {
     implicitWidth: 320; implicitHeight: 200
     Island.ArtworkBackground { id: artwork; anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top;height:160; service: service }
     Island.BrailleGauge {id:gauge;anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom;height:24;value:0.2}
+    Island.BrailleClap {id:clap;anchors.centerIn:parent;width:220;height:150;visible:false;active:false}
     Item {
       id:dissolveProbe
       visible:false
@@ -96,6 +97,23 @@ ShellRoot {
       check(crisp.equals(grabImage(dissolveProbe)),"releasing the dissolve shader changed the settled text")
       console.log("DISSOLVE_FRAMES_PASS")
       console.log("GAUGE_FRAMES_PASS")
+      dissolveProbe.visible=false;clap.visible=true
+      Commons.Style.reduceMotion=false
+      clap.phase=0;wait(60)
+      var openHands=grabImage(clap)
+      clap.phase=0.25;wait(60)
+      check(!openHands.equals(grabImage(clap)),"clapping hands did not move")
+      Commons.Style.reduceMotion=true;wait(60)
+      var stillHands=grabImage(clap)
+      clap.phase=0.6;wait(60)
+      check(stillHands.equals(grabImage(clap)),"clapping hands ignore reduced motion")
+      Commons.Style.reduceMotion=false
+      clap.active=true;wait(120)
+      check(clap.phase!==0.6,"clapping animation did not start")
+      clap.active=false;wait(60)
+      var pausedPhase=clap.phase;wait(100)
+      check(clap.phase===pausedPhase,"hidden overview kept clapping")
+      console.log("CLAP_FRAMES_PASS")
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()
     }
