@@ -11,6 +11,7 @@ Item {
   property var weather: null
   property bool active: true
   property bool radialBraille: true
+  property bool showBack: true
   property bool editing: false
   readonly property var report: weather ? weather.report : null
   readonly property var current: report ? report.current : null
@@ -32,7 +33,7 @@ Item {
     RowLayout {
       Layout.fillWidth: true
       spacing: Style.space(4)
-      FeedbackButton { objectName: "weatherBack"; feedback: weatherFeedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: root.backRequested() }
+      FeedbackButton { objectName: "weatherBack"; visible: root.showBack; feedback: weatherFeedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: root.backRequested() }
       FeedbackButton {
         objectName: "weatherLocation"
         feedback: weatherFeedback

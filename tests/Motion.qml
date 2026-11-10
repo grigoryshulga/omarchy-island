@@ -100,11 +100,16 @@ ShellRoot {
       if (!popup) return
       tick++
       if(tick === 10) { service.latest=service.allEntries[0]; service.arrivalChanged() }
+      if(tick===30) {
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0 || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast retained a background or navigation");widget.close();Qt.quit();return }
+      }
       if(tick === 40) widget.open()
       if(tick >= 10 && tick < 70 && popup.backingWindowVisible && (popup.shown === undefined || popup.shown > 0.01)) sizes.push(popup.width+"x"+popup.height)
       if(tick >= 10 && tick < 36 && popup.shown > 0.01) entrance.push({w:popup.drawnWidth,h:popup.drawnHeight,target:popup.contentWidth})
       if(popup.open && popup.shown > 0.01 && popup.cardOrigin !== undefined && Math.abs(popup.cardOrigin.x+popup.drawnWidth/2-popup.screen.width/2)>1) offCenter++
       if(tick === 70) {
+        var tabs=test.findChild(widget,"islandTabs"), player=test.findChild(widget,"islandMediaPlayer")
+        if(!tabs.visible || player.mapToItem(tabs.parent,0,0).y<tabs.y+tabs.height || popup.frameSuppressed) { console.log("ISLAND_MOTION_FAIL: tabs are not above music or persistent frame is missing");widget.close();Qt.quit();return }
         var artwork = test.findChild(widget,"islandPopupArtwork")
         if(!service.playing && (artwork.opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01)) {
           console.log("ISLAND_MOTION_FAIL: music backdrop visible while playback is paused",artwork.opacity)
@@ -122,7 +127,7 @@ ShellRoot {
       if(tick===72) test.mouseClick(test.findChild(popup,"islandOutside"),popup.width/2,13,Qt.MiddleButton)
       if(tick===90) {
         if(!widget.pinned || !widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: middle click did not open calendar"); widget.close(); Qt.quit(); return }
-        test.findChild(widget,"calendarBack").clicked()
+        test.findChild(widget,"islandTabOverview").clicked()
       }
       if(tick===106) {
         if(widget.calendarMode || !widget.pinned) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }
@@ -152,9 +157,18 @@ ShellRoot {
       }
       if(tick===225) {
         if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: disconnected player left its backdrop"); widget.close(); Qt.quit(); return }
+        widget.close(); service.latest=service.allEntries[1]; service.arrivalChanged()
+      }
+      if(tick===255) {
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0) { console.log("ISLAND_MOTION_FAIL: incoming toast is not transparent");widget.close();Qt.quit();return }
+        widget.close()
+      }
+      if(tick===260) {
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0) { console.log("ISLAND_MOTION_FAIL: background flashed while closing toast");widget.close();Qt.quit();return }
         console.log("ISLAND_MOTION_PASS")
         console.log("CALENDAR_ROUTING_PASS")
         console.log("MUSIC_BACKDROP_PASS")
+        console.log("TOP_TABS_AND_TRANSPARENT_TOAST_PASS")
         widget.close(); Qt.quit()
       }
     }

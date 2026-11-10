@@ -16,6 +16,7 @@ Item {
   property bool hovering: false
   property string alertKind: ""
   property var weather: null
+  property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   signal expandRequested()
   signal calendarRequested()
   signal weatherRequested()
@@ -29,7 +30,7 @@ Item {
   ColumnLayout {
     id: body
     width: parent.width
-    spacing: Style.space(12)
+    spacing: Style.space(root.compactNotifications ? 4 : 12)
   MediaCard {
     objectName: "islandMediaPlayer"
     Layout.fillWidth: true
@@ -44,11 +45,9 @@ Item {
   PanelSeparator { objectName: "islandMediaSeparator"; Layout.fillWidth: true; visible: root.showPlayer && (root.expanded || root.hovering) }
   RowLayout {
     Layout.fillWidth: true
-    visible: root.expanded || root.hovering || root.alertKind === "notification"
+    visible: !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
     Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-    WeatherChip { objectName: "weatherOpen"; visible: (root.expanded || root.hovering) && root.weather!==null && root.weather.allowed; weather: root.weather; strings: root.strings; onClicked: root.weatherRequested() }
-    Button { objectName: "calendarOpen"; radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded || root.hovering; iconText: "󰃭"; tooltipText: root.strings.t("calendar.open"); focusable: true; onClicked: root.calendarRequested() }
     Button { radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded; text: root.service && root.service.doNotDisturb ? "󰂛" : "󰂚"; selected: root.service && root.service.doNotDisturb; tooltipText: root.strings.t("dnd"); focusable: true; verticalPadding: 0; onClicked: root.service.setDoNotDisturb(!root.service.doNotDisturb) }
     Button { radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded && root.rows.length > 0; text: root.strings.t("clear"); focusable: true; verticalPadding: 0; onClicked: root.service.clear() }
   }
@@ -56,14 +55,14 @@ Item {
     id: scroll
     visible: root.expanded || root.hovering || root.alertKind === "notification"
     Layout.fillWidth: true
-    Layout.preferredHeight: Math.min(cards.implicitHeight,Style.space(root.expanded ? 360 : 330))
+    Layout.preferredHeight: Math.min(cards.implicitHeight,Style.space(root.compactNotifications ? 96 : root.expanded ? 360 : 330))
     clip: true
     contentWidth: availableWidth
     Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
     Column {
       id: cards
       width: scroll.availableWidth
-      spacing: Style.space(8)
+      spacing: Style.space(root.compactNotifications ? 4 : 8)
       Repeater {
         model: Model.previewGroups(root.displayedRows,100)
         NotificationGroup {
@@ -74,6 +73,8 @@ Item {
           service: root.service
           radialBraille: root.radialBraille
           expanded: root.expanded
+          compact: root.compactNotifications
+          overflow: root.compactNotifications ? Math.max(0,(root.service && ("entries" in root.service) ? root.service.entries.length : root.rows.length)-1) : 0
           limit: root.expanded ? 100 : root.hovering ? 3 : 1
           visible: group.positions[0] < limit
           onExpandRequested: root.expandRequested()
@@ -91,16 +92,6 @@ Item {
       PlainText { width: parent.width; visible: root.rows.length === 0; text: root.strings.t("empty"); color: Commons.Color.muted; horizontalAlignment: Text.AlignHCenter; height: visible ? Style.space(48) : 0; verticalAlignment: Text.AlignVCenter }
     }
   }
-  // The folded cards hint at the depth of the stack without moving its front.
-  Column {
-    visible: !root.expanded && !root.hovering && root.rows.length > 1 && root.alertKind === "notification"
-    Layout.fillWidth: true
-    spacing: Style.space(3)
-    Repeater {
-      model: Math.max(0,Math.min(2,root.rows.length-1))
-      Rectangle { required property int index; width: parent.width - Style.space(12)*(index+1); anchors.horizontalCenter: parent.horizontalCenter; height: Style.space(4); color: Commons.Color.accent; opacity: 0.22-index*0.07; radius: Style.cornerRadius }
-    }
-  }
   Flow {
     visible: root.expanded && root.service && root.service.mutedSources.length > 0
     Layout.fillWidth: true
@@ -110,6 +101,6 @@ Item {
       Button { radius: Math.min(Style.cornerRadius,Style.space(6)); required property string modelData; text: "󰂛 " + modelData.replace(/[<>]/g,"") + " ×"; focusable: true; onClicked: root.service.mute(modelData) }
     }
   }
-  PlainText { Layout.fillWidth: true; visible: root.service && root.service.error !== ""; text: root.strings.t("error").arg(root.service ? root.service.error : ""); color: Commons.Color.urgent; wrapMode: Text.Wrap }
+  PlainText { Layout.fillWidth: true; visible: !root.compactNotifications && root.service && root.service.error !== ""; text: root.strings.t("error").arg(root.service ? root.service.error : ""); color: Commons.Color.urgent; wrapMode: Text.Wrap }
   }
 }

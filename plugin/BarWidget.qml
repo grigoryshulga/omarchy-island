@@ -21,6 +21,7 @@ BarWidget {
   readonly property string screenName: root.QsWindow.window && root.QsWindow.window.screen ? root.QsWindow.window.screen.name : ""
   readonly property bool alertOnScreen: !service || !service.targetScreen || service.targetScreen === screenName
   readonly property bool showAlert: alertKind !== "" && alertOnScreen
+  readonly property bool notificationToast: alertKind==="notification" && !pinned && !hoverOpen
   readonly property string clockText: now.toLocaleString(Qt.locale(Commons.I18n.formatLocale), setting("format", "dddd HH:mm"))
   readonly property string barText: showAlert && service ? (alertKind === "notification" && service.latest ? "󰂚  " + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
@@ -119,13 +120,14 @@ BarWidget {
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: true
     open: root.pinned || root.hoverOpen || root.showAlert
+    frameless: root.notificationToast
     onVisibleChanged: if (!visible) { root.contentExpanded = false; root.calendarMode = false; root.weatherMode = false }
-    contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.hoverOpen ? 420 : 370))
+    contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.hoverOpen ? 420 : root.notificationToast ? 300 : 370))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
     ArtworkBackground {
       objectName: "islandPopupArtwork"
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-      anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
+      anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: previewContent.contentTop>0 ? previewContent.contentTop : -preview.padding
       height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 250 : 145))
       reveal: 1-previewContent.pageProgress
       visible: reveal>0 && (root.pinned || root.hoverOpen || root.alertKind === "media")
@@ -135,6 +137,7 @@ BarWidget {
       id: previewContent
       calendar: root.calendarMode
       weather: root.weatherMode
+      compactNotifications: preview.frameSuppressed && !root.pinned && !root.hoverOpen
       radialBraille: root.setting("radialBraille",true)
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       service: root.service; strings: strings; bar: root.bar

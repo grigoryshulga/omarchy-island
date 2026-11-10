@@ -1,7 +1,9 @@
 import QtQuick
+import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
+import qs.Ui
 
 Item {
   id: root
@@ -13,6 +15,7 @@ Item {
   property string alertKind: ""
   property bool calendar: false
   property bool weather: false
+  property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   readonly property var weatherData: service && ("weather" in service) ? service.weather : null
   readonly property int lastPage: weatherData && weatherData.allowed ? 2 : 1
   property bool radialBraille: true
@@ -25,7 +28,8 @@ Item {
   signal weatherRequested()
   signal inboxRequested()
   readonly property real pageProgress: pager.width>0 ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.contentItem.originX)/pager.width))) : (calendar ? 1 : 0)
-  implicitHeight: weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight
+  readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(8) : 0
+  implicitHeight: contentTop+(weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
   function handleCalendarKey(event) { return calendarPage.handleKey(event) }
@@ -63,10 +67,48 @@ Item {
   onLastPageChanged: if(ready) {if(weather && lastPage<2) inboxRequested();else syncPage()}
   Component.onCompleted: { ready = true; syncPage() }
 
+  RowLayout {
+    id: tabs
+    objectName: "islandTabs"
+    anchors.left: parent.left; anchors.right: parent.right
+    visible: root.expanded || root.hovering
+    spacing: Style.space(4)
+    Button {
+      objectName: "islandTabOverview"
+      Layout.fillWidth: true
+      text: root.strings.t("tabs.overview")
+      selected: !root.calendar && !root.weather
+      fontSize: Style.font.bodySmall
+      radius: Math.min(Style.cornerRadius,Style.space(6))
+      focusable: true
+      onClicked: root.requestPage(0)
+    }
+    Button {
+      objectName: "calendarOpen"
+      Layout.fillWidth: true
+      text: root.strings.t("calendar.open")
+      selected: root.calendar
+      fontSize: Style.font.bodySmall
+      radius: Math.min(Style.cornerRadius,Style.space(6))
+      focusable: true
+      onClicked: root.requestPage(1)
+    }
+    WeatherChip {
+      objectName: "weatherOpen"
+      Layout.fillWidth: true
+      visible: root.lastPage===2
+      showLabel: true
+      weather: root.weatherData
+      strings: root.strings
+      selected: root.weather
+      onClicked: root.requestPage(2)
+    }
+  }
   Controls.SwipeView {
     id: pager
     objectName: "islandPageSwipe"
-    anchors.fill: parent
+    x: 0; y: root.contentTop
+    width: parent.width; height: Math.max(0,parent.height-y)
     interactive: root.expanded || root.hovering
     onCurrentIndexChanged: {
       if(!root.ready) return
@@ -78,6 +120,7 @@ Item {
       id: inbox
       service: root.service; strings: root.strings; bar: root.bar
       expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
+      compactNotifications: root.compactNotifications
       weather: root.weatherData
       radialBraille: root.radialBraille
       onExpandRequested: root.expandRequested()
@@ -88,6 +131,7 @@ Item {
       id: calendarPage
       objectName: "islandCalendar"
       strings: root.strings
+      showBack: false
       radialBraille: root.radialBraille
       onBackRequested: root.inboxRequested()
     }
@@ -95,6 +139,7 @@ Item {
       id: weatherPage
       objectName: "islandWeather"
       strings: root.strings
+      showBack: false
       weather: root.weatherData
       active: root.weather && (root.expanded || root.hovering)
       radialBraille: root.radialBraille

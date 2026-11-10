@@ -190,6 +190,15 @@ ShellRoot {
       mouseClick(first,first.width*0.4,first.height*0.25)
       check(service.activateCalls===1,"notification click did not open app")
       if(!Commons.Style.reduceMotion) check(findChild(group,"groupSpotlight").rippling,"notification click did not reach the group ripple")
+      var expandedHeight=composed.implicitHeight
+      service.latest=service.allEntries[0]
+      composed.expanded=false;composed.hovering=false;composed.alertKind="notification"
+      wait(80)
+      var toast=findChild(composed,"notificationGroup-Test")
+      check(toast.compact && toast.color.a===0 && toast.border.width===0,"toast retained a card background")
+      check(composed.implicitHeight<expandedHeight,"toast did not compact the notification")
+      composed.hovering=true;composed.alertKind=""
+      wait(20)
       var panelPlayer=findChild(composed,"islandMediaPlayer")
       var separator=findChild(composed,"islandMediaSeparator")
       p.isPlaying=false; p.playbackState=MprisPlaybackState.Paused
@@ -268,7 +277,7 @@ ShellRoot {
       check(fakeWeather.searched==="Paris","weather city search did not run")
       mouseClick(findChild(weatherView,"weatherAuto"))
       check(fakeWeather.autoCalls===1,"weather auto-location control failed")
-      mouseClick(findChild(weatherView,"weatherBack"))
+      mouseClick(findChild(pages,"islandTabOverview"))
       wait(350)
       check(!pages.weather && !pages.calendar,"weather back did not return to inbox")
       mouseWheel(pager,pager.width/2,pager.height/2,0,-120,Qt.NoButton,Qt.ShiftModifier)

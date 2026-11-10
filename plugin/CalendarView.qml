@@ -9,6 +9,7 @@ Item {
   id: root
   required property var strings
   property bool radialBraille: true
+  property bool showBack: true
   property date today: new Date()
   property int viewYear: today.getFullYear()
   property int viewMonth: today.getMonth()
@@ -74,7 +75,7 @@ Item {
     RowLayout {
       Layout.fillWidth: true
       spacing: Style.space(4)
-      Button { id: backButton; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(backButton); root.backRequested() } }
+      Button { id: backButton; visible: root.showBack; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(backButton); root.backRequested() } }
       PlainText { objectName: "calendarMonth"; Layout.fillWidth: true; text: root.monthTitle; font.pixelSize: Style.font.title; font.bold: true }
       Button { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
       Button { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
