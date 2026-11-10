@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 project=$(cd -- "$(dirname -- "$0")/.." && pwd)
+if [[ -d $HOME/.config/omarchy/plugins/gshulga.island/.git ]]; then
+  echo "Island is managed by Omarchy. Use: omarchy plugin update gshulga.island" >&2
+  exit 1
+fi
 for dependency in python3 omarchy omarchy-shell qs wl-copy wl-paste parec; do
   if ! command -v "$dependency" >/dev/null 2>&1; then
     echo "Missing dependency: $dependency. See README.md for requirements." >&2
