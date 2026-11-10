@@ -46,7 +46,9 @@ Item {
   readonly property bool playing: player !== null && player.isPlaying
   readonly property bool hasMedia: Model.hasMedia(player,MprisPlaybackState.Stopped)
   readonly property string track: player ? player.dbusName + ":" + player.trackTitle + ":" + player.trackArtist : ""
-  readonly property var allEntries: Model.collect(entries, history)
+  readonly property var activeEntries: Model.collect(entries, [])
+  readonly property var historyEntries: Model.collect([], history)
+  readonly property var allEntries: activeEntries.concat(historyEntries)
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/island"
 
   // One phase keeps the clock and popup on the same braille shimmer frame.
@@ -93,8 +95,10 @@ Item {
     row.duration = n.expireTimeout === 0 ? 0 : n.expireTimeout > 0 ? Math.min(n.expireTimeout,300000) : 300000
     // Keep a finite live set, even if a sender never closes its notifications.
     var rest = entries.filter(function(r) { return r.key !== key })
-    if (rest.length >= 99) archive(rest.pop().key, "expired")
+    history = history.filter(function(r) { return r.key !== key })
     entries = [row].concat(rest)
+    if (entries.length > Store.LIVE_LIMIT) archive(entries[entries.length-1].key, "expired")
+    pruneHistory()
     if (mutedSources.indexOf(Model.source(row)) < 0 && !doNotDisturb) {
       targetScreen = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
       latest = row
@@ -103,11 +107,12 @@ Item {
     saveSoon.restart()
   }
   function watch(n, key) {
-    n.closed.connect(function() {
+    n.closed.connect(function(reason) {
       if (root.refs[key] !== n) return
       delete root.refs[key]
       root.revision++
-      root.archive(key, "closed")
+      if (reason === NotificationCloseReason.CloseRequested) root.remove(key)
+      else root.archive(key, reason === NotificationCloseReason.Expired ? "expired" : "dismissed")
     })
     var queued = false
     var refresh = function() {
@@ -117,27 +122,54 @@ Item {
     var schedule = function() { if (!queued) { queued = true; Qt.callLater(refresh) } }
     ;[n.summaryChanged,n.bodyChanged,n.appNameChanged,n.appIconChanged,n.imageChanged,n.urgencyChanged,n.expireTimeoutChanged,n.hintsChanged,n.actionsChanged].forEach(function(s) { s.connect(schedule) })
   }
+  // Keep timed-out objects tracked: senders can still withdraw their history
+  // entries after a chat is read. Bound those references to retained history.
+  function pruneHistory() {
+    history = Store.retain(history, Date.now()/1000)
+    var kept = {}
+    entries.concat(history).forEach(function(r) { kept[r.key] = true })
+    Object.keys(refs).forEach(function(key) {
+      if (kept[key]) return
+      var n = refs[key]
+      delete refs[key]
+      revision++
+      try { n.expire() } catch(e) {}
+    })
+  }
   function archive(key, reason) {
-    var row = entries.find(function(r) { return r.key === key })
+    var row = entries.find(function(r) { return r.key === key }) || history.find(function(r) { return r.key === key })
     if (!row) return
+    var n = refs[key]
+    entries = entries.filter(function(r) { return r.key !== key })
+    history = history.filter(function(r) { return r.key !== key })
+    if (!row.transient)
+      history = Store.addHistory(history, Store.closedEntry(row, reason, Date.now()/1000), Date.now()/1000)
+    if (latest && latest.key === key) latest = null
+    if (reason !== "expired" || row.transient) {
+      delete refs[key]
+      revision++
+      if (n) { try { reason === "expired" ? n.expire() : n.dismiss() } catch(e) {} }
+    }
+    pruneHistory()
+    saveSoon.restart()
+  }
+  function remove(key) {
     var n = refs[key]
     delete refs[key]
     revision++
     entries = entries.filter(function(r) { return r.key !== key })
-    history = Store.addHistory(history.filter(function(r) { return r.key !== key }), Store.closedEntry(row, reason, Date.now()/1000), Date.now()/1000)
-    if (n) { try { reason === "expired" ? n.expire() : n.dismiss() } catch(e) {} }
-    saveSoon.restart()
-  }
-  function remove(key) {
-    archive(key, "dismissed")
     history = history.filter(function(r) { return r.key !== key })
     if (latest && latest.key === key) latest = null
+    if (n) { try { n.dismiss() } catch(e) {} }
     saveSoon.restart()
   }
   function clear() {
     entries.slice().forEach(function(r) { root.archive(r.key, "dismissed") })
-    history = []; latest = null
+    latest = null
     saveSoon.restart()
+  }
+  function clearHistory() {
+    history.slice().forEach(function(r) { root.remove(r.key) })
   }
   function mute(source) {
     mutedSources = mutedSources.indexOf(source) < 0 ? mutedSources.concat([source]) : mutedSources.filter(function(s) { return s !== source })
@@ -189,7 +221,8 @@ Item {
   function save() {
     if (!loaded) return
     var cutoff = Date.now()/1000 - Store.RETENTION_HOURS*3600
-    var rows = allEntries.filter(function(r) { return r.ts > cutoff }).map(function(r) { return Store.closedEntry(r,"history",r.closed_ts || r.ts) })
+    var rows = allEntries.filter(function(r) { return !r.transient && r.ts > cutoff }).map(function(r) { return Store.closedEntry(r,r.closed_reason || "restart",r.closed_ts || r.ts) })
+    rows = Store.retain(rows.sort(function(a,b) { return b.closed_ts-a.closed_ts }), Date.now()/1000)
     stateFile.setText(JSON.stringify({version:1, history:rows, muted:mutedSources, dnd:doNotDisturb}))
   }
   function load(text) {
@@ -213,7 +246,7 @@ Item {
     persistenceSupported: true
     onNotification: n => root.receive(n)
   }
-  // Expiry closes the sender but retains a redacted history snapshot.
+  // Presentation expiry archives the card without invalidating the sender ID.
   Timer {
     interval: 1000; repeat: true; running: root.entries.length > 0
     onTriggered: {
@@ -224,6 +257,7 @@ Item {
       })
     }
   }
+  Timer { interval: 60000; repeat: true; running: root.history.length > 0; onTriggered: root.pruneHistory() }
   Process { id: clip; onExited: function(code) { if (code !== 0) root.error = "clipboard" } }
   Timer { id: secretLife; interval: 60000; onTriggered: clipReader.running = true }
   Process {
@@ -263,6 +297,7 @@ Item {
     function remove(key: string): void { root.remove(key) }
     function count(): string { return String(root.entries.length) }
     function dismissAll(): string { root.clear(); return "ok" }
+    function clearHistory(): string { root.clearHistory(); return "ok" }
     function dismissOne(): string { if (root.entries[0]) root.remove(root.entries[0].key); return "ok" }
     function invokeLast(): string { if (root.entries[0]) root.activate(root.entries[0]); return "ok" }
     function act(): string { return invokeLast() }

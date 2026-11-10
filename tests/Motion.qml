@@ -36,6 +36,8 @@ ShellRoot {
     property real audioBass: 0
     property real audioTreble: 0
     signal arrivalChanged()
+    readonly property var activeEntries: allEntries
+    property var historyEntries: []
     property var allEntries: [{key:"n1",app:"Test",summary:"One",body:"one",ts:1},{key:"n2",app:"Test",summary:"Two",body:"two",ts:2},{key:"n3",app:"Test",summary:"Three",body:"three",ts:3},{key:"n4",app:"Test",summary:"Four",body:"four",ts:4}]
     property string error: ""
     property bool doNotDisturb: false

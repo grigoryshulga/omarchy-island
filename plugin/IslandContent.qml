@@ -25,7 +25,9 @@ Item {
   signal weatherRequested()
   signal closeRequested()
   readonly property bool showPlayer: service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
-  readonly property var rows: service ? service.allEntries : []
+  property bool historyOpen: false
+  onExpandedChanged: if (!expanded) historyOpen = false
+  readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
   readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
   readonly property var displayedRows: !expanded && !hovering && service && service.latest ? [service.latest] : rows
   implicitHeight: body.implicitHeight
@@ -60,11 +62,30 @@ Item {
   }
   RowLayout {
     Layout.fillWidth: true
+    visible: root.expanded
+    Button {
+      objectName: "notificationsActive"
+      text: root.strings.t("notifications.active")
+      selected: !root.historyOpen
+      focusable: true
+      onClicked: root.historyOpen = false
+    }
+    Button {
+      objectName: "notificationsHistory"
+      text: root.strings.t("notifications.history")
+      selected: root.historyOpen
+      focusable: true
+      onClicked: root.historyOpen = true
+    }
+    Item { Layout.fillWidth: true }
+  }
+  RowLayout {
+    Layout.fillWidth: true
     visible: !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
     Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
     Button { radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded; text: root.service && root.service.doNotDisturb ? "󰂛" : "󰂚"; selected: root.service && root.service.doNotDisturb; tooltipText: root.strings.t("dnd"); focusable: true; verticalPadding: 0; onClicked: root.service.setDoNotDisturb(!root.service.doNotDisturb) }
-    Button { radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded && root.rows.length > 0; text: root.strings.t("clear"); focusable: true; verticalPadding: 0; onClicked: root.service.clear() }
+    Button { objectName: "notificationsClear"; radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded && root.rows.length > 0; text: root.strings.t("clear"); focusable: true; verticalPadding: 0; onClicked: root.historyOpen ? root.service.clearHistory() : root.service.clear() }
   }
   Controls.ScrollView {
     id: scroll
@@ -104,7 +125,7 @@ Item {
         topPadding: Style.space(4)
         bottomPadding: Style.space(4)
       }
-      PlainText { width: parent.width; visible: root.rows.length === 0; text: root.strings.t("empty"); color: Commons.Color.muted; horizontalAlignment: Text.AlignHCenter; height: visible ? Style.space(48) : 0; verticalAlignment: Text.AlignVCenter }
+      PlainText { width: parent.width; visible: root.rows.length === 0; text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty"); color: Commons.Color.muted; horizontalAlignment: Text.AlignHCenter; height: visible ? Style.space(48) : 0; verticalAlignment: Text.AlignVCenter }
     }
   }
   Flow {

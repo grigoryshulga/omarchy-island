@@ -18,6 +18,9 @@
     "one": "%1 notification",
     "other": "%1 notifications"
   },
+  "notifications.active": "Notifications",
+  "notifications.history": "History",
+  "notifications.historyEmpty": "History is empty",
   "dnd": "Do Not Disturb",
   "clear": "Clear all",
   "empty": "All caught up",

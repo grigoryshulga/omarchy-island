@@ -61,6 +61,8 @@ ShellRoot {
     property var players:[]
     property var latest:null
     property var mutedSources:[]
+    readonly property var activeEntries: allEntries
+    property var historyEntries: []
     property var allEntries:[{key:"test",app:"Keyboard test",summary:"Notification",body:"Body",codes:"123456",ts:1}]
     property string error:""
     property bool doNotDisturb:false

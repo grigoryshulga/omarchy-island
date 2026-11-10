@@ -20,6 +20,9 @@
     "many": "%1 уведомлений",
     "other": "%1 уведомления"
   },
+  "notifications.active": "Уведомления",
+  "notifications.history": "История",
+  "notifications.historyEmpty": "История пуста",
   "dnd": "Не беспокоить",
   "clear": "Очистить",
   "empty": "Новых уведомлений нет",

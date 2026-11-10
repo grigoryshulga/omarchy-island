@@ -51,6 +51,8 @@ ShellRoot {
   QtObject {
     id: service
     property var weather: fakeWeather
+    readonly property var activeEntries: allEntries
+    property var historyEntries: []
     property var allEntries: [{key:"n1",app:"Test",summary:"One",body:"one",ts:1},{key:"n2",app:"Test",summary:"Two",body:"two",ts:2},{key:"n3",app:"Test",summary:"Three",body:"three",ts:3},{key:"n4",app:"Test",summary:"Four",body:"four",ts:4}]
     property string error: ""
     property bool doNotDisturb: false
@@ -64,6 +66,8 @@ ShellRoot {
     property string copied: ""
     property string muted: ""
     property var removed: []
+    function clearHistory() {historyEntries=[]}
+    function clear() {historyEntries=allEntries;allEntries=[]}
     function media(action) { mediaCalls++; p.isPlaying = !p.isPlaying }
     function actions(row) { return [] }
     function activate(row) { activateCalls++ }
@@ -256,6 +260,20 @@ ShellRoot {
       service.allEntries=[]
       wait(20)
       check(!findChild(composed,"notificationCount").visible,"zero notification count is visible")
+      composed.expanded=true
+      service.historyEntries=[{key:"old",app:"Archive",summary:"Old notification",body:"old",ts:1}]
+      wait(30)
+      check(composed.rows.length===0,"history leaked into active notifications")
+      mouseClick(findChild(composed,"notificationsHistory"));wait(30)
+      check(composed.historyOpen && composed.rows.length===1,"history toggle did not reveal archived notifications")
+      check(findChild(composed,"notification-old")!==null,"archived notification did not render")
+      service.allEntries=[{key:"unread",app:"Current",summary:"Unread",body:"",ts:2}]
+      mouseClick(findChild(composed,"notificationsClear"));wait(30)
+      check(service.allEntries.length===1,"history clear removed active notifications")
+      check(composed.rows.length===0,"history did not clear")
+      composed.expanded=false;composed.hovering=true;wait(30)
+      check(!composed.historyOpen && composed.rows.length===1 && composed.rows[0].key==="unread","hover preview retained the history view")
+      console.log("NOTIFICATION_HISTORY_UI_PASS")
       calendarWin.visible=true
       calendar.today=new Date(2024,1,29,12)
       calendar.showToday()

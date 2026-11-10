@@ -42,6 +42,8 @@ ShellRoot {
     property string track:""
     property string targetScreen:""
     property var latest:null
+    readonly property var activeEntries: allEntries
+    property var historyEntries: []
     property var allEntries:[]
     property var players:[]
     property var mutedSources:[]

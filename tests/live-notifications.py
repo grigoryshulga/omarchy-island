@@ -32,7 +32,7 @@ try:
     assert json.loads(ipc('island','status'))['alert']=='notification'
     assert probe()['count']==base+2
     api.CloseNotification(dbus.UInt32(n2));time.sleep(.2)
-    assert probe()['count']==base+2,'sender close must retain history'
+    assert probe()['count']==base+1,'sender recall must remove the notification'
     ipc('notifications','dismiss','Island integration')
     # History also gets deleted by the prefix command.
     print('PASS: DBus arrival, replaces_id, latest alert, sender close, history, cleanup.')
