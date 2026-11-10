@@ -4,6 +4,8 @@
 
 `IslandSlider.qml` is adapted from Omarchy `Ui/PanelSlider.qml`, preserving its interactions and applying the system corner policy.
 
+`WeatherModel.js` follows the location and unit conventions of Omarchy’s weather model. The weather backend uses the same native location file and Open-Meteo/Omarchy providers; the procedural braille scenes are original code. Weather data is provided by https://open-meteo.com/ and is attributed in the weather view.
+
 Sources: https://github.com/omacom/omarchy and https://github.com/omacom/omapager
 
 Copyright (c) David Heinemeier Hansson

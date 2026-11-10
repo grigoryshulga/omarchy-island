@@ -14,6 +14,8 @@ import "Model.js" as Model
 Item {
   id: root
   property var shell: null
+  readonly property alias weather: weatherService
+  WeatherService { id: weatherService }
   property var entries: []
   readonly property string sessionKey: Date.now().toString(36)
   property var refs: ({})

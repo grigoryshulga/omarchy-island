@@ -15,8 +15,10 @@ Item {
   property bool radialBraille: true
   property bool hovering: false
   property string alertKind: ""
+  property var weather: null
   signal expandRequested()
   signal calendarRequested()
+  signal weatherRequested()
   signal closeRequested()
   readonly property bool showPlayer: service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
   readonly property var rows: service ? service.allEntries : []
@@ -45,6 +47,7 @@ Item {
     visible: root.expanded || root.hovering || root.alertKind === "notification"
     Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+    WeatherChip { objectName: "weatherOpen"; visible: (root.expanded || root.hovering) && root.weather!==null && root.weather.allowed; weather: root.weather; strings: root.strings; onClicked: root.weatherRequested() }
     Button { objectName: "calendarOpen"; radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded || root.hovering; iconText: "󰃭"; tooltipText: root.strings.t("calendar.open"); focusable: true; onClicked: root.calendarRequested() }
     Button { radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded; text: root.service && root.service.doNotDisturb ? "󰂛" : "󰂚"; selected: root.service && root.service.doNotDisturb; tooltipText: root.strings.t("dnd"); focusable: true; verticalPadding: 0; onClicked: root.service.setDoNotDisturb(!root.service.doNotDisturb) }
     Button { radius: Math.min(Style.cornerRadius,Style.space(6)); visible: root.expanded && root.rows.length > 0; text: root.strings.t("clear"); focusable: true; verticalPadding: 0; onClicked: root.service.clear() }

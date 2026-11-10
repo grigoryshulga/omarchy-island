@@ -12,6 +12,7 @@ BarWidget {
   property bool pinned: false
   property bool contentExpanded: false
   property bool calendarMode: false
+  property bool weatherMode: false
   property bool hoverOpen: false
   property string alertKind: ""
   property bool hoverSuppressed: false
@@ -25,10 +26,17 @@ BarWidget {
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
-  function open() { calendarMode = false; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""; Qt.callLater(function() { previewContent.forceActiveFocus() }) }
+  function activateWeather() { if(service && ("weather" in service)) service.weather.activate() }
+  function open() { weatherMode = false; calendarMode = false; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""; activateWeather(); Qt.callLater(function() { previewContent.forceActiveFocus() }) }
   function openCalendar() {
-    calendarMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
+    weatherMode = false; calendarMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
+    activateWeather()
     previewContent.showToday()
+    Qt.callLater(function() { previewContent.forceActiveFocus() })
+  }
+  function openWeather() {
+    calendarMode = false; weatherMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
+    activateWeather()
     Qt.callLater(function() { previewContent.forceActiveFocus() })
   }
   function toggleCalendar() { if (pinned && calendarMode) close(); else openCalendar() }
@@ -40,7 +48,13 @@ BarWidget {
   }
   function syncSettings() {
     if (service && Array.isArray(setting("musicApps",null))) service.allowedPlayers = setting("musicApps",[])
+    if(service && ("weather" in service)) {
+      service.weather.allowed=setting("weatherEnabled",true)!==false
+      service.weather.unitOverride=String(setting("weatherUnit",""))
+      service.weather.refreshOverride=Number(setting("weatherRefreshMinutes",0)) || 0
+    }
   }
+  onHoverOpenChanged: if(hoverOpen) activateWeather()
   onServiceChanged: syncSettings()
   onSettingsChanged: syncSettings()
   onSignatureChanged: {
@@ -105,7 +119,7 @@ BarWidget {
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: true
     open: root.pinned || root.hoverOpen || root.showAlert
-    onVisibleChanged: if (!visible) { root.contentExpanded = false; root.calendarMode = false }
+    onVisibleChanged: if (!visible) { root.contentExpanded = false; root.calendarMode = false; root.weatherMode = false }
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.hoverOpen ? 420 : 370))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
     ArtworkBackground {
@@ -120,6 +134,7 @@ BarWidget {
     PopupPages {
       id: previewContent
       calendar: root.calendarMode
+      weather: root.weatherMode
       radialBraille: root.setting("radialBraille",true)
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       service: root.service; strings: strings; bar: root.bar
@@ -128,10 +143,11 @@ BarWidget {
       alertKind: root.alertKind
       focus: root.pinned
       Keys.onEscapePressed: root.close()
-      Keys.onSpacePressed: event => { if (!root.calendarMode && root.service) root.service.media("toggle"); else event.accepted = false }
+      Keys.onSpacePressed: event => { if (!root.calendarMode && !root.weatherMode && root.service) root.service.media("toggle"); else event.accepted = false }
       Keys.onPressed: event => { if (root.calendarMode) event.accepted = previewContent.handleCalendarKey(event); else event.accepted = false }
       onExpandRequested: root.open()
       onCalendarRequested: root.openCalendar()
+      onWeatherRequested: root.openWeather()
       onInboxRequested: root.open()
     }
   }
@@ -140,8 +156,9 @@ BarWidget {
     function open(): void { root.open() }
     function close(): void { root.close() }
     function calendar(): void { root.openCalendar() }
+    function weather(): void { root.openWeather() }
     function toggle(): void { root.toggle() }
     function hover(): void { root.hoverOpen = !root.hoverOpen }
-    function status(): string { return JSON.stringify({pinned:root.pinned,page:root.calendarMode ? "calendar" : "inbox",hover:root.hoverOpen,alert:root.alertKind,service:root.service!==null,screen:root.screenName,appearance:preview.entranceStyle || "legacy"}) }
+    function status(): string { return JSON.stringify({pinned:root.pinned,page:root.weatherMode ? "weather" : root.calendarMode ? "calendar" : "inbox",hover:root.hoverOpen,alert:root.alertKind,service:root.service!==null,screen:root.screenName,appearance:preview.entranceStyle || "legacy"}) }
   }
 }

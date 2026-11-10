@@ -12,6 +12,9 @@ Item {
   property bool hovering: false
   property string alertKind: ""
   property bool calendar: false
+  property bool weather: false
+  readonly property var weatherData: service && ("weather" in service) ? service.weather : null
+  readonly property int lastPage: weatherData && weatherData.allowed ? 2 : 1
   property bool radialBraille: true
   property bool ready: false
   property real wheelDistance: 0
@@ -19,15 +22,16 @@ Item {
   property bool wheelLatched: false
   signal expandRequested()
   signal calendarRequested()
+  signal weatherRequested()
   signal inboxRequested()
   readonly property real pageProgress: pager.width>0 ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.contentItem.originX)/pager.width))) : (calendar ? 1 : 0)
-  implicitHeight: calendar ? calendarPage.implicitHeight : inbox.implicitHeight
+  implicitHeight: weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight
   clip: true
   function showToday() { calendarPage.showToday() }
   function handleCalendarKey(event) { return calendarPage.handleKey(event) }
   function syncPage() {
     if (!ready) return
-    var next=calendar ? 1 : 0
+    var next=Math.min(lastPage,weather ? 2 : calendar ? 1 : 0)
     if (pager.currentIndex!==next) { pager.contentItem.cancelFlick(); pager.setCurrentIndex(next) }
   }
   function handleWheel(event) {
@@ -44,11 +48,19 @@ Item {
     root.wheelDistance+=x
     var threshold=event.pixelDelta.x || event.pixelDelta.y ? 40 : 90
     if (Math.abs(root.wheelDistance)<threshold) return
-    var next=Commons.I18n.rightToLeft ? sign>0 : sign<0
+    var step=(Commons.I18n.rightToLeft ? sign>0 : sign<0) ? 1 : -1
+    var next=Math.max(0,Math.min(root.lastPage,pager.currentIndex+step))
     root.wheelLatched=true
-    if (next!==root.calendar) { if (next) root.calendarRequested(); else root.inboxRequested() }
+    requestPage(next)
+  }
+  function requestPage(index) {
+    if(index===2 && !weather) weatherRequested()
+    else if(index===1 && !calendar) calendarRequested()
+    else if(index===0 && (calendar || weather)) inboxRequested()
   }
   onCalendarChanged: syncPage()
+  onWeatherChanged: syncPage()
+  onLastPageChanged: if(ready) {if(weather && lastPage<2) inboxRequested();else syncPage()}
   Component.onCompleted: { ready = true; syncPage() }
 
   Controls.SwipeView {
@@ -57,23 +69,34 @@ Item {
     anchors.fill: parent
     interactive: root.expanded || root.hovering
     onCurrentIndexChanged: {
-      if (!root.ready || root.calendar === (currentIndex === 1)) return
-      if (currentIndex === 1) root.calendarRequested()
-      else root.inboxRequested()
+      if(!root.ready) return
+      if(currentIndex>root.lastPage) { setCurrentIndex(root.lastPage); return }
+      root.requestPage(currentIndex)
     }
     Binding { target: pager.contentItem; property: "highlightMoveDuration"; value: Style.duration(230) }
     IslandContent {
       id: inbox
       service: root.service; strings: root.strings; bar: root.bar
       expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
+      weather: root.weatherData
       radialBraille: root.radialBraille
       onExpandRequested: root.expandRequested()
       onCalendarRequested: root.calendarRequested()
+      onWeatherRequested: root.weatherRequested()
     }
     CalendarView {
       id: calendarPage
       objectName: "islandCalendar"
       strings: root.strings
+      radialBraille: root.radialBraille
+      onBackRequested: root.inboxRequested()
+    }
+    WeatherView {
+      id: weatherPage
+      objectName: "islandWeather"
+      strings: root.strings
+      weather: root.weatherData
+      active: root.weather && (root.expanded || root.hovering)
       radialBraille: root.radialBraille
       onBackRequested: root.inboxRequested()
     }

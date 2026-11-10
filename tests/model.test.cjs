@@ -51,3 +51,22 @@ for(const tz of ['America/Santiago','America/Havana','Pacific/Apia']) {
  assert.equal(Calendar.stepMonth(2026,8,1).key,'2026-10-01');
 }
 console.log('PASS: code detection, redaction, URL policy, music filtering, notification ordering.');
+const Weather=load('WeatherModel');
+for(const [code,kind] of [[0,0],[2,1],[3,2],[45,3],[53,4],[65,5],[75,6],[95,7],[99,7],[null,-1],[4,-1]]) assert.equal(Weather.kind(code),kind);
+assert.equal(Weather.coordinates({latitude:91,longitude:0}),null);
+assert.equal(Weather.coordinates({latitude:null,longitude:0}),null);
+assert.equal(Weather.temperature(0,true),32);
+assert.equal(Weather.temperature(null,false),null);
+assert.equal(Weather.imperial('metric','en_US','United States'),false);
+assert.equal(Weather.imperial('','ru_RU','United States'),true);
+assert.equal(Weather.imperial('','en_US','Russia'),false);
+assert.equal(Weather.imperial('','en_US',''),true);
+const weatherRaw=JSON.stringify({location:{name:'A city',latitude:55,longitude:37},fetchedAt:1794300000,forecast:{current:{temperature_2m:-3.4,apparent_temperature:-5.7,relative_humidity_2m:75,wind_speed_10m:12,weather_code:71,is_day:0},daily:{time:['2026-11-10','2026-11-11'],temperature_2m_min:[-6,-5],temperature_2m_max:[-2,0],weather_code:[71,2]}}});
+const parsed=Weather.parseReport(weatherRaw);
+assert.equal(parsed.current.temperature,-3.4);assert.equal(parsed.current.isDay,false);assert.equal(parsed.days.length,2);
+assert.equal(Weather.parseReport(weatherRaw.replace('"temperature_2m":-3.4','"temperature_2m":null')),null);
+assert.equal(Weather.parseReport('x'.repeat(262145)),null);
+assert.equal(Weather.parseSuggestions(JSON.stringify({query:'old',results:[{name:'City',latitude:1,longitude:2}]}),'new').length,0);
+assert.equal(Weather.parseSuggestions(JSON.stringify({query:'new',results:[{name:'City',latitude:1,longitude:2},{name:'Bad',latitude:999,longitude:2}]}),'new').length,1);
+assert.equal(Weather.nativeSettings(JSON.stringify({bar:{layout:{right:[{id:'omarchy.weather',unit:'metric',refreshMinutes:20}]}}})).refreshMinutes,20);
+console.log('PASS: weather codes, bounded reports, units, coordinates and search ordering.');

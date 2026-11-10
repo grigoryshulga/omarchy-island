@@ -2,6 +2,8 @@
 set -euo pipefail
 project=$(cd -- "$(dirname -- "$0")/.." && pwd)
 node "$project/tests/model.test.cjs"
+python3 "$project/tests/weather.py"
+python3 "$project/tests/weather-service.py"
 python3 "$project/tests/install.py"
 python3 "$project/tests/native-install.py"
 python3 "$project/tests/qml-smoke.py"

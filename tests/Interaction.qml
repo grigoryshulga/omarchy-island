@@ -8,6 +8,25 @@ import qs.Commons as Commons
 import "Island" as Island
 ShellRoot {
   QtObject {
+    id: fakeWeather
+    property bool allowed: true
+    property bool loading: false
+    property bool searching: false
+    property bool saving: false
+    property bool stale: false
+    property bool useImperial: false
+    property string error: ""
+    property string searched: ""
+    property int autoCalls: 0
+    property var suggestions: []
+    property var report: ({location:"Demo City",country:"",fetchedAt:1794300000,current:{temperature:7,feels:5,wind:12,humidity:81,code:63,isDay:true},days:[{date:"2026-11-10",min:3,max:8,code:63},{date:"2026-11-11",min:1,max:6,code:3},{date:"2026-11-12",min:-1,max:3,code:71},{date:"2026-11-13",min:0,max:7,code:0}]})
+    function activate() {}
+    function refresh() {}
+    function search(query) { searched=query }
+    function choose(place) {}
+    function autoLocate() { autoCalls++ }
+  }
+  QtObject {
     id: p
     property string identity: "Test Music"
     property string trackTitle: "A test track"
@@ -28,6 +47,7 @@ ShellRoot {
   }
   QtObject {
     id: service
+    property var weather: fakeWeather
     property var allEntries: [{key:"n1",app:"Test",summary:"One",body:"one",ts:1},{key:"n2",app:"Test",summary:"Two",body:"two",ts:2},{key:"n3",app:"Test",summary:"Three",body:"three",ts:3},{key:"n4",app:"Test",summary:"Four",body:"four",ts:4}]
     property string error: ""
     property bool doNotDisturb: false
@@ -80,8 +100,9 @@ ShellRoot {
         anchors.fill: parent; anchors.margins: 12
         visible: calendarSurface.testPages
         service: service; strings: strings; expanded: true; hovering: true
-        onCalendarRequested: pages.calendar=true
-        onInboxRequested: pages.calendar=false
+        onCalendarRequested: {pages.weather=false;pages.calendar=true}
+        onWeatherRequested: {pages.calendar=false;pages.weather=true}
+        onInboxRequested: {pages.weather=false;pages.calendar=false}
       }
     }
   }
@@ -234,6 +255,25 @@ ShellRoot {
       mouseWheel(pager,pager.width/2,pager.height/2,0,-120,Qt.NoButton,Qt.ShiftModifier)
       wait(350)
       check(pages.calendar,"Shift+wheel did not open calendar")
+      mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
+      wait(350)
+      check(pages.weather && !pages.calendar,"horizontal wheel did not open weather")
+      var weatherView=findChild(pages,"islandWeather")
+      check(findChild(weatherView,"weatherHeroScene").condition===5,"weather did not select rain scene")
+      check(findChild(weatherView,"weatherTemperature").text.indexOf("7")>=0,"weather temperature missing")
+      mouseClick(findChild(weatherView,"weatherLocation"))
+      var cityInput=findChild(weatherView,"weatherCityInput")
+      cityInput.text="Paris"
+      wait(350)
+      check(fakeWeather.searched==="Paris","weather city search did not run")
+      mouseClick(findChild(weatherView,"weatherAuto"))
+      check(fakeWeather.autoCalls===1,"weather auto-location control failed")
+      mouseClick(findChild(weatherView,"weatherBack"))
+      wait(350)
+      check(!pages.weather && !pages.calendar,"weather back did not return to inbox")
+      mouseWheel(pager,pager.width/2,pager.height/2,0,-120,Qt.NoButton,Qt.ShiftModifier)
+      wait(350)
+      check(pages.calendar,"calendar did not reopen after weather")
       var pageCalendar=findChild(pages,"islandCalendar")
       mouseDrag(pager,pager.width*0.15,pager.height*0.45,pager.width*0.65,0,Qt.LeftButton)
       wait(350)
