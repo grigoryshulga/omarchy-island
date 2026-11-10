@@ -29,7 +29,38 @@ Rectangle {
   property bool showTimestamp: true
   property real dismissShown: hover.hovered || keyboardFocused ? 1 : 0
   Behavior on dismissShown {NumberAnimation {duration:Style.duration(150);easing.type:Easing.OutCubic}}
-  readonly property bool hasActions: !grouped || !!row.link || String(row.codes || "").trim()!=="" || service.actions(row).some(function(action){return action.id!=="default"}) || (Security.parseExecActions(row.execActions) || []).length>0
+  readonly property var members: row.members || [row]
+  readonly property var senderActions: Model.notificationActions(row,function(member) { return service.actions(member) })
+  readonly property var codeActions: {
+    var found = []
+    members.forEach(function(member) {
+      String(member.codes || "").split(" ").filter(function(code) { return code !== "" }).forEach(function(code) {
+        if (!found.some(function(item) { return item.code === code })) found.push({code:code,row:member})
+      })
+    })
+    return found
+  }
+  readonly property var linkActions: {
+    var found = []
+    members.forEach(function(member) {
+      if (member.link && !found.some(function(item) { return item.link === member.link })) found.push({link:member.link})
+    })
+    return found
+  }
+  // Commands refer to one concrete item (e.g. a screenshot path). A merged
+  // card opens the newest item; never duplicate buttons or launch every file.
+  readonly property var execActions: (Security.parseExecActions(members[0].execActions) || []).map(function(action,index) {
+    return {label:action.label,row:members[0],index:index}
+  })
+  function dismiss() {
+    var backend = service, keys = members.map(function(member) { return member.key })
+    keys.forEach(function(key) { backend.remove(key) })
+  }
+  function invokeAction(action) {
+    var backend = service, id = action.id
+    action.targets.slice().forEach(function(member) { backend.invoke(member,id) })
+  }
+  readonly property bool hasActions: !grouped || linkActions.length>0 || codeActions.length>0 || senderActions.some(function(action){return action.id!=="default"}) || execActions.length>0
   property var feedback: brailleFeedback
   property string copied: ""
   signal expandRequested()
@@ -65,7 +96,7 @@ Rectangle {
       PlainText { visible: !root.grouped; Layout.fillWidth: true; text: Model.source(root.row); color: Commons.Color.accent; font.pixelSize: Style.font.caption }
       Item { visible: root.grouped; Layout.fillWidth: true }
       PlainText { text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.dismiss() }
     }
     RowLayout {
       Layout.fillWidth: true
@@ -77,10 +108,10 @@ Rectangle {
         Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
         Layout.preferredHeight:rowDismiss.implicitHeight
         clip:true
-      FeedbackButton { id:rowDismiss; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { id:rowDismiss; objectName:"notificationDismiss"; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.dismiss() }
       }
     }
-    PlainText { Layout.fillWidth: true; visible: text !== ""; text: Model.plain(root.row.body); font.pixelSize: Style.font.bodySmall; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
+    PlainText { objectName:"notificationBody"; Layout.fillWidth: true; visible: text !== ""; text: root.row.members ? root.row.body : Model.plain(root.row.body); font.pixelSize: Style.font.bodySmall; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
     Item {
       objectName:"notificationFooter"
       Layout.fillWidth: true
@@ -105,42 +136,46 @@ Rectangle {
         enabled: parent.reveal>0
       spacing: Style.space(4)
       Repeater {
-        model: String(root.row.codes || "").split(" ").filter(function(s) { return s !== "" })
-        ActionButton {
-          feedback: root.feedback
-          required property string modelData
-          objectName: "copyCode-" + modelData
-          text: (root.copied === modelData ? "✓ " : "󰆏 ") + modelData
-          focusable: true; bordered: true
-          onClicked: { root.service.copyCode(root.row,modelData); root.copied = modelData }
-        }
-      }
-      ActionButton {
-        feedback: root.feedback
-        visible: !!root.row.link
-        text: root.strings.t("openLink")
-        focusable: true
-        onClicked: Security.openExternalUrl(root.row.link)
-      }
-      Repeater {
-        model: root.service.actions(root.row).filter(function(a) { return a.id !== "default" })
+        model: root.codeActions
         ActionButton {
           feedback: root.feedback
           required property var modelData
+          objectName: "copyCode-" + modelData.code
+          text: (root.copied === modelData.code ? "✓ " : "󰆏 ") + modelData.code
+          focusable: true; bordered: true
+          onClicked: { root.service.copyCode(modelData.row,modelData.code); root.copied = modelData.code }
+        }
+      }
+      Repeater {
+        model: root.linkActions
+        ActionButton {
+          feedback: root.feedback
+          required property var modelData
+          text: root.strings.t("openLink")
+          focusable: true
+          onClicked: Security.openExternalUrl(modelData.link)
+        }
+      }
+      Repeater {
+        model: root.senderActions.filter(function(a) { return a.id !== "default" })
+        ActionButton {
+          feedback: root.feedback
+          required property var modelData
+          objectName: "notificationAction-" + modelData.id
           text: Model.plain(modelData.text)
           focusable: true
-          onClicked: root.service.invoke(root.row,modelData.id)
+          onClicked: root.invokeAction(modelData)
         }
       }
       Repeater {
-        model: Security.parseExecActions(root.row.execActions) || []
+        model: root.execActions
         ActionButton {
           feedback: root.feedback
           required property var modelData
-          required property int index
+          objectName: "notificationExecAction-" + modelData.index
           text: Model.plain(modelData.label)
           focusable: true
-          onClicked: root.service.execAction(root.row,index)
+          onClicked: root.service.execAction(modelData.row,modelData.index)
         }
       }
       ActionButton {

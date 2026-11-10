@@ -43,3 +43,39 @@ function hasMedia(player, stoppedState) {
   return !!player && player.playbackState !== stoppedState
     && (String(player.trackTitle || "").trim() !== "" || String(player.trackArtist || "").trim() !== "")
 }
+
+// Presentation only: originals remain independent so sender recalls and
+// replacements remove/update exactly one message, including in history.
+function coalesceNotifications(rows) {
+  var groups = [], byHeader = Object.create(null)
+  rows.forEach(function(row) {
+    var key = JSON.stringify([source(row), String(row.summary || "")])
+    if (!byHeader[key]) { byHeader[key] = []; groups.push(byHeader[key]) }
+    byHeader[key].push(row)
+  })
+  return groups.map(function(members) {
+    if (members.length === 1) return members[0]
+    var ordered = members.slice().sort(function(a,b) { return b.ts-a.ts })
+    var row = Object.assign({}, ordered[0])
+    row.members = ordered
+    row.body = ordered.slice().reverse().map(function(r) { return plain(r.body) }).filter(function(body) { return body !== "" }).join("\n")
+    return row
+  })
+}
+
+// Equivalent sender actions share one button. Keep each original target so
+// "Mark as read" acknowledges all messages represented by the card.
+function notificationActions(row, resolve) {
+  var actions = [], byAction = Object.create(null)
+  ;(row.members || [row]).forEach(function(member) {
+    resolve(member).forEach(function(action) {
+      var key = JSON.stringify([action.id, action.text])
+      if (!byAction[key]) {
+        byAction[key] = {id:action.id, text:action.text, targets:[]}
+        actions.push(byAction[key])
+      }
+      byAction[key].targets.push(member)
+    })
+  })
+  return actions
+}

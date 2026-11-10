@@ -20,6 +20,7 @@ Rectangle {
   property var externalFeedback: null
   property bool radialBraille: true
   property int limit: 3
+  readonly property var mergedRows: Model.coalesceNotifications(group.rows)
   readonly property var feedback: externalFeedback || brailleFeedback
   signal expandRequested()
   function dismissGroup() {
@@ -49,7 +50,7 @@ Rectangle {
         Image { id: icon; anchors.fill: parent; source: root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
       PlainText { Layout.fillWidth: true; Layout.minimumWidth:0; text: root.group.source; color: Commons.Color.accent; font.pixelSize: Style.font.caption }
-      PlainText { objectName:"groupTime";visible: root.compact || root.group.total===1; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+      PlainText { objectName:"groupTime";visible: root.compact || root.mergedRows.length===1; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
       Item {
         Layout.preferredWidth:tools.implicitWidth*root.toolsShown
         Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
@@ -84,7 +85,7 @@ Rectangle {
       }
     }
     Repeater {
-      model: root.group.rows
+      model: root.mergedRows
       Loader {
         required property var modelData
         required property int index
@@ -92,18 +93,24 @@ Rectangle {
         Layout.fillHeight: false
         Layout.preferredHeight: item ? item.implicitHeight : 0
         Layout.maximumHeight: item ? item.implicitHeight : 0
-        visible: root.group.positions[index] < root.limit
+        visible: root.group.positions[root.group.rows.findIndex(function(r) { return r.key === modelData.key })] < root.limit
         active: visible
         sourceComponent: NotificationCard {
-          row: modelData
+          row: {
+            var members = modelData.members || [modelData]
+            var visible = members.filter(function(member) {
+              return root.group.positions[root.group.rows.findIndex(function(r) { return r.key === member.key })] < root.limit
+            })
+            return Model.coalesceNotifications(visible)[0] || modelData
+          }
           service: root.service
           strings: root.strings
           expanded: root.expanded
           grouped: true
           compact: root.compact
           separated: index>0 && !root.compact
-          individualDismiss: root.group.total>1
-          showTimestamp: root.group.total>1
+          individualDismiss: root.mergedRows.length>1
+          showTimestamp: root.mergedRows.length>1
           radialBraille: root.radialBraille
           feedback: root.feedback
           onExpandRequested: root.expandRequested()

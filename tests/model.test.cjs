@@ -101,3 +101,24 @@ assert.equal(Weather.parseSuggestions(JSON.stringify({query:'old',results:[{name
 assert.equal(Weather.parseSuggestions(JSON.stringify({query:'new',results:[{name:'City',latitude:1,longitude:2},{name:'Bad',latitude:999,longitude:2}]}),'new').length,1);
 assert.equal(Weather.nativeSettings(JSON.stringify({bar:{layout:{right:[{id:'omarchy.weather',unit:'metric',refreshMinutes:20}]}}})).refreshMinutes,20);
 console.log('PASS: weather codes, bounded reports, units, coordinates and search ordering.');
+
+const threadRows = [
+ {key:'new',app:'Telegram',summary:'Chat',body:'second',ts:3},
+ {key:'other',app:'Telegram',summary:'Other chat',body:'separate',ts:2},
+ {key:'old',app:'Telegram',summary:'Chat',body:'first',ts:1},
+ {key:'app',app:'Mail',summary:'Chat',body:'different source',ts:0}
+];
+const threads=Model.coalesceNotifications(threadRows);
+assert.equal(threads.length,3);
+assert.equal(threads[0].key,'new');
+assert.equal(threads[0].body,'first\nsecond');
+assert.equal(threads[0].members.length,2);
+assert.equal(threadRows[0].body,'second','coalescing mutated a stored notification');
+assert.equal(Model.coalesceNotifications(threadRows.filter(r=>r.key!=='old'))[0].body,'second','recall left stale text');
+assert.equal(Model.coalesceNotifications([{key:'a',app:'A',summary:'__proto__',body:'same',ts:2},{key:'b',app:'A',summary:'__proto__',body:'same',ts:1}])[0].body,'same\nsame');
+const combinedActions=Model.notificationActions(threads[0],r=>[{id:'read',text:'Read'},{id:'default',text:r.key}]);
+assert.equal(combinedActions.length,3);
+assert.equal(combinedActions[0].targets.length,2);
+assert.equal(combinedActions[0].targets[0].key,'new');
+assert.equal(Model.coalesceNotifications([]).length,0);
+console.log('PASS: shared notification headers, chronological bodies, independent recalls and combined sender actions.');

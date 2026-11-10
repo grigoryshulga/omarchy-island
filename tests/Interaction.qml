@@ -69,7 +69,12 @@ ShellRoot {
     function clearHistory() {historyEntries=[]}
     function clear() {historyEntries=allEntries;allEntries=[]}
     function media(action) { mediaCalls++; p.isPlaying = !p.isPlaying }
-    function actions(row) { return [] }
+    property var actionRows: []
+    property var invokedRows: []
+    property string executedRow: ""
+    function execAction(row,index) { executedRow=row.key+":"+index }
+    function actions(row) { return actionRows.indexOf(row.key)>=0 ? [{id:"read",text:"Mark as read"}] : [] }
+    function invoke(row,id) { invokedRows=invokedRows.concat([row.key]);remove(row.key) }
     function activate(row) { activateCalls++ }
     function copyCode(row,code) { copied = code }
     function mute(s) { muted = s }
@@ -201,6 +206,9 @@ ShellRoot {
       wait(20)
       check(first === findChild(composed,"notification-n1"),"expansion rebuilt notification delegates")
       wait(220)
+      var activeTab=findChild(composed,"notificationsActive"),clearButton=findChild(composed,"notificationsClear"),dndButton=findChild(composed,"notificationsDnd")
+      check(clearButton.parent===activeTab.parent && dndButton.parent===activeTab.parent,"notification controls are not in the tabs row")
+      check(clearButton.x<dndButton.x,"Clear all must precede the bell")
       var stableGroupHeight=group.implicitHeight
       mouseMove(first,first.width/2,first.height/2)
       wait(220)
@@ -257,6 +265,40 @@ ShellRoot {
       check(single.implicitHeight===singleHeight,"compact single notification changes height on hover")
       check(singleStamp.mapToItem(single,0,0).x<idleStampX-Commons.Style.space(15),"timestamp did not make room for hover actions")
       console.log("COMPACT_SINGLE_NOTIFICATION_PASS",singleHeight)
+      composed.expanded=true;composed.hovering=true
+      service.allEntries=[{key:"new",app:"Test",summary:"Chat",body:"second",ts:3,codes:"222222"},{key:"different",app:"Test",summary:"Other chat",body:"other",ts:2},{key:"old",app:"Test",summary:"Chat",body:"first",ts:1,codes:"111111"}]
+      service.actionRows=["new","old"]
+      wait(40)
+      var merged=findChild(composed,"notification-new")
+      check(merged!==null && merged.members.length===2,"same header did not merge")
+      check(findChild(composed,"notification-old")===null,"repeated header still has its own card")
+      check(findChild(merged,"notificationBody").text==="first\nsecond","merged bodies are missing or out of order")
+      check(merged.senderActions.length===1,"identical actions were duplicated")
+      check(findChild(merged,"copyCode-111111")!==null && findChild(merged,"copyCode-222222")!==null,"merging lost a verification code")
+      composed.expanded=false;wait(30)
+      group=findChild(composed,"notificationGroup-Test");group.limit=1;wait(30)
+      check(findChild(findChild(composed,"notification-new"),"notificationBody").text==="second","merged preview exceeded its message budget")
+      group.limit=Qt.binding(function(){return composed.expanded ? 100 : composed.hovering ? 3 : 1})
+      composed.expanded=true;wait(30)
+      service.allEntries=service.allEntries.filter(function(row){return row.key!=="old"});wait(30)
+      check(findChild(findChild(composed,"notification-new"),"notificationBody").text==="second","recalled message remained in merged body")
+      service.allEntries=service.allEntries.concat([{key:"old",app:"Test",summary:"Chat",body:"first",ts:1}]);wait(30)
+      merged=findChild(composed,"notification-new")
+      findChild(merged,"notificationAction-read").clicked();wait(30)
+      check(service.invokedRows.length===2 && service.allEntries.length===1 && service.allEntries[0].key==="different","merged action did not target exactly its original messages")
+      service.allEntries=[{key:"new",app:"Test",summary:"Chat",body:"second",ts:3},{key:"different",app:"Test",summary:"Other chat",body:"other",ts:2},{key:"old",app:"Test",summary:"Chat",body:"first",ts:1}];wait(30)
+      findChild(findChild(composed,"notification-new"),"notificationDismiss").clicked();wait(30)
+      check(service.allEntries.length===1 && service.allEntries[0].key==="different","merged dismiss removed another header or left a member behind")
+      service.allEntries=[{key:"shot-new",app:"Test",summary:"Screenshot saved",body:"new.png",ts:3,execActions:JSON.stringify([{label:"Open",argv:["xdg-open","/tmp/new.png"]},{label:"Edit",argv:["editor","/tmp/new.png"]}])},{key:"shot-old",app:"Test",summary:"Screenshot saved",body:"old.png",ts:1,execActions:JSON.stringify([{label:"Open",argv:["xdg-open","/tmp/old.png"]},{label:"Edit",argv:["editor","/tmp/old.png"]}])}];wait(30)
+      var screenshot=findChild(composed,"notification-shot-new")
+      check(screenshot.execActions.length===2,"merged screenshots repeated Open/Edit buttons: "+screenshot.execActions.length)
+      check(screenshot.execActions[0].row.key==="shot-new" && screenshot.execActions[1].row.key==="shot-new","screenshot actions target an older file")
+      findChild(screenshot,"notificationExecAction-0").clicked()
+      check(service.executedRow==="shot-new:0","Open did not target the latest screenshot")
+      findChild(screenshot,"notificationExecAction-1").clicked()
+      check(service.executedRow==="shot-new:1","Edit did not target the latest screenshot")
+      service.actionRows=[]
+      console.log("MERGED_NOTIFICATIONS_PASS")
       service.allEntries=[]
       wait(20)
       check(!findChild(composed,"notificationCount").visible,"zero notification count is visible")
