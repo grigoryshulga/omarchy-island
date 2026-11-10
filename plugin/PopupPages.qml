@@ -43,7 +43,7 @@ Item {
   signal inboxRequested()
   readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(1) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(1).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
   readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(24)+tabDivider.implicitHeight : 0
-  implicitHeight: contentTop+(controls ? controlsPage.implicitHeight : weather ? calendarWeatherHeight : calendar ? calendarWeatherHeight : inbox.implicitHeight)
+  implicitHeight: contentTop+Math.max(root.expanded ? calendarWeatherHeight : 0,controls ? controlsPage.implicitHeight : weather || calendar ? calendarWeatherHeight : inbox.implicitHeight)
   readonly property real calendarWeatherHeight:Math.max(calendarPage.implicitHeight,weatherPage.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }

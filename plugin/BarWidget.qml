@@ -259,7 +259,7 @@ BarWidget {
       objectName: "islandPopupArtwork"
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
-      height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 250 : 145)+previewContent.contentTop)
+      height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 285 : 175)+previewContent.contentTop)
       reveal: 1-previewContent.pageProgress
       // Let the last dithered dots finish disappearing after the page settles.
       visible: opacity>0.001 && artworkReveal>0.001 && preview.visible && !preview.frameSuppressed

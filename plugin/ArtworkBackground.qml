@@ -30,6 +30,7 @@ Item {
       ? root.service.player.trackArtUrl : Qt.resolvedUrl("assets/dot-field.svg")
     sourceSize: Qt.size(240,240)
     fillMode: Image.PreserveAspectCrop
+    verticalAlignment: Image.AlignTop
     asynchronous: true
     visible: false
     layer.enabled: true
