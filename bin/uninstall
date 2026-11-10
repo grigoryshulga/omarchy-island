@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if command -v omarchy-hyprland-session-locked >/dev/null 2>&1 && omarchy-hyprland-session-locked; then
+  echo "Unlock the desktop before uninstalling Island so the shell can restart safely." >&2
+  exit 1
+fi
+python3 - <<'PY'
+import json,os,pathlib
+home=pathlib.Path.home();config=home/'.config/omarchy/shell.json';state=home/'.local/state/omarchy/island/install.json'
+if not state.exists(): raise SystemExit('No Island installation record found.')
+original=json.loads(state.read_text());settings=json.loads(config.read_text())
+for section,entries in settings['bar']['layout'].items():
+ replacements=[r for r in original['clocks'] if r['section']==section]
+ for i,entry in enumerate(entries):
+  if entry.get('id')=='gshulga.island': entries[i]=next((r['entry'] for r in replacements),{'id':'omarchy.clock'})
+disabled=settings.setdefault('disabledPlugins',[])
+if not original['notificationsDisabled'] and 'omarchy.notifications' in disabled: disabled.remove('omarchy.notifications')
+if 'gshulga.island' not in disabled: disabled.append('gshulga.island')
+tmp=config.with_suffix('.json.island-tmp');tmp.write_text(json.dumps(settings,ensure_ascii=False,indent=2)+'\n');os.replace(tmp,config)
+print('Restored clock and previous notification service. Island history is retained.')
+PY
+omarchy restart shell

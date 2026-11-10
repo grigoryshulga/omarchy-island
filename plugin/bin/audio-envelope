@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+"""Analyze only the playback monitor. PCM exists in memory and is never saved."""
+import array,json,math,signal,subprocess,sys
+
+def stop(*_): raise SystemExit(0)
+signal.signal(signal.SIGTERM,stop)
+signal.signal(signal.SIGINT,stop)
+child=None
+try:
+    child=subprocess.Popen(['parec','--device=@DEFAULT_MONITOR@','--format=s16le','--rate=8000','--channels=1','--latency-msec=50','--client-name=Omarchy Island','--stream-name=Island visualizer'],stdout=subprocess.PIPE,stderr=sys.stderr)
+    low=0.0
+    while True:
+        raw=child.stdout.read(800)
+        if len(raw)<800: raise RuntimeError('Playback monitor closed')
+        samples=array.array('h');samples.frombytes(raw)
+        if sys.byteorder!='little': samples.byteswap()
+        energy=bass=treble=0.0
+        for sample in samples:
+            value=sample/32768
+            low+=.12*(value-low)
+            energy+=value*value;bass+=low*low;treble+=(value-low)**2
+        n=len(samples)
+        print(json.dumps([round(min(1,math.sqrt(energy/n)*4),4),round(min(1,math.sqrt(bass/n)*5),4),round(min(1,math.sqrt(treble/n)*5),4)]),flush=True)
+except (BrokenPipeError,SystemExit):
+    pass
+except Exception as error:
+    print(str(error),file=sys.stderr)
+    sys.exit(1)
+finally:
+    if child is not None:
+        child.terminate()
+        try: child.wait(timeout=1)
+        except subprocess.TimeoutExpired: child.kill();child.wait()

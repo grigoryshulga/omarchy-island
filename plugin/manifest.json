@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "gshulga.island",
+  "name": "Island",
+  "version": "0.1.0",
+  "author": "gshulga",
+  "description": "Omarchy clock, music and notification island",
+  "kinds": ["bar-widget", "service"],
+  "keepLoaded": true,
+  "entryPoints": {"barWidget": "BarWidget.qml", "service": "Service.qml"},
+  "barWidget": {"displayName": "Island", "category": "Time", "allowMultiple": false}
+}

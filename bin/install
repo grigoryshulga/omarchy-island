@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+project=$(cd -- "$(dirname -- "$0")/.." && pwd)
+for dependency in python3 omarchy omarchy-shell qs wl-copy wl-paste parec; do
+  if ! command -v "$dependency" >/dev/null 2>&1; then
+    echo "Missing dependency: $dependency. See README.md for requirements." >&2
+    exit 1
+  fi
+done
+if [[ ! -d ${OMARCHY_PATH:-/usr/share/omarchy}/shell/Commons || ! -d ${OMARCHY_PATH:-/usr/share/omarchy}/shell/Ui ]]; then
+  echo "Omarchy's Quickshell shell is required; Waybar editions are not supported." >&2
+  exit 1
+fi
+if command -v omarchy-hyprland-session-locked >/dev/null 2>&1 && omarchy-hyprland-session-locked; then
+  echo "Unlock the desktop before installing Island so the shell can restart safely." >&2
+  exit 1
+fi
+python3 - "$project" <<'PY'
+import datetime,json,os,pathlib,shutil,sys
+project=pathlib.Path(sys.argv[1]); home=pathlib.Path.home()
+config=home/'.config/omarchy/shell.json'
+state=home/'.local/state/omarchy/island';state.mkdir(parents=True,exist_ok=True,mode=0o700)
+settings=json.loads(config.read_text())
+stamp=datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+backup=state/f'shell-before-{stamp}.json';shutil.copy2(config,backup)
+original=state/'install.json'
+if not original.exists():
+ clocks=[{'section':section,'index':i,'entry':entry} for section,entries in settings['bar']['layout'].items() for i,entry in enumerate(entries) if entry.get('id')=='omarchy.clock']
+ if not clocks: raise SystemExit('No clock found in bar layout; installation stopped.')
+ original.write_text(json.dumps({'clocks':clocks,'notificationsDisabled':'omarchy.notifications' in settings.get('disabledPlugins',[])},indent=2))
+ os.chmod(original,0o600)
+target=home/'.config/omarchy/plugins/gshulga.island'
+if target.exists(): shutil.copytree(target,state/f'plugin-before-{stamp}')
+shutil.copytree(project/'plugin',target,dirs_exist_ok=True)
+for section,entries in settings['bar']['layout'].items():
+ for entry in entries:
+  if entry.get('id')=='omarchy.clock':
+   entry['id']='gshulga.island'
+   entry.setdefault('musicApps',['spotifast','spotify','strawberry','clementine','lollypop','amberol','audacious','elisa','tauon','rhythmbox'])
+disabled=settings.setdefault('disabledPlugins',[])
+if 'omarchy.notifications' not in disabled: disabled.append('omarchy.notifications')
+if 'gshulga.island' in disabled: disabled.remove('gshulga.island')
+# An atomic rename makes the watcher observe a complete config.
+tmp=config.with_suffix('.json.island-tmp');tmp.write_text(json.dumps(settings,ensure_ascii=False,indent=2)+'\n');os.replace(tmp,config)
+print(f'Installed gshulga.island. Backup: {backup}')
+PY
+omarchy restart shell

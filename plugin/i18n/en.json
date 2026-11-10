@@ -1,0 +1,37 @@
+{
+  "island": "ISLAND",
+  "untitled": "Untitled",
+  "noMusic": "Nothing playing",
+  "musicApps": "Open Spotifast or another music app",
+  "previous": "Previous track",
+  "playPause": "Play / pause",
+  "next": "Next track",
+  "noVolume": "This app does not expose volume via MPRIS.",
+  "delete": "Delete notification",
+  "openLink": "Open link",
+  "openApp": "Open app",
+  "mute": "Mute source",
+  "unmute": "Unmute source",
+  "close": "Close",
+  "expand": "Open full panel",
+  "notifications": {
+    "one": "%1 notification",
+    "other": "%1 notifications"
+  },
+  "dnd": "Do Not Disturb",
+  "clear": "Clear all",
+  "empty": "All caught up",
+  "error": "Could not access %1",
+  "more": {
+    "one": "+ %1 more notification",
+    "other": "+ %1 more notifications"
+  },
+  "nowPlaying": "Now Playing",
+  "calendar.open": "Calendar",
+  "calendar.back": "Player and notifications",
+  "calendar.previous": "Previous month",
+  "calendar.next": "Next month",
+  "calendar.today": "Today",
+  "calendar.monthYear": "%1 %2",
+  "calendar.dateFormat": "dddd, MMMM d"
+}
