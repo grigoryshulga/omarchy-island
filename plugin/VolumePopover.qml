@@ -13,7 +13,7 @@ Item {
   property real availableWidth: Style.space(420)
   property bool opened: false
   readonly property bool controllable: player !== null && player.volumeSupported
-  readonly property bool hovering: trigger.hot || flyoutHover.hovered || volume.dragging
+  readonly property bool hovering: trigger.hot || trigger.activeFocus || volume.activeFocus || flyoutHover.hovered || volume.dragging
   implicitWidth: Style.space(30)
   implicitHeight: Style.space(32)
   z: 10

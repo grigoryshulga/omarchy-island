@@ -11,6 +11,7 @@ layout(std140, binding = 0) uniform buf {
     float treble;
     vec4 accent;
     float monochrome;
+    float reveal;
 };
 layout(binding = 1) uniform sampler2D source;
 // Integer avalanche hashing avoids the precision stripes and small spatial
@@ -51,7 +52,13 @@ void main() {
     float dots = mix(stableGlyph,glyph,mix(0.32,1.0,smoothstep(0.015,0.25,audio)));
     // Rare bright bits crossfade into new braille characters like glitter.
     float sparkle = mix(pow(a,18.0),pow(b,18.0),transition)*audio;
-    float mask = 1.0-smoothstep(1.08,1.40,length(local-center));
+    // Each dot has a fixed disappearance threshold, independent of the music
+    // shimmer. Reversing a tab gesture rebuilds the same field without noise
+    // tiles or a new random pattern on every frame.
+    float threshold = noise(dotPosition,0x5a17u);
+    float survival = smoothstep(threshold,threshold+0.08,reveal*1.08);
+    float radius = mix(0.40,1.08,survival);
+    float mask = (1.0-smoothstep(radius,radius+0.32,length(local-center)))*survival;
     vec3 color = mix(cover.rgb,vec3(max(luminance,0.5)),0.20);
     color = mix(color,vec3(0.96),sparkle*0.8);
     color = mix(color,accent.rgb,mix(0.18,1.0,monochrome));

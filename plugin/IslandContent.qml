@@ -13,6 +13,7 @@ Item {
   property var bar: null
   property var externalFeedback: null
   readonly property bool musicHovered: mediaPlayer.visible && mediaPlayer.hovered
+  property bool overviewActive: true
   property bool expanded: false
   property bool radialBraille: true
   property bool hovering: false
@@ -47,6 +48,16 @@ Item {
     onExpandRequested: root.expandRequested()
   }
   PanelSeparator { objectName: "islandMediaSeparator"; Layout.fillWidth: true; visible: root.showPlayer && (root.expanded || root.hovering) }
+  BatteryOverview {
+    id:battery
+    objectName:"islandBatteryOverview"
+    Layout.fillWidth:true
+    visible:present && (root.expanded || root.hovering)
+    active:root.overviewActive && root.visible && (root.expanded || root.hovering)
+    strings:root.strings
+    externalFeedback:root.externalFeedback
+    onExpandRequested:root.expandRequested()
+  }
   RowLayout {
     Layout.fillWidth: true
     visible: !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")

@@ -21,7 +21,9 @@ ShaderEffect {
   property real cornerRadius: Style.cornerRadius
   property color accent: Commons.Color.accent
   property real profile: adaptive ? 1 : 0
-  property real hoverOpacity: shown
+  property real intensity: 1
+  property real hoverOpacity: shown*intensity
+  Behavior on intensity {NumberAnimation {duration:Style.duration(140);easing.type:Easing.OutCubic}}
   property real rippleProgress: 1
   readonly property bool rippling: rippleProgress < 0.24
   visible: shown > 0 || rippling

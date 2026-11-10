@@ -7,6 +7,8 @@ ShaderEffect {
   property bool active: false
   property vector2d size: Qt.vector2d(width,height)
   property real phase: 0
+  property vector2d intensity: Qt.vector2d(1.0,0.35)
+  property vector2d fadeMargins: Qt.vector2d(Style.space(24),Style.space(10))
   property vector2d origin: Qt.vector2d(-18,height/2)
   property real spacing: Style.space(90)
   property real bandWidth: Style.space(21)

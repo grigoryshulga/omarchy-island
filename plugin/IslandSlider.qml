@@ -7,6 +7,22 @@ import qs.Commons as Commons
 Item {
   id: root
 
+  property bool islandHandlesHorizontalKeys:true
+  activeFocusOnTab:true
+  Keys.onPressed:event=>{
+    if(event.modifiers & (Qt.AltModifier|Qt.ControlModifier|Qt.MetaModifier)) {event.accepted=false;return}
+    var text=String(event.text || "").toLowerCase(),delta=0,next=root.liveValue
+    if(event.key===Qt.Key_Left || text==="h" || text==="р") delta=root.mirrored ? root.step : -root.step
+    else if(event.key===Qt.Key_Right || text==="l" || text==="д") delta=root.mirrored ? -root.step : root.step
+    else if(event.key===Qt.Key_Home) next=root.minimum
+    else if(event.key===Qt.Key_End) next=root.maximum
+    else {event.accepted=false;return}
+    next=Math.max(root.minimum,Math.min(root.maximum,next+delta))
+    if(root.integer) next=Math.round(next)
+    root.liveValue=next;root.moved(next);root.released(next)
+    event.accepted=true
+  }
+  BorderSurface {anchors.fill:parent;color:"transparent";borderSpec:Border.controlSpec("focus",Commons.Color.foreground,Commons.Color.accent);radius:Style.cornerRadius;visible:root.activeFocus}
   property QtObject bar: null
   property real value: 0
   property real minimum: 0

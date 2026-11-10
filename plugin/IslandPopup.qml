@@ -30,7 +30,7 @@ PanelWindow {
   readonly property real thickness: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real availableWidth: Math.max(120,(screen ? screen.width : 1920)-2*margin)
   readonly property real availableHeight: Math.max(120,(screen ? screen.height : 1080)-thickness-2*margin)
-  readonly property var borderSpec: frameSuppressed ? Border.none() : Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)))
+  readonly property var borderSpec: Border.surfaceSpec(frameSuppressed ? "notifications" : "popups","border",frameSuppressed ? Commons.Color.notifications.border : Commons.Color.popups.border,Math.max(1,Style.space(2)))
   readonly property real insetTop: padding+Border.top(borderSpec)
   readonly property real insetBottom: padding+Border.bottom(borderSpec)
   readonly property real insetLeft: padding+Border.left(borderSpec)
@@ -94,7 +94,7 @@ PanelWindow {
     }
     primeFocus()
   }
-  // Keep the toast's compact, borderless treatment through closing.
+  // Keep the toast's compact treatment through closing.
   onFramelessChanged: Qt.callLater(function(){if(root.open) root.frameSuppressed=root.frameless})
   onPinnedChanged: primeFocus()
   onWidthChanged: revealWhenConfigured()

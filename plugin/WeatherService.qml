@@ -9,6 +9,7 @@ Item {
   property bool allowed: true
   property bool activated: false
   property string unitOverride: ""
+  property string temperatureOverride: ""
   property int refreshOverride: 0
   property var nativePreferences: ({unit:"",refreshMinutes:15})
   property var report: null
@@ -26,6 +27,7 @@ Item {
   readonly property bool stale: report!==null && (error!=="" || now-report.fetchedAt>refreshMinutes*60+60)
   readonly property int refreshMinutes: Math.max(1,Math.min(120,refreshOverride || nativePreferences.refreshMinutes || 15))
   readonly property bool useImperial: Model.imperial(unitOverride || nativePreferences.unit,Commons.I18n.formatLocale,report ? report.country : "")
+  readonly property string temperatureUnit: Model.temperatureUnit(temperatureOverride,useImperial)
   readonly property string helper: String(Qt.resolvedUrl("bin/weather-data")).replace(/^file:\/\//,"")
   function activate() {
     if(!allowed) return
@@ -51,6 +53,9 @@ Item {
     if(!allowed || searchQuery.length<2) return
     geocode.command=["python3",helper,"search",searchQuery,String(Commons.I18n.formatLocale).slice(0,2).toLowerCase()]
     geocode.running=true
+  }
+  function cancelSearch() {
+    searchQuery="";geocode.running=false;suggestions=[]
   }
   function choose(place) {
     if(!place || !Model.coordinates(place) || locationSave.running) return

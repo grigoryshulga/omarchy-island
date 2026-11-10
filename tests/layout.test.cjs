@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const m=require('../plugin/KeyboardLayoutModel.js');
+assert.equal(m.languageName('English (US)',{}),'English');
+assert.equal(m.languageName('Russian (phonetic)',{}),'Русский');
+assert.equal(m.languageName('German',{}),'German');
+assert.deepEqual(m.eventLayout({name:'activelayout',data:'keychron-k3,Russian'}),{keyboard:'keychron-k3',description:'Russian'});
+assert.equal(m.eventLayout({name:'activelayout',data:'power-button,Russian'}),null);
+assert.equal(m.eventLayout({name:'activelayout',data:'hl-virtual-keyboard,Russian'}),null);
+assert.equal(m.eventLayout({name:'activelayout',data:'keychron-k3'}),null);
+assert.equal(m.eventLayout({name:'configreloaded',data:'keychron-k3,Russian'}),null);
+assert.deepEqual(m.eventLayout({name:'activelayout',parse:()=>['kbd','English (US, intl.)']}),{keyboard:'kbd',description:'English (US, intl.)'});
+console.log('PASS: layout events, full language names, variants and virtual-key filtering.');

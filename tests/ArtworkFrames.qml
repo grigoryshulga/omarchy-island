@@ -21,6 +21,17 @@ ShellRoot {
     implicitWidth: 320; implicitHeight: 200
     Island.ArtworkBackground { id: artwork; anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top;height:160; service: service }
     Island.BrailleGauge {id:gauge;anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom;height:24;value:0.2}
+    Item {
+      id:dissolveProbe
+      visible:false
+      width:320;height:30;y:125
+      property real dissolveAmount:0
+      property bool effectEnabled:true
+      layer.enabled:true
+      layer.effect:effectEnabled ? dissolveComponent : null
+      Component {id:dissolveComponent;Island.BrailleDissolve {amount:dissolveProbe.dissolveAmount}}
+      Island.PlainText {anchors.centerIn:parent;text:"Tuesday 19:47";font.pixelSize:16;color:"white"}
+    }
   }
   TestCase {
     id: test
@@ -50,6 +61,23 @@ ShellRoot {
       service.visualPhase=1.5
       wait(80)
       check(still.equals(grabImage(artwork)),"artwork ignores reduced motion")
+      Commons.Style.reduceMotion=false
+      var fullCover=grabImage(artwork)
+      artwork.reveal=0.5;wait(320)
+      var partialCover=grabImage(artwork),surviving=0,removed=0
+      for(var y=0;y<fullCover.height;y++) for(var x=0;x<fullCover.width;x++) {
+        var full=fullCover.red(x,y)+fullCover.green(x,y)+fullCover.blue(x,y)
+        var partial=partialCover.red(x,y)+partialCover.green(x,y)+partialCover.blue(x,y)
+        if(full>15) {if(partial>full*0.9) surviving++;if(partial<full*0.05) removed++}
+      }
+      check(surviving>10 && removed>10,"album art faded uniformly instead of dissolving dot by dot")
+      artwork.reveal=0;wait(320)
+      var absent=grabImage(artwork),remaining=0
+      for(var y=0;y<absent.height;y++) for(var x=0;x<absent.width;x++) remaining+=absent.red(x,y)+absent.green(x,y)+absent.blue(x,y)
+      check(remaining===0,"album art dissolve left visible dots")
+      artwork.reveal=1;wait(320)
+      check(fullCover.equals(grabImage(artwork)),"album art did not reassemble the same field")
+      console.log("ARTWORK_DITHER_PASS")
       var field=findChild(gauge,"brailleGaugeField")
       var thin=grabImage(gauge)
       gauge.value=0.9;wait(80)
@@ -58,6 +86,15 @@ ShellRoot {
       // become thicker, rather than merely lighting more columns.
       for(var y=Math.ceil(field.y);y<field.y+field.height;y++) for(var x=Math.ceil(field.x);x<field.x+field.width*0.15;x++) {a+=thin.red(x,y)+thin.green(x,y)+thin.blue(x,y);b+=thick.red(x,y)+thick.green(x,y)+thick.blue(x,y)}
       check(b>a*1.2,"gauge dots did not become thicker: "+a+" -> "+b+", amount="+field.amount)
+      artwork.visible=false;gauge.visible=false;dissolveProbe.visible=true;wait(60)
+      var crisp=grabImage(dissolveProbe)
+      dissolveProbe.dissolveAmount=1;wait(60)
+      check(!crisp.equals(grabImage(dissolveProbe)),"OSD dissolve did not pixelate the live text")
+      dissolveProbe.dissolveAmount=0;wait(60)
+      check(crisp.equals(grabImage(dissolveProbe)),"OSD dissolve did not restore the original text")
+      dissolveProbe.effectEnabled=false;wait(60)
+      check(crisp.equals(grabImage(dissolveProbe)),"releasing the dissolve shader changed the settled text")
+      console.log("DISSOLVE_FRAMES_PASS")
       console.log("GAUGE_FRAMES_PASS")
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()

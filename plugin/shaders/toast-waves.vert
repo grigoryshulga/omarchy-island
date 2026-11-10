@@ -8,6 +8,8 @@ layout(std140, binding = 0) uniform buf {
   float qt_Opacity;
   vec2 size;
   vec2 origin;
+  vec2 fadeMargins;
+  vec2 intensity;
   float phase;
   float spacing;
   float bandWidth;

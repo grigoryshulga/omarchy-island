@@ -9,6 +9,6 @@ with tempfile.TemporaryDirectory(prefix='island-indicators-qml-') as temporary:
     (root/'Bridge').symlink_to(project/'plugin/osd-bridge')
     (root/'shell.qml').write_text((project/'tests/Indicators.qml').read_text())
     env=dict(os.environ,QT_QPA_PLATFORM='wayland',QT_QUICK_BACKEND='rhi' if os.environ.get('ISLAND_TEST_GPU') else 'software')
-    r=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=12)
+    r=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=15)
     print(r.stdout)
     assert 'INDICATORS_PASS' in r.stdout and not any(s in r.stdout for s in ['INDICATORS_FAIL','ReferenceError:','TypeError:']),r.stdout

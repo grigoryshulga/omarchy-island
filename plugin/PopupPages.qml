@@ -10,16 +10,20 @@ Item {
   required property var service
   required property var strings
   property var bar: null
+  property var settings: ({})
   property var externalFeedback: null
-  readonly property bool musicHovered: !calendar && !weather && inbox.musicHovered
+  readonly property real controlsCursorIntensity:controls ? controlsPage.cursorIntensity : 1
+  readonly property bool musicHovered: !controls && !calendar && !weather && inbox.musicHovered
+  property bool keyboardActive: false
   property bool expanded: false
   property bool hovering: false
   property string alertKind: ""
+  property bool controls: false
   property bool calendar: false
   property bool weather: false
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   readonly property var weatherData: service && ("weather" in service) ? service.weather : null
-  readonly property int lastPage: weatherData && weatherData.allowed ? 2 : 1
+  readonly property int lastPage: weatherData && weatherData.allowed ? 3 : 2
   property bool radialBraille: true
   property bool ready: false
   property real wheelDistance: 0
@@ -28,21 +32,66 @@ Item {
   property bool positioned: false
   property bool navigating: false
   property bool gesturing: false
+  property int edgeTarget: -1
+  property bool wrapping: false
+  signal dismissRequested()
+  signal settingRequested(string key, var value)
   signal expandRequested()
+  signal controlsRequested()
   signal calendarRequested()
   signal weatherRequested()
   signal inboxRequested()
-  readonly property real pageProgress: pager.width>0 && pager.itemAt(0) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(0).x)/pager.width))) : (calendar || weather ? 1 : 0)
-  readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(8) : 0
-  implicitHeight: contentTop+(weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight)
+  readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(1) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(1).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
+  readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(24)+tabDivider.implicitHeight : 0
+  implicitHeight: contentTop+(controls ? controlsPage.implicitHeight : weather ? weatherPage.implicitHeight : calendar ? calendarPage.implicitHeight : inbox.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
+  function cancelEdits() {weatherPage.cancelEditing()}
   function handleCalendarKey(event) { return calendarPage.handleKey(event) }
+  function currentPage() {return controls ? controlsPage : weather ? weatherPage : calendar ? calendarPage : inbox}
+  function keyboardPage(index) {
+    if(!keyboardActive || index>lastPage) return
+    requestPage(index)
+    Qt.callLater(function(){if(root.calendar) calendarPage.focusSelectedDay();else navigation.first(root.currentPage())})
+  }
+  function directionEnabled(horizontal) {
+    return keyboardActive && navigation.contains(root,navigation.focused) && !navigation.editing(navigation.focused) && !navigation.nativeFocus() && !(horizontal && navigation.focused && "islandHandlesHorizontalKeys" in navigation.focused)
+  }
+  function keyboardDirection(x,y) {
+    if(calendar && navigation.focused && "islandCalendarDay" in navigation.focused) {
+      calendarPage.handleKey({key:x<0 ? Qt.Key_Left : x>0 ? Qt.Key_Right : y<0 ? Qt.Key_Up : Qt.Key_Down})
+      Qt.callLater(calendarPage.focusSelectedDay)
+    }
+    else navigation.move(x,y)
+  }
+  function handleKeyboard(event) {
+    if(!keyboardActive || navigation.editing(navigation.focused)) return false
+    var direction=navigation.direction(event)
+    if(calendar && navigation.focused && "islandCalendarDay" in navigation.focused) {
+      if(direction) return calendarPage.handleKey({key:direction.key})
+      return calendarPage.handleKey(event)
+    }
+    if(direction) return navigation.move(direction.x,direction.y)
+    return false
+  }
+  KeyboardNavigation {id:navigation;scope:root;containers:[tabs,root.currentPage()]}
+  Shortcut {sequence:"Alt+1";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(0)}
+  Shortcut {sequence:"Alt+2";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(1)}
+  Shortcut {sequence:"Alt+3";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(2)}
+  Shortcut {sequence:"Alt+4";context:Qt.WindowShortcut;enabled:root.keyboardActive && root.lastPage===3;onActivated:root.keyboardPage(3)}
+  Shortcut {sequence:"Tab";context:Qt.WindowShortcut;enabled:root.keyboardActive && navigation.contains(root,navigation.focused);onActivated:navigation.tab(1)}
+  Shortcut {sequence:"Shift+Tab";context:Qt.WindowShortcut;enabled:root.keyboardActive && navigation.contains(root,navigation.focused);onActivated:navigation.tab(-1)}
+  Shortcut {sequences:["Left","H","Р"];context:Qt.WindowShortcut;enabled:root.directionEnabled(true);onActivated:root.keyboardDirection(-1,0)}
+  Shortcut {sequences:["Right","L","Д"];context:Qt.WindowShortcut;enabled:root.directionEnabled(true);onActivated:root.keyboardDirection(1,0)}
+  Shortcut {sequences:["Up","K","Л"];context:Qt.WindowShortcut;enabled:root.directionEnabled(false);onActivated:root.keyboardDirection(0,-1)}
+  Shortcut {sequences:["Down","J","О"];context:Qt.WindowShortcut;enabled:root.directionEnabled(false);onActivated:root.keyboardDirection(0,1)}
+  Keys.priority:Keys.AfterItem
+  Keys.onPressed:event=>{event.accepted=root.handleKeyboard(event)}
   function syncPage() {
     if(!ready || pager.width<=0) return
     var view=pager.contentItem
     if(view.dragging || view.flicking) return
-    var next=Math.min(lastPage,weather ? 2 : calendar ? 1 : 0)
+    var next=Math.min(lastPage,weather ? 3 : calendar ? 2 : controls ? 0 : 1)
     pageMotion.stop()
     var from=view.contentX
     pager.setCurrentIndex(next)
@@ -50,7 +99,7 @@ Item {
     var page=pager.itemAt(next)
     if(!page) return
     var target=page.x
-    if(!positioned || Math.abs(from-target)<0.5 || Style.reduceMotion) view.contentX=target
+    if(!positioned || Math.abs(from-target)<0.5 || Style.reduceMotion) {view.contentX=target;wrapping=false}
     else {
       view.contentX=from
       pageMotion.from=from;pageMotion.to=target;pageMotion.restart()
@@ -61,6 +110,7 @@ Item {
   function finishGesture() {
     if(navigating || !gesturing) return
     gesturing=false
+    if(edgeTarget>=0) {var target=edgeTarget;edgeTarget=-1;requestPage(target);return}
     var closest=0,distance=Infinity
     pager.contentItem.forceLayout()
     for(var i=0;i<=lastPage;i++) {
@@ -73,7 +123,7 @@ Item {
     var x=event.pixelDelta.x || event.angleDelta.x
     var y=event.pixelDelta.y || event.angleDelta.y
     if (event.modifiers & Qt.ShiftModifier) x=x || y
-    if (!(root.expanded || root.hovering) || !x || (!(event.modifiers & Qt.ShiftModifier) && Math.abs(x)<Math.abs(y))) { event.accepted=false; return }
+    if (!root.expanded || !x || (!(event.modifiers & Qt.ShiftModifier) && Math.abs(x)<Math.abs(y))) { event.accepted=false; return }
     event.accepted=true
     var sign=x<0 ? -1 : 1
     if (sign!==root.wheelDirection) { root.wheelDistance=0; root.wheelLatched=false }
@@ -84,35 +134,56 @@ Item {
     var threshold=event.pixelDelta.x || event.pixelDelta.y ? 40 : 90
     if (Math.abs(root.wheelDistance)<threshold) return
     var step=(Commons.I18n.rightToLeft ? sign>0 : sign<0) ? 1 : -1
-    var next=Math.max(0,Math.min(root.lastPage,pager.currentIndex+step))
+    var count=root.lastPage+1
+    var next=(pager.currentIndex+step+count)%count
     root.wheelLatched=true
     requestPage(next)
   }
   function requestPage(index) {
+    wrapping=(pager.currentIndex===0 && index===lastPage) || (pager.currentIndex===lastPage && index===0)
+    edgeTarget=-1
     gesturing=false
     navigating=true
     pageMotion.stop()
     pager.contentItem.cancelFlick()
     navigating=false
-    if(index===2 && !weather) weatherRequested()
-    else if(index===1 && !calendar) calendarRequested()
-    else if(index===0 && (calendar || weather)) inboxRequested()
+    if(index===3 && !weather) weatherRequested()
+    else if(index===2 && !calendar) calendarRequested()
+    else if(index===0 && !controls) controlsRequested()
+    else if(index===1 && (controls || calendar || weather)) inboxRequested()
     scheduleSync()
   }
+  onControlsChanged: scheduleSync()
   onCalendarChanged: scheduleSync()
   onWeatherChanged: scheduleSync()
   onWidthChanged: scheduleSync()
   onHeightChanged: scheduleSync()
-  onLastPageChanged: if(ready) {if(weather && lastPage<2) inboxRequested();else scheduleSync()}
+  onLastPageChanged: if(ready) {if(weather && lastPage<3) inboxRequested();else scheduleSync()}
   Component.onCompleted: { ready = true; scheduleSync() }
 
   RowLayout {
     id: tabs
     objectName: "islandTabs"
     anchors.left: parent.left; anchors.right: parent.right
-    visible: root.expanded || root.hovering
+    visible: root.expanded
     spacing: Style.space(4)
     uniformCellSizes: true
+    FeedbackButton {
+      feedback: root.externalFeedback
+      color: "transparent"; borderSpec: Border.none()
+      objectName: "islandTabControls"
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      Layout.preferredWidth: 1
+      Layout.minimumWidth: 0
+      text: root.strings.t("tabs.controls")
+      selected: root.controls
+      foreground: selected ? Commons.Color.accent : Commons.Color.foreground
+      fontSize: Style.font.bodySmall
+      radius: Math.min(Style.cornerRadius,Style.space(6))
+      focusable: true
+      onClicked: root.requestPage(0)
+    }
     FeedbackButton {
       feedback: root.externalFeedback
       color: "transparent"; borderSpec: Border.none()
@@ -122,11 +193,12 @@ Item {
       Layout.preferredWidth: 1
       Layout.minimumWidth: 0
       text: root.strings.t("tabs.overview")
-      selected: !root.calendar && !root.weather
+      selected: !root.controls && !root.calendar && !root.weather
+      foreground: selected ? Commons.Color.accent : Commons.Color.foreground
       fontSize: Style.font.bodySmall
       radius: Math.min(Style.cornerRadius,Style.space(6))
       focusable: true
-      onClicked: root.requestPage(0)
+      onClicked: root.requestPage(1)
     }
     FeedbackButton {
       feedback: root.externalFeedback
@@ -138,10 +210,11 @@ Item {
       Layout.minimumWidth: 0
       text: root.strings.t("calendar.open")
       selected: root.calendar
+      foreground: selected ? Commons.Color.accent : Commons.Color.foreground
       fontSize: Style.font.bodySmall
       radius: Math.min(Style.cornerRadius,Style.space(6))
       focusable: true
-      onClicked: root.requestPage(1)
+      onClicked: root.requestPage(2)
     }
     WeatherChip {
       feedback: root.externalFeedback
@@ -151,26 +224,46 @@ Item {
       Layout.fillHeight: true
       Layout.preferredWidth: 1
       Layout.minimumWidth: 0
-      visible: root.lastPage===2
+      visible: root.lastPage===3
       showLabel: true
       weather: root.weatherData
       strings: root.strings
       selected: root.weather
-      onClicked: root.requestPage(2)
+      onClicked: root.requestPage(3)
     }
+  }
+  PanelSeparator {
+    id:tabDivider
+    objectName:"islandTabsDivider"
+    anchors.left:parent.left;anchors.right:parent.right
+    anchors.top:tabs.bottom;anchors.topMargin:Style.space(10)
+    visible:tabs.visible
   }
   Controls.SwipeView {
     id: pager
     objectName: "islandPageSwipe"
+    currentIndex: 1
     x: 0; y: root.contentTop
     width: parent.width; height: Math.max(0,parent.height-y)
-    interactive: root.expanded || root.hovering
+    interactive: root.expanded
     // Native flicking owns gestures; explicit navigation owns the settled
     // position. Do not let ListView's highlight fight the page transition.
+    Binding {target:pager.contentItem;property:"boundsBehavior";value:Flickable.DragOverBounds}
     Binding { target: pager.contentItem; property: "highlightRangeMode"; value: ListView.NoHighlightRange }
     Binding { target: pager.contentItem; property: "highlightFollowsCurrentItem"; value: false }
+    ControlsView {
+      id: controlsPage
+      settings: root.settings
+      onSettingRequested:(key,value)=>root.settingRequested(key,value)
+      objectName: "islandControls"
+      service: root.service; strings: root.strings; bar: root.bar
+      externalFeedback: root.externalFeedback
+      active: root.controls && root.visible && (root.expanded || root.hovering)
+      onDismissRequested: root.dismissRequested()
+    }
     IslandContent {
       id: inbox
+      overviewActive:!root.controls && !root.calendar && !root.weather
       externalFeedback: root.externalFeedback
       service: root.service; strings: root.strings; bar: root.bar
       expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
@@ -187,6 +280,9 @@ Item {
       objectName: "islandCalendar"
       strings: root.strings
       showBack: false
+      active: root.calendar && root.visible && (root.expanded || root.hovering)
+      weekStart: String(root.settings.calendarWeekStart || "")
+      onWeekStartRequested: value => root.settingRequested("calendarWeekStart",value)
       radialBraille: root.radialBraille
       onBackRequested: root.inboxRequested()
     }
@@ -199,13 +295,22 @@ Item {
       weather: root.weatherData
       active: root.weather && (root.expanded || root.hovering)
       radialBraille: root.radialBraille
+      onTemperatureUnitRequested: value => root.settingRequested("weatherTemperatureUnit",value)
       onBackRequested: root.inboxRequested()
     }
   }
-  NumberAnimation { id: pageMotion; target: pager.contentItem; property: "contentX"; duration: Style.duration(230); easing.type: Easing.OutCubic }
+  NumberAnimation { id: pageMotion; onFinished:root.wrapping=false; target: pager.contentItem; property: "contentX"; duration: Style.duration(230); easing.type: Easing.OutCubic }
   Connections {
     target: pager.contentItem
-    function onDraggingChanged() {if(pager.contentItem.dragging) {root.gesturing=true;pageMotion.stop()}}
+    function onDraggingChanged() {if(pager.contentItem.dragging) {root.gesturing=true;root.edgeTarget=-1;pageMotion.stop()}}
+    function onContentXChanged() {
+      var view=pager.contentItem
+      if(!root.gesturing || !view.dragging) return
+      var first=pager.itemAt(0),last=pager.itemAt(root.lastPage)
+      if(!first || !last) return
+      var low=Math.min(first.x,last.x),high=Math.max(first.x,last.x),threshold=Style.space(40)
+      root.edgeTarget=view.contentX<low-threshold ? (first.x<last.x ? root.lastPage : 0) : view.contentX>high+threshold ? (first.x<last.x ? 0 : root.lastPage) : -1
+    }
     function onMovementEnded() {root.finishGesture()}
     function onContentWidthChanged() {root.scheduleSync()}
   }

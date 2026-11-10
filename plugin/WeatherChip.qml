@@ -22,6 +22,6 @@ FeedbackButton {
     spacing: Style.space(2)
     PlainText { Layout.fillWidth: true; Layout.minimumWidth: 0; visible: root.showLabel; text: root.strings.t("weather.open"); color: root.selected ? Commons.Color.accent : Commons.Color.foreground; font.pixelSize: Style.font.bodySmall }
     WeatherScene { Layout.preferredWidth: Style.space(root.showLabel ? 22 : 32); Layout.preferredHeight: Style.space(28); condition: root.current ? Model.kind(root.current.code) : 2; isDay: root.current ? root.current.isDay : true; animated: false; opacity: root.current ? 1 : 0.35 }
-    PlainText { text: root.current ? Commons.I18n.formatNumber(Model.temperature(root.current.temperature,root.weather.useImperial))+"°" : root.weather && root.weather.loading ? "…" : "—"; color: root.selected ? Commons.Color.accent : Commons.Color.foreground; font.pixelSize: Style.font.bodySmall }
+    PlainText { objectName:"weatherChipTemperature";text: root.current ? Commons.I18n.formatNumber(Model.temperature(root.current.temperature,root.weather.temperatureUnit))+(root.weather.temperatureUnit==="kelvin" ? " K" : "°") : root.weather && root.weather.loading ? "…" : "—"; color: root.selected ? Commons.Color.accent : Commons.Color.foreground; font.pixelSize: Style.font.bodySmall }
   }
 }

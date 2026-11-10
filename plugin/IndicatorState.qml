@@ -4,6 +4,8 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
 import qs.Commons
+import "Osd.js" as Osd
+import "osd-bridge/OsdModel.js" as NativeOsd
 
 Item {
   id: root
@@ -18,11 +20,15 @@ Item {
   property string osdKind: "volume"
   property real osdValue: 0
   property bool osdMuted: false
+  property bool osdHasProgress: true
+  property string osdIcon: ""
+  property string osdMessage: ""
+  property string osdProgressText: ""
   property string osdScreen: ""
   property int osdSerial: 0
 
   function attach(item) {if(consumers.indexOf(item)<0) consumers=consumers.concat([item]);refresh()}
-  function detach(item) {consumers=consumers.filter(function(c){return c!==item})}
+  function detach(item) {consumers=consumers.filter(function(c){return c!==item});if(!consumers.length) hideOsd()}
   function status(target) {
     var reply=IpcRegistry.call(target,"status",[])
     try {return reply.ran ? JSON.parse(reply.output) : {}} catch(e) {return {}}
@@ -37,26 +43,29 @@ Item {
     if(!recordingProbe.running) recordingProbe.running=true
     if(!remoteProbe.running) remoteProbe.running=true
   }
+  function hideOsd() {osdLife.stop();osdActive=false}
   function showOsd(raw) {
-    if(!consumers.length || typeof raw!=="string" || raw.length>8192) return false
-    try {
-      var data=JSON.parse(raw),key=String(data.icon || "").toLowerCase()
-      var kind=key.indexOf("volume")===0 ? "volume" : key==="brightness" || key==="display" ? "brightness" : ""
-      if(!kind || data.message || data.value===null || data.value===undefined || String(data.value).trim()==="") return false
-      if(typeof data.value!=="number" && typeof data.value!=="string") return false
-      if(data.max!==undefined && typeof data.max!=="number" && typeof data.max!=="string") return false
-      var value=Number(data.value),maximum=data.max===undefined || data.max==="" ? 100 : Number(data.max)
-      if(!isFinite(value) || !isFinite(maximum) || maximum<=0) return false
-      osdValue=Math.max(0,Math.min(1,value/maximum))
-      osdKind=kind
-      osdMuted=kind==="volume" && key.indexOf("mute")>=0
-      osdScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
-      osdActive=true;osdSerial++
-      var duration=Number(data.duration)
-      osdLife.interval=isFinite(duration) && duration>0 ? Math.max(600,Math.min(5000,duration)) : 1200
-      osdLife.restart()
-      return true
-    } catch(e) {return false}
+    if(!consumers.length) return false
+    var next=Osd.parse(raw)
+    if(!next) return false
+    osdValue=next.value
+    osdKind=next.kind
+    osdMuted=next.muted
+    osdHasProgress=next.hasProgress
+    osdIcon=next.kind==="layout" ? "󰌌" : NativeOsd.iconFor(next.iconName,next.hasProgress ? Math.round(next.value*100) : -1)
+    osdMessage=next.message
+    osdProgressText=next.progressText
+    osdScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+    osdActive=true;osdSerial++
+    osdLife.stop()
+    if(next.duration>0) {osdLife.interval=next.duration;osdLife.start()}
+    return true
+  }
+  readonly property alias layouts:layoutState
+  KeyboardLayoutState {
+    id:layoutState
+    active:root.consumers.length>0
+    onSwitched:language=>root.showOsd(JSON.stringify({icon:"layout",message:language,duration:1200}))
   }
   PwObjectTracker {objects:root.microphone ? [root.microphone] : []}
   Timer {id:osdLife;interval:1200;onTriggered:root.osdActive=false}

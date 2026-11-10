@@ -15,6 +15,7 @@ ShellRoot {
     property bool saving: false
     property bool stale: false
     property bool useImperial: false
+    property string temperatureUnit: "celsius"
     property string error: ""
     property string searched: ""
     property int autoCalls: 0
@@ -23,7 +24,9 @@ ShellRoot {
     function activate() {}
     function refresh() {}
     function search(query) { searched=query }
-    function choose(place) {}
+    property var chosen: null
+    function choose(place) {chosen=place}
+    function cancelSearch() {suggestions=[]}
     function autoLocate() { autoCalls++ }
   }
   QtObject {
@@ -96,15 +99,20 @@ ShellRoot {
       anchors.fill: parent
       Rectangle { anchors.fill: parent; color: Commons.Color.popups.background }
       property bool testPages: false
-      Island.CalendarView { id: calendar; visible: !calendarSurface.testPages; x: 12; y: 12; width: parent.width-24; strings: strings }
+      Island.CalendarView { id: calendar; visible: !calendarSurface.testPages; x: 12; y: 12; width: parent.width-24; strings: strings; onWeekStartRequested: value => weekStart=value }
       Island.PopupPages {
         id: pages
         x: 12; y: 12; width: parent.width-24; height: implicitHeight
         visible: calendarSurface.testPages
         service: service; strings: strings; expanded: true; hovering: true
-        onCalendarRequested: {pages.weather=false;pages.calendar=true}
-        onWeatherRequested: {pages.calendar=false;pages.weather=true}
-        onInboxRequested: {pages.weather=false;pages.calendar=false}
+        onControlsRequested: {pages.controls=true;pages.weather=false;pages.calendar=false}
+        onCalendarRequested: {pages.controls=false;pages.weather=false;pages.calendar=true}
+        onWeatherRequested: {pages.controls=false;pages.calendar=false;pages.weather=true}
+        onInboxRequested: {pages.controls=false;pages.weather=false;pages.calendar=false}
+        onSettingRequested: (key,value) => {
+          var next=Object.assign({},pages.settings);next[key]=value;pages.settings=next
+          if(key==="weatherTemperatureUnit") fakeWeather.temperatureUnit=value
+        }
       }
     }
   }
@@ -232,6 +240,15 @@ ShellRoot {
       check(groupDismiss.x>groupBell.x && groupDismiss.opacity>0.9,"group close is not to the right of mute")
       mouseClick(groupDismiss)
       check(service.removed.length===4 && service.allEntries.length===0,"group close did not dismiss all source notifications")
+      service.allEntries=[{key:"single",app:"Test",summary:"Screenshot saved and copied",body:"583 × 684 · 56.7 kB",ts:1}]
+      wait(40)
+      var single=findChild(composed,"notificationGroup-Test"),singleHeight=single.implicitHeight
+      check(findChild(single,"groupTime").visible,"single notification timestamp is not in its source header")
+      check(!findChild(single,"notificationFooter").visible,"single notification reserves an empty footer")
+      check(singleHeight<=Commons.Style.space(100),"single notification is still too tall: "+singleHeight)
+      mouseMove(single,single.width/2,single.height/2);wait(160)
+      check(single.implicitHeight===singleHeight,"compact single notification changes height on hover")
+      console.log("COMPACT_SINGLE_NOTIFICATION_PASS",singleHeight)
       service.allEntries=[]
       wait(20)
       check(!findChild(composed,"notificationCount").visible,"zero notification count is visible")
@@ -260,9 +277,26 @@ ShellRoot {
       check(!glow.rippling,"calendar wave did not finish")
       calendar.shiftMonth(-2)
       check(calendar.viewYear===2023 && calendar.viewMonth===11,"calendar year rollover failed")
-      mouseClick(findChild(calendar,"calendarToday"))
-      check(calendar.viewYear===2024 && calendar.viewMonth===1 && calendar.selectedDay.key===calendar.todayKey,"Today button failed")
+      mouseClick(findChild(calendar,"calendarCurrentDate"))
+      check(calendar.viewYear===2024 && calendar.viewMonth===1 && calendar.selectedDay.key===calendar.todayKey,"current date did not return to today")
+      check(findChild(calendar,"calendarToday")===null,"redundant Today button remains")
+      var today=findChild(calendar,"calendar-day-2024-02-29")
+      wait(150)
+      check(today.color===Commons.Color.accent && today.foreground===Commons.Color.background,"today does not use accent fill with inverse text")
+      check(findChild(today,"calendarTodayGlow").active,"today has no braille glow")
+      check(findChild(calendar,"calendarMonth").font.pixelSize<findChild(calendar,"calendarCurrentDate").fontSize,"calendar typography hierarchy is reversed")
+      check(findChild(calendar,"calendarPrevious").y>=0 && findChild(calendar,"calendarMonth").mapToItem(calendar,0,0).y>today.mapToItem(calendar,0,0).y,"month navigation is not below the grid")
+      mouseClick(findChild(calendar,"calendarSettings"));wait(180)
+      check(findChild(calendar,"calendarSettingsMenu").opened,"calendar gear did not open settings")
+      var sunday=findChild(findChild(calendar,"calendarSettingsMenu").contentItem,"calendarWeekStart-sunday")
+      mouseClick(sunday);wait(120)
+      check(calendar.firstDay===0 && calendar.cells[0].key==="2024-01-28","Sunday preference did not update calendar")
+      check(calendar.weekNumbers.length===6 && calendar.weekNumbers[0]===5 && calendar.weekNumbers[5]===10,"ISO week numbers are incorrect")
+      mouseClick(findChild(calendar,"calendarSettings"));wait(180)
+      mouseClick(findChild(findChild(calendar,"calendarSettingsMenu").contentItem,"calendarWeekStart-monday"));wait(120)
+      check(calendar.firstDay===1 && calendar.cells[0].key==="2024-01-29","Monday preference did not update calendar")
       check(calendar.implicitHeight===calendarHeight,"calendar height changed between months")
+      console.log("CALENDAR_LAYOUT_PASS")
       mouseMove(calendarSurface,1,1)
       calendar.forceActiveFocus()
       wait(150)
@@ -294,20 +328,42 @@ ShellRoot {
       var overviewButton=findChild(pages,"islandTabOverview"),calendarButton=findChild(pages,"calendarOpen"),weatherButton=findChild(pages,"weatherOpen")
       check(Math.abs(overviewButton.width-calendarButton.width)<=1 && Math.abs(calendarButton.width-weatherButton.width)<=1,"popup tabs have different column widths")
       check(findChild(weatherView,"weatherForecast").count===7,"weather does not show seven future days")
-      check(findChild(weatherView,"weatherTemperature").text.endsWith("°C"),"temperature unit is not inline")
-      fakeWeather.useImperial=true
-      check(findChild(weatherView,"weatherTemperature").text.endsWith("°F"),"imperial temperature unit is not inline")
-      fakeWeather.useImperial=false
+      var unit=findChild(weatherView,"weatherUnit"),temperature=findChild(weatherView,"weatherTemperature")
+      check(unit.text==="°C" && temperature.text==="7","initial Celsius temperature is incorrect")
+      mouseClick(unit);wait(450)
+      check(unit.text==="°C","single click changed the temperature unit")
+      mouseDoubleClickSequence(unit);wait(120)
+      check(unit.text==="°F" && temperature.text==="45" && pages.settings.weatherTemperatureUnit==="fahrenheit","double click did not select Fahrenheit")
+      check(findChild(findChild(weatherView,"weatherDay-0"),"weatherDayHigh").text==="43°","forecast did not convert to Fahrenheit")
+      wait(400);mouseDoubleClickSequence(unit);wait(120)
+      check(unit.text==="K" && temperature.text==="280","double click did not select Kelvin")
+      check(findChild(weatherView,"weatherStat-0").text==="278 K" && findChild(findChild(weatherView,"weatherDay-0"),"weatherDayHigh").text==="279 K","Kelvin was not applied to feels-like and forecast")
+      check(findChild(findChild(pages,"weatherOpen"),"weatherChipTemperature").text==="280 K","weather tab did not use the selected unit")
+      check(!fakeWeather.useImperial,"temperature cycling changed wind units")
+      wait(400);mouseDoubleClickSequence(unit);wait(120)
+      check(unit.text==="°C" && temperature.text==="7","temperature unit cycle did not return to Celsius")
+      console.log("WEATHER_UNITS_PASS")
       var firstDay=findChild(weatherView,"weatherDay-0"),lastDay=findChild(weatherView,"weatherDay-6")
       check(firstDay && lastDay && Math.abs(firstDay.width-lastDay.width)<=1 && lastDay.x+lastDay.width<=weatherView.width+1,"seven-day columns overflow or have unequal widths")
       check(findChild(weatherView,"weatherHeroScene").condition===5,"weather did not select rain scene")
       check(findChild(weatherView,"weatherTemperature").text.indexOf("7")>=0,"weather temperature missing")
       mouseClick(findChild(weatherView,"weatherLocation"))
       var cityInput=findChild(weatherView,"weatherCityInput")
+      check(!findChild(weatherView,"weatherLocation").visible && cityInput.visible,"search did not replace the city row")
       cityInput.text="Paris"
       wait(350)
       check(fakeWeather.searched==="Paris","weather city search did not run")
+      mouseClick(findChild(weatherView,"weatherHeroScene"),20,20)
+      check(!weatherView.editing && findChild(weatherView,"weatherLocation").visible && cityInput.text==="" && fakeWeather.chosen===null,"panel click did not discard the city draft")
+      mouseClick(findChild(weatherView,"weatherLocation"))
+      cityInput.text="Paris";wait(350)
+      fakeWeather.suggestions=[{name:"Paris",description:"France",latitude:48.85,longitude:2.35}]
+      keyClick(Qt.Key_Return)
+      check(!weatherView.editing && fakeWeather.chosen && fakeWeather.chosen.name==="Paris","Enter did not commit the city")
+      mouseClick(findChild(weatherView,"weatherLocation"))
       mouseClick(findChild(weatherView,"weatherAuto"))
+      check(fakeWeather.autoCalls===0,"auto-location was applied before Enter")
+      keyClick(Qt.Key_Return)
       check(fakeWeather.autoCalls===1,"weather auto-location control failed")
       var calendarTab=findChild(pages,"calendarOpen")
       calendarTab.clicked()
@@ -335,12 +391,22 @@ ShellRoot {
       wait(100)
       check(!pages.calendar && p.position>100,"page swipe stole track scrubbing")
       check(!findChild(pages,"mediaSpotlight").rippling,"track dragging triggered a click ripple")
+      pages.requestPage(3);wait(350)
+      mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton);wait(350)
+      check(pages.controls,"scroll past the last tab did not wrap to Controls")
+      mouseWheel(pager,pager.width/2,pager.height/2,120,0,Qt.NoButton);wait(350)
+      check(pages.weather,"scroll before Controls did not wrap to Weather")
+      pages.requestPage(0);wait(350)
+      mouseDrag(pager,pager.width/2,30,pager.width*0.35,0,Qt.LeftButton)
+      tryVerify(function(){return pages.weather},1200)
+      check(pages.weather,"edge swipe did not wrap tabs")
+      console.log("CYCLIC_TABS_PASS")
       console.log("ISLAND_INTERACTION_PASS")
       if (Quickshell.env("ISLAND_CALENDAR_CAPTURE_PATH")) {
         calendarSurface.grabToImage(function(result) { result.saveToFile(Quickshell.env("ISLAND_CALENDAR_CAPTURE_PATH")); Qt.quit() })
       } else Qt.quit()
     }
   }
-  Timer { interval: 300; running: true; onTriggered: test.test_controls() }
-  Timer { interval: 13000; running: true; onTriggered: { console.log("ISLAND_INTERACTION_TIMEOUT"); Qt.quit() } }
+  Timer { interval: 300; running: true; onTriggered: {try {test.test_controls()} catch(error) {console.log("ISLAND_INTERACTION_FAIL",error.stack);Qt.quit()}} }
+  Timer { interval: 17000; running: true; onTriggered: { console.log("ISLAND_INTERACTION_TIMEOUT"); Qt.quit() } }
 }

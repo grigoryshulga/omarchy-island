@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
@@ -11,17 +12,24 @@ Item {
   property bool radialBraille: true
   property var externalFeedback: null
   property bool showBack: true
+  property bool active: true
+  property string weekStart: ""
   property date today: new Date()
   property int viewYear: today.getFullYear()
   property int viewMonth: today.getMonth()
   property var selectedDay: ({year:today.getFullYear(),month:today.getMonth(),day:today.getDate(),key:todayKey})
   readonly property string todayKey: Calendar.key(today.getFullYear(),today.getMonth(),today.getDate())
   readonly property var locale: Qt.locale(Commons.I18n.formatLocale)
-  readonly property var weekdays: Calendar.weekdays(locale.firstDayOfWeek)
-  readonly property var cells: Calendar.monthCells(viewYear,viewMonth,locale.firstDayOfWeek,todayKey)
+  readonly property int firstDay: Calendar.weekStart(weekStart,locale.firstDayOfWeek)
+  readonly property var weekdays: Calendar.weekdays(firstDay)
+  readonly property var cells: Calendar.monthCells(viewYear,viewMonth,firstDay,todayKey)
+  readonly property var weekNumbers: Calendar.weekNumbers(cells,firstDay)
   readonly property string monthTitle: strings.t("calendar.monthYear").arg(locale.standaloneMonthName(viewMonth,Locale.LongFormat)).arg(Calendar.localDate(viewYear,viewMonth,1).toLocaleDateString(locale,"yyyy"))
   signal backRequested()
+  signal weekStartRequested(string value)
   implicitHeight: body.implicitHeight
+  onActiveChanged: if(!active) settingsMenu.close()
+  onVisibleChanged: if(!visible) settingsMenu.close()
 
   function pulseFrom(item) {
     if(externalFeedback) {externalFeedback.pulseFrom(item);return}
@@ -41,6 +49,19 @@ Item {
     viewYear=next.year; viewMonth=next.month
   }
   function selectDay(day) { selectedDay=day; viewYear=day.year; viewMonth=day.month }
+  function focusSelectedDay() {
+    for(var i=0;i<dayCells.count;i++) {
+      var item=dayCells.itemAt(i)
+      if(item && item.modelData.key===selectedDay.key) {item.forceActiveFocus(Qt.TabFocusReason);return}
+    }
+  }
+  function chooseWeekStart(value) {
+    weekStartRequested(value)
+    settingsMenu.close()
+  }
+  function focusWeekStart() {
+    if(settingsMenu.opened) weekChoices.itemAt(firstDay===0 ? 0 : 1).forceActiveFocus()
+  }
   function handleKey(event) {
     if(event.key===Qt.Key_PageUp) shiftMonth(-1)
     else if(event.key===Qt.Key_PageDown) shiftMonth(1)
@@ -63,7 +84,7 @@ Item {
   }
   MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));else glow.pulse(Qt.point(mouse.x,mouse.y))} }
   Timer {
-    interval: 60000; repeat: true; running: root.visible
+    interval: 60000; repeat: true; running: root.active && root.visible
     onTriggered: {
       var follow=root.selectedDay.key===root.todayKey && root.viewYear===root.today.getFullYear() && root.viewMonth===root.today.getMonth()
       root.today=new Date()
@@ -74,23 +95,56 @@ Item {
     id: body
     width: parent.width
     spacing: Style.space(12)
-    RowLayout {
+    Item {
       Layout.fillWidth: true
-      spacing: Style.space(4)
-      Button { id: backButton; visible: root.showBack; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(backButton); root.backRequested() } }
-      PlainText { objectName: "calendarMonth"; Layout.fillWidth: true; text: root.monthTitle; font.pixelSize: Style.font.title; font.bold: true }
-      Button { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
-      Button { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
+      implicitHeight: currentDate.implicitHeight+Style.space(8)
+      Button { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(backButton); root.backRequested() } }
+      Button {
+        id: currentDate
+        objectName: "calendarCurrentDate"
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(implicitWidth,parent.width-2*(settingsButton.width+Style.space(8)))
+        text: root.today.toLocaleDateString(root.locale,root.strings.t("calendar.currentDateFormat"))
+        fontSize: Style.space(30)
+        color: "transparent"
+        foreground: hot || activeFocus ? Commons.Color.accent : Commons.Color.foreground
+        tooltipText: root.strings.t("calendar.goToToday")
+        focusable: true
+        onClicked: {root.pulseFrom(currentDate);root.showToday()}
+      }
+      Button {
+        id: settingsButton
+        objectName: "calendarSettings"
+        anchors.right: parent.right
+        anchors.verticalCenter: currentDate.verticalCenter
+        iconText: "󰒓"
+        tooltipText: root.strings.t("calendar.settings")
+        horizontalPadding: Style.space(5)
+        radius: Math.min(Style.cornerRadius,Style.space(6))
+        focusable: true
+        onClicked: {root.pulseFrom(settingsButton);settingsMenu.opened ? settingsMenu.close() : settingsMenu.open()}
+      }
     }
     GridLayout {
       Layout.fillWidth: true
-      columns: 7
+      columns: 8
       columnSpacing: Style.space(3)
       rowSpacing: Style.space(3)
+      PlainText {
+        objectName: "calendarWeekHeading"
+        Layout.row: 0; Layout.column: 0
+        Layout.preferredWidth: Style.space(28)
+        horizontalAlignment: Text.AlignHCenter
+        text: root.strings.t("calendar.weekNumber")
+        font.pixelSize: Style.font.caption
+        color: Commons.Color.muted
+      }
       Repeater {
         model: root.weekdays
         PlainText {
           required property int modelData
+          required property int index
+          Layout.row: 0; Layout.column: index+1
           Layout.fillWidth: true
           Layout.preferredHeight: Style.space(24)
           horizontalAlignment: Text.AlignHCenter
@@ -101,28 +155,52 @@ Item {
         }
       }
       Repeater {
+        model: root.weekNumbers
+        PlainText {
+          required property int index
+          required property int modelData
+          objectName: "calendarWeek-"+index
+          Layout.row: index+1; Layout.column: 0
+          Layout.preferredWidth: Style.space(28)
+          Layout.fillHeight: true
+          horizontalAlignment: Text.AlignHCenter
+          verticalAlignment: Text.AlignVCenter
+          text: Commons.I18n.formatNumber(modelData)
+          font.pixelSize: Style.font.caption
+          color: Commons.Color.muted
+        }
+      }
+      Repeater {
+        id:dayCells
         model: root.cells
         Button {
           id: dayButton
           required property var modelData
+          required property int index
+          readonly property bool islandCalendarDay: true
           objectName: "calendar-day-"+modelData.key
+          Layout.row: Math.floor(index/7)+1; Layout.column: index%7+1
           Layout.fillWidth: true
           Layout.preferredWidth: Style.space(38)
           Layout.preferredHeight: Style.space(34)
           horizontalPadding: 0; verticalPadding: 0
           radius: Math.min(Style.cornerRadius,Style.space(6))
           text: Commons.I18n.formatNumber(modelData.day)
-          foreground: modelData.today ? Commons.Color.accent : modelData.inMonth ? Commons.Color.foreground : Commons.Color.muted
-          background: modelData.today ? Util.alpha(Commons.Color.accent,0.15) : "transparent"
-          bordered: modelData.today
+          foreground: modelData.today ? Commons.Color.background : modelData.inMonth ? Commons.Color.foreground : Commons.Color.muted
+          color: modelData.today ? Commons.Color.accent : activeFocus ? Style.focusFillFor(foreground,accent) : hot ? Style.hoverFillFor(foreground,accent) : active ? Style.selectedFillFor(foreground,accent) : "transparent"
           active: root.selectedDay.key===modelData.key
-          Rectangle {
-            anchors.fill: parent
-            visible: modelData.today
-            radius: parent.radius
-            color: "transparent"
-            border.width: Math.max(1,Style.space(1))
-            border.color: Commons.Color.accent
+          Loader {
+            anchors.centerIn: parent
+            width: Math.max(dayButton.width,dayButton.height)+Style.space(28)
+            height: width
+            z: -1
+            active: dayButton.modelData.today
+            sourceComponent: IndicatorGlow {
+              objectName: "calendarTodayGlow"
+              width: parent.width; height: parent.height
+              active: root.active && root.visible
+              intensity: 1.8
+            }
           }
           focusable: true
           onClicked: { root.pulseFrom(dayButton); root.selectDay(modelData) }
@@ -132,13 +210,57 @@ Item {
     PanelSeparator { Layout.fillWidth: true }
     RowLayout {
       Layout.fillWidth: true
+      spacing: Style.space(8)
+      Button { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
       PlainText {
+        objectName: "calendarMonth"
         Layout.fillWidth: true
-        text: Calendar.localDate(root.selectedDay.year,root.selectedDay.month,root.selectedDay.day).toLocaleDateString(root.locale,root.strings.t("calendar.dateFormat"))
+        horizontalAlignment: Text.AlignHCenter
+        text: root.monthTitle
         font.pixelSize: Style.font.bodySmall
         color: Commons.Color.muted
       }
-      ActionButton { id: todayButton; objectName: "calendarToday"; text: root.strings.t("calendar.today"); onClicked: { root.pulseFrom(todayButton); root.showToday() } }
+      Button { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
+    }
+  }
+  Controls.Popup {
+    id: settingsMenu
+    objectName: "calendarSettingsMenu"
+    parent: settingsButton
+    x: Commons.I18n.rightToLeft ? 0 : settingsButton.width-width
+    y: settingsButton.height+Style.space(5)
+    width: Math.min(root.width,Style.space(230))
+    padding: Style.space(10)
+    focus: true
+    closePolicy: Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
+    enter: Transition {NumberAnimation {property:"opacity";from:0;to:1;duration:Style.duration(160);easing.type:Easing.OutCubic}}
+    exit: Transition {NumberAnimation {property:"opacity";to:0;duration:Style.duration(100);easing.type:Easing.OutCubic}}
+    background: BorderSurface {color:Commons.Color.popups.background;borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)));radius:Style.cornerRadius}
+    onOpened: Qt.callLater(root.focusWeekStart)
+    onClosed: if(root.active && root.visible) settingsButton.forceActiveFocus()
+    contentItem: Column {
+      spacing: Style.space(6)
+      PlainText {width:parent.width;text:root.strings.t("calendar.weekStartsOn");color:Commons.Color.muted;font.pixelSize:Style.font.bodySmall;wrapMode:Text.Wrap}
+      Repeater {
+        id: weekChoices
+        model: ["sunday","monday"]
+        ActionButton {
+          required property string modelData
+          required property int index
+          objectName: "calendarWeekStart-"+modelData
+          width: parent.width
+          text: root.locale.dayName(index===0 ? 0 : 1,Locale.LongFormat)
+          selected: root.firstDay===(index===0 ? 0 : 1)
+          foreground: selected ? Commons.Color.accent : Commons.Color.foreground
+          leftAlign: true
+          background: "transparent"
+          onClicked: {root.pulseFrom(settingsButton);root.chooseWeekStart(modelData)}
+          Keys.onDownPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
+          Keys.onUpPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
+          Keys.onTabPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
+          Keys.onBacktabPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
+        }
+      }
     }
   }
 }

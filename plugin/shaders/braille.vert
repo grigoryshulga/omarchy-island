@@ -13,6 +13,7 @@ layout(std140, binding = 0) uniform buf {
     float treble;
     vec4 accent;
     float monochrome;
+    float reveal;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

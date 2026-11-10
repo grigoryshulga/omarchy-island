@@ -21,6 +21,7 @@ Item {
   ShellIpc {
     target: "island-osd"
     function show(payload: string): string {return indicatorState.showOsd(payload) ? "ok" : "unavailable"}
+    function hide(): string {indicatorState.hideOsd();return "ok"}
   }
   property var entries: []
   readonly property string sessionKey: Date.now().toString(36)

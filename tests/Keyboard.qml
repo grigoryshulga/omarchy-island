@@ -1,0 +1,175 @@
+import QtQuick
+import QtTest
+import Quickshell
+import Quickshell.Wayland
+import qs.Commons as Commons
+import "Island" as Island
+
+ShellRoot {
+  QtObject {
+    id:fakeWeather
+    property bool allowed:true
+    property bool loading:false
+    property bool searching:false
+    property bool saving:false
+    property bool stale:false
+    property bool useImperial:false
+    property string temperatureUnit:"celsius"
+    property string error:""
+    property var report:null
+    property var suggestions:[]
+    function search(query){}
+    function cancelSearch(){suggestions=[]}
+    function choose(place){}
+    function autoLocate(){}
+    function refresh(){}
+  }
+  QtObject {
+    id:states
+    property var microphone:({})
+    property bool microphoneMuted:false
+    property bool nightLight:false
+    property bool stayAwake:false
+    property bool recording:false
+    property bool remoteActive:false
+  }
+  QtObject {
+    id:player
+    property string identity:"Test music"
+    property string trackTitle:"Track"
+    property string trackArtist:"Artist"
+    property string trackArtUrl:""
+    property bool isPlaying:false
+    property bool canGoPrevious:true
+    property bool canGoNext:true
+    property bool canTogglePlaying:true
+    property bool canSeek:true
+    property bool lengthSupported:true
+    property bool positionSupported:true
+    property bool volumeSupported:true
+    property real length:180
+    property real position:20
+    property real volume:0.5
+  }
+  QtObject {
+    id:service
+    property var indicators:states
+    property var weather:fakeWeather
+    property var player:player
+    property bool hasMedia:true
+    property bool playing:false
+    property var players:[]
+    property var latest:null
+    property var mutedSources:[]
+    property var allEntries:[{key:"test",app:"Keyboard test",summary:"Notification",body:"Body",codes:"123456",ts:1}]
+    property string error:""
+    property bool doNotDisturb:false
+    property int activations:0
+    function setDoNotDisturb(value){doNotDisturb=value}
+    function actions(row){return []}
+    function media(action){}
+    function activate(row){activations++}
+    function mute(source){}
+    function clear(){}
+  }
+  QtObject {id:shell;function firstPartyServiceFor(id){return null}}
+  QtObject {
+    id:bar
+    property var shell:shell
+    property color foreground:"white"
+    property color background:"black"
+    property color barForeground:"white"
+    property color urgent:"red"
+    property string fontFamily:"monospace"
+    property bool vertical:false
+    property string position:"top"
+    property int barSize:30
+    property bool foregroundAnimationEnabled:true
+    function registerClickTarget(t){}
+    function unregisterClickTarget(t){}
+    function showTooltip(t,s){}
+    function hideTooltip(t){}
+    function moduleWidgets(id){return []}
+  }
+  PanelWindow {
+    WlrLayershell.keyboardFocus:WlrKeyboardFocus.Exclusive
+    WlrLayershell.layer:WlrLayer.Overlay
+    WlrLayershell.namespace:"island-keyboard-test"
+    exclusionMode:ExclusionMode.Ignore
+    anchors {top:true;left:true}
+    visible:true;implicitWidth:560;implicitHeight:700
+    Island.PopupPages {
+      id:pages;anchors.fill:parent;anchors.margins:16
+      expanded:true;keyboardActive:true
+      service:service;bar:bar;strings:translations
+      onControlsRequested:{pages.controls=true;pages.calendar=false;pages.weather=false}
+      onInboxRequested:{pages.controls=false;pages.calendar=false;pages.weather=false}
+      onCalendarRequested:{pages.controls=false;pages.calendar=true;pages.weather=false}
+      onWeatherRequested:{pages.controls=false;pages.calendar=false;pages.weather=true}
+    }
+    Commons.Translations {id:translations;directory:Qt.resolvedUrl("Island/i18n")}
+    TestCase {
+      id:test;when:false
+      function check(ok,message){if(!ok){console.log("KEYBOARD_FAIL:",message);Qt.quit();throw new Error(message)}}
+      function test_keyboard(){
+        pages.forceActiveFocus();wait(150)
+        keyClick(Qt.Key_1,Qt.AltModifier);wait(280)
+        check(pages.controls,"Alt+1 did not open Controls")
+        var audio=findChild(pages,"controlOpen-audio"),bluetooth=findChild(pages,"controlOpen-bluetooth")
+        check(audio.activeFocus,"tab switch did not focus the current page")
+        keyClick(Qt.Key_Right);check(bluetooth.activeFocus,"right arrow did not move between tiles: "+findChild(pages,"islandKeyboardNavigation").focused.objectName)
+        keyClick(Qt.Key_J);check(findChild(pages,"controlOpen-tailscale").activeFocus,"Vim J did not move down")
+        var dnd=findChild(pages,"controlDnd")
+        dnd.forceActiveFocus();keyClick(Qt.Key_Return)
+        check(service.doNotDisturb,"Enter did not activate focused control")
+        keyClick(Qt.Key_Tab);check(findChild(pages,"controlNightLight").activeFocus,"Tab did not advance through current page controls")
+        keyClick(Qt.Key_Backtab,Qt.ShiftModifier);check(dnd.activeFocus,"Shift+Tab did not reverse focus")
+        audio.forceActiveFocus();keyClick(Qt.Key_Return);wait(500)
+        var loader=findChild(pages,"islandNativeControl")
+        check(loader.item && loader.item.opened,"keyboard did not open native audio detail")
+        keyClick(Qt.Key_J);check(loader.item.cursorActive,"native Vim cursor navigation stopped working")
+        keyClick(Qt.Key_Tab)
+        check(!loader.item.keyboardTarget.activeFocus,"Tab is trapped by the native panel")
+        keyClick(Qt.Key_Backtab,Qt.ShiftModifier)
+        check(loader.item.keyboardTarget.activeFocus,"Shift+Tab did not return to native navigation")
+        keyClick(Qt.Key_2,Qt.AltModifier);wait(280)
+        check(!pages.controls && !pages.calendar && !pages.weather,"Alt+2 from a native panel did not open Overview")
+        var seek=findChild(pages,"mediaSeek")
+        seek.forceActiveFocus();keyClick(Qt.Key_Right)
+        check(player.position===21,"focused track slider did not handle right arrow")
+        keyClick(Qt.Key_H);check(player.position===20,"focused track slider did not handle Vim H")
+        var card=findChild(pages,"notification-test")
+        card.forceActiveFocus();wait(180)
+        check(card.keyboardFocused,"notification keyboard focus is not visible")
+        keyClick(Qt.Key_Return);check(service.activations===1,"Enter did not activate notification")
+        check(findChild(card,"copyCode-123456").enabled,"notification actions did not appear for keyboard focus")
+        keyClick(Qt.Key_Tab)
+        check(findChild(card,"copyCode-123456").activeFocus,"notification action is unreachable via Tab")
+        keyClick(Qt.Key_3,Qt.AltModifier);wait(280)
+        check(pages.calendar,"Alt+3 did not open Calendar")
+        var calendar=findChild(pages,"islandCalendar"),before=calendar.selectedDay.key
+        keyClick(Qt.Key_J);wait(40);check(calendar.selectedDay.key!==before,"Vim calendar day navigation failed")
+        check(findChild(calendar,"calendar-day-"+calendar.selectedDay.key).activeFocus,"calendar date selection did not follow keyboard focus")
+        keyClick(Qt.Key_4,Qt.AltModifier);wait(280)
+        check(pages.weather,"Alt+4 did not open Weather")
+        findChild(pages,"weatherLocation").clicked();wait(40)
+        var field=findChild(pages,"weatherCityInput")
+        field.forceActiveFocus();for(var key of [Qt.Key_H,Qt.Key_J,Qt.Key_K,Qt.Key_L]) keyClick(key)
+        check(field.text==="hjkl","Vim bindings stole text input")
+        var cursor=field.cursorPosition
+        keyClick(Qt.Key_Left)
+        check(field.cursorPosition===cursor-1,"arrow navigation stole the editor caret")
+        keyClick(Qt.Key_1,Qt.AltModifier);wait(280)
+        check(pages.controls,"Alt+1 did not switch away from a text editor")
+        fakeWeather.allowed=false
+        keyClick(Qt.Key_4,Qt.AltModifier);wait(50)
+        check(pages.controls,"disabled weather tab still had an active shortcut")
+        pages.keyboardActive=false
+        keyClick(Qt.Key_2,Qt.AltModifier);wait(50)
+        check(pages.controls,"shortcuts remained enabled outside persistent menu")
+        console.log("KEYBOARD_PASS");Qt.quit()
+      }
+    }
+    Timer {interval:300;running:true;onTriggered:test.test_keyboard()}
+  }
+}

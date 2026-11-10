@@ -65,7 +65,18 @@ function imperial(override,locale,country) {
   if(name) return ["united states","united states of america","us","usa","liberia","myanmar","burma"].indexOf(name)>=0
   return /^en[_-](US|LR)($|[_.-])|^my($|[_.-])/.test(String(locale || ""))
 }
-function temperature(celsius,useImperial) { return celsius===null || celsius===undefined ? null : Math.round(useImperial ? celsius*9/5+32 : celsius) }
+function temperatureUnit(override,useImperial) {
+  return ["celsius","fahrenheit","kelvin"].indexOf(override)>=0 ? override : useImperial ? "fahrenheit" : "celsius"
+}
+function nextTemperatureUnit(unit) {
+  var units=["celsius","fahrenheit","kelvin"]
+  return units[(units.indexOf(unit)+1)%units.length]
+}
+function unitSymbol(unit) {return unit==="kelvin" ? "K" : unit==="fahrenheit" ? "°F" : "°C"}
+function temperature(celsius,unit) {
+  if(celsius===null || celsius===undefined) return null
+  return Math.round(unit===true || unit==="fahrenheit" ? celsius*9/5+32 : unit==="kelvin" ? celsius+273.15 : celsius)
+}
 function nativeSettings(raw) {
   try {
     var config=JSON.parse(raw),layout=config.bar && config.bar.layout || {}

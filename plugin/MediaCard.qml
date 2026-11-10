@@ -45,13 +45,16 @@ Item {
       spacing: Style.space(12)
       ColumnLayout {
         Layout.fillWidth: true
+        Layout.minimumWidth: 0
         spacing: Style.space(4)
-        PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); font.pixelSize: Math.round(Style.font.title*1.25) }
-        PlainText { Layout.fillWidth: true; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Commons.Color.accent : Commons.Color.muted; font.pixelSize: Style.font.bodySmall }
-        PlainText { Layout.fillWidth: true; visible: root.expanded && root.player !== null; text: root.player ? root.player.identity : ""; font.pixelSize: Style.font.caption; color: Commons.Color.accent }
+        PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); font.pixelSize: Math.round(Style.font.title*1.25) }
+        PlainText { Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Commons.Color.accent : Commons.Color.muted; font.pixelSize: Style.font.bodySmall }
       }
       RowLayout {
+        objectName:"mediaTransport"
         Layout.alignment: Qt.AlignVCenter
+        Layout.minimumWidth: implicitWidth
+        Layout.maximumWidth: implicitWidth
         spacing: Style.space(2)
         FeedbackButton { feedback: root.feedback; iconText: "󰒮"; tooltipText: root.strings.t("previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoPrevious; onClicked: root.service.media("previous") }
         PlayPauseButton { feedback: root.feedback; objectName: "mediaToggle"; playing: root.player !== null && root.player.isPlaying; tooltipText: root.strings.t("playPause"); enabled: root.player !== null && root.player.canTogglePlaying; onClicked: root.service.media("toggle") }
@@ -102,22 +105,7 @@ Item {
           Item { Layout.fillWidth: true }
           PlainText { objectName: "mediaDuration"; text: Model.time(seek.maximum); font.pixelSize: Style.font.body; font.bold: true; color: Commons.Color.foreground }
         }
-        Flow {
-          Layout.fillWidth: true
-          spacing: Style.space(4)
-          Repeater {
-            model: root.service ? root.service.players : []
-            FeedbackButton {
-              feedback: root.feedback
-              required property var modelData
-              text: Model.plain(modelData.identity).slice(0,40)
-              radius: Math.min(Style.cornerRadius,Style.space(6))
-              selected: root.player === modelData
-              focusable: true
-              onClicked: root.service.selectPlayer(modelData.dbusName)
-            }
-          }
-        }
+
       }
     }
   }

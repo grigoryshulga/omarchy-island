@@ -8,6 +8,8 @@ Item {
   property bool monochrome: false
   property bool horizontalFade: false
   property real reveal: 1
+  property real artworkReveal: Math.max(0,Math.min(1,reveal))
+  Behavior on artworkReveal { NumberAnimation { duration: Style.duration(280); easing.type: Easing.OutCubic } }
   readonly property real phase: service ? service.visualPhase : 0
   readonly property bool active: service !== null && service.hasMedia && service.playing
   clip: true
@@ -19,7 +21,7 @@ Item {
     vertexShader: Qt.resolvedUrl("shaders/fade.vert.qsb")
     fragmentShader: Qt.resolvedUrl("shaders/fade.frag.qsb")
   }
-  opacity: active ? reveal : 0
+  opacity: active ? 1 : 0
   Behavior on opacity { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
   Image {
     id: artwork
@@ -43,6 +45,7 @@ Item {
     property real treble: root.service ? root.service.audioTreble : 0
     property color accent: Commons.Color.accent
     property real monochrome: root.monochrome ? 1 : 0
+    property real reveal: root.horizontalFade ? 1 : root.artworkReveal
     vertexShader: Qt.resolvedUrl("shaders/braille.vert.qsb")
     fragmentShader: Qt.resolvedUrl("shaders/braille.frag.qsb")
   }

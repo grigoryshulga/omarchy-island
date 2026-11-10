@@ -59,6 +59,8 @@ ShellRoot {
   QtObject {
     id: fakeShell
     function serviceFor(id) { return service }
+    property var writtenEntry: null
+    function updateEntryInline(id,entry) {writtenEntry=entry;return true}
   }
   QtObject {
     id: fakeBar
@@ -95,8 +97,10 @@ ShellRoot {
       if(!ok) {console.log("ISLAND_MOTION_FAIL:",message);Qt.quit();throw new Error(message)}
     }
     property int exitTick: 0
+    property bool artworkFadeTailSeen: false
     property real startWidth: 0
     property real playerWidth: 0
+    property point mediaControlPosition: Qt.point(0,0)
     property string nativeSize: ""
     function sampleExit(popup) {
       checkExit(popup.visible && popup.backingWindowVisible && popup.shown>0.1 && popup.shown<0.95,"close has no perceptible intermediate frame")
@@ -120,12 +124,16 @@ ShellRoot {
         checkExit(tabs.visible && player.visible && art.visible,"pinned close discarded its contents or backdrop before fading")
       }
       if([25,65,105,145,185].indexOf(exitTick)>=0) sampleExit(popup)
-      if(exitTick===26) {widget.contentExpanded=false;widget.hoverOpen=true}
+      if(exitTick===26) {
+        widget.contentExpanded=false;widget.hoverOpen=true
+        var hoverCard=findChild(popup,"islandPopupCard")
+        mouseMove(hoverCard,hoverCard.width/2,hoverCard.height/2)
+      }
       if(exitTick===50) {var card=findChild(popup,"islandPopupCard");mouseMove(card,card.width/2,card.height/2)}
       if(exitTick===60) {
         startWidth=popup.drawnWidth;playerWidth=player.width
         widget.hoverOpen=false
-        checkExit(tabs.visible && player.visible && art.visible,"hover close discarded its contents or backdrop before fading")
+        checkExit(!tabs.visible && player.visible && art.visible,"hover close discarded its overview or showed tabs")
       }
       if(exitTick===65) checkExit(Math.abs(player.width-playerWidth)<1,"hover close reflowed its content")
       if(exitTick===66) widget.showNotification()
@@ -137,13 +145,29 @@ ShellRoot {
         checkExit(toast && toast.visible && toast.height===toastHeight && popup.frameSuppressed,"toast expiry removed its text before fading")
       }
       if(exitTick===106) widget.alertKind="media"
+      if(exitTick===132) {
+        p.trackTitle="A very long track title that should elide without moving the player controls"
+        mediaControlPosition=findChild(player,"mediaToggle").mapToGlobal(0,0)
+        widget.hoverOpen=true
+      }
+      if(exitTick===138) {
+        var at=findChild(player,"mediaToggle").mapToGlobal(0,0)
+        checkExit(Math.abs(at.x-mediaControlPosition.x)<1 && Math.abs(at.y-mediaControlPosition.y)<1,"hovering Now Playing moved its transport controls")
+        console.log("STABLE_MEDIA_CONTROLS_PASS")
+      }
       if(exitTick===140) {
         startWidth=popup.drawnWidth
+        widget.hoverOpen=false
         widget.alertKind=""
         checkExit(player.visible && art.visible,"media alert removed its player before fading")
       }
       if(exitTick===146) widget.openCalendar()
+      if(exitTick>=147 && exitTick<180 && art.reveal<0.0001 && art.artworkReveal>0.005) {
+        artworkFadeTailSeen=true
+        checkExit(art.visible,"tab switch cut off album artwork before its opacity faded")
+      }
       if(exitTick===180) {
+        checkExit(artworkFadeTailSeen,"tab switch did not preserve the artwork fade tail")
         startWidth=popup.drawnWidth
         widget.close()
         checkExit(tabs.visible && Math.abs(findChild(widget,"islandCalendar").mapToItem(findChild(widget,"islandPageSwipe"),0,0).x)<1,"calendar close switched its content before fading")
@@ -182,6 +206,17 @@ ShellRoot {
       var popup = test.findChild(widget,"islandPopup")
       if (!popup) return
       tick++
+      if(tick===1) {
+        widget.settings={format:"dddd HH:mm"}
+        widget.updateSetting("calendarWeekStart","sunday")
+        widget.updateSetting("weatherTemperatureUnit","kelvin")
+        var calendar=test.findChild(widget,"islandCalendar")
+        if(!fakeShell.writtenEntry || fakeShell.writtenEntry.calendarWeekStart!=="sunday" || fakeShell.writtenEntry.weatherTemperatureUnit!=="kelvin" || fakeShell.writtenEntry.format!=="dddd HH:mm" || calendar.firstDay!==0) {console.log("ISLAND_MOTION_FAIL: calendar/weather preferences were not saved with existing settings");Qt.quit();return}
+        widget.updateSetting("calendarWeekStart","invalid")
+        widget.updateSetting("weatherTemperatureUnit","invalid")
+        if(widget.settings.calendarWeekStart!=="sunday" || widget.settings.weatherTemperatureUnit!=="kelvin") {console.log("ISLAND_MOTION_FAIL: invalid preference was accepted");Qt.quit();return}
+        console.log("ISLAND_PREFERENCES_PASS")
+      }
       if(tick===1 && Quickshell.env("ISLAND_EXIT_ONLY")) {motionClock.stop();test.test_exit();return}
       if(tick===5) test.findChild(widget,"islandClock").triggerPress(Qt.RightButton)
       if(tick===7) {
@@ -270,6 +305,12 @@ ShellRoot {
         var pager=test.findChild(widget,"islandPageSwipe")
         test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
       }
+      if(tick===290) {
+        if(widget.pinned || widget.calendarMode || test.findChild(widget,"islandTabs").visible) {console.log("ISLAND_MOTION_FAIL: hover preview exposed tabs or switched away from Overview");Qt.quit();return}
+        widget.open()
+        var pager=test.findChild(widget,"islandPageSwipe")
+        test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
+      }
       if(tick===310) {
         var pager=test.findChild(widget,"islandPageSwipe")
         if(!widget.calendarMode || Math.abs(test.findChild(widget,"islandCalendar").mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: hover-to-pinned wheel resized without moving calendar contents");widget.close();Qt.quit();return}
@@ -278,6 +319,17 @@ ShellRoot {
       if(tick===340) {
         if(widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: wheel did not return visible overview");widget.close();Qt.quit();return}
         console.log("RESIZING_PAGE_WHEEL_PASS")
+        test.findChild(widget,"islandTabControls").clicked()
+      }
+      if(tick===370) {
+        var controls=test.findChild(widget,"islandControls"),pager=test.findChild(widget,"islandPageSwipe")
+        if(!widget.controlsMode || !controls.active || Math.abs(controls.mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls tab did not switch visible page");widget.close();Qt.quit();return}
+        if(test.findChild(widget,"islandTabControls").x>=test.findChild(widget,"islandTabOverview").x) {console.log("ISLAND_MOTION_FAIL: Controls is not the first tab");widget.close();Qt.quit();return}
+        test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
+      }
+      if(tick===400) {
+        if(widget.controlsMode || widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls wheel did not return Overview");widget.close();Qt.quit();return}
+        console.log("CONTROLS_NAVIGATION_PASS")
         motionClock.stop()
         test.test_exit()
       }

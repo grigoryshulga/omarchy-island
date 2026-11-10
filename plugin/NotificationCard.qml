@@ -14,11 +14,20 @@ Rectangle {
   required property var service
   required property var strings
   property bool expanded: false
+  property bool islandNavigationContainer:true
+  activeFocusOnTab:expanded
+  KeyboardNavigation {id:focusWatch;scope:root}
+  readonly property bool keyboardFocused:focusWatch.contains(root,focusWatch.focused)
+  Keys.onReturnPressed:{root.feedback.pulseFrom(root);root.service.activate(root.row)}
+  Keys.onEnterPressed:{root.feedback.pulseFrom(root);root.service.activate(root.row)}
+  Keys.onSpacePressed:{root.feedback.pulseFrom(root);root.service.activate(root.row)}
   property bool radialBraille: true
   property bool grouped: false
   property bool compact: false
   property bool separated: false
   property bool individualDismiss: true
+  property bool showTimestamp: true
+  readonly property bool hasActions: !grouped || !!row.link || String(row.codes || "").trim()!=="" || service.actions(row).some(function(action){return action.id!=="default"}) || (Security.parseExecActions(row.execActions) || []).length>0
   property var feedback: brailleFeedback
   property string copied: ""
   signal expandRequested()
@@ -30,6 +39,7 @@ Rectangle {
   border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
   radius: Style.cornerRadius
   implicitHeight: content.implicitHeight + (grouped ? 0 : Style.space(20)) + (separated ? Style.space(12) : 0)
+  BorderSurface {anchors.fill:parent;color:"transparent";radius:Style.cornerRadius;borderSpec:Border.controlSpec("focus",Commons.Color.foreground,Commons.Color.accent);visible:root.keyboardFocused}
   PanelSeparator { objectName: "notificationDivider"; anchors.top: parent.top; visible: root.separated }
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
   HoverHandler { id: hover }
@@ -53,26 +63,27 @@ Rectangle {
       PlainText { visible: !root.grouped; Layout.fillWidth: true; text: Model.source(root.row); color: Commons.Color.accent; font.pixelSize: Style.font.caption }
       Item { visible: root.grouped; Layout.fillWidth: true }
       PlainText { text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
     }
     RowLayout {
       Layout.fillWidth: true
       PlainText { Layout.fillWidth: true; text: root.row.summary; font.pixelSize: root.compact ? Style.font.body : Style.font.subtitle; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 8 : 1; elide: Text.ElideRight }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
     }
     PlainText { Layout.fillWidth: true; visible: text !== ""; text: Model.plain(root.row.body); font.pixelSize: Style.font.bodySmall; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
     Item {
+      objectName:"notificationFooter"
       Layout.fillWidth: true
-      property real reveal: !root.compact && hover.hovered ? 1 : 0
+      property real reveal: !root.compact && (hover.hovered || root.keyboardFocused) ? 1 : 0
       implicitHeight: Math.max(stamp.visible ? stamp.implicitHeight : 0,actions.implicitHeight)
-      visible: !root.compact
+      visible: !root.compact && ((root.grouped && root.showTimestamp) || root.hasActions)
       clip: true
       Behavior on reveal { NumberAnimation { duration: Style.duration(150); easing.type: Easing.OutCubic } }
       PlainText {
         id: stamp
         objectName: "notificationTime"
         anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
-        visible: root.grouped
+        visible: root.grouped && root.showTimestamp
         text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm")
         color: Commons.Color.muted
         font.pixelSize: Style.font.caption

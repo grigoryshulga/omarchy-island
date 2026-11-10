@@ -6,6 +6,8 @@ layout(std140, binding = 0) uniform buf {
   float qt_Opacity;
   vec2 size;
   vec2 origin;
+  vec2 fadeMargins;
+  vec2 intensity;
   float phase;
   float spacing;
   float bandWidth;
@@ -28,8 +30,10 @@ void main() {
   float distanceFromOrigin=length(pixel-center);
   float band=mod(distanceFromOrigin-phase*speed,spacing)-spacing*0.5;
   float wave=exp(-pow(band/bandWidth,2.0));
-  float edgeFade=smoothstep(0.0,0.20,1.0-qt_TexCoord0.x);
-  float strength=wave*edgeFade*mix(1.0,0.35,qt_TexCoord0.x);
+  vec2 edgeDistance=min(pixel,size-pixel);
+  vec2 softEdge=smoothstep(vec2(0.0),max(fadeMargins,vec2(1.0)),edgeDistance);
+  float edgeFade=softEdge.x*softEdge.y;
+  float strength=wave*edgeFade*mix(intensity.x,intensity.y,smoothstep(0.0,1.0,qt_TexCoord0.x));
   uvec2 site=uvec2(floor(pixel/3.0));
   vec2 local=mod(pixel,3.0)-vec2(1.5);
   float clock=phase*0.65+noise(site,31u);

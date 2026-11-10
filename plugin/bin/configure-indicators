@@ -27,6 +27,12 @@ if args.disable:
     disabled=data.setdefault('disabledPlugins',[])
     if 'gshulga.island-osd' not in disabled:disabled.append('gshulga.island-osd')
     if not saved['osdDisabled'] and 'omarchy.osd' in disabled:disabled.remove('omarchy.osd')
+    # Restore the old permanent layout widget only if the user has not placed one.
+    layout=data.get('bar',{}).get('layout',{})
+    if not any(entry_id(entry)=='omarchy.keyboard-layout' for entries in layout.values() for entry in entries):
+        for change in saved.get('keyboardEntries',[]):
+            entries=layout.setdefault(change['section'],[])
+            entries.insert(min(change['index'],len(entries)),change['entry'])
     for change in saved['entries']:
         entries=data.get('bar',{}).get('layout',{}).get(change['section'],[])
         if change.get('removed'):
@@ -54,6 +60,13 @@ else:
                 if remaining:entry['items']=remaining
                 else:entries.remove(entry)
                 saved['entries'].append({'section':section,'index':index,'before':before,'afterItems':remaining,'removed':not remaining})
+    # Also migrate existing installations: layout OSD replaces the bar label.
+    keyboard_entries=saved.setdefault('keyboardEntries',[])
+    for section,entries in data.get('bar',{}).get('layout',{}).items():
+        for index,entry in enumerate(list(entries)):
+            if entry_id(entry)=='omarchy.keyboard-layout':
+                keyboard_entries.append({'section':section,'index':index,'entry':entry})
+                entries.remove(entry)
     shutil.copytree(source,target,dirs_exist_ok=True)
     plugins=data.setdefault('plugins',[])
     if not any(entry_id(e)=='gshulga.island-osd' for e in plugins):plugins.append({'id':'gshulga.island-osd'})

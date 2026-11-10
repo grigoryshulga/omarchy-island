@@ -7,6 +7,6 @@ with tempfile.TemporaryDirectory(prefix='island-qml-') as tmp:
     (root/'Island').symlink_to(project/'plugin')
     (root/'shell.qml').write_text((project/'tests/Interaction.qml').read_text())
     env=os.environ.copy();env['QT_QPA_PLATFORM']='offscreen';env['QT_QUICK_BACKEND']='software'
-    result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=15)
+    result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=19)
     print(result.stdout)
     if 'ISLAND_INTERACTION_PASS' not in result.stdout or 'FAIL!' in result.stdout: raise SystemExit(1)

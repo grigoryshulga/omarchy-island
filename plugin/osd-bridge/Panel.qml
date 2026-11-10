@@ -74,14 +74,17 @@ Item {
 
   function open(payloadJson) {
     var forwarded = IpcRegistry.call("island-osd", "show", [String(payloadJson)])
-    if (forwarded.ran && forwarded.output === "ok") { root.close(); return }
+    if (forwarded.ran && forwarded.output === "ok") { root.opened = false; return }
     try {
       var p = JSON.parse(payloadJson || "{}")
       show(p.icon || "", p.message || "", p.value === undefined ? "" : String(p.value), p.max === undefined ? "100" : String(p.max), p.progressText || "", p.duration === undefined ? "1200" : String(p.duration))
     } catch (e) {}
   }
 
-  function close() { opened = false }
+  function close() {
+    opened = false
+    IpcRegistry.call("island-osd", "hide", [])
+  }
 
   Timer {
     id: hideTimer

@@ -44,11 +44,26 @@ assert.equal(Calendar.monthCells(2025,1,1,'').filter(c=>c.inMonth).length,28);
 assert.equal(Calendar.stepMonth(2026,11,1).key,'2027-01-01');
 assert.equal(Calendar.stepMonth(2026,0,-1).key,'2025-12-01');
 assert.equal(Calendar.stepDay({year:2024,month:1,day:28},1).key,'2024-02-29');
+assert.equal(Calendar.weekStart('sunday',1),0);
+assert.equal(Calendar.weekStart('monday',7),1);
+assert.equal(Calendar.weekStart('',7),0);
+assert.equal(Calendar.weekStart('invalid',1),1);
+for(const [date,week] of [['2020-12-31',53],['2021-01-01',53],['2021-01-04',1],['2024-02-29',9],['2026-12-31',53],['2027-01-01',53]]) {
+ const [year,month,day]=date.split('-').map(Number);
+ assert.equal(Calendar.isoWeek(year,month-1,day),week,date);
+}
+for(const start of [0,1]) {
+ const numbers=Calendar.weekNumbers(Calendar.monthCells(2024,1,start,''),start);
+ assert.equal(Array.from(numbers).join(','),'5,6,7,8,9,10');
+ const newYear=Calendar.weekNumbers(Calendar.monthCells(2021,0,start,''),start);
+ assert.equal(Array.from(newYear).join(','),'53,1,2,3,4,5');
+}
 for(const tz of ['America/Santiago','America/Havana','Pacific/Apia']) {
  process.env.TZ=tz;
  const grid=Calendar.monthCells(2026,8,0,'');
  assert.equal(new Set(grid.map(c=>c.key)).size,42,tz);
  assert.equal(Calendar.stepMonth(2026,8,1).key,'2026-10-01');
+ assert.equal(Calendar.isoWeek(2021,0,1),53,tz);
 }
 console.log('PASS: code detection, redaction, URL policy, music filtering, notification ordering.');
 const Weather=load('WeatherModel');
@@ -57,6 +72,18 @@ assert.equal(Weather.coordinates({latitude:91,longitude:0}),null);
 assert.equal(Weather.coordinates({latitude:null,longitude:0}),null);
 assert.equal(Weather.temperature(0,true),32);
 assert.equal(Weather.temperature(null,false),null);
+assert.equal(Weather.temperature(7,'fahrenheit'),45);
+assert.equal(Weather.temperature(7,'kelvin'),280);
+assert.equal(Weather.temperature(-273.15,'kelvin'),0);
+assert.equal(Weather.temperature(-40,'fahrenheit'),-40);
+assert.equal(Weather.temperature(null,'kelvin'),null);
+assert.equal(Weather.unitSymbol('kelvin'),'K');
+assert.equal(Weather.temperatureUnit('',true),'fahrenheit');
+assert.equal(Weather.temperatureUnit('kelvin',true),'kelvin');
+assert.equal(Weather.temperatureUnit('invalid',false),'celsius');
+assert.equal(Weather.nextTemperatureUnit('celsius'),'fahrenheit');
+assert.equal(Weather.nextTemperatureUnit('fahrenheit'),'kelvin');
+assert.equal(Weather.nextTemperatureUnit('kelvin'),'celsius');
 assert.equal(Weather.imperial('metric','en_US','United States'),false);
 assert.equal(Weather.imperial('','ru_RU','United States'),true);
 assert.equal(Weather.imperial('','en_US','Russia'),false);
