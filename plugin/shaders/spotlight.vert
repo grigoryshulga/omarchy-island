@@ -16,6 +16,7 @@ layout(std140, binding = 0) uniform buf {
   float hoverOpacity;
   vec2 rippleCenter;
   float rippleProgress;
+  float artworkMix;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

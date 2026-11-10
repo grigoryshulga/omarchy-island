@@ -2,7 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
-Button {
+FeedbackButton {
   radius: Math.min(Style.cornerRadius,Style.space(6))
   horizontalPadding: Style.space(9)
   verticalPadding: Style.space(4)

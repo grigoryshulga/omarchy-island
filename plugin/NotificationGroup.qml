@@ -14,6 +14,7 @@ Rectangle {
   property bool expanded: false
   property bool radialBraille: true
   property int limit: 3
+  readonly property var feedback: brailleFeedback
   signal expandRequested()
   objectName: "notificationGroup-" + group.source
   color: Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
@@ -21,9 +22,10 @@ Rectangle {
   border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
   radius: Style.cornerRadius
   implicitHeight: content.implicitHeight + Style.space(20)
-  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.expandRequested() }
+  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
-  BrailleSpotlight { objectName: "groupSpotlight"; anchors.fill: parent; active: hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
+  BrailleSpotlight { id: glow; objectName: "groupSpotlight"; anchors.fill: parent; active: hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -39,6 +41,7 @@ Rectangle {
       PlainText { Layout.fillWidth: true; text: root.group.source; color: Commons.Color.accent; font.pixelSize: Style.font.caption }
       PlainText { text: Commons.I18n.formatNumber(root.group.total); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
       ActionButton {
+        feedback: root.feedback
         objectName: "groupMute"
         opacity: hover.hovered ? 1 : 0
         enabled: hover.hovered
@@ -67,6 +70,7 @@ Rectangle {
           expanded: root.expanded
           grouped: true
           radialBraille: root.radialBraille
+          feedback: root.feedback
           onExpandRequested: root.expandRequested()
         }
       }

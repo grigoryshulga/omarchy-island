@@ -6,6 +6,9 @@ ShaderEffect {
   id: root
   property bool active: false
   property bool adaptive: true
+  property url artworkUrl: ""
+  property var source: cover
+  property real artworkMix: artworkUrl.toString()!=="" && cover.status===Image.Ready ? 1 : 0
   property point pointer: Qt.point(width/2,height/2)
   property point rippleOrigin: Qt.point(width/2,height/2)
   property real shown: active ? 1 : 0
@@ -23,6 +26,17 @@ ShaderEffect {
   visible: shown > 0 || rippling
   vertexShader: Qt.resolvedUrl("shaders/spotlight.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/spotlight.frag.qsb")
+  Image {
+    id: cover
+    anchors.fill: parent
+    source: root.artworkUrl.toString()!=="" ? root.artworkUrl : Qt.resolvedUrl("assets/dot-field.svg")
+    sourceSize: Qt.size(240,240)
+    fillMode: Image.PreserveAspectCrop
+    asynchronous: true
+    visible: false
+    layer.enabled: true
+  }
+  Behavior on artworkMix { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
   function pulse(point) {
     if (Style.reduceMotion) return
     rippleOrigin=point

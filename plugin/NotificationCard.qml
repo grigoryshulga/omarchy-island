@@ -16,6 +16,7 @@ Rectangle {
   property bool expanded: false
   property bool radialBraille: true
   property bool grouped: false
+  property var feedback: brailleFeedback
   property string copied: ""
   signal expandRequested()
   opacity: 0
@@ -26,9 +27,10 @@ Rectangle {
   border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
   radius: Style.cornerRadius
   implicitHeight: content.implicitHeight + (grouped ? 0 : Style.space(20))
-  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.service.activate(root.row) }
+  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
   HoverHandler { id: hover }
-  BrailleSpotlight { objectName: "notificationSpotlight"; anchors.fill: parent; active: !root.grouped && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
+  BrailleSpotlight { id: glow; objectName: "notificationSpotlight"; anchors.fill: parent; active: !root.grouped && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -46,13 +48,13 @@ Rectangle {
       PlainText { visible: !root.grouped; Layout.fillWidth: true; text: Model.source(root.row); color: Commons.Color.accent; font.pixelSize: Style.font.caption }
       Item { visible: root.grouped; Layout.fillWidth: true }
       PlainText { text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      Button { radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
     }
     RowLayout {
       Layout.fillWidth: true
       PlainText { Layout.fillWidth: true; text: root.row.summary; font.pixelSize: Style.font.body; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 8 : 1 }
       PlainText { visible: root.grouped; text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      Button { radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded; opacity: hover.hovered ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.service.remove(root.row.key) }
     }
     PlainText { Layout.fillWidth: true; visible: text !== ""; text: Model.plain(root.row.body); font.pixelSize: Style.font.caption; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 1000 : 2 }
     Item {
@@ -79,6 +81,7 @@ Rectangle {
       Repeater {
         model: String(root.row.codes || "").split(" ").filter(function(s) { return s !== "" })
         ActionButton {
+          feedback: root.feedback
           required property string modelData
           objectName: "copyCode-" + modelData
           text: (root.copied === modelData ? "✓ " : "󰆏 ") + modelData
@@ -86,10 +89,17 @@ Rectangle {
           onClicked: { root.service.copyCode(root.row,modelData); root.copied = modelData }
         }
       }
-      ActionButton { visible: !!root.row.link; text: root.strings.t("openLink"); focusable: true; onClicked: Security.openExternalUrl(root.row.link) }
+      ActionButton {
+        feedback: root.feedback
+        visible: !!root.row.link
+        text: root.strings.t("openLink")
+        focusable: true
+        onClicked: Security.openExternalUrl(root.row.link)
+      }
       Repeater {
         model: root.service.actions(root.row).filter(function(a) { return a.id !== "default" })
         ActionButton {
+          feedback: root.feedback
           required property var modelData
           text: Model.plain(modelData.text)
           focusable: true
@@ -99,6 +109,7 @@ Rectangle {
       Repeater {
         model: Security.parseExecActions(root.row.execActions) || []
         ActionButton {
+          feedback: root.feedback
           required property var modelData
           required property int index
           text: Model.plain(modelData.label)
@@ -107,6 +118,7 @@ Rectangle {
         }
       }
       ActionButton {
+        feedback: root.feedback
         objectName: "muteSource"
         visible: !root.grouped
         iconText: root.service.mutedSources.indexOf(Model.source(root.row)) >= 0 ? "󰂚" : "󰂛"

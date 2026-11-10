@@ -36,6 +36,8 @@ Item {
     strings: root.strings
     bar: root.bar
     expanded: root.expanded
+    radialBraille: root.radialBraille
+    onExpandRequested: root.expandRequested()
   }
   PanelSeparator { objectName: "islandMediaSeparator"; Layout.fillWidth: true; visible: root.showPlayer && (root.expanded || root.hovering) }
   RowLayout {

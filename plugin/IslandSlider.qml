@@ -36,6 +36,7 @@ Item {
   // Right-click is a secondary action on the whole track — audio uses it to
   // mute the channel the slider belongs to. Dragging stays left-button only.
   signal rightClicked()
+  signal clicked(point position)
 
   implicitWidth: Style.space(200)
   implicitHeight: Math.max(Style.space(22), knobSize + Style.spacing.md)
@@ -114,6 +115,8 @@ Item {
 
   MouseArea {
     id: mouseArea
+    property point pressPosition: Qt.point(0,0)
+    property bool movedBeyondTap: false
     anchors.fill: parent
     hoverEnabled: true
     preventStealing: true
@@ -131,6 +134,8 @@ Item {
 
     onPressed: function(mouse) {
       if (mouse.button !== Qt.LeftButton) return
+      pressPosition=Qt.point(mouse.x,mouse.y)
+      movedBeyondTap=false
       root.dragging = true
       var next = valueFromX(mouse.x)
       root.liveValue = next
@@ -141,6 +146,7 @@ Item {
     }
     onPositionChanged: function(mouse) {
       if (!root.dragging) return
+      if(Math.hypot(mouse.x-pressPosition.x,mouse.y-pressPosition.y)>Qt.styleHints.startDragDistance) movedBeyondTap=true
       var next = valueFromX(mouse.x)
       root.liveValue = next
       root.moved(next)
@@ -150,7 +156,9 @@ Item {
       root.dragging = false
       root.released(root.liveValue)
       root.liveValue = root.value
+      if(!movedBeyondTap) root.clicked(Qt.point(mouse.x,mouse.y))
     }
+    onCanceled: root.dragging=false
     onWheel: function(wheel) {
       var delta = wheel.angleDelta.y > 0 ? root.step : -root.step
       var next = Math.max(root.minimum, Math.min(root.maximum, root.liveValue + delta))

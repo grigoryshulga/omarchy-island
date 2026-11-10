@@ -14,7 +14,9 @@ layout(std140, binding = 0) uniform buf {
   float hoverOpacity;
   vec2 rippleCenter;
   float rippleProgress;
+  float artworkMix;
 };
+layout(binding = 1) uniform sampler2D source;
 uint mixBits(uint v) {
   v ^= v >> 16; v *= 0x85ebca6bu;
   v ^= v >> 13; v *= 0xc2b2ae35u;
@@ -61,5 +63,12 @@ void main() {
   vec2 box=abs(pixel-size*0.5)-(size*0.5-vec2(cornerRadius));
   float distanceToEdge=length(max(box,vec2(0.0)))+min(max(box.x,box.y),0.0)-cornerRadius;
   alpha=clamp(alpha,0.0,1.0)*(1.0-smoothstep(-0.5,0.5,distanceToEdge));
-  fragColor=vec4(accent.rgb*alpha,alpha)*qt_Opacity;
+  // Keep music feedback in the cover's colors, with the same 18% theme tint
+  // as the music backdrop. Other surfaces retain the pure theme accent.
+  vec4 cover=texture(source,(vec2(site)*3.0+vec2(1.5))/size);
+  float luminance=dot(cover.rgb,vec3(0.2126,0.7152,0.0722));
+  vec3 artColor=mix(cover.rgb,vec3(max(luminance,0.5)),0.20);
+  artColor=mix(artColor,accent.rgb,0.18);
+  vec3 color=mix(accent.rgb,artColor,artworkMix*cover.a);
+  fragColor=vec4(color*alpha,alpha)*qt_Opacity;
 }

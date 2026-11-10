@@ -9,6 +9,7 @@ Item {
   required property var player
   required property var strings
   property var bar: null
+  property var feedback: null
   property real availableWidth: Style.space(420)
   property bool opened: false
   readonly property bool controllable: player !== null && player.volumeSupported
@@ -23,8 +24,9 @@ Item {
   onVisibleChanged: if (!visible) opened = false
   onControllableChanged: if (!controllable) opened = false
   Timer { id: closeGrace; interval: 180; onTriggered: if (!root.hovering) root.opened = false }
-  Button {
+  FeedbackButton {
     id: trigger
+    feedback: root.feedback
     objectName: "mediaVolumeTrigger"
     anchors.fill: parent
     radius: Math.min(Style.cornerRadius,Style.space(6))
@@ -74,6 +76,7 @@ Item {
         bar: root.bar
         enabled: root.controllable
         value: root.controllable ? root.player.volume : 0
+        onClicked: position => { if(root.feedback) root.feedback.pulseFrom(volume,position) }
         onMoved: value => { if (root.controllable) root.player.volume = value }
       }
       PlainText {

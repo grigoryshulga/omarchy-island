@@ -3,7 +3,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 
-Button {
+FeedbackButton {
   id: root
   property bool playing: false
   implicitWidth: Style.space(36)
