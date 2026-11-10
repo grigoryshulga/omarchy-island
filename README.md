@@ -61,6 +61,33 @@ mv ~/.config/omarchy/plugins/gshulga.island ~/.config/omarchy/plugins/.gshulga.i
 
 Шейдеры пересобираются через `bin/build-shaders` (Qt `qsb`); он также генерирует согласованные vertex-шейдеры для GLSL 150 / GLES 300. Шиммер использует целочисленный hash полных координат точек и независимые фазы ячеек вместо повторяемых шумовых тайлов.
 
+## Фон и размытие Hyprland
+
+Island использует layer-shell поверхность с namespace `omarchy-island-popup`. Размытие выполняет Hyprland; его сила следует вашим `decoration.blur.size` и `decoration.blur.passes`. Для включения только на Island можно скопировать правило из [hyprland/island.lua](hyprland/island.lua):
+
+```bash
+cp ~/.config/omarchy/plugins/gshulga.island/hyprland/island.lua ~/.config/hypr/omarchy-island.lua
+```
+
+Добавьте в `~/.config/hypr/looknfeel.lua` вне управляемых блоков:
+
+```lua
+require("hypr.omarchy-island")
+```
+
+Примените и проверьте конфигурацию:
+
+```bash
+hyprctl reload
+hyprctl configerrors
+```
+
+Правило `ignore_alpha` исключает прозрачную область за пределами карточки: поверхность поп-апа занимает весь экран для плавной анимации, но блюр нужен только под карточкой.
+
+У layer rules Hyprland нет `opacity`: прозрачность фона остаётся у клиента. Island следует `[popups] background-alpha` из темы или `~/.config/omarchy/shell.toml`; это общий токен поп-апов Omarchy. При альфе `1.0` фон непрозрачный и блюр за ним не виден. Цвет, прозрачность текста и музыкальный рисунок не изменяются правилом блюра.
+
+Волна точек при клике длится около половины секунды: расширение замедляется, а яркость независимо и плавно сходит к нулю. При отключённых системных анимациях волна не запускается.
+
 ## Скриншоты
 
 Текущая тема Omarchy, демонстрационные уведомления и трек.

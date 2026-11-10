@@ -31,5 +31,6 @@ ShaderEffect {
   }
   Behavior on shown { NumberAnimation { duration: Style.duration(root.active ? 160 : 120); easing.type: Easing.OutCubic } }
   NumberAnimation on phase { running: root.visible && !Style.reduceMotion; from: 0; to: 1200; duration: 1200000; loops: Animation.Infinite }
-  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Style.duration(280); easing.type: Easing.OutCubic }
+  // A time cursor lets travel and brightness ease independently in the shader.
+  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Style.duration(520); easing.type: Easing.Linear }
 }

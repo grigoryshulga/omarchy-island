@@ -201,7 +201,7 @@ ShellRoot {
       calendar.radialBraille=false
       check(glow.profile===0,"experimental spotlight cannot be reverted")
       calendar.radialBraille=true
-      wait(300)
+      wait(580)
       check(!glow.rippling,"calendar wave did not finish")
       calendar.shiftMonth(-2)
       check(calendar.viewYear===2023 && calendar.viewMonth===11,"calendar year rollover failed")
