@@ -97,6 +97,28 @@ const weekPayload=JSON.parse(weatherRaw);
 weekPayload.forecast.daily={time:Array.from({length:16},(_,i)=>new Date(Date.UTC(2026,10,10+i)).toISOString().slice(0,10)),temperature_2m_min:Array(16).fill(-5),temperature_2m_max:Array(16).fill(3),weather_code:Array(16).fill(3)};
 const week=Weather.parseReport(JSON.stringify(weekPayload));
 assert.equal(week.days.length,8);assert.equal(week.days.slice(1).length,7);assert.equal(week.days.at(-1).date,'2026-11-17');
+// Solar colors follow the selected city's winter daylight, including across
+// UTC midnight and fractional-hour time zones. Old caches use the local clock.
+assert.equal(parsed.utcOffset,null);
+const solarPayload=JSON.parse(weatherRaw);
+solarPayload.forecast.utc_offset_seconds=19800;
+solarPayload.forecast.daily.sunrise=['2026-11-10T08:00','2026-11-11T08:02'];
+solarPayload.forecast.daily.sunset=['2026-11-10T16:00','2026-11-11T15:58'];
+const solar=Weather.parseReport(JSON.stringify(solarPayload));
+const cityTime=value=>Date.parse(value+'+05:30');
+assert.equal(Weather.skyHour(cityTime('2026-11-10T08:00'),solar),6);
+assert.equal(Weather.skyHour(cityTime('2026-11-10T12:00'),solar),12);
+assert.equal(Weather.skyHour(cityTime('2026-11-10T16:00'),solar),18);
+assert.equal(Weather.skyHour(cityTime('2026-11-10T00:00'),solar),0);
+assert.ok(Weather.skyHour(cityTime('2026-11-10T23:59'),solar)>23.9);
+assert.ok(Weather.skyHour(cityTime('2026-11-11T00:01'),solar)<0.1);
+const polar=JSON.parse(JSON.stringify(solar));
+polar.days[0].sunrise='';polar.days[0].sunset='';
+assert.equal(Weather.skyHour(cityTime('2026-11-10T12:00'),polar),0);
+polar.current.isDay=true;
+assert.equal(Weather.skyHour(cityTime('2026-11-10T12:00'),polar),12);
+const localNow=new Date(2026,10,10,14,30).getTime();
+assert.equal(Weather.skyHour(localNow,parsed),14.5);
 assert.equal(Weather.parseSuggestions(JSON.stringify({query:'old',results:[{name:'City',latitude:1,longitude:2}]}),'new').length,0);
 assert.equal(Weather.parseSuggestions(JSON.stringify({query:'new',results:[{name:'City',latitude:1,longitude:2},{name:'Bad',latitude:999,longitude:2}]}),'new').length,1);
 assert.equal(Weather.nativeSettings(JSON.stringify({bar:{layout:{right:[{id:'omarchy.weather',unit:'metric',refreshMinutes:20}]}}})).refreshMinutes,20);

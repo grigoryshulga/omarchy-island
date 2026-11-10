@@ -26,7 +26,7 @@ Item {
   signal backRequested()
   signal temperatureUnitRequested(string value)
   implicitHeight: body.implicitHeight
-  onActiveChanged: if(!active) cancelEditing()
+  onActiveChanged: { if(!active) cancelEditing(); else skyNow=Date.now() }
   function cancelEditing() {
     editing=false;searchDelay.stop();draftPlace=null;draftAuto=false
     if(weather) weather.cancelSearch()
@@ -57,6 +57,23 @@ Item {
   function temp(value) { var n=Model.temperature(value,temperatureUnit); return n===null ? "—" : Commons.I18n.formatNumber(n)+(temperatureUnit==="kelvin" ? " K" : "°") }
   function cycleTemperatureUnit() {temperatureUnitRequested(Model.nextTemperatureUnit(temperatureUnit))}
   function stat(value,suffix) { return value===null || value===undefined ? "—" : Commons.I18n.formatNumber(Math.round(value))+suffix }
+  property double skyNow: Date.now()
+  Timer {
+    interval: 30000
+    running: root.active && root.visible
+    repeat: true
+    onTriggered: root.skyNow=Date.now()
+  }
+  onReportChanged: skyNow=Date.now()
+  onVisibleChanged: if(visible) skyNow=Date.now()
+  WeatherBackdrop {
+    objectName: "weatherBackdrop"
+    anchors.fill: parent
+    solarHour: Model.skyHour(root.skyNow,root.report)
+    animated: root.active
+    opacity: root.current ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: Style.duration(300) } }
+  }
   HoverHandler { id: hover }
   BrailleFeedback { id: weatherFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight { id: glow; objectName: "weatherSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }

@@ -43,11 +43,34 @@ function parseReport(raw) {
     for(var i=0;i<Math.min(8,(daily.time || []).length);i++) {
       var date=String(daily.time[i]),min=number((daily.temperature_2m_min || [])[i],-100,70),max=number((daily.temperature_2m_max || [])[i],-100,70)
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date+"T12:00:00Z")) || min===null || max===null || min>max) continue
-      days.push({date:date,min:min,max:max,code:number((daily.weather_code || [])[i],0,99)})
+      days.push({date:date,min:min,max:max,sunrise:text((daily.sunrise || [])[i],32),sunset:text((daily.sunset || [])[i],32),code:number((daily.weather_code || [])[i],0,99)})
     }
-    return {location:text(payload.location.name,128),country:text(payload.location.country,128),fetchedAt:stamp,
+    return {location:text(payload.location.name,128),country:text(payload.location.country,128),fetchedAt:stamp,utcOffset:number(data.utc_offset_seconds,-50400,50400),
       current:{temperature:temp,feels:number(c.apparent_temperature,-120,90),wind:number(c.wind_speed_10m,0,500),humidity:number(c.relative_humidity_2m,0,100),code:code,isDay:Number(c.is_day)!==0},days:days}
   } catch(e) { return null }
+}
+// Map actual daylight to 06–18 on the palette clock. Winter compresses the
+// daytime colors; the remaining hours flow continuously through the night.
+function skyHour(now,report) {
+  var offset=report ? number(report.utcOffset,-50400,50400) : null
+  var local=new Date(now+(offset===null ? -new Date(now).getTimezoneOffset()*60 : offset)*1000)
+  var civil=local.getUTCHours()+local.getUTCMinutes()/60+local.getUTCSeconds()/3600
+  if(!report || offset===null) return civil
+  var date=local.toISOString().slice(0,10), days=report.days || []
+  function solarTime(value) {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(value || "") ? Date.parse(value+"Z")-offset*1000 : NaN
+  }
+  for(var i=0;i<days.length;i++) {
+    if(days[i].date!==date) continue
+    var rise=solarTime(days[i].sunrise),set=solarTime(days[i].sunset)
+    if(!isFinite(rise) || !isFinite(set) || set<=rise) return report.current.isDay ? 12 : 0
+    if(now>=rise && now<=set) return 6+12*(now-rise)/(set-rise)
+    var previousSet=set-86400000, nextRise=solarTime((days[i+1] || {}).sunrise)
+    if(!isFinite(nextRise) || nextRise<=set) nextRise=rise+86400000
+    var hour=now<rise ? 6-12*(rise-now)/(rise-previousSet) : 18+12*(now-set)/(nextRise-set)
+    return (hour%24+24)%24
+  }
+  return civil
 }
 function parseSuggestions(raw,query) {
   if(typeof raw!=="string" || raw.length>65536) return []
