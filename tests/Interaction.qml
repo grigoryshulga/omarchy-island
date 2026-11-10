@@ -19,7 +19,7 @@ ShellRoot {
     property string searched: ""
     property int autoCalls: 0
     property var suggestions: []
-    property var report: ({location:"Demo City",country:"",fetchedAt:1794300000,current:{temperature:7,feels:5,wind:12,humidity:81,code:63,isDay:true},days:[{date:"2026-11-10",min:3,max:8,code:63},{date:"2026-11-11",min:1,max:6,code:3},{date:"2026-11-12",min:-1,max:3,code:71},{date:"2026-11-13",min:0,max:7,code:0}]})
+    property var report: ({location:"Demo City",country:"",fetchedAt:1794300000,current:{temperature:7,feels:5,wind:12,humidity:81,code:63,isDay:true},days:[{"date":"2026-11-10","min":3,"max":8,"code":63},{"date":"2026-11-11","min":1,"max":6,"code":3},{"date":"2026-11-12","min":-1,"max":3,"code":71},{"date":"2026-11-13","min":0,"max":7,"code":0},{"date":"2026-11-14","min":-2,"max":2,"code":61},{"date":"2026-11-15","min":-3,"max":1,"code":3},{"date":"2026-11-16","min":1,"max":5,"code":2},{"date":"2026-11-17","min":2,"max":8,"code":0}]})
     function activate() {}
     function refresh() {}
     function search(query) { searched=query }
@@ -157,8 +157,10 @@ ShellRoot {
       check(pixels.getImageData(2,2,1,1).data[3]===0,"circular play/pause still has filled corners")
       check(findChild(seek,"sliderKnob").radius>0,"slider did not pick up system rounding")
       Commons.Style.cornerRadius=systemRadius
+      var stableCardHeight=card.implicitHeight
       mouseMove(card,card.width/2,card.height/2)
       wait(400)
+      check(Math.abs(card.implicitHeight-stableCardHeight)<1,"notification changed height on hover")
       check(!popover.visible,"volume did not close after hover")
       var copy=findChild(card,"copyCode-482913")
       mouseClick(copy)
@@ -187,8 +189,12 @@ ShellRoot {
       wait(20)
       check(first === findChild(composed,"notification-n1"),"expansion rebuilt notification delegates")
       wait(220)
+      var stableGroupHeight=group.implicitHeight
       mouseMove(first,first.width/2,first.height/2)
       wait(220)
+      check(Math.abs(group.implicitHeight-stableGroupHeight)<1,"grouped notifications changed height on hover")
+      check(findChild(findChild(composed,"notification-n2"),"notificationDivider").visible,"grouped notifications lack a divider")
+      check(findChild(first,"notificationTime").mapToItem(first,0,0).y>first.height/2,"message timestamp is not in its footer")
       check(findChild(group,"groupSpotlight").shown>0.9,"group spotlight did not fade in")
       mouseClick(first,first.width*0.4,first.height*0.25)
       check(service.activateCalls===1,"notification click did not open app")
@@ -243,6 +249,8 @@ ShellRoot {
       wait(40)
       mouseClick(findChild(calendar,"calendar-day-2024-02-29"))
       check(calendar.selectedDay.key==="2024-02-29","date selection failed: "+calendar.selectedDay.key)
+      wait(100)
+      check(findChild(calendar,"calendarSpotlight").rippleProgress<0.15,"click wave did not slow down")
       var glow=findChild(calendar,"calendarSpotlight")
       if(!Commons.Style.reduceMotion) check(glow.rippling,"calendar click did not start a wave")
       calendar.radialBraille=false
@@ -283,6 +291,15 @@ ShellRoot {
       check(pages.weather && !pages.calendar,"horizontal swipe did not open weather")
       check(Math.abs(findChild(pages,"islandWeather").mapToItem(pager,0,0).x)<1,"weather content did not move into view after swipe")
       var weatherView=findChild(pages,"islandWeather")
+      var overviewButton=findChild(pages,"islandTabOverview"),calendarButton=findChild(pages,"calendarOpen"),weatherButton=findChild(pages,"weatherOpen")
+      check(Math.abs(overviewButton.width-calendarButton.width)<=1 && Math.abs(calendarButton.width-weatherButton.width)<=1,"popup tabs have different column widths")
+      check(findChild(weatherView,"weatherForecast").count===7,"weather does not show seven future days")
+      check(findChild(weatherView,"weatherTemperature").text.endsWith("°C"),"temperature unit is not inline")
+      fakeWeather.useImperial=true
+      check(findChild(weatherView,"weatherTemperature").text.endsWith("°F"),"imperial temperature unit is not inline")
+      fakeWeather.useImperial=false
+      var firstDay=findChild(weatherView,"weatherDay-0"),lastDay=findChild(weatherView,"weatherDay-6")
+      check(firstDay && lastDay && Math.abs(firstDay.width-lastDay.width)<=1 && lastDay.x+lastDay.width<=weatherView.width+1,"seven-day columns overflow or have unequal widths")
       check(findChild(weatherView,"weatherHeroScene").condition===5,"weather did not select rain scene")
       check(findChild(weatherView,"weatherTemperature").text.indexOf("7")>=0,"weather temperature missing")
       mouseClick(findChild(weatherView,"weatherLocation"))

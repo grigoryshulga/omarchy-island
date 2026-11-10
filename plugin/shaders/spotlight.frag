@@ -55,7 +55,7 @@ void main() {
   float travel=1.0-pow(1.0-rippleProgress,3.0);
   float waveRadius=reach*travel;
   float band=(distanceFromClick-waveRadius)/max(4.0,spotRadius*0.08);
-  float waveFade=1.0-smoothstep(0.05,1.0,rippleProgress);
+  float waveFade=1.0-smoothstep(0.0,0.24,rippleProgress);
   float ring=exp(-band*band)*waveFade;
   float waveCore=1.0-smoothstep(0.0,1.0,distanceFromClick/reach);
   alpha+=dots(local,waveCore,a,b,blend)*ring*0.38;

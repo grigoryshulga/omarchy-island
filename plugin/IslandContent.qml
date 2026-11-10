@@ -11,6 +11,8 @@ Item {
   required property var service
   required property var strings
   property var bar: null
+  property var externalFeedback: null
+  readonly property bool musicHovered: mediaPlayer.visible && mediaPlayer.hovered
   property bool expanded: false
   property bool radialBraille: true
   property bool hovering: false
@@ -26,12 +28,14 @@ Item {
   readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
   readonly property var displayedRows: !expanded && !hovering && service && service.latest ? [service.latest] : rows
   implicitHeight: body.implicitHeight
-  MouseArea { anchors.fill: parent; onClicked: if (!root.expanded) root.expandRequested() }
+  MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   ColumnLayout {
     id: body
     width: parent.width
     spacing: Style.space(root.compactNotifications ? 4 : 12)
   MediaCard {
+    id: mediaPlayer
+    externalFeedback: root.externalFeedback
     objectName: "islandMediaPlayer"
     Layout.fillWidth: true
     visible: root.showPlayer
@@ -74,7 +78,7 @@ Item {
           radialBraille: root.radialBraille
           expanded: root.expanded
           compact: root.compactNotifications
-          overflow: root.compactNotifications ? Math.max(0,(root.service && ("entries" in root.service) ? root.service.entries.length : root.rows.length)-1) : 0
+          externalFeedback: root.externalFeedback
           limit: root.expanded ? 100 : root.hovering ? 3 : 1
           visible: group.positions[0] < limit
           onExpandRequested: root.expandRequested()

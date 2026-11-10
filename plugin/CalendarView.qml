@@ -9,6 +9,7 @@ Item {
   id: root
   required property var strings
   property bool radialBraille: true
+  property var externalFeedback: null
   property bool showBack: true
   property date today: new Date()
   property int viewYear: today.getFullYear()
@@ -23,6 +24,7 @@ Item {
   implicitHeight: body.implicitHeight
 
   function pulseFrom(item) {
+    if(externalFeedback) {externalFeedback.pulseFrom(item);return}
     var at=item.mapToItem(root,item.width/2,item.height/2)
     if(hover.hovered) {
       var p=hover.point.position, local=item.mapFromItem(root,p.x,p.y)
@@ -55,11 +57,11 @@ Item {
     id: glow
     objectName: "calendarSpotlight"
     anchors.fill: parent
-    active: hover.hovered
+    active: !root.externalFeedback && hover.hovered
     pointer: hover.point.position
     adaptive: root.radialBraille
   }
-  MouseArea { anchors.fill: parent; onClicked: mouse => glow.pulse(Qt.point(mouse.x,mouse.y)) }
+  MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));else glow.pulse(Qt.point(mouse.x,mouse.y))} }
   Timer {
     interval: 60000; repeat: true; running: root.visible
     onTriggered: {

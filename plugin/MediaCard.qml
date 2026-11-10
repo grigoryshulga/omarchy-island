@@ -10,19 +10,22 @@ Item {
   required property var service
   required property var strings
   property var bar: null
+  property var externalFeedback: null
+  readonly property var feedback: externalFeedback || brailleFeedback
+  readonly property bool hovered: hover.hovered
   property bool expanded: false
   property bool radialBraille: true
   readonly property var player: service ? service.player : null
   signal expandRequested()
   implicitHeight: body.implicitHeight
-  MouseArea { anchors.fill: parent; onClicked: mouse => { brailleFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
+  MouseArea { anchors.fill: parent; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight {
     id: glow
     objectName: "mediaSpotlight"
     anchors.fill: parent
-    active: hover.hovered
+    active: !root.externalFeedback && hover.hovered
     pointer: hover.point.position
     adaptive: root.radialBraille
     artworkUrl: root.player ? root.player.trackArtUrl : ""
@@ -50,9 +53,9 @@ Item {
       RowLayout {
         Layout.alignment: Qt.AlignVCenter
         spacing: Style.space(2)
-        FeedbackButton { feedback: brailleFeedback; iconText: "󰒮"; tooltipText: root.strings.t("previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoPrevious; onClicked: root.service.media("previous") }
-        PlayPauseButton { feedback: brailleFeedback; objectName: "mediaToggle"; playing: root.player !== null && root.player.isPlaying; tooltipText: root.strings.t("playPause"); enabled: root.player !== null && root.player.canTogglePlaying; onClicked: root.service.media("toggle") }
-        FeedbackButton { feedback: brailleFeedback; iconText: "󰒭"; tooltipText: root.strings.t("next"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoNext; onClicked: root.service.media("next") }
+        FeedbackButton { feedback: root.feedback; iconText: "󰒮"; tooltipText: root.strings.t("previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoPrevious; onClicked: root.service.media("previous") }
+        PlayPauseButton { feedback: root.feedback; objectName: "mediaToggle"; playing: root.player !== null && root.player.isPlaying; tooltipText: root.strings.t("playPause"); enabled: root.player !== null && root.player.canTogglePlaying; onClicked: root.service.media("toggle") }
+        FeedbackButton { feedback: root.feedback; iconText: "󰒭"; tooltipText: root.strings.t("next"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoNext; onClicked: root.service.media("next") }
       }
     }
     Item {
@@ -80,12 +83,12 @@ Item {
             value: root.player && root.player.positionSupported ? root.player.position : 0
             enabled: root.player !== null && root.player.canSeek && root.player.lengthSupported && root.player.positionSupported
             step: 1
-            onClicked: position => brailleFeedback.pulseFrom(seek,position)
+            onClicked: position => root.feedback.pulseFrom(seek,position)
             onReleased: value => { if (root.player && root.player.canSeek) root.player.position = value }
           }
           VolumePopover {
             id: volumeControl
-            feedback: brailleFeedback
+            feedback: root.feedback
             player: root.player
             strings: root.strings
             bar: root.bar
@@ -105,7 +108,7 @@ Item {
           Repeater {
             model: root.service ? root.service.players : []
             FeedbackButton {
-              feedback: brailleFeedback
+              feedback: root.feedback
               required property var modelData
               text: Model.plain(modelData.identity).slice(0,40)
               radius: Math.min(Style.cornerRadius,Style.space(6))

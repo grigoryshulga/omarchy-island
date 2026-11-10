@@ -10,6 +10,8 @@ Item {
   required property var service
   required property var strings
   property var bar: null
+  property var externalFeedback: null
+  readonly property bool musicHovered: !calendar && !weather && inbox.musicHovered
   property bool expanded: false
   property bool hovering: false
   property string alertKind: ""
@@ -110,9 +112,15 @@ Item {
     anchors.left: parent.left; anchors.right: parent.right
     visible: root.expanded || root.hovering
     spacing: Style.space(4)
-    Button {
+    uniformCellSizes: true
+    FeedbackButton {
+      feedback: root.externalFeedback
+      color: "transparent"; borderSpec: Border.none()
       objectName: "islandTabOverview"
       Layout.fillWidth: true
+      Layout.fillHeight: true
+      Layout.preferredWidth: 1
+      Layout.minimumWidth: 0
       text: root.strings.t("tabs.overview")
       selected: !root.calendar && !root.weather
       fontSize: Style.font.bodySmall
@@ -120,9 +128,14 @@ Item {
       focusable: true
       onClicked: root.requestPage(0)
     }
-    Button {
+    FeedbackButton {
+      feedback: root.externalFeedback
+      color: "transparent"; borderSpec: Border.none()
       objectName: "calendarOpen"
       Layout.fillWidth: true
+      Layout.fillHeight: true
+      Layout.preferredWidth: 1
+      Layout.minimumWidth: 0
       text: root.strings.t("calendar.open")
       selected: root.calendar
       fontSize: Style.font.bodySmall
@@ -131,8 +144,13 @@ Item {
       onClicked: root.requestPage(1)
     }
     WeatherChip {
+      feedback: root.externalFeedback
+      color: "transparent"; borderSpec: Border.none()
       objectName: "weatherOpen"
       Layout.fillWidth: true
+      Layout.fillHeight: true
+      Layout.preferredWidth: 1
+      Layout.minimumWidth: 0
       visible: root.lastPage===2
       showLabel: true
       weather: root.weatherData
@@ -153,6 +171,7 @@ Item {
     Binding { target: pager.contentItem; property: "highlightFollowsCurrentItem"; value: false }
     IslandContent {
       id: inbox
+      externalFeedback: root.externalFeedback
       service: root.service; strings: root.strings; bar: root.bar
       expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
       compactNotifications: root.compactNotifications
@@ -164,6 +183,7 @@ Item {
     }
     CalendarView {
       id: calendarPage
+      externalFeedback: root.externalFeedback
       objectName: "islandCalendar"
       strings: root.strings
       showBack: false
@@ -172,6 +192,7 @@ Item {
     }
     WeatherView {
       id: weatherPage
+      externalFeedback: root.externalFeedback
       objectName: "islandWeather"
       strings: root.strings
       showBack: false

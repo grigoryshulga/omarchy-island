@@ -48,6 +48,7 @@ ShellRoot {
     property int activateCalls: 0
     property string copied: ""
     property string muted: ""
+    function setDoNotDisturb(value) {doNotDisturb=value}
     function media(action) { mediaCalls++; p.isPlaying = !p.isPlaying }
     function actions(row) { return [] }
     function activate(row) { activateCalls++ }
@@ -99,7 +100,7 @@ ShellRoot {
     property string nativeSize: ""
     function sampleExit(popup) {
       checkExit(popup.visible && popup.backingWindowVisible && popup.shown>0.1 && popup.shown<0.95,"close has no perceptible intermediate frame")
-      checkExit(popup.drawnWidth<startWidth-1 && popup.drawnWidth>startWidth*0.9,"close does not gently contract")
+      checkExit(popup.drawnWidth<startWidth-1 && popup.drawnWidth>startWidth*0.9,"close does not gently contract: stage="+exitTick+", from="+startWidth+", current="+popup.drawnWidth+", open="+popup.open)
       checkExit(popup.width+"x"+popup.height===nativeSize,"closing resized the native surface")
     }
     function test_exit() {
@@ -182,10 +183,17 @@ ShellRoot {
       if (!popup) return
       tick++
       if(tick===1 && Quickshell.env("ISLAND_EXIT_ONLY")) {motionClock.stop();test.test_exit();return}
+      if(tick===5) test.findChild(widget,"islandClock").triggerPress(Qt.RightButton)
+      if(tick===7) {
+        var dnd=test.findChild(widget,"islandDndIndicator"),clock=test.findChild(widget,"islandClock"),at=dnd.mapToItem(clock,0,0)
+        if(!dnd.visible || dnd.height<Commons.Style.font.bodySmall || at.x<0 || at.x+dnd.width>clock.width || at.y<0 || at.y+dnd.height>clock.height) {console.log("ISLAND_MOTION_FAIL: DND indicator is tiny or outside the clock");Qt.quit();return}
+        clock.triggerPress(Qt.RightButton)
+      }
       if(tick === 10) { service.latest=service.allEntries[0]; service.arrivalChanged() }
       if(tick===30) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0 || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast retained a background or navigation");widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation");widget.close();Qt.quit();return }
       }
+      if(tick===30 && !test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: incoming notification has no radio waves");Qt.quit();return}
       if(tick === 40) widget.open()
       if(tick >= 10 && tick < 70 && popup.backingWindowVisible && (popup.shown === undefined || popup.shown > 0.01)) sizes.push(popup.width+"x"+popup.height)
       if(tick >= 10 && tick < 36 && popup.shown > 0.01) entrance.push({w:popup.drawnWidth,h:popup.drawnHeight,target:popup.contentWidth})
@@ -193,6 +201,9 @@ ShellRoot {
       if(tick === 70) {
         var tabs=test.findChild(widget,"islandTabs"), player=test.findChild(widget,"islandMediaPlayer")
         if(!tabs.visible || player.mapToItem(tabs.parent,0,0).y<tabs.y+tabs.height || popup.frameSuppressed) { console.log("ISLAND_MOTION_FAIL: tabs are not above music or persistent frame is missing");widget.close();Qt.quit();return }
+        if(test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: notification waves leaked into overview");Qt.quit();return}
+        var panelEffect=test.findChild(widget,"islandPanelSpotlight")
+        if(panelEffect.width<tabs.width || panelEffect.mapToItem(tabs.parent,0,0).y>tabs.y || tabs.children[0].color.a!==0) {console.log("ISLAND_MOTION_FAIL: shared cursor effect excludes tabs or tabs retain a fill");Qt.quit();return}
         var artwork = test.findChild(widget,"islandPopupArtwork")
         if(artwork.mapToItem(tabs.parent,0,0).y>tabs.y || artwork.height<tabs.height+player.height) { console.log("ISLAND_MOTION_FAIL: music backdrop does not extend behind tabs");widget.close();Qt.quit();return }
         if(!service.playing && (artwork.opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01)) {
@@ -212,6 +223,7 @@ ShellRoot {
       if(tick===90) {
         if(!widget.pinned || !widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: middle click did not open calendar"); widget.close(); Qt.quit(); return }
         test.findChild(widget,"islandTabOverview").clicked()
+        if(!Commons.Style.reduceMotion && !test.findChild(widget,"islandPanelSpotlight").rippling) {console.log("ISLAND_MOTION_FAIL: tab click did not use the shared wave");Qt.quit();return}
       }
       if(tick===106) {
         if(widget.calendarMode || !widget.pinned || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }
@@ -244,14 +256,14 @@ ShellRoot {
         widget.close(); service.latest=service.allEntries[1]; service.arrivalChanged()
       }
       if(tick===255) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0) { console.log("ISLAND_MOTION_FAIL: incoming toast is not transparent");widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString()) { console.log("ISLAND_MOTION_FAIL: incoming toast lost its themed background");widget.close();Qt.quit();return }
         widget.close()
       }
       if(tick===260) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.a!==0) { console.log("ISLAND_MOTION_FAIL: background flashed while closing toast");widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString()) { console.log("ISLAND_MOTION_FAIL: toast background changed while closing");widget.close();Qt.quit();return }
         console.log("CALENDAR_ROUTING_PASS")
         console.log("MUSIC_BACKDROP_PASS")
-        console.log("TOP_TABS_AND_TRANSPARENT_TOAST_PASS")
+        console.log("TOP_TABS_AND_COMPACT_TOAST_PASS")
         widget.close(); widget.contentExpanded=false; widget.hoverOpen=true
       }
       if(tick===280) {

@@ -31,7 +31,7 @@ Item {
     if(!allowed) return
     activated=true
     now=Date.now()/1000
-    if(!report || stale) refresh()
+    if(!report || stale || report.days.length<8) refresh()
   }
   function refresh() {
     if(!allowed || !activated || forecast.running) return

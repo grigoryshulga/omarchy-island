@@ -27,6 +27,7 @@ with tempfile.TemporaryDirectory(prefix='island-weather-') as temporary:
         report=helper.forecast()
         assert report['location']['name']=='Chosen city'
         assert len(calls)==1 and 'latitude=55.7' in calls[0]
+        assert helper.urllib.parse.parse_qs(helper.urllib.parse.urlsplit(calls[0]).query)['forecast_days']==['8']
         location.write_text(json.dumps({'name':'Paris'}));calls.clear()
         assert helper.forecast()['location']['name']=='Paris'
         assert 'geocoding-api' in calls[0] and len(calls)==2

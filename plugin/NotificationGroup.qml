@@ -13,10 +13,10 @@ Rectangle {
   required property var service
   property bool expanded: false
   property bool compact: false
-  property int overflow: 0
+  property var externalFeedback: null
   property bool radialBraille: true
   property int limit: 3
-  readonly property var feedback: brailleFeedback
+  readonly property var feedback: externalFeedback || brailleFeedback
   signal expandRequested()
   function dismissGroup() {
     var backend=service,keys=group.rows.map(function(row){return row.key})
@@ -27,16 +27,16 @@ Rectangle {
   border.width: compact ? 0 : Math.max(1,Style.space(1))
   border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
   radius: Style.cornerRadius
-  implicitHeight: content.implicitHeight + Style.space(compact ? 4 : 20)
+  implicitHeight: content.implicitHeight + Style.space(compact ? 4 : 24)
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
-  BrailleSpotlight { id: glow; objectName: "groupSpotlight"; anchors.fill: parent; active: hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleSpotlight { id: glow; objectName: "groupSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-    anchors.margins: Style.space(root.compact ? 2 : 10)
-    spacing: Style.space(root.compact ? 2 : 8)
+    anchors.margins: Style.space(root.compact ? 2 : 12)
+    spacing: Style.space(root.compact ? 2 : 10)
     RowLayout {
       Layout.fillWidth: true
       Item {
@@ -45,7 +45,6 @@ Rectangle {
         Image { id: icon; anchors.fill: parent; source: root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
       PlainText { Layout.fillWidth: true; text: root.group.source; color: Commons.Color.accent; font.pixelSize: Style.font.caption }
-      PlainText { visible: !root.compact || root.overflow>0; text: root.compact ? "+"+Commons.I18n.formatNumber(root.overflow) : Commons.I18n.formatNumber(root.group.total); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
       PlainText { visible: root.compact; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
       ActionButton {
         feedback: root.feedback
@@ -90,6 +89,7 @@ Rectangle {
           expanded: root.expanded
           grouped: true
           compact: root.compact
+          separated: index>0 && !root.compact
           individualDismiss: root.group.total>1
           radialBraille: root.radialBraille
           feedback: root.feedback

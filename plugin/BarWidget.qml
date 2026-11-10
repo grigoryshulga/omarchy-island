@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import qs.Commons
 import qs.Commons as Commons
@@ -96,6 +97,7 @@ BarWidget {
     fixedWidth: root.implicitWidth
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
+    tooltipText: root.service && root.service.doNotDisturb ? strings.t("dnd") : ""
     onPressed: button => { if (button === Qt.RightButton && root.service) root.service.setDoNotDisturb(!root.service.doNotDisturb); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     ArtworkBackground {
       objectName: "islandClockArtwork"
@@ -105,19 +107,25 @@ BarWidget {
       monochrome: true
       horizontalFade: true
     }
-    PlainText {
+    RowLayout {
       anchors.centerIn: parent
-      width: parent.width - Style.space(18)
-      horizontalAlignment: Text.AlignHCenter
-      text: root.vertical ? root.now.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH\nmm") : root.barText
-      font.family: root.bar ? root.bar.fontFamily : Style.font.family
-      color: root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
-    }
-    Rectangle {
-      visible: root.service !== null && root.service.doNotDisturb
-      width: Style.space(3); height: width; radius: Style.cornerRadius > 0 ? width/2 : 0
-      color: Commons.Color.muted
-      anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+      width: Math.min(implicitWidth,parent.width-Style.space(18))
+      spacing: Style.space(6)
+      PlainText {
+        Layout.fillWidth: true
+        Layout.minimumWidth: 0
+        horizontalAlignment: Text.AlignHCenter
+        text: root.vertical ? root.now.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH\nmm") : root.barText
+        font.family: root.bar ? root.bar.fontFamily : Style.font.family
+        color: root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
+      }
+      PlainText {
+        objectName: "islandDndIndicator"
+        visible: root.service !== null && root.service.doNotDisturb
+        text: "󰂛"
+        font.pixelSize: Style.font.icon
+        color: Commons.Color.accent
+      }
     }
   }
   IslandPopup {
@@ -130,9 +138,17 @@ BarWidget {
     centerOnBar: true
     open: root.pinned || root.hoverOpen || root.showAlert
     frameless: root.notificationToast
+    onBackgroundClicked: position => panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))
     onVisibleChanged: if (!visible) { root.contentExpanded = false; root.calendarMode = false; root.weatherMode = false }
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.hoverOpen ? 420 : root.notificationToast ? 300 : 370))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
+    ToastWaves {
+      objectName: "islandToastWaves"
+      anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+      anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
+      height: preview.layoutHeight
+      active: preview.frameSuppressed && preview.visible
+    }
     ArtworkBackground {
       objectName: "islandPopupArtwork"
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -142,8 +158,22 @@ BarWidget {
       visible: reveal>0 && preview.visible && !preview.frameSuppressed
       service: root.service
     }
+    BrailleSpotlight {
+      id: panelGlow
+      objectName: "islandPanelSpotlight"
+      x: -preview.insetLeft; y: -preview.insetTop
+      width: preview.layoutWidth; height: preview.layoutHeight
+      z: 10
+      active: preview.containsMouse && preview.visible
+      pointer: Qt.point(preview.hoverPosition.x+(preview.layoutWidth-preview.drawnWidth)/2,preview.hoverPosition.y)
+      adaptive: root.setting("radialBraille",true)
+      artworkUrl: root.service && root.service.player ? root.service.player.trackArtUrl : ""
+      artworkStrength: previewContent.musicHovered ? 1 : 0
+    }
+    BrailleFeedback {id:panelFeedback;surface:panelGlow;effect:panelGlow;hover:null}
     PopupPages {
       id: previewContent
+      externalFeedback: panelFeedback
       calendar: root.calendarMode
       weather: root.weatherMode
       compactNotifications: preview.frameSuppressed && !root.pinned && !root.hoverOpen

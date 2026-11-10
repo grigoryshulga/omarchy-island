@@ -8,7 +8,8 @@ ShaderEffect {
   property bool adaptive: true
   property url artworkUrl: ""
   property var source: cover
-  property real artworkMix: artworkUrl.toString()!=="" && cover.status===Image.Ready ? 1 : 0
+  property real artworkStrength: 1
+  property real artworkMix: artworkUrl.toString()!=="" && cover.status===Image.Ready ? artworkStrength : 0
   property point pointer: Qt.point(width/2,height/2)
   property point rippleOrigin: Qt.point(width/2,height/2)
   property real shown: active ? 1 : 0
@@ -22,7 +23,7 @@ ShaderEffect {
   property real profile: adaptive ? 1 : 0
   property real hoverOpacity: shown
   property real rippleProgress: 1
-  readonly property bool rippling: rippleProgress < 1
+  readonly property bool rippling: rippleProgress < 0.24
   visible: shown > 0 || rippling
   vertexShader: Qt.resolvedUrl("shaders/spotlight.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/spotlight.frag.qsb")
@@ -46,5 +47,5 @@ ShaderEffect {
   Behavior on shown { NumberAnimation { duration: Style.duration(root.active ? 160 : 120); easing.type: Easing.OutCubic } }
   NumberAnimation on phase { running: root.visible && !Style.reduceMotion; from: 0; to: 1200; duration: 1200000; loops: Animation.Infinite }
   // A time cursor lets travel and brightness ease independently in the shader.
-  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Style.duration(520); easing.type: Easing.Linear }
+  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Style.duration(1560); easing.type: Easing.Linear }
 }

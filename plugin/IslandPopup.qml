@@ -24,6 +24,8 @@ PanelWindow {
   property int contentHeight: Style.space(240)
   readonly property bool pinned: triggerMode === "click"
   readonly property bool containsMouse: cardHover.hovered
+  readonly property point hoverPosition: cardHover.point.position
+  signal backgroundClicked(point position)
   readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
   readonly property real thickness: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real availableWidth: Math.max(120,(screen ? screen.width : 1920)-2*margin)
@@ -65,8 +67,15 @@ PanelWindow {
   // outside clicks for dismissal. The closing fade takes no input.
   mask: Region { item: !root.open ? null : root.pinned ? canvas : card }
 
-  onContentWidthChanged: if (open) { settledWidth = contentWidth; layoutWidth = contentWidth }
-  onContentHeightChanged: if (open) { settledHeight = contentHeight; layoutHeight = contentHeight }
+  function syncLayout() {
+    // Hover/alert flags also choose the requested size. Wait for the whole
+    // state change before accepting dimensions, so closing cannot resize us.
+    if(!open) return
+    settledWidth = contentWidth; layoutWidth = contentWidth
+    settledHeight = contentHeight; layoutHeight = contentHeight
+  }
+  onContentWidthChanged: Qt.callLater(syncLayout)
+  onContentHeightChanged: Qt.callLater(syncLayout)
   onOpenChanged: {
     if (open) {
       frameSuppressed=frameless
@@ -74,6 +83,7 @@ PanelWindow {
       settledHeight = contentHeight
       layoutWidth = contentWidth
       layoutHeight = contentHeight
+      Qt.callLater(syncLayout)
       if (bar) bar.requestPopout(owner || root)
       // Wait for the actual output-sized Wayland configure before painting;
       // the provisional 500x500 surface must never flash on the first frame.
@@ -84,7 +94,7 @@ PanelWindow {
     }
     primeFocus()
   }
-  // Keep the toast's transparent treatment through its closing animation.
+  // Keep the toast's compact, borderless treatment through closing.
   onFramelessChanged: Qt.callLater(function(){if(root.open) root.frameSuppressed=root.frameless})
   onPinnedChanged: primeFocus()
   onWidthChanged: revealWhenConfigured()
@@ -140,14 +150,14 @@ PanelWindow {
       y: root.cardOrigin.y + (root.position === "bottom" ? -1 : 1)*reveal.offsetY
       width: root.drawnWidth
       height: root.drawnHeight
-      color: root.frameSuppressed ? "transparent" : Commons.Color.popups.background
+      color: Commons.Color.popups.background
       Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Style.duration(120)} }
       borderSpec: root.borderSpec
       radius: Math.min(Style.cornerRadius,width/2,height/2)
       opacity: root.shown
       clip: true
       // Empty parts of the card should never count as an outside click.
-      MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
+      MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onClicked: mouse => root.backgroundClicked(Qt.point(mouse.x,mouse.y)) }
       Item {
         id: contentHolder
         x: (card.width-root.layoutWidth)/2+root.insetLeft

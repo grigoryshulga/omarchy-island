@@ -40,7 +40,7 @@ function parseReport(raw) {
     var temp=number(c.temperature_2m,-100,70),code=number(c.weather_code,0,99),stamp=number(payload.fetchedAt,1,4102444800)
     if(temp===null || code===null || stamp===null) return null
     var daily=data.daily || {},days=[]
-    for(var i=0;i<Math.min(4,(daily.time || []).length);i++) {
+    for(var i=0;i<Math.min(8,(daily.time || []).length);i++) {
       var date=String(daily.time[i]),min=number((daily.temperature_2m_min || [])[i],-100,70),max=number((daily.temperature_2m_max || [])[i],-100,70)
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date+"T12:00:00Z")) || min===null || max===null || min>max) continue
       days.push({date:date,min:min,max:max,code:number((daily.weather_code || [])[i],0,99)})

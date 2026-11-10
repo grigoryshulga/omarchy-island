@@ -11,6 +11,8 @@ Item {
   property var weather: null
   property bool active: true
   property bool radialBraille: true
+  property var externalFeedback: null
+  readonly property var feedback: externalFeedback || weatherFeedback
   property bool showBack: true
   property bool editing: false
   readonly property var report: weather ? weather.report : null
@@ -21,23 +23,23 @@ Item {
   implicitHeight: body.implicitHeight
   onActiveChanged: if(!active) {editing=false;searchDelay.stop()}
   function temp(value) { var n=Model.temperature(value,imperial); return n===null ? "—" : Commons.I18n.formatNumber(n)+"°" }
-  function conditionLabel(code) { var k=Model.kind(code); return strings.t(k<0 ? "weather.unknown" : "weather.condition."+k) }
   function stat(value,suffix) { return value===null || value===undefined ? "—" : Commons.I18n.formatNumber(Math.round(value))+suffix }
   HoverHandler { id: hover }
   BrailleFeedback { id: weatherFeedback; surface: root; effect: glow; hover: hover }
-  BrailleSpotlight { id: glow; objectName: "weatherSpotlight"; anchors.fill: parent; active: hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleSpotlight { id: glow; objectName: "weatherSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: body
     width: parent.width
-    spacing: Style.space(12)
+    spacing: Style.space(10)
     RowLayout {
       Layout.fillWidth: true
       spacing: Style.space(4)
-      FeedbackButton { objectName: "weatherBack"; visible: root.showBack; feedback: weatherFeedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: root.backRequested() }
+      FeedbackButton { objectName: "weatherBack"; visible: root.showBack; feedback: root.feedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: root.backRequested() }
       FeedbackButton {
         objectName: "weatherLocation"
-        feedback: weatherFeedback
+        feedback: root.feedback
         Layout.fillWidth: true
+        Layout.minimumWidth: 0
         text: root.report && root.report.location ? root.report.location : root.strings.t("weather.title")
         fontSize: Style.font.title
         radius: Math.min(Style.cornerRadius,Style.space(6))
@@ -46,7 +48,15 @@ Item {
         tooltipText: root.strings.t("weather.changeCity")
         onClicked: { root.editing=!root.editing; if(root.editing) Qt.callLater(function(){city.forceActiveFocus()}) }
       }
-      FeedbackButton { objectName: "weatherRefresh"; feedback: weatherFeedback; iconText: "󰑐"; tooltipText: root.strings.t("weather.refresh"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; enabled: root.weather!==null && !root.weather.loading; onClicked: root.weather.refresh() }
+      PlainText {
+        objectName: "weatherUpdated"
+        Layout.maximumWidth: root.width*0.45
+        visible: text!==""
+        text: root.weather && root.weather.loading ? root.strings.t("weather.loading") : root.report ? root.strings.t("weather.updated").arg(new Date(root.report.fetchedAt*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm")) : ""
+        color: Commons.Color.muted
+        font.pixelSize: Style.font.caption
+      }
+      FeedbackButton { objectName: "weatherRefresh"; feedback: root.feedback; iconText: "󰑐"; tooltipText: root.strings.t("weather.refresh"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; enabled: root.weather!==null && !root.weather.loading; onClicked: root.weather.refresh() }
     }
     ColumnLayout {
       Layout.fillWidth: true
@@ -63,13 +73,13 @@ Item {
           Keys.onReturnPressed: if(root.weather && root.weather.suggestions.length>0) {root.weather.choose(root.weather.suggestions[0]);root.editing=false}
           Keys.onEscapePressed: event => {root.editing=false;event.accepted=true}
         }
-        ActionButton { objectName: "weatherAuto"; feedback: weatherFeedback; text: root.strings.t("weather.auto"); onClicked: {if(root.weather)root.weather.autoLocate();root.editing=false} }
+        ActionButton { objectName: "weatherAuto"; feedback: root.feedback; text: root.strings.t("weather.auto"); onClicked: {if(root.weather)root.weather.autoLocate();root.editing=false} }
       }
       Repeater {
         model: root.weather ? root.weather.suggestions : []
         FeedbackButton {
           required property var modelData
-          feedback: weatherFeedback
+          feedback: root.feedback
           Layout.fillWidth: true
           text: modelData.name+" · "+modelData.description
           leftAlign: true
@@ -81,30 +91,37 @@ Item {
       }
       PlainText { visible: root.weather!==null && root.weather.searching; text: root.strings.t("weather.searching"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
     }
-    RowLayout {
+    Item {
       Layout.fillWidth: true
-      spacing: Style.space(8)
+      implicitHeight: Style.space(184)
       WeatherScene {
         objectName: "weatherHeroScene"
-        Layout.fillWidth: true
-        Layout.preferredWidth: Style.space(240)
-        Layout.preferredHeight: Style.space(180)
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        width: Math.min(parent.width,Style.space(240))
+        height: Style.space(168)
         condition: root.condition<0 ? 2 : root.condition
         isDay: root.current ? root.current.isDay : true
         animated: root.active && root.current!==null
         opacity: root.current ? 1 : 0.25
       }
-      ColumnLayout {
-        Layout.preferredWidth: Style.space(145)
-        spacing: Style.space(4)
-        PlainText { objectName: "weatherTemperature"; text: root.current ? root.temp(root.current.temperature) : "—"; font.pixelSize: Style.space(48); font.bold: true }
-        PlainText { text: root.imperial ? "°F" : "°C"; color: Commons.Color.accent; font.pixelSize: Style.font.bodySmall }
-        PlainText { Layout.fillWidth: true; text: root.current ? root.conditionLabel(root.current.code) : root.strings.t(root.weather && root.weather.loading ? "weather.loading" : "weather.noData"); color: Commons.Color.muted; wrapMode: Text.Wrap; font.pixelSize: Style.font.bodySmall }
+      PlainText {
+        objectName: "weatherTemperature"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        width: parent.width
+        horizontalAlignment: Text.AlignHCenter
+        text: root.current ? root.temp(root.current.temperature)+(root.imperial ? "F" : "C") : root.strings.t(root.weather && root.weather.loading ? "weather.loading" : "weather.noData")
+        font.pixelSize: root.current ? Style.space(42) : Style.font.bodySmall
+        font.bold: root.current!==null
+        color: root.current ? Commons.Color.foreground : Commons.Color.muted
       }
     }
     RowLayout {
       Layout.fillWidth: true
       visible: root.current!==null
+      uniformCellSizes: true
+      spacing: Style.space(8)
       Repeater {
         model: [
           {label:root.strings.t("weather.feels"),value:root.temp(root.current ? root.current.feels : null)},
@@ -115,13 +132,14 @@ Item {
           required property var modelData
           Layout.fillWidth: true
           Layout.preferredWidth: 1
+          Layout.minimumWidth: 0
           implicitHeight: statColumn.implicitHeight
           ColumnLayout {
             id: statColumn
             width: parent.width
             spacing: Style.space(4)
-            PlainText { text: modelData.label; color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-            PlainText { text: modelData.value; font.pixelSize: Style.font.body }
+            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.label; color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.value; font.pixelSize: Style.font.body }
           }
         }
       }
@@ -129,27 +147,29 @@ Item {
     PanelSeparator { Layout.fillWidth: true; visible: root.report!==null }
     RowLayout {
       Layout.fillWidth: true
-      spacing: Style.space(8)
+      spacing: Style.space(4)
+      uniformCellSizes: true
       visible: root.report!==null
       Repeater {
-        model: root.report ? root.report.days.slice(1,4) : []
+        objectName: "weatherForecast"
+        model: root.report ? root.report.days.slice(1,8) : []
         Item {
+          id: forecastDay
           required property var modelData
+          required property int index
+          objectName: "weatherDay-"+index
           Layout.fillWidth: true
           Layout.preferredWidth: 1
+          Layout.minimumWidth: 0
           implicitHeight: dayColumn.implicitHeight
           ColumnLayout {
             id: dayColumn
             width: parent.width
             spacing: Style.space(3)
             PlainText { Layout.alignment: Qt.AlignHCenter; text: new Date(modelData.date+"T12:00:00").toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-            WeatherScene { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: Style.space(70); Layout.preferredHeight: Style.space(52); condition: Model.kind(modelData.code)<0 ? 2 : Model.kind(modelData.code); animated: false }
-            RowLayout {
-              Layout.alignment: Qt.AlignHCenter
-              spacing: Style.space(6)
-              PlainText { text: root.temp(modelData.max); font.pixelSize: Style.font.bodySmall }
-              PlainText { text: root.temp(modelData.min); color: Commons.Color.muted; font.pixelSize: Style.font.bodySmall }
-            }
+            WeatherScene { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: Math.min(forecastDay.width,Style.space(56)); Layout.preferredHeight: Style.space(44); condition: Model.kind(modelData.code)<0 ? 2 : Model.kind(modelData.code); animated: false }
+            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.max); font.pixelSize: Style.font.bodySmall }
+            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.min); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
           }
         }
       }
@@ -161,11 +181,7 @@ Item {
       color: Commons.Color.muted
       wrapMode: Text.Wrap
       font.pixelSize: Style.font.caption
-    }
-    RowLayout {
-      Layout.fillWidth: true
-      PlainText { Layout.fillWidth: true; text: root.weather && root.weather.loading ? root.strings.t("weather.loading") : root.report ? root.strings.t("weather.updated").arg(new Date(root.report.fetchedAt*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm")) : ""; color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      ActionButton { feedback: weatherFeedback; text: "Open-Meteo"; fontSize: Style.font.caption; onClicked: Qt.openUrlExternally("https://open-meteo.com/") }
+      horizontalAlignment: Text.AlignHCenter
     }
   }
   Timer { id: searchDelay; interval: 300; onTriggered: if(root.weather && root.editing) root.weather.search(city.text) }
