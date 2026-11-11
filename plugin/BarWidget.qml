@@ -204,14 +204,14 @@ BarWidget {
         visible:!!root.t3 && root.t3.allowed && (root.t3.waitingCount>0 || root.t3.workingCount>0)
         readonly property bool waiting:!!root.t3 && root.t3.waitingCount>0
         readonly property string text:Commons.I18n.formatNumber(root.t3 ? root.t3.waitingCount || root.t3.workingCount : 0)
-        readonly property color color:waiting ? Commons.Color.accent : Commons.Color.muted
+        readonly property color color:root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
         implicitWidth:t3IndicatorBody.implicitWidth;implicitHeight:t3IndicatorBody.implicitHeight
         RowLayout {
           id:t3IndicatorBody
           anchors.centerIn:parent;spacing:Style.space(4)
-          T3Spinner {objectName:"islandT3Spinner";visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:Style.space(14)}
-          PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;font.pixelSize:Design.type.bar}
-          PlainText {text:t3Indicator.text;color:t3Indicator.color;font.pixelSize:Design.type.bar}
+          T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:Style.space(14)}
+          PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
+          PlainText {objectName:"islandT3Count";text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:trigger.height;verticalAlignment:Text.AlignVCenter}
         }
         MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
       }
