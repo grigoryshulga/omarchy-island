@@ -15,10 +15,12 @@ PanelWindow {
   readonly property string entranceStyle: "seed-drop-stretch"
   property bool open: false
   property bool frameless: false
+  property bool bareCard:false
+  property bool bareCardShown:false
   property bool frameSuppressed: false
   property string triggerMode: "hover"
   property bool centerOnBar: true
-  property int padding: frameSuppressed ? Design.gap.small : Design.panelPadding
+  property int padding: bareCardShown ? 0 : frameSuppressed ? Design.gap.small : Design.panelPadding
   property int margin: Style.gapsOut
   property int contentWidth: Style.space(420)
   property int contentHeight: Style.space(240)
@@ -30,7 +32,7 @@ PanelWindow {
   readonly property real thickness: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real availableWidth: Math.max(120,(screen ? screen.width : 1920)-2*margin)
   readonly property real availableHeight: Math.max(120,(screen ? screen.height : 1080)-thickness-2*margin)
-  readonly property var borderSpec: Border.surfaceSpec(frameSuppressed ? "notifications" : "popups","border",frameSuppressed ? Commons.Color.notifications.border : Commons.Color.popups.border,Math.max(1,Style.space(2)))
+  readonly property var borderSpec: bareCardShown ? Border.none() : Border.surfaceSpec(frameSuppressed ? "notifications" : "popups","border",frameSuppressed ? Commons.Color.notifications.border : Commons.Color.popups.border,Math.max(1,Style.space(2)))
   readonly property real insetTop: padding+Border.top(borderSpec)
   readonly property real insetBottom: padding+Border.bottom(borderSpec)
   readonly property real insetLeft: padding+Border.left(borderSpec)
@@ -79,6 +81,7 @@ PanelWindow {
   onOpenChanged: {
     if (open) {
       frameSuppressed=frameless
+      bareCardShown=bareCard
       settledWidth = contentWidth
       settledHeight = contentHeight
       layoutWidth = contentWidth
@@ -95,6 +98,7 @@ PanelWindow {
     primeFocus()
   }
   // Keep the toast's compact treatment through closing.
+  onBareCardChanged:Qt.callLater(function(){if(root.open) root.bareCardShown=root.bareCard})
   onFramelessChanged: Qt.callLater(function(){if(root.open) root.frameSuppressed=root.frameless})
   onPinnedChanged: primeFocus()
   onWidthChanged: revealWhenConfigured()
@@ -150,7 +154,7 @@ PanelWindow {
       y: root.cardOrigin.y + (root.position === "bottom" ? -1 : 1)*reveal.offsetY
       width: root.drawnWidth
       height: root.drawnHeight
-      color: Design.canvas
+      color: root.bareCardShown ? Design.surface : Design.canvas
       Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Preferences.duration(120)} }
       borderSpec: root.borderSpec
       radius: Math.min(Style.cornerRadius,width/2,height/2)

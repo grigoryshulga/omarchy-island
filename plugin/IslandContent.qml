@@ -34,29 +34,24 @@ Item {
   readonly property var t3:service && ("t3" in service) ? service.t3 : null
   readonly property bool showT3:!!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
   property var notificationIcon:null
+  readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
   implicitHeight: body.implicitHeight
   MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   ColumnLayout {
     id: body
     width: parent.width
     spacing: root.compactNotifications ? Design.gap.tight : Design.gap.section
-  ColumnLayout {
+  T3SessionCard {
+    id:t3Toast
+    objectName:"t3ActivityToast"
     Layout.fillWidth:true
     visible:root.alertKind==="t3" && !root.expanded && !root.hovering && !!root.service && !!root.service.latestT3
-    spacing:Design.gap.small
-    SectionHeading {
-      Layout.fillWidth:true
-      title:"T3 Code"
-      detail:root.service && root.service.latestT3 ? root.strings.t(root.service.latestT3.requestId ? "t3.needsAction" : "t3.status."+root.service.latestT3.status) : ""
-    }
-    T3SessionCard {
-      objectName:"t3ActivityToast"
-      Layout.fillWidth:true
-      row:root.service && root.service.latestT3 ? root.service.latestT3 : ({id:"",title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
-      bridge:root.t3;strings:root.strings;active:parent.visible && root.visible
-      feedback:root.externalFeedback
-      onExpandRequested:root.expandRequested()
-    }
+    compactToast:true
+    color:"transparent"
+    row:root.service && root.service.latestT3 ? root.service.latestT3 : ({id:"",title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
+    bridge:root.t3;strings:root.strings;active:visible && root.visible
+    feedback:root.externalFeedback
+    onExpandRequested:root.expandRequested()
   }
   MediaCard {
     id: mediaPlayer

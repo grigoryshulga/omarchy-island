@@ -14,6 +14,8 @@ Rectangle {
   property bool active:true
   property var feedback:null
   property bool detailsOpen:false
+  property bool compactToast:false
+  readonly property var statusIcon:working ? workingIcon : stateIcon
   readonly property bool islandSpotlightSurface:true
   readonly property var request:row ? row.request : null
   readonly property bool needsInput:!!row.requestId
@@ -53,8 +55,8 @@ Rectangle {
     RowLayout {
       Layout.fillWidth:true
       spacing:Design.gap.medium
-      T3Spinner {objectName:"t3SessionSpinner";visible:root.working;active:root.active && root.bridge.connected;Layout.alignment:Qt.AlignVCenter}
-      PlainText {visible:!root.working;text:root.needsInput ? "󰋗" : root.row.status==="completed" ? "✓" : "·";color:root.needsInput ? Design.accent : Design.secondaryText}
+      T3Spinner {id:workingIcon;objectName:"t3SessionSpinner";visible:root.working;active:root.active && root.bridge.connected;Layout.alignment:Qt.AlignVCenter}
+      PlainText {id:stateIcon;visible:!root.working;text:root.needsInput ? "󰋗" : root.row.status==="completed" ? "✓" : "·";color:root.needsInput ? Design.accent : Design.secondaryText}
       ColumnLayout {
         Layout.fillWidth:true;Layout.minimumWidth:0
         spacing:Design.gap.tight
@@ -89,7 +91,7 @@ Rectangle {
         RowLayout {
           Layout.fillWidth:true;spacing:Design.gap.medium
           PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;text:root.row.project;typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
-          PlainText {visible:!root.needsInput;Layout.maximumWidth:Math.max(Style.space(80),(root.width-Style.space(48))*0.65);text:root.statusText;typeRole:"caption";color:root.needsInput ? Design.accent : Design.secondaryText;horizontalAlignment:Text.AlignRight;elide:Text.ElideRight}
+          PlainText {visible:!root.needsInput || root.compactToast;Layout.maximumWidth:Math.max(Style.space(80),(root.width-Style.space(48))*0.65);text:root.statusText;typeRole:"caption";color:root.needsInput ? Design.accent : Design.secondaryText;horizontalAlignment:Text.AlignRight;elide:Text.ElideRight}
         }
       }
     }

@@ -321,7 +321,8 @@ BarWidget {
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: true
     open: root.pinned || (root.hoverOpen && root.hoverContentAvailable) || (root.showAlert && !root.stripNotification)
-    frameless: root.notificationToast
+    frameless: root.notificationToast || bareCard
+    bareCard: root.alertKind==="t3" && !root.pinned && !root.hoverOpen
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
     onVisibleChanged: if (!visible) Qt.callLater(function(){
       if(!preview.visible && !preview.open) {root.contentExpanded=false;root.calendarMode=false;root.weatherMode=false;root.controlsMode=false}

@@ -18,7 +18,7 @@ Item {
   property bool expanded: false
   property bool hovering: false
   property string alertKind: ""
-  readonly property var notificationIcon: inbox.notificationIcon
+  readonly property var notificationIcon: inbox.toastIcon
   property bool controls: false
   property bool calendar: false
   property bool weather: false
