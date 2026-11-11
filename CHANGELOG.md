@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Исправлена загрузка Monitors в новых версиях Omarchy: поддержаны `reorderableSideways` и `reorderSidewaysRequested` в клавиатурном адаптере, включая Ctrl+Left/Right и Ctrl+H/L.
+
 - Controls загружает актуальные системные панели через автоматическую адаптацию в кэше по подходу Dashboard. Удалены локальные копии Audio, Bluetooth, Network, Tailscale и Monitors; сохранены штатный жизненный цикл, навигация и оформление Island.
 
 ## 1.0.0

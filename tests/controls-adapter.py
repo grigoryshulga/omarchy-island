@@ -72,6 +72,20 @@ class ControlsAdapter(unittest.TestCase):
         host.write_text(host.read_text() + '\n// updated container\n')
         self.assertNotEqual(first, build())
 
+    def test_monitor_sideways_reorder_contract(self):
+        source = SOURCE.replace(
+            'content: PanelKeyCatcher { implicitHeight: 100 }',
+            """content: PanelKeyCatcher {
+      implicitHeight: 100
+      reorderableSideways: true
+      onReorderSidewaysRequested: function(dx) { root.reorderMonitor(dx) }
+    }""")
+        source = source.replace('id: root', 'id: root\n  function reorderMonitor(dx) {}')
+        (self.source / 'Panel.qml').write_text(source)
+        output = self.build()
+        self.assertIn('reorderableSideways: true', output.read_text())
+        self.assertIn('onReorderSidewaysRequested:', output.read_text())
+
     def test_rejects_new_host_contract(self):
         (self.source / 'Panel.qml').write_text(SOURCE.replace('id: panel', 'id: panel\n    unknownFutureProperty: true'))
         with self.assertRaisesRegex(adapter.AdaptationError, 'unknownFutureProperty'):
