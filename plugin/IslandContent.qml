@@ -39,6 +39,24 @@ Item {
     id: body
     width: parent.width
     spacing: root.compactNotifications ? Design.gap.tight : Design.gap.section
+  ColumnLayout {
+    Layout.fillWidth:true
+    visible:root.alertKind==="t3" && !root.expanded && !root.hovering && !!root.service && !!root.service.latestT3
+    spacing:Design.gap.small
+    SectionHeading {
+      Layout.fillWidth:true
+      title:"T3 Code"
+      detail:root.service && root.service.latestT3 ? root.strings.t(root.service.latestT3.requestId ? "t3.needsAction" : "t3.status."+root.service.latestT3.status) : ""
+    }
+    T3SessionCard {
+      objectName:"t3ActivityToast"
+      Layout.fillWidth:true
+      row:root.service && root.service.latestT3 ? root.service.latestT3 : ({id:"",title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
+      bridge:root.t3;strings:root.strings;active:parent.visible && root.visible
+      feedback:root.externalFeedback
+      onExpandRequested:root.expandRequested()
+    }
+  }
   MediaCard {
     id: mediaPlayer
     externalFeedback: root.externalFeedback
@@ -143,7 +161,7 @@ Item {
         objectName:"islandDownloads"
         width:parent.width
         spacing:Design.gap.small
-        visible:(root.expanded || root.hovering) ? root.downloads.length>0 : !!(root.service && root.service.latest && root.service.latest.downloadPath)
+        visible:root.alertKind!=="t3" && ((root.expanded || root.hovering) ? root.downloads.length>0 : !!(root.service && root.service.latest && root.service.latest.downloadPath))
         SectionHeading {width:parent.width;visible:root.expanded || root.hovering;title:root.strings.t("downloads.title")}
         DownloadList {
           width:parent.width

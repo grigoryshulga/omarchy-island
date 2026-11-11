@@ -142,10 +142,10 @@ ShellRoot {
       check(!t3Indicator.visible,"disabled T3 indicator is visible")
       t3State.allowed=true;t3State.workingCount=3;wait(25)
       check(t3Indicator.visible && t3Indicator.text.indexOf(Commons.I18n.formatNumber(3))>=0,"T3 working count is missing")
-      var spinner=findChild(widget,"islandT3Spinner"),wheel=findChild(spinner,"t3SpinnerWheel")
+      var spinner=findChild(widget,"islandT3Spinner"),glyph=findChild(spinner,"t3SpinnerGlyph")
       check(spinner.animating,"T3 bar spinner is not running")
-      var angle=wheel.rotation;wait(70)
-      check(wheel.rotation!==angle,"T3 bar spinner did not rotate")
+      var frame=glyph.text;wait(120)
+      check(glyph.text!==frame,"T3 bar braille spinner did not advance")
       Commons.Style.reduceMotion=true;wait(25)
       check(!spinner.animating,"T3 bar spinner ignored reduced motion")
       Commons.Style.reduceMotion=false

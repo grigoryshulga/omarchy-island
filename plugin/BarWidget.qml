@@ -57,7 +57,7 @@ BarWidget {
   property date now: new Date()
   readonly property bool opened: pinned
   readonly property string screenName: root.QsWindow.window && root.QsWindow.window.screen ? root.QsWindow.window.screen.name : ""
-  readonly property bool alertOnScreen: !service || !service.targetScreen || service.targetScreen === screenName
+  readonly property bool alertOnScreen: !service || !(alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) || (alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) === screenName
   readonly property bool showAlert: alertKind !== "" && alertOnScreen
   readonly property bool notificationToast: alertKind==="notification" && !pinned && !hoverOpen
   readonly property real displayScale: root.QsWindow.window ? root.QsWindow.window.devicePixelRatio : 1
@@ -75,7 +75,7 @@ BarWidget {
     var index=controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1
     previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
-  readonly property string barText: showAlert && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
+  readonly property string barText: showAlert && alertKind!=="t3" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
@@ -109,8 +109,14 @@ BarWidget {
   function toggleCalendar() { if (pinned && calendarMode) close(); else openCalendar() }
   function close() { hoverSuppressed = true; pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop() }
   function toggle() { pinned ? close() : open() }
+  function showT3Activity() {
+    if(!service || !service.latestT3 || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
+    if(service.t3TargetScreen && service.t3TargetScreen!==screenName) return
+    contentExpanded=false;controlsMode=false;calendarMode=false;weatherMode=false
+    alertKind="t3";alertLife.interval=4000;alertLife.restart()
+  }
   function showNotification() {
-    if (!service || !service.latest || !alertOnScreen || pinned) return
+    if (!service || !service.latest || (service.targetScreen && service.targetScreen!==screenName) || pinned) return
     contentExpanded = false; alertKind = "notification"; alertLife.interval = Number(setting("notificationDuration",5000)); alertLife.restart()
   }
   function syncSettings() {
@@ -150,7 +156,7 @@ BarWidget {
   onServiceChanged: syncSettings()
   onSettingsChanged: syncSettings()
   onSignatureChanged: {
-    if (Settings.get(settings,"trackAlerts") && service && service.playing && !pinned && alertKind !== "notification") {
+    if (Settings.get(settings,"trackAlerts") && service && service.playing && !pinned && alertKind !== "notification" && alertKind !== "t3") {
       alertKind = "media"; alertLife.interval = 3000; alertLife.restart()
     }
   }
@@ -162,11 +168,11 @@ BarWidget {
   implicitHeight: vertical ? Style.space(80) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
-  Connections { target: root.service; function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
+  Connections { target: root.service; ignoreUnknownSignals:true; function onT3Arrival() {root.showT3Activity()} function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
   Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
   Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
-  Timer { id: alertLife; interval: 3000; onTriggered: root.alertKind = "" }
+  Timer { id: alertLife; objectName:"islandAlertLife"; interval: 3000; onTriggered: root.alertKind = "" }
   PlainText {id:osdMeasure;visible:false;text:root.indicators && ("osdMessage" in root.indicators) ? root.indicators.osdMessage : "";typeRole:"bar"}
   PlainText { id: clockMeasure; typeRole:"bar"; text: root.clockText; visible: false }
   WidgetButton {

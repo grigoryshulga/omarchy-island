@@ -43,6 +43,8 @@ ShellRoot {
           compare(input.text,draft);verify(input.activeFocus,"Theme change stole editor focus")
           compare(surface.border.width,0)
         }
+        // Exercise base scaling independently of explicit user/theme font sizes.
+        Commons.Style.fontOverrides=({});wait(30)
         var before=title.font.pixelSize,height=input.implicitHeight
         Commons.Style.fontBaseSize=originalSize*1.5;wait(30)
         verify(title.font.pixelSize>before && input.implicitHeight>height,"Typography and controls must scale together")

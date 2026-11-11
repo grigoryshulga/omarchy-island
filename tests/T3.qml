@@ -6,6 +6,7 @@ import "Island" as Island
 
 ShellRoot {
   Island.Service {id:service}
+  SignalSpy {id:alerts;target:service;signalName:"t3Arrival"}
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("Island/i18n")}
   FloatingWindow {
     id:window
@@ -22,6 +23,7 @@ ShellRoot {
         tryCompare(service.t3,"connected",true,5000)
         tryVerify(function(){return service.t3.rows.length===1})
         compare(service.t3.waitingCount,1)
+        compare(alerts.count,0,"Initial snapshot must stay quiet")
         var card=findChild(pages,"t3Session-thread-1")
         verify(card!==null)
         var field=findChild(card,"t3Answer-q1"),submit=findChild(card,"t3Submit")
@@ -56,8 +58,8 @@ ShellRoot {
         var workingCard=findChild(pages,"t3Session-thread-2"),spinner=findChild(workingCard,"t3SessionSpinner")
         verify(workingCard.height<=Commons.Style.space(88),"Working session must be a compact row")
         verify(spinner.animating,"Working session spinner is stopped")
-        var wheel=findChild(spinner,"t3SpinnerWheel"),rotation=wheel.rotation
-        wait(60);verify(wheel.rotation!==rotation,"Spinner did not rotate")
+        var glyph=findChild(spinner,"t3SpinnerGlyph"),frame=glyph.text
+        wait(120);verify(glyph.text!==frame,"Braille spinner did not advance")
         pages.controls=true;wait(30);verify(!spinner.animating,"Hidden page kept animating")
         pages.controls=false;wait(300)
         field.forceActiveFocus()
@@ -129,6 +131,22 @@ ShellRoot {
         verify(longSend.activeFocus,"Tab must reach Send on a long form")
         var buttonAt=longSend.mapToItem(sessionScroll,0,0)
         verify(buttonAt.y>=0 && buttonAt.y+longSend.height<=sessionScroll.height+1,"Keyboard focus must scroll the send button into view")
+        snapshot([]);wait(30)
+        alerts.clear()
+        service.doNotDisturb=false
+        snapshot([Object.assign({},second,{status:"running"})]);wait(30)
+        compare(alerts.count,1)
+        snapshot([Object.assign({},second,{status:"starting"})]);wait(30)
+        compare(alerts.count,1,"Run phases must not repeat popups")
+        service.doNotDisturb=true
+        snapshot([Object.assign({},second,{status:"completed"})]);wait(30)
+        compare(alerts.count,1,"DND must suppress popups")
+        service.doNotDisturb=false
+        snapshot([Object.assign({},second,{status:"running"})]);wait(30)
+        compare(alerts.count,2)
+        pages.expanded=false;pages.hovering=false;pages.alertKind="t3";wait(50)
+        verify(findChild(pages,"t3ActivityToast").visible,"Status alert must render its compact card")
+        pages.alertKind="";pages.expanded=true
         snapshot([]);wait(30)
         verify(!findChild(pages,"t3Section").visible,"Empty T3 must be completely hidden")
         service.t3.allowed=false

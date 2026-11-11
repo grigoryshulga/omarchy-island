@@ -30,3 +30,13 @@ assert.equal(model.duration({startedAt:100, finishedAt:165}, 200, String), '1:05
 assert.equal(model.duration({startedAt:100}, 225, String), '2:05');
 assert.equal(model.duration({}, 200, String), '');
 console.log('PASS: T3 settings, links, answer selection and durations');
+
+const running={id:'a',status:'running',requestId:''};
+assert.deepEqual(model.transitions(null,[running]),[]);
+assert.deepEqual(model.transitions([running],[{...running,title:'renamed'}]),[]);
+assert.deepEqual(model.transitions([{...running,status:'queued'}],[running]),[]);
+assert.equal(model.transitions([], [running]).length,1);
+assert.equal(model.transitions([running],[{...running,status:'completed'}]).length,1);
+assert.equal(model.transitions([running],[{...running,requestId:'question'}]).length,1);
+assert.deepEqual(model.transitions([], [{...running,status:'completed'}]),[]);
+assert.deepEqual(model.transitions([running], []),[]);

@@ -20,4 +20,16 @@ function duration(row, now, format) {
   var seconds=Math.max(0,Math.floor((row.finishedAt || now)-row.startedAt))
   return format(Math.floor(seconds/60))+":"+(seconds%60<10 ? format(0) : "")+format(seconds%60)
 }
-if(typeof module!=="undefined") module.exports={busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}
+// Collapse preparatory run states; metadata refreshes are not transitions.
+function alertState(row) {
+  return row.requestId ? "request:"+row.requestId : busy(row) ? "running" : row.status
+}
+function transitions(previous, next) {
+  if(previous===null) return []
+  return next.filter(function(row) {
+    var old=previous.find(function(item){return item.id===row.id})
+    var state=alertState(row)
+    return state!=="idle" && (old ? alertState(old)!==state : !!row.requestId || busy(row))
+  })
+}
+if(typeof module!=="undefined") module.exports={alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}

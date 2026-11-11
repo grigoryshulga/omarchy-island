@@ -14,6 +14,9 @@ Item {
   property bool canRespond:false
   property var rows:[]
   property var responses:({})
+  property var alertBaseline:null
+  signal activityChanged(var session)
+  onConnectedChanged:if(!connected) alertBaseline=null
   readonly property bool connected:allowed && status==="connected"
   readonly property int waitingCount:connected ? rows.filter(function(r){return !!r.requestId}).length : 0
   readonly property int workingCount:connected ? rows.filter(function(r){return T3.busy(r) && !r.requestId}).length : 0
@@ -29,7 +32,13 @@ Item {
       if(event.environmentId) environmentId=event.environmentId
       if(status!=="connected") failPending()
     } else if(event.type==="sessions" && Array.isArray(event.rows)) {
-      rows=event.rows.slice(0,30)
+      var nextRows=event.rows.slice(0,30)
+      var changes=T3.transitions(alertBaseline,nextRows)
+      rows=nextRows
+      alertBaseline=nextRows
+      // Prefer an input request or failure when several threads change together.
+      changes.sort(function(a,b){return (b.requestId ? 2 : b.status==="failed" ? 1 : 0)-(a.requestId ? 2 : a.status==="failed" ? 1 : 0)})
+      if(changes.length && connected) activityChanged(changes[0])
       var keep={}
       rows.forEach(function(r){if(r.requestId && root.responses[r.requestId]) keep[r.requestId]=root.responses[r.requestId]})
       responses=keep

@@ -36,6 +36,20 @@ ShellRoot {
     property real audioBass: 0
     property real audioTreble: 0
     signal arrivalChanged()
+    signal t3Arrival()
+    property var latestT3: null
+    property string t3TargetScreen: ""
+    property var t3: QtObject {
+      property bool allowed:false
+      property bool connected:true
+      property bool canRespond:true
+      property bool responsesEnabled:true
+      property var rows:[]
+      property int waitingCount:0
+      property int workingCount:0
+      function response(id) {return ""}
+      function openThread(id) {}
+    }
     readonly property var activeEntries: allEntries
     property var historyEntries: []
     property var allEntries: [{key:"n1",app:"Test",summary:"One",body:"one",ts:1},{key:"n2",app:"Test",summary:"Two",body:"two",ts:2},{key:"n3",app:"Test",summary:"Three",body:"three",ts:3},{key:"n4",app:"Test",summary:"Four",body:"four",ts:4}]
@@ -188,6 +202,22 @@ ShellRoot {
       if(exitTick===226) {
         checkExit(!popup.visible && !popup.backingWindowVisible,"closed panel kept its native surface")
         console.log("ANIMATED_CLOSE_PASS")
+        exitClock.stop()
+        service.latestT3={id:"activity",title:"Проверка плашки",project:"Island",status:"completed",requestId:"",request:null,summary:""}
+        service.doNotDisturb=true;service.t3Arrival()
+        compare(widget.alertKind,"","DND must suppress T3")
+        service.doNotDisturb=false;service.t3TargetScreen="other-monitor";service.t3Arrival()
+        compare(widget.alertKind,"","Another monitor must not show T3")
+        service.t3TargetScreen=widget.screenName;service.t3Arrival()
+        compare(widget.alertKind,"t3")
+        wait(100)
+        verify(findChild(widget,"t3ActivityToast").visible)
+        verify(!widget.pinned,"T3 must not pin the popup")
+        var lifetime=findChild(widget,"islandAlertLife")
+        compare(lifetime.interval,4000)
+        lifetime.interval=20;lifetime.restart();wait(60)
+        compare(widget.alertKind,"","T3 popup must expire")
+        console.log("T3_ACTIVITY_POPUP_PASS")
         console.log("ISLAND_MOTION_PASS")
         Qt.quit()
       }
@@ -286,7 +316,7 @@ ShellRoot {
         p.playbackState=MprisPlaybackState.Playing; p.isPlaying=true; service.playing=true
       }
       if(tick===175) {
-        if(test.findChild(widget,"islandPopupArtwork").opacity<0.99) { console.log("ISLAND_MOTION_FAIL: playback did not reveal music backdrop",test.findChild(widget,"islandPopupArtwork").opacity,test.findChild(widget,"islandPopupArtwork").active,test.findChild(widget,"islandPopupArtwork").reveal); widget.close(); Qt.quit(); return }
+        if(Math.abs(test.findChild(widget,"islandPopupArtwork").opacity-0.7)>0.01) { console.log("ISLAND_MOTION_FAIL: playback did not reveal music backdrop",test.findChild(widget,"islandPopupArtwork").opacity,test.findChild(widget,"islandPopupArtwork").active,test.findChild(widget,"islandPopupArtwork").reveal); widget.close(); Qt.quit(); return }
         p.playbackState=MprisPlaybackState.Stopped; p.isPlaying=false; service.playing=false
       }
       if(tick===195) {

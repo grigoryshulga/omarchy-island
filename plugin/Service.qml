@@ -17,7 +17,18 @@ Item {
   property var shell: null
   readonly property alias weather: weatherService
   readonly property alias t3: t3State
-  T3State {id:t3State}
+  property var latestT3:null
+  property string t3TargetScreen:""
+  signal t3Arrival()
+  T3State {
+    id:t3State
+    onActivityChanged:session=>{
+      if(root.doNotDisturb) return
+      root.t3TargetScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+      root.latestT3=session
+      root.t3Arrival()
+    }
+  }
   WeatherService { id: weatherService }
   readonly property alias indicators: indicatorState
   IndicatorState {id:indicatorState}
