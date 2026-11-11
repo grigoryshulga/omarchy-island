@@ -13,6 +13,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 - **Calendar and weather:** month navigation, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
+- **T3 Code (optional):** live session cards in Overview, a bar indicator for running sessions and pending requests, and inline answers to questions. Cards preserve drafts and focus while sessions update. Permission and authentication requests open in T3.
 - **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Optional Voxtype integration shows recording and transcription status without taking focus.
 
 ## Installation
@@ -115,6 +116,8 @@ Open **Controls → Settings** (the sixth tile) for Island behavior, section vis
 | Music visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
 | Visualization style | `musicVisualizationStyle: "default"`; reserved, currently a disabled choice |
 | Notification style | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
+| T3 Code sessions | `t3Enabled: false`; opt in under Integrations to connect to the local T3 server |
+| Answer T3 questions from Island | `t3Responses: true`; when disabled, the T3 connection is read-only |
 | Indicators | `indicatorDnd`, `indicatorMicrophone`, `indicatorRecording`, `indicatorRemote`, `indicatorNightLight`, `indicatorStayAwake`, `indicatorUpdate`: all `true`; visibility only, without changing system state |
 | System events | `osdVolume`, `osdBrightness`, `osdKeyboard`, `osdLayout`, `osdMicrophone`, `osdModes`: all `true`; disabled events are suppressed without invoking the native OSD fallback |
 
@@ -141,6 +144,25 @@ Click the weather city to search or choose automatic location; Enter confirms an
 
 For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
 
+### T3 Code session cards
+
+Requires a running **local T3 Code server**, its `t3` CLI on the shell's `PATH`, and orchestration protocol **2**. Tested against `0.1.9-nightly.20261111.4515`. The bridge uses Python's standard library; Node.js and extra Python packages are not required.
+
+Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions appear in **Overview → Active**. The bar shows the number of pending requests, or working sessions when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. New requests do not open a popup or steal focus, including during DND.
+
+- Choose a single option, select several options when the question permits it, or enter a custom answer. Complete required questions, then choose **Send answer**. Tab / Shift+Tab navigates the form; typing and caret keys stay in the text field.
+- Session updates preserve existing card order, drafts, and focus. A replacement question resets its draft. Questions answered in another T3 client disappear after synchronization.
+- **Details** expands the latest message or request context. **Open T3** uses T3's official `https://app.t3.codes/threads/...` link, which offers the desktop or web client; the chosen client must already have access to the environment.
+- Permission approvals, secrets/authentication, non-resumable requests, and forms outside the supported bounds are handled in T3. Island never interprets request text as a command.
+- Disconnects keep the last cards visibly stale and disable responses. An unconfirmed send is never retried automatically; check it in T3. Reconnection is automatic.
+- Up to 30 top-level sessions are shown, prioritizing pending requests and running work. Recently finished sessions remain for 30 minutes. Archived, explicitly settled, and child-agent threads are excluded. Overview must be enabled to use the cards.
+
+Discovery reads `$T3CODE_HOME/userdata/server-runtime.json`, defaulting to `~/.t3/userdata/server-runtime.json`. `T3CODE_HOME`, if set, must be available in the Omarchy shell environment. Only literal loopback HTTP origins are accepted; remote environments are outside this integration's scope.
+
+When enabled, the bridge uses `t3 auth session issue` to obtain a one-hour token with `orchestration:read` and, if answers are enabled, `orchestration:operate`. The latter is T3's general orchestration permission; Island exposes only validated answers to pending questions. Tokens are held in memory, rotated before expiry, and revoked on normal disconnect or shutdown. Turning off the integration stops the bridge. Session text and drafts are never added to notification history or written to disk by Island.
+
+The integration follows T3's client protocol, rather than a version-independent SDK. Unsupported protocol versions show an error and do not obtain a token. See the upstream [HTTP contract](https://github.com/pingdotgg/t3code/blob/d2c25950b4d9183ea342d5d5fc14c326b9e0172a/packages/contracts/src/environmentHttp.ts) and [orchestration contract](https://github.com/pingdotgg/t3code/blob/d2c25950b4d9183ea342d5d5fc14c326b9e0172a/packages/contracts/src/orchestrationV2.ts).
+
 ### Optional Hyprland blur
 
 Copy the included [layer rule](hyprland/island.lua):
@@ -163,6 +185,7 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. Blur strength foll
 - Expired notifications enter history; sender withdrawal removes them from both lists while Island retains the sender reference. After restart, saved entries are history only. Transient notifications are not saved.
 - Verification-code notifications are redacted before persistence. Copied codes use a sensitive clipboard selection and are cleared after one minute unless the clipboard has changed.
 - Playback audio is read through `parec` and processed in memory without saving PCM. Voxtype uses its existing audio bridge during recording; Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
+- T3 integration is off by default. When enabled, session data, draft answers, and the scoped access token stay in memory. Opening a session uses T3's official hosted thread link. See [T3 Code session cards](#t3-code-session-cards) for permissions and lifecycle.
 - Weather requests begin on first opening or hovering, with no requests beforehand. Automatic location uses `geo.omarchy.org`; search and forecasts use [Open-Meteo](https://open-meteo.com/). Requests use HTTPS, timeouts, and response limits. On failure, the last forecast remains marked stale; the cache is `~/.local/state/omarchy/island/weather.json`.
 
 ## Development
@@ -185,6 +208,8 @@ Additional checks for the affected feature:
 python3 tests/live-notifications.py        # Requires a running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
+python3 tests/t3-bridge.py                 # Local fake T3 HTTP/WebSocket server; no live T3 changes
+python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/keyboard.py                  # Keyboard input and focus
 QT_QPA_PLATFORM=offscreen python3 tests/keyboard.py # Keyboard checks without Wayland focus

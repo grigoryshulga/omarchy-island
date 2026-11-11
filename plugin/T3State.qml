@@ -1,0 +1,76 @@
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.Commons
+import "Security.js" as Security
+import "T3Model.js" as T3
+
+Item {
+  id:root
+  property bool allowed:Preferences.get("t3Enabled")
+  property bool responsesEnabled:Preferences.get("t3Responses")
+  property string status:"offline"
+  property string environmentId:""
+  property bool canRespond:false
+  property var rows:[]
+  property var responses:({})
+  readonly property bool connected:allowed && status==="connected"
+  readonly property int waitingCount:connected ? rows.filter(function(r){return !!r.requestId}).length : 0
+  readonly property int workingCount:connected ? rows.filter(function(r){return T3.busy(r) && !r.requestId}).length : 0
+  function row(id) {return rows.find(function(r){return r.id===id}) || null}
+  function response(id) {return responses[id] || ""}
+  function receive(line) {
+    if(line.length>4194304) return
+    var event
+    try {event=JSON.parse(line)} catch(e) {return}
+    if(event.type==="connection") {
+      status=event.status
+      canRespond=event.status==="connected" && event.canRespond===true
+      if(event.environmentId) environmentId=event.environmentId
+      if(status!=="connected") failPending()
+    } else if(event.type==="sessions" && Array.isArray(event.rows)) {
+      rows=event.rows.slice(0,30)
+      var keep={}
+      rows.forEach(function(r){if(r.requestId && root.responses[r.requestId]) keep[r.requestId]=root.responses[r.requestId]})
+      responses=keep
+    } else if(event.type==="response" && typeof event.requestId==="string") {
+      if(!rows.some(function(r){return r.requestId===event.requestId})) return
+      var next=Object.assign({},responses);next[event.requestId]=event.status;responses=next
+    }
+  }
+  function failPending() {
+    var next=Object.assign({},responses)
+    for(var id in next) if(next[id]==="sending") next[id]="uncertain"
+    responses=next
+  }
+  function submit(id,request,answers) {
+    var current=row(id),state=request ? response(request.id) : ""
+    if(!connected || !canRespond || !responsesEnabled || !reader.running || !current || !request || !request.canRespond || !current.request || current.request.revision!==request.revision || ["sending","sent","uncertain"].indexOf(state)>=0) return false
+    var next=Object.assign({},responses);next[request.id]="sending";responses=next
+    reader.write(JSON.stringify({type:"respond",threadId:id,requestId:request.id,revision:request.revision,answers:answers})+"\n")
+    return true
+  }
+  function openThread(id) {
+    var url=Security.t3ThreadUrl(environmentId,id)
+    if(url && row(id)) Util.execArgv(["xdg-open",url])
+  }
+  function restart() {
+    canRespond=false;failPending()
+    if(reader.running) reader.running=false
+    else if(allowed) retry.restart()
+  }
+  onAllowedChanged: {
+    if(allowed) {status="connecting";reader.running=true}
+    else {retry.stop();reader.running=false;rows=[];responses=({});status="offline";canRespond=false}
+  }
+  onResponsesEnabledChanged:restart()
+  Process {
+    id:reader
+    command:["python3",String(Qt.resolvedUrl("bin/t3-bridge")).replace(/^file:\/\//,"")].concat(root.responsesEnabled ? [] : ["--read-only"])
+    running:root.allowed
+    stdinEnabled:true
+    stdout:SplitParser {onRead:data=>root.receive(data)}
+    onExited:{root.status="offline";root.canRespond=false;root.failPending();if(root.allowed) retry.restart()}
+  }
+  Timer {id:retry;interval:2000;onTriggered:if(root.allowed) reader.running=true}
+}

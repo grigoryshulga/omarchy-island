@@ -1,0 +1,30 @@
+const assert = require('node:assert/strict');
+const {readFileSync} = require('node:fs');
+const vm = require('node:vm');
+const model = require('../plugin/T3Model.js');
+const settings = require('../plugin/SettingsModel.js');
+const security = vm.createContext({});
+vm.runInContext(readFileSync(require.resolve('../plugin/Security.js'), 'utf8').replace(/^\.pragma.*$/gm, ''), security);
+assert.equal(settings.get({}, 't3Enabled'), false);
+assert.equal(settings.get({}, 't3Responses'), true);
+assert.equal(settings.valid('t3Enabled', 'true'), false);
+assert.equal(security.t3ThreadUrl('env-1', 'thread-1'), 'https://app.t3.codes/threads/env-1/thread-1');
+for (const id of ['', '../secret', 'a/b', 'a?x=y', 'a#b', 'a%2fb', '$(touch bad)', '<b>', 'a'.repeat(129)]) {
+  assert.equal(security.t3ThreadUrl('env', id), '');
+  assert.equal(security.t3ThreadUrl(id, 'thread'), '');
+}
+assert.deepEqual(model.toggle(['a'], 'b', false), ['b']);
+assert.deepEqual(model.toggle(['a'], 'b', true), ['a', 'b']);
+assert.deepEqual(model.toggle(['a', 'b'], 'a', true), ['b']);
+const question = {required:true, multiSelect:false, allowCustomAnswer:true};
+assert.equal(model.valid(question, []), false);
+assert.deepEqual(model.answer(question, ['a'], ' custom '), ['custom']);
+assert.deepEqual(model.answer({...question, multiSelect:true}, ['a'], 'custom'), ['a', 'custom']);
+assert.deepEqual(model.answer({...question, multiSelect:true}, ['a'], 'a'), ['a']);
+assert.deepEqual(model.answer({...question, allowCustomAnswer:false}, ['a'], 'custom'), ['a']);
+assert.equal(model.valid({...question, required:false}, []), true);
+assert.equal(model.valid(question, ['a', 'b']), false);
+assert.equal(model.duration({startedAt:100, finishedAt:165}, 200, String), '1:05');
+assert.equal(model.duration({startedAt:100}, 225, String), '2:05');
+assert.equal(model.duration({}, 200, String), '');
+console.log('PASS: T3 settings, links, answer selection and durations');

@@ -34,7 +34,17 @@ ShellRoot {
     function detach(item){backend.detach(item)}
   }
   QtObject {
+    id:t3State
+    property bool allowed:false
+    property int waitingCount:0
+    property int workingCount:0
+    property bool connected:false
+    property string status:"offline"
+    property var rows:[]
+  }
+  QtObject {
     id:service
+    property var t3:t3State
     property var indicators:states
     property bool doNotDisturb:false
     property var player:null
@@ -128,6 +138,18 @@ ShellRoot {
       tryVerify(function(){return !widget.osdTransitioning && !gauge.visible},300)
       check(!backend.osdActive && label.visible && !gauge.visible,"clock did not return after layout OSD: "+JSON.stringify({active:backend.osdActive,shown:widget.osdShown,clock:label.visible,gauge:gauge.visible}))
       check(!findChild(widget,"islandRecordingIndicator").visible && !findChild(widget,"islandMicrophoneIndicator").visible,"inactive indicators are visible")
+      var t3Indicator=findChild(widget,"islandT3Indicator")
+      check(!t3Indicator.visible,"disabled T3 indicator is visible")
+      t3State.allowed=true;t3State.workingCount=3;wait(25)
+      check(t3Indicator.visible && t3Indicator.text.indexOf(Commons.I18n.formatNumber(3))>=0,"T3 working count is missing")
+      t3State.waitingCount=2;wait(25)
+      check(t3Indicator.text.indexOf(Commons.I18n.formatNumber(2))>=0 && t3Indicator.color===Commons.Color.accent,"T3 input requests did not take priority")
+      var clockAt=label.mapToItem(clock,0,0)
+      check(Math.abs(clockAt.x+label.width/2-clock.width/2)<1,"T3 indicator moved the clock off center")
+      t3State.waitingCount=0;t3State.workingCount=0;wait(25)
+      check(!t3Indicator.visible,"settled T3 sessions kept the bar indicator")
+      t3State.allowed=false
+      console.log("T3_INDICATOR_PASS")
       if(Quickshell.env("ISLAND_TEST_GPU")) {
         var frozen=new Date(2026,10,10,19,47),saved=widget.now
         widget.now=frozen;wait(30)

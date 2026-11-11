@@ -4,7 +4,7 @@ var defaults = {
   panelAnimation: true, animationsEnabled: true, trackAlerts: true,
   musicVisualization: "visible", musicVisualizationStyle: "default",
   overviewEnabled: true, calendarEnabled: true, weatherEnabled: true,
-  notificationStyle: "card",
+  notificationStyle: "card", t3Enabled: false, t3Responses: true,
   indicatorRecording: true, indicatorRemote: true, indicatorUpdate: true,
   indicatorMicrophone: true, indicatorDnd: true, indicatorNightLight: true, indicatorStayAwake: true,
   osdVolume: true, osdBrightness: true, osdKeyboard: true, osdLayout: true,
@@ -49,6 +49,7 @@ var sections = [
   {id:"behavior",rows:[{key:"hoverPreview"},{key:"hoverDelay",type:"delay"},{key:"openingPage",type:"choice"},{key:"panelAnimation"},{key:"animationsEnabled"}]},
   {id:"sections",rows:[{key:"controlsEnabled",fixed:true},{key:"overviewEnabled"},{key:"calendarEnabled"},{key:"weatherEnabled"}]},
   {id:"music",rows:[{key:"trackAlerts"},{key:"musicVisualization",type:"choice"},{key:"musicVisualizationStyle",type:"choice",fixed:true}]},
+  {id:"integrations",rows:[{key:"t3Enabled"},{key:"t3Responses"}]},
   {id:"indicators",rows:[{key:"indicatorDnd"},{key:"indicatorMicrophone"},{key:"indicatorRecording"},{key:"indicatorRemote"},{key:"indicatorNightLight"},{key:"indicatorStayAwake"},{key:"indicatorUpdate"}]},
   {id:"events",rows:[{key:"notificationStyle",type:"choice"},{key:"osdVolume"},{key:"osdBrightness"},{key:"osdKeyboard"},{key:"osdLayout"},{key:"osdMicrophone"},{key:"osdModes"}]}
 ]

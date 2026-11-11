@@ -1,0 +1,313 @@
+#!/usr/bin/env python3
+"""Opt-in local T3 v2 bridge. NDJSON on stdin/stdout; credentials stay in memory.
+
+Only runtime-request.respond with validated user answers is writable. Other T3
+commands, approvals, secrets, and arbitrary URLs are not accepted over stdin.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import queue
+import select
+import signal
+import subprocess
+import sys
+import threading
+import time
+from urllib.parse import quote, urlencode
+import uuid
+
+from t3_model import identifier, request_view, select_threads, session_view, validate_answers
+from t3_transport import TransportError, WebSocket, http_json
+
+# Eight custom answers plus selected options, including multibyte UTF-8 text.
+MAX_INPUT = 262144
+
+
+def emit(event):
+    print(json.dumps(event, ensure_ascii=True, separators=(",", ":")), flush=True)
+
+
+class Bridge:
+    def __init__(self, base, readonly=False, output=emit):
+        self.base = base
+        self.readonly = readonly
+        self.output = output
+        self.stopping = False
+        self.inbox = queue.Queue(maxsize=64)
+        self.credential = None
+        self.ws = None
+        self.origin = ""
+        self.environment = ""
+        self.threads = {}
+        self.projects = {}
+        self.details = {}
+        self.last_output = ""
+        self.pending = {}
+        self.rpc_sequence = 1
+        self.dirty = False
+        self.last_refresh = 0
+
+    def cli(self, *args):
+        return subprocess.run(["t3", "auth", "session", *args, "--base-dir", str(self.base)],
+                              capture_output=True, text=True, timeout=12, check=True).stdout
+
+    def connect(self):
+        runtime = json.loads((self.base / "userdata/server-runtime.json").read_text())
+        self.origin = runtime["origin"]
+        descriptor = http_json(self.origin, "/.well-known/t3/environment")
+        if descriptor.get("orchestrationProtocolVersion") != 2:
+            raise TransportError("incompatible")
+        self.environment = descriptor["environmentId"]
+        scopes = ["--scope", "orchestration:read"]
+        if not self.readonly:
+            scopes += ["--scope", "orchestration:operate"]
+        self.credential = json.loads(self.cli("issue", *scopes, "--ttl", "1h", "--label", "Omarchy Island", "--json"))
+        self.refresh_shell()
+        ticket = self.http("/api/auth/websocket-ticket/rpc", "POST")
+        path = "/ws?" + urlencode({"orchestrationProtocol": "2", "wsTicket": ticket["ticket"]})
+        self.ws = WebSocket(self.origin, path)
+        self.ws.send({"_tag": "Request", "id": "shell", "tag": "orchestration.subscribeShell",
+                      "payload": {"afterSequence": self.sequence, "requestCompletionMarker": True}, "headers": []})
+        self.output({"type": "connection", "status": "connected", "environmentId": self.environment,
+                     "canRespond": not self.readonly})
+        self.publish()
+
+    def http(self, path, method="GET"):
+        return http_json(self.origin, path, self.credential["token"], method)
+
+    def refresh_shell(self):
+        shell = self.http("/api/orchestration/shell")
+        self.sequence = shell["snapshotSequence"]
+        self.threads = {t["id"]: t for t in shell["threads"]}
+        self.projects = {p["id"]: p.get("title", "") for p in shell["projects"]}
+        self.last_refresh = time.monotonic()
+
+    def projection(self, thread_id):
+        return self.http("/api/orchestration/threads/" + quote(thread_id, safe="") + "/bounded")["projection"]
+
+    def publish(self):
+        rows = []
+        selected = select_threads(self.threads.values())
+        keep = {row["id"] for row in selected}
+        self.details = {key: value for key, value in self.details.items() if key in keep}
+        for row in selected:
+            pending = row.get("pendingRuntimeRequest")
+            request = None
+            if pending:
+                fingerprint = (pending["id"], row.get("updatedAt"))
+                cached = self.details.get(row["id"])
+                if not cached or cached[0] != fingerprint:
+                    request = request_view(self.projection(row["id"]), pending["id"])
+                    self.details[row["id"]] = (fingerprint, request)
+                else:
+                    request = cached[1]
+            else:
+                self.details.pop(row["id"], None)
+            rows.append(session_view(row, self.projects, request))
+        output = {"type": "sessions", "rows": rows}
+        serial = json.dumps(output, sort_keys=True)
+        if serial != self.last_output:
+            self.last_output = serial
+            self.output(output)
+        self.dirty = False
+
+    def result(self, request_id, status):
+        self.output({"type": "response", "requestId": request_id, "status": status})
+
+    def respond(self, action):
+        thread_id, request_id = action.get("threadId"), action.get("requestId")
+        if not identifier(thread_id) or not identifier(request_id):
+            return
+        if self.readonly or not self.ws:
+            self.result(request_id, "readonly" if self.readonly else "offline")
+            return
+        if any(item[0] == request_id for item in self.pending.values()):
+            return
+        try:
+            # Re-read before every write: a second client may have answered or
+            # replaced this question since the card was rendered.
+            request = request_view(self.projection(thread_id), request_id)
+            if not request or request["revision"] != action.get("revision"):
+                self.result(request_id, "stale")
+                self.details.pop(thread_id, None)
+                self.refresh_shell()
+                self.publish()
+                return
+            answers = validate_answers(request, action.get("answers"))
+        except ValueError:
+            self.result(request_id, "invalid")
+            return
+        self.rpc_sequence += 1
+        rpc_id = str(self.rpc_sequence)
+        self.pending[rpc_id] = (request_id, time.monotonic())
+        self.ws.send({"_tag": "Request", "id": rpc_id, "tag": "orchestration.dispatchCommand",
+                      "payload": {"type": "runtime-request.respond", "commandId": str(uuid.uuid4()),
+                                  "threadId": thread_id, "requestId": request_id, "answers": answers}, "headers": []})
+
+    def frame(self, frame):
+        if frame.get("_tag") == "Ping":
+            self.ws.send({"_tag": "Pong"})
+        elif frame.get("_tag") == "Chunk":
+            rpc_id = str(frame.get("requestId"))
+            if rpc_id == "shell":
+                for event in frame.get("values", []):
+                    kind = event.get("kind")
+                    if kind == "snapshot":
+                        snapshot = event["snapshot"]
+                        self.threads = {r["id"]: r for r in snapshot["threads"]}
+                        self.projects = {p["id"]: p.get("title", "") for p in snapshot["projects"]}
+                        self.dirty = True
+                    elif kind == "thread.updated":
+                        row = event["thread"]
+                        if event.get("location") == "archive":
+                            self.threads.pop(row["id"], None)
+                        else:
+                            self.threads[row["id"]] = row
+                        self.dirty = True
+                    elif kind == "thread.removed":
+                        self.threads.pop(event["threadId"], None)
+                        self.dirty = True
+                    elif kind == "project.updated":
+                        self.projects[event["project"]["id"]] = event["project"].get("title", "")
+                        self.dirty = True
+                    elif kind == "project.removed":
+                        self.projects.pop(event["projectId"], None)
+                        self.dirty = True
+                    elif kind == "snapshot-required":
+                        raise TransportError("reconnect")
+            self.ws.send({"_tag": "Ack", "requestId": frame.get("requestId")})
+        elif frame.get("_tag") == "Exit":
+            rpc_id = str(frame.get("requestId"))
+            if rpc_id == "shell":
+                raise TransportError("subscription")
+            pending = self.pending.pop(rpc_id, None)
+            if pending:
+                self.result(pending[0], "sent" if frame.get("exit", {}).get("_tag") == "Success" else "rejected")
+                self.details.clear()
+                self.refresh_shell()
+                self.dirty = True
+        elif frame.get("_tag") == "Defect":
+            raise TransportError("protocol")
+
+    def action(self, action):
+        if action is None or action.get("type") == "shutdown":
+            self.stopping = True
+        elif action.get("type") == "respond":
+            self.respond(action)
+
+    def disconnect(self):
+        for request_id, _ in self.pending.values():
+            self.result(request_id, "uncertain")
+        self.pending.clear()
+        if self.ws:
+            self.ws.close()
+            self.ws = None
+        if self.credential:
+            try:
+                self.cli("revoke", self.credential["sessionId"])
+            except (OSError, subprocess.SubprocessError):
+                pass  # One-hour expiry also bounds credentials after SIGKILL.
+            self.credential = None
+
+    def read_input(self):
+        buffer = bytearray()
+        def enqueue(action):
+            while not self.stopping:
+                try:
+                    self.inbox.put(action, timeout=0.2)
+                    return
+                except queue.Full:
+                    pass
+        while not self.stopping:
+            # Do not hold Python's buffered stdin lock in a daemon thread when
+            # Quickshell terminates the bridge. That aborts interpreter shutdown.
+            if not select.select([sys.stdin], [], [], 0.2)[0]:
+                continue
+            chunk = os.read(sys.stdin.fileno(), 65536)
+            if not chunk:
+                enqueue(None)
+                return
+            buffer.extend(chunk)
+            while b"\n" in buffer:
+                line, _, remaining = buffer.partition(b"\n")
+                buffer = bytearray(remaining)
+                if len(line) > MAX_INPUT:
+                    enqueue(None)
+                    return
+                try:
+                    action = json.loads(line)
+                    if isinstance(action, dict):
+                        enqueue(action)
+                except (ValueError, UnicodeDecodeError):
+                    pass
+            if len(buffer) > MAX_INPUT:
+                enqueue(None)
+                return
+
+    def run(self):
+        input_thread = threading.Thread(target=self.read_input, daemon=True)
+        input_thread.start()
+        delay = 2
+        while not self.stopping:
+            try:
+                self.output({"type": "connection", "status": "connecting"})
+                self.connect()
+                started = last_frame = last_publish = time.monotonic()
+                last_ping = 0
+                delay = 2
+                while not self.stopping and time.monotonic() - started < 3000:
+                    while not self.inbox.empty():
+                        self.action(self.inbox.get_nowait())
+                    frame = self.ws.receive()
+                    now = time.monotonic()
+                    if now - last_ping >= 20:
+                        self.ws.send({"_tag": "Ping"})
+                        last_ping = now
+                    if frame is not None:
+                        last_frame = now
+                        for value in frame if isinstance(frame, list) else [frame]:
+                            self.frame(value)
+                    if now - last_frame > 60:
+                        raise TransportError("offline")
+                    for rpc_id, (request_id, sent_at) in list(self.pending.items()):
+                        if now - sent_at > 15:
+                            self.result(request_id, "uncertain")
+                            del self.pending[rpc_id]
+                    if now - self.last_refresh > 60:
+                        self.refresh_shell()
+                        self.dirty = True
+                    if (self.dirty and now - last_publish > 0.35) or now - last_publish > 15:
+                        self.publish()
+                        last_publish = now
+                if not self.stopping:
+                    self.output({"type": "connection", "status": "connecting"})
+            except (OSError, ValueError, KeyError, TypeError, TransportError, subprocess.SubprocessError) as error:
+                status = str(error) if isinstance(error, TransportError) and str(error) in ("incompatible", "auth", "origin") else "offline"
+                self.output({"type": "connection", "status": status})
+            finally:
+                self.disconnect()
+            if not self.stopping:
+                end = time.monotonic() + delay
+                while not self.stopping and time.monotonic() < end:
+                    try:
+                        self.action(self.inbox.get(timeout=min(0.5, max(0.01, end - time.monotonic()))))
+                    except queue.Empty:
+                        pass
+                delay = min(delay * 2, 30)
+        input_thread.join(timeout=1)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--read-only", action="store_true")
+    options = parser.parse_args()
+    base = Path(os.environ.get("T3CODE_HOME") or Path.home() / ".t3").expanduser()
+    bridge = Bridge(base, options.read_only)
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda *_: setattr(bridge, "stopping", True))
+    try:
+        bridge.run()
+    except BrokenPipeError:
+        bridge.disconnect()

@@ -37,6 +37,10 @@ singleton Preferences 1.0 Preferences.qml
 Service 1.0 Service.qml
 SettingsView 1.0 SettingsView.qml
 StatusBeacon 1.0 StatusBeacon.qml
+T3Question 1.0 T3Question.qml
+T3SessionCard 1.0 T3SessionCard.qml
+T3SessionList 1.0 T3SessionList.qml
+T3State 1.0 T3State.qml
 TabButton 1.0 TabButton.qml
 ToastWaves 1.0 ToastWaves.qml
 VolumePopover 1.0 VolumePopover.qml

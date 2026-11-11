@@ -16,6 +16,8 @@ Item {
   id: root
   property var shell: null
   readonly property alias weather: weatherService
+  readonly property alias t3: t3State
+  T3State {id:t3State}
   WeatherService { id: weatherService }
   readonly property alias indicators: indicatorState
   IndicatorState {id:indicatorState}

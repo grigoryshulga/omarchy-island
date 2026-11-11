@@ -13,6 +13,7 @@ BarWidget {
   moduleName: "gshulga.island"
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
+  readonly property var t3:service && ("t3" in service) ? service.t3 : null
   property var registeredIndicators: null
   readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
   property real osdShown:showOsd ? 1 : 0
@@ -191,6 +192,14 @@ BarWidget {
     }
     RowLayout {
       id:leftIndicators
+      PlainText {
+        objectName:"islandT3Indicator"
+        visible:!!root.t3 && root.t3.allowed && (root.t3.waitingCount>0 || root.t3.workingCount>0)
+        text:(root.t3 && root.t3.waitingCount>0 ? "󰋗 " : "⠿ ")+Commons.I18n.formatNumber(root.t3 ? root.t3.waitingCount || root.t3.workingCount : 0)
+        color:root.t3 && root.t3.waitingCount>0 ? Commons.Color.accent : Commons.Color.muted
+        font.pixelSize:Style.font.caption
+        MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
+      }
       objectName:"islandLeftIndicators"
       anchors.right:centerContent.horizontalCenter
       anchors.rightMargin:centerContent.indicatorSpan/2+Style.space(11)

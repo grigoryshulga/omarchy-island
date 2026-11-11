@@ -31,6 +31,8 @@ Item {
   readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
   readonly property var displayedRows: !expanded && !hovering && service && service.latest ? (service.latest.downloadPath ? [] : [service.latest]) : rows
   readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
+  readonly property var t3:service && ("t3" in service) ? service.t3 : null
+  readonly property bool showT3:!!t3 && t3.allowed && (expanded || hovering) && !historyOpen
   implicitHeight: body.implicitHeight
   MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   ColumnLayout {
@@ -91,7 +93,7 @@ Item {
   Controls.ScrollView {
     id: scroll
     objectName: "notificationsScroll"
-    visible: root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification")
+    visible: root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0 || root.showT3)) || (!root.hovering && root.alertKind === "notification")
     Layout.fillWidth: true
     Layout.preferredHeight: Math.min(cards.implicitHeight,Style.space(root.compactNotifications ? 96 : root.expanded ? 360 : 330))
     clip: true
@@ -101,6 +103,14 @@ Item {
       id: cards
       width: scroll.availableWidth
       spacing: Style.space(root.compactNotifications ? 4 : 8)
+      T3SessionList {
+        width:parent.width
+        visible:root.showT3
+        bridge:root.t3;strings:root.strings;expanded:root.expanded
+        active:root.overviewActive && root.visible && root.showT3
+        feedback:root.externalFeedback
+        onExpandRequested:root.expandRequested()
+      }
       Repeater {
         model: Model.previewGroups(root.displayedRows,100)
         NotificationGroup {
@@ -142,7 +152,7 @@ Item {
       Column {
         objectName: "notificationsEmpty"
         width: parent.width
-        visible: root.expanded && root.rows.length === 0 && root.downloads.length === 0
+        visible: root.expanded && root.rows.length === 0 && root.downloads.length === 0 && !root.showT3
         spacing: Style.space(4)
         BrailleClap {
           objectName: "notificationsEmptyClap"

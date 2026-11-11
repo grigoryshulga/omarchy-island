@@ -71,7 +71,7 @@ Item {
           readonly property bool delay:key==="hoverDelay"
           width:body.width
           implicitHeight:layout.implicitHeight+Style.space(22)
-          enabled:!modelData.fixed && (!delay || Settings.get(root.settings,"hoverPreview"))
+          enabled:!modelData.fixed && (!delay || Settings.get(root.settings,"hoverPreview")) && (key!=="t3Responses" || Settings.get(root.settings,"t3Enabled"))
           opacity:enabled ? 1 : 0.45
           ColumnLayout {
             id:layout
