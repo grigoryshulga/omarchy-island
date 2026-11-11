@@ -46,6 +46,7 @@ ShellRoot {
     function run(command){scene.commands=scene.commands.concat([command])}
   }
   FloatingWindow {
+    id:controlsWindow
     visible:true;implicitWidth:520;implicitHeight:620
     Island.ControlsView {
       id:view;anchors.fill:parent;anchors.margins:16
@@ -87,6 +88,16 @@ ShellRoot {
       view.openSection("settings");wait(40)
       var settingsView=findChild(view,"islandSettings")
       check(view.implicitHeight===stableHeight && !loader.active && settingsView.visible,"Settings did not inherit Controls size or started native backend")
+      for(var windowWidth of [520,360]) {
+        controlsWindow.implicitWidth=windowWidth;wait(40)
+        for(var tabName of ["behavior","sections","music","indicators","events"]) {
+          var tab=findChild(settingsView,"settingsTab-"+tabName),label=findChild(tab,"tabLabel")
+          check(label.text.length>0 && label.width>=label.implicitWidth,"settings tab label is clipped: "+tabName+" ("+label.width+" < "+label.implicitWidth+")")
+          var at=tab.mapToItem(settingsView,0,0)
+          check(at.x>=0 && at.x+tab.width<=settingsView.width && at.y+tab.height<=findChild(settingsView,"settingsViewport").y,"settings tab overflowed its container: "+tabName)
+        }
+      }
+      controlsWindow.implicitWidth=520;wait(40)
       var hover=findChild(settingsView,"setting-hoverPreview")
       hover.toggled()
       check(scene.preferences[0]==="hoverPreview" && scene.preferences[1]===false,"toggle did not persist")
