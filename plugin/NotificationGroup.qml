@@ -15,6 +15,7 @@ Rectangle {
   property bool expanded: false
   KeyboardNavigation {id:focusWatch;scope:root}
   readonly property bool keyboardFocused:focusWatch.contains(root,focusWatch.focused)
+  property alias notificationIcon: sourceIcon
   property bool compact: false
   property real toolsShown:!compact && (hover.hovered || keyboardFocused) ? 1 : 0
   Behavior on toolsShown {NumberAnimation {duration:Preferences.duration(150);easing.type:Easing.OutCubic}}
@@ -46,6 +47,8 @@ Rectangle {
       Layout.fillWidth: true
       Layout.preferredHeight:root.compact ? Design.lineHeight("caption") : Design.inlineControlHeight
       Item {
+        id:sourceIcon
+        objectName:"notificationSourceIcon"
         Layout.preferredWidth: Style.space(root.compact ? 12 : 16); Layout.preferredHeight: width
         PlainText { anchors.centerIn: parent; text: "󰂚"; font.pixelSize: root.compact ? Style.font.caption : Style.font.body; color: Design.accent; visible: icon.status !== Image.Ready }
         Image { id: icon; anchors.fill: parent; source: root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }

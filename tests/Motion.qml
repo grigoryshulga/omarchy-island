@@ -270,6 +270,25 @@ ShellRoot {
         if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
       }
       if(tick===30 && !test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: incoming notification has no radio waves");Qt.quit();return}
+      if(tick===30) {
+        var waves=test.findChild(widget,"islandToastWaves")
+        var icon=waves.sourceIcon
+        var center=icon.mapToItem(waves,icon.width/2,icon.height/2)
+        if(Math.abs(waves.origin.x-center.x)>=1 || Math.abs(waves.origin.y-center.y)>=1) {console.log("ISLAND_MOTION_FAIL: notification wave origin",waves.origin,center);Qt.quit();return}
+        console.log("NOTIFICATION_WAVE_ORIGIN_PASS")
+      }
+      if(tick===32) {
+        Commons.Style.reduceMotion=true
+        service.latest=service.allEntries[1];service.arrivalChanged()
+      }
+      if(tick===36) {
+        var replacedWaves=test.findChild(widget,"islandToastWaves"),replacedIcon=replacedWaves.sourceIcon
+        if(!replacedIcon) {console.log("ISLAND_MOTION_FAIL: replacement lost notification icon");Qt.quit();return}
+        var replacedCenter=replacedIcon.mapToItem(replacedWaves,replacedIcon.width/2,replacedIcon.height/2)
+        if(Math.abs(replacedWaves.origin.x-replacedCenter.x)>=1 || Math.abs(replacedWaves.origin.y-replacedCenter.y)>=1) {console.log("ISLAND_MOTION_FAIL: reduced-motion wave origin");Qt.quit();return}
+        Commons.Style.reduceMotion=false
+        console.log("NOTIFICATION_WAVE_REPLACEMENT_PASS")
+      }
       if(tick === 40) widget.open()
       if(tick >= 10 && tick < 70 && popup.backingWindowVisible && (popup.shown === undefined || popup.shown > 0.01)) sizes.push(popup.width+"x"+popup.height)
       if(tick >= 10 && tick < 36 && popup.shown > 0.01) entrance.push({w:popup.drawnWidth,h:popup.drawnHeight,target:popup.contentWidth})

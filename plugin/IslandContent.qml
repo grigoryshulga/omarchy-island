@@ -33,6 +33,7 @@ Item {
   readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
   readonly property var t3:service && ("t3" in service) ? service.t3 : null
   readonly property bool showT3:!!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
+  property var notificationIcon:null
   implicitHeight: body.implicitHeight
   MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   ColumnLayout {
@@ -132,6 +133,9 @@ Item {
       width: scroll.availableWidth
       spacing: Style.space(root.compactNotifications ? 4 : 8)
       Repeater {
+        id:notificationGroups
+        onItemAdded:(index,item)=>{if(index===0) root.notificationIcon=item.notificationIcon}
+        onItemRemoved:(index,item)=>{if(root.notificationIcon===item.notificationIcon) root.notificationIcon=null}
         model: Model.previewGroups(root.displayedRows,100)
         NotificationGroup {
           required property var modelData

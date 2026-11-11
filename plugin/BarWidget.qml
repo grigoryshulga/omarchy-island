@@ -329,7 +329,30 @@ BarWidget {
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
     ToastWaves {
+      id:notificationWaves
       objectName: "islandToastWaves"
+      property var sourceIcon:previewContent.notificationIcon
+      function updateOrigin() {
+        if(!sourceIcon) return
+        var center=sourceIcon.mapToItem(notificationWaves,sourceIcon.width/2,sourceIcon.height/2)
+        origin=Qt.vector2d(center.x,center.y)
+      }
+      // The entrance moves/scales the card inside a stable Wayland surface.
+      FrameAnimation {
+        running:notificationWaves.active && notificationWaves.visible && !Preferences.reduceMotion
+        onTriggered:notificationWaves.updateOrigin()
+      }
+      onSourceIconChanged:Qt.callLater(updateOrigin)
+      onActiveChanged:Qt.callLater(updateOrigin)
+      onWidthChanged:Qt.callLater(updateOrigin)
+      onHeightChanged:Qt.callLater(updateOrigin)
+      Connections {
+        target:notificationWaves.sourceIcon
+        function onXChanged() {Qt.callLater(notificationWaves.updateOrigin)}
+        function onYChanged() {Qt.callLater(notificationWaves.updateOrigin)}
+        function onWidthChanged() {Qt.callLater(notificationWaves.updateOrigin)}
+        function onHeightChanged() {Qt.callLater(notificationWaves.updateOrigin)}
+      }
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
       height: preview.layoutHeight
