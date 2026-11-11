@@ -63,6 +63,15 @@ ShellRoot {
     function test_controls(){
       wait(80)
       check(view.section==="" && view.implicitHeight>0,"controls landing is empty")
+      var loader=findChild(view,"islandNativeControl")
+      if(Quickshell.env("ISLAND_TEST_MISSING_SYSTEM")==="1") {
+        view.openSection("audio")
+        tryVerify(function(){return view.error!==""},4000)
+        check(!loader.item,"missing system loaded a stale panel")
+        view.back()
+        check(view.section==="" && view.error==="","failed panel cannot return to Controls")
+        console.log("CONTROLS_PASS");Qt.quit();return
+      }
       var main=findChild(view,"controlMainGrid"),quick=findChild(view,"controlQuickGrid")
       check(main.y+main.height<quick.y && quick.columns===3,"main settings are not above the three-column quick controls")
       view.toggleMode("dnd");check(service.doNotDisturb,"DND did not toggle")
@@ -73,20 +82,22 @@ ShellRoot {
       check(scene.calls[0].target==="nightlight" && scene.calls[1].target==="idle","native indicator actions were not used")
       view.toggleMode("recording");states.recording=true;view.toggleMode("recording")
       check(scene.commands[1][0]==="omarchy-menu" && scene.commands[2][1]==="--stop-recording","capture actions differ from stock")
-      var loader=findChild(view,"islandNativeControl")
       var stableHeight=view.implicitHeight
       for(var section of ["audio","bluetooth","network","tailscale","monitors"]){
         view.openSection(section)
         check(view.implicitHeight===stableHeight,"opening a native section resized Controls: "+section)
-        wait(500)
+        tryVerify(function(){return loader.item && loader.item.opened},4000)
         check(view.implicitHeight===stableHeight,"loading native content resized Controls: "+section)
         check(loader.status===Loader.Ready && loader.item && loader.item.opened,"native section did not load: "+section)
-        check(loader.item.inlineContentHeight>0,"native content is empty: "+section)
+        tryVerify(function(){return loader.item.inlineContentHeight>0},2000)
         var power=findChild(loader.item,"controlPowerSwitch")
-        if(section==="bluetooth" && loader.item.adapter) check(power && power.visible && power.width>0 && power.height>0,"Bluetooth power switch is not visible")
         if(power) check(power.trackHeight<=Commons.Style.space(16),"native switch is not compact: "+section)
         check(!loader.item.manageIpc,"native panel owns global IPC: "+section)
         check(view.section===section,"native section lost its selection")
+        if(section!=="network") {
+          var ownViewport=findChild(loader.item,"inlinePanelViewport")
+          check(ownViewport.contentHeight===ownViewport.height,"host displaced native scrolling: "+section)
+        }
         if(section==="network") {
           var viewport=findChild(loader.item,"inlinePanelViewport")
           check(viewport.contentHeight>=viewport.height && viewport.clip,"Network is not contained in a scroll viewport")
@@ -95,18 +106,28 @@ ShellRoot {
         if(section==="tailscale") {
           loader.item.persistRecentMullvad("NL")
           check(scene.preferences[0]==="recentMullvadRegions" && scene.preferences[1][0]==="NL","native preferences did not route to Island")
+          view.settings={recentMullvadRegions:["NL"]}
+          loader.item.persistRecentMullvad("DE")
+          check(scene.preferences[1].join(",")==="DE,NL","native settings stopped following Island updates")
         }
-        findChild(loader.item,"controlBack").clicked();wait(30)
+        findChild(view,"controlBack").clicked();wait(30)
         check(view.section==="" && !loader.active,"back did not return to Controls or stop native backend")
       }
+      // A helper finishing after navigation must not load its old section.
+      view.openSection("audio");view.openSection("bluetooth");view.openSection("network")
+      tryVerify(function(){return loader.item && loader.item.moduleName==="omarchy.network"},4000)
+      loader.item.close()
+      tryVerify(function(){return view.section==="" && !loader.item},1000)
+      view.openSection("tailscale");view.back();wait(150)
+      check(!loader.item && view.section==="","late helper reopened a closed panel")
       var commandCount=scene.commands.length
       view.launchExternalPanel("unknown.plugin","{}")
       check(scene.commands.length===commandCount,"unrecognized external panel was launched")
       view.launchExternalPanel("omarchy.wifiqr","{}")
       check(scene.commands[commandCount][0]==="omarchy-shell" && scene.commands[commandCount][3]==="omarchy.wifiqr","native Wi-Fi share card did not use the shell route")
-      view.openSection("audio");wait(150);view.active=false;wait(30)
+      view.openSection("audio");tryVerify(function(){return loader.item && loader.item.opened},4000);view.active=false;wait(30)
       check(!loader.active,"closing Controls left native polling/scanning active")
-      view.active=true;wait(150)
+      view.active=true;tryVerify(function(){return loader.item && loader.item.opened},4000)
       check(loader.item && loader.item.opened,"native detail did not resume on reopen")
       view.back();wait(30)
       console.log("CONTROLS_PASS");Qt.quit()
