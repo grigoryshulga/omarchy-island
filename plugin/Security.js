@@ -5,11 +5,11 @@ var MAX_APP_NAME=256, MAX_SUMMARY=2048, MAX_BODY=32768
 var MAX_ACTIONS=16, MAX_ACTION_LABEL=256, MAX_ACTION_ID=256, MAX_SOURCE=253
 var MAX_URL=4096, MAX_CODES=8
 function bounded(value, max) { return typeof value === 'string' ? value.slice(0,max) : '' }
-// Construct T3's official thread link from identifiers, never from session text.
+// Construct T3's desktop deep link from identifiers, never from session text.
 function t3ThreadUrl(environmentId, threadId) {
   var id=/^[A-Za-z0-9_-]{1,128}$/
   if(typeof environmentId!=="string" || typeof threadId!=="string" || !id.test(environmentId) || !id.test(threadId)) return ""
-  return "https://app.t3.codes/threads/"+environmentId+"/"+threadId
+  return "t3code://threads/"+environmentId+"/"+threadId
 }
 function containsControlChars(s) { return /[\x00-\x20\x7f-\x9f\\]/.test(s) }
 function canonicalHostname(raw) {

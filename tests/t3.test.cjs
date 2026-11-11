@@ -8,7 +8,7 @@ vm.runInContext(readFileSync(require.resolve('../plugin/Security.js'), 'utf8').r
 assert.equal(settings.get({}, 't3Enabled'), false);
 assert.equal(settings.get({}, 't3Responses'), true);
 assert.equal(settings.valid('t3Enabled', 'true'), false);
-assert.equal(security.t3ThreadUrl('env-1', 'thread-1'), 'https://app.t3.codes/threads/env-1/thread-1');
+assert.equal(security.t3ThreadUrl('env-1', 'thread-1'), 't3code://threads/env-1/thread-1');
 for (const id of ['', '../secret', 'a/b', 'a?x=y', 'a#b', 'a%2fb', '$(touch bad)', '<b>', 'a'.repeat(129)]) {
   assert.equal(security.t3ThreadUrl('env', id), '');
   assert.equal(security.t3ThreadUrl(id, 'thread'), '');

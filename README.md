@@ -152,7 +152,7 @@ Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions
 
 - Options use equal-width columns with complete, wrapping labels and descriptions; narrow cards use one column. Choose a single option, select several when permitted, or expand **Custom answer**. The send button shares the custom-answer row instead of taking its own row. Complete required questions, then choose **Send answer**. Tab / Shift+Tab navigates the form; typing and caret keys stay in the text field.
 - Session updates preserve existing card order, drafts, and focus. A replacement question resets its draft. Questions answered in another T3 client disappear after synchronization.
-- The chevron expands the latest message or request context. Click the session title to open T3 using T3's official `https://app.t3.codes/threads/...` link, which offers the desktop or web client; the chosen client must already have access to the environment.
+- The chevron expands the latest message or request context. Click the session title to open T3 directly in the desktop app using `t3code://threads/<environment>/<thread>`. T3 must be registered as the system handler for `t3code` links and have access to the environment.
 - Permission approvals, secrets/authentication, non-resumable requests, and forms outside the supported bounds are handled in T3. Island never interprets request text as a command.
 - Spinners stop on hidden pages, outside the visible list, and when reduced motion is enabled.
 - When T3 is disconnected or has no sessions, its entire section is hidden. Drafts stay in memory for reconnection, and responses remain disabled while disconnected. If no result arrives within 20 seconds, the card marks the send as unconfirmed instead of waiting indefinitely. An unconfirmed send is never retried automatically; check it in T3. Reconnection is automatic.
@@ -186,7 +186,7 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. Blur strength foll
 - Expired notifications enter history; sender withdrawal removes them from both lists while Island retains the sender reference. After restart, saved entries are history only. Transient notifications are not saved.
 - Verification-code notifications are redacted before persistence. Copied codes use a sensitive clipboard selection and are cleared after one minute unless the clipboard has changed.
 - Playback audio is read through `parec` and processed in memory without saving PCM. Voxtype uses its existing audio bridge during recording; Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
-- T3 integration is off by default. When enabled, session data, draft answers, and the scoped access token stay in memory. Opening a session uses T3's official hosted thread link. See [T3 Code session cards](#t3-code-session-cards) for permissions and lifecycle.
+- T3 integration is off by default. When enabled, session data, draft answers, and the scoped access token stay in memory. Opening a session uses T3's desktop deep link. See [T3 Code session cards](#t3-code-session-cards) for permissions and lifecycle.
 - Weather requests begin on first opening or hovering, with no requests beforehand. Automatic location uses `geo.omarchy.org`; search and forecasts use [Open-Meteo](https://open-meteo.com/). Requests use HTTPS, timeouts, and response limits. On failure, the last forecast remains marked stale; the cache is `~/.local/state/omarchy/island/weather.json`.
 
 ## Design system
