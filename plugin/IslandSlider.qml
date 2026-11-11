@@ -23,16 +23,16 @@ Item {
     root.liveValue=next;root.moved(next);root.released(next)
     event.accepted=true
   }
-  BorderSurface {anchors.fill:parent;color:"transparent";borderSpec:Border.controlSpec("focus",Commons.Color.foreground,Commons.Color.accent);radius:Style.cornerRadius;visible:root.activeFocus}
+  BorderSurface {anchors.fill:parent;color:"transparent";borderSpec:Border.controlSpec("focus",Design.text,Design.accent);radius:Design.cardRadius;visible:root.activeFocus}
   property QtObject bar: null
   property real value: 0
   property real minimum: 0
   property real maximum: 1
   property real step: 0.05
   property bool integer: false
-  property color trackColor: bar ? Style.selectedFillFor(bar.foreground, Commons.Color.accent) : "#333"
-  property color fillColor: bar ? bar.foreground : Commons.Color.foreground
-  property color knobColor: bar ? bar.foreground : Commons.Color.foreground
+  property color trackColor: Design.raised
+  property color fillColor: bar ? bar.foreground : Design.text
+  property color knobColor: bar ? bar.foreground : Design.text
   property bool dragging: false
   property real trackHeight: Math.max(4, Math.round(Style.spacing.controlHeight * 0.11))
   property real knobSize: Math.max(14, Math.round(Style.spacing.controlHeight * 0.38))
@@ -43,7 +43,7 @@ Item {
   // crossing the track shows). Purely visual — snapping is the caller's job via
   // `integer`/`step` or an index-based value. Default 0 leaves the track plain.
   property int tickCount: 0
-  property color tickColor: bar ? bar.background : Commons.Color.background
+  property color tickColor: bar ? bar.background : Design.opaqueCanvas
 
   onValueChanged: if (!dragging) liveValue = value
 
@@ -76,7 +76,7 @@ Item {
     anchors.leftMargin: root.knobSize / 2
     anchors.rightMargin: root.knobSize / 2
     height: root.trackHeight
-    radius: Style.cornerRadius > 0 ? height / 2 : 0
+    radius: Design.cardRadius > 0 ? height / 2 : 0
     color: root.trackColor
   }
 
@@ -101,7 +101,7 @@ Item {
       required property int index
       width: Math.max(1, Style.space(2))
       height: root.trackHeight + Style.space(4)
-      radius: Style.cornerRadius > 0 ? 1 : 0
+      radius: Design.cardRadius > 0 ? 1 : 0
       color: root.tickColor
       anchors.verticalCenter: track.verticalCenter
       x: root.trackX(index / (root.tickCount - 1)) - width / 2
@@ -113,9 +113,9 @@ Item {
     objectName: "sliderKnob"
     width: root.knobSize
     height: root.knobSize
-    radius: Style.cornerRadius > 0 ? root.knobSize / 2 : 0
+    radius: Design.cardRadius > 0 ? root.knobSize / 2 : 0
     color: root.knobColor
-    borderSpec: Border.flat(root.bar ? root.bar.background : "#101315", Math.max(1, Style.space(2)))
+    borderSpec: Border.flat(Design.opaqueCanvas, Math.max(1, Style.space(2)))
     anchors.verticalCenter: track.verticalCenter
     x: root.trackX(root.progress) - width / 2
     scale: root._hot ? 1.15 : 1.0

@@ -28,7 +28,7 @@ Item {
   Flow {
     id:tabFlow
     width:parent.width
-    spacing:Style.space(2)
+    spacing:Design.gap.micro
     Repeater {
       id:tabs
       model:Settings.sections
@@ -38,22 +38,22 @@ Item {
         objectName:"settingsTab-"+modelData.id
         label:root.strings.t("settings.tab."+modelData.id)
         tabActive:root.category===index
-        color:"transparent";borderSpec:Border.none()
-        fontSize:Style.font.bodySmall
-        radius:Math.min(Style.cornerRadius,Style.space(6))
+
+        fontSize:Design.type.label
+        radius:Design.controlRadius
         focusable:true
         feedback:root.feedback
         onClicked:root.category=index
       }
     }
   }
-  PanelSeparator {id:divider;width:parent.width;anchors.top:tabFlow.bottom;anchors.topMargin:Style.space(8)}
+
   Flickable {
     id:viewport
     objectName:"settingsViewport"
     anchors.left:parent.left;anchors.right:parent.right
-    anchors.top:divider.bottom;anchors.bottom:parent.bottom
-    anchors.topMargin:Style.space(8)
+    anchors.top:tabFlow.bottom;anchors.bottom:parent.bottom
+    anchors.topMargin:Design.gap.large
     contentWidth:width;contentHeight:body.implicitHeight
     clip:true;boundsBehavior:Flickable.StopAtBounds
     Controls.ScrollBar.vertical:Controls.ScrollBar {policy:Controls.ScrollBar.AsNeeded}
@@ -70,26 +70,27 @@ Item {
           readonly property string key:modelData.key
           readonly property bool delay:key==="hoverDelay"
           width:body.width
-          implicitHeight:layout.implicitHeight+Style.space(22)
+          implicitHeight:layout.implicitHeight+Design.gap.section
           enabled:!modelData.fixed && (!delay || Settings.get(root.settings,"hoverPreview")) && (key!=="t3Responses" || Settings.get(root.settings,"t3Enabled"))
-          opacity:enabled ? 1 : 0.45
+          opacity:enabled ? 1 : Design.disabledOpacity
           ColumnLayout {
             id:layout
             anchors.left:parent.left;anchors.right:parent.right
-            anchors.rightMargin:Style.space(8)
+            anchors.rightMargin:Design.gap.small
             anchors.verticalCenter:parent.verticalCenter
-            spacing:Style.space(6)
+            spacing:Design.gap.small
             RowLayout {
               Layout.fillWidth:true
-              spacing:Style.space(8)
+              spacing:Design.gap.small
               PlainText {
                 Layout.fillWidth:true
                 text:root.strings.t("settings."+row.key)
-                font.pixelSize:Style.font.bodySmall
+                typeRole:"title"
                 wrapMode:Text.Wrap
               }
               ControlSwitch {
                 objectName:"setting-"+row.key
+                Accessible.name:root.strings.t("settings."+row.key)
                 visible:!row.modelData.type
                 activeFocusOnTab:true
                 hasCursor:activeFocus
@@ -102,10 +103,10 @@ Item {
               PlainText {
                 visible:row.delay
                 text:root.strings.t("settings.milliseconds").arg(Commons.I18n.formatNumber(Settings.get(root.settings,"hoverDelay")))
-                color:Commons.Color.muted;font.pixelSize:Style.font.caption
+                color:Design.secondaryText;typeRole:"caption"
               }
             }
-            Dropdown {
+            DesignDropdown {
               id:choice
               objectName:row.modelData.type==="choice" ? "setting-"+row.key : ""
               Layout.fillWidth:true
@@ -125,7 +126,7 @@ Item {
               onMoved:value=>root.settingRequested("hoverDelay",Math.round(value))
             }
           }
-          PanelSeparator {width:parent.width;anchors.bottom:parent.bottom}
+
         }
       }
     }

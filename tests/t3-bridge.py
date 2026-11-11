@@ -26,6 +26,7 @@ from t3_transport import local_origin, TransportError, WebSocket, MAX_MESSAGE
 
 QUESTION = {'id':'q1', 'question':'Where?', 'options':[{'label':'Local', 'value':'local', 'description':'On this machine'}], 'allowCustomAnswer':True}
 REQUEST = {'id':'request-1', 'kind':'user_input', 'status':'pending', 'responseCapability':{'type':'message'}}
+NATIVE_REQUEST_ID='runtime-request:provider:codex:provider-turn:provider-turn%3Aprovider%3Acodex%3Anative-turn%3Atest:native-request:async%3Acall_test:123'
 
 
 def projection():
@@ -123,11 +124,12 @@ class FakeServer(ThreadingHTTPServer):
     def __init__(self):
         super().__init__(('127.0.0.1',0), Handler)
         self.resolved=False;self.writes=[];self.drop=False;self.protocol=2;self.pings=0
+        self.request_id='request-1';self.request_projection=projection()
         self.socket_ready=threading.Event();self.client=None;self.sequence=1
     def shell(self):
         return {'snapshotSequence':self.sequence, 'schemaVersion':2, 'projects':[{'id':'p1','title':'Project'}], 'threads':[{
             'id':'thread-1', 'projectId':'p1', 'title':'A session', 'status':'running',
-            'pendingRuntimeRequest':None if self.resolved else {'id':'request-1','kind':'user_input'},
+            'pendingRuntimeRequest':None if self.resolved else {'id':self.request_id,'kind':'user_input'},
             'updatedAt':'2026-11-11T10:00:00Z', 'latestVisibleMessage':{'text':'Working'}}], 'archivedThreads':[]}
 
 
@@ -172,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
         assert self.headers['x-t3-orchestration-protocol']=='2'
         if self.path=='/api/orchestration/shell': return self.respond(self.server.shell())
         if self.path=='/api/orchestration/threads/thread-1/bounded':
-            p=projection()
+            p=copy.deepcopy(self.server.request_projection)
             if self.server.resolved:p['runtimeRequests'][0]['status']='resolved'
             return self.respond({'projection':p,'snapshotSequence':self.server.sequence})
         self.respond({},404)
@@ -241,6 +243,41 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(self.wait(lambda e:e['type']=='response')['status'],'readonly')
         self.assertEqual(self.server.writes,[])
         self.stop();self.assertNotIn('orchestration:operate',(self.root/'cli.log').read_text())
+
+    def test_encoded_runtime_request_is_dispatched(self):
+        # Native T3 IDs contain encoded provider-turn IDs; they are opaque strings.
+        rid=NATIVE_REQUEST_ID
+        self.server.request_id=rid
+        self.server.request_projection['runtimeRequests'][0]['id']=rid
+        self.server.request_projection['turnItems'][0]['requestId']=rid
+        self.start()
+        self.wait(lambda e:e.get('status')=='connected')
+        request=self.wait(lambda e:e['type']=='sessions')['rows'][0]['request']
+        self.send(type='respond',threadId='invalid/path',requestId=rid,revision=request['revision'],answers={'q1':['local']})
+        self.assertEqual(self.wait(lambda e:e['type']=='response')['status'],'invalid')
+        self.send(type='respond',threadId='thread-1',requestId=rid,revision=request['revision'],answers={'q1':['local']})
+        try: result=self.wait(lambda e:e['type']=='response',timeout=2)
+        except queue.Empty:self.fail('Sending stays forever: native request ID was silently discarded')
+        self.assertEqual(result['status'],'sent')
+        self.assertEqual(self.server.writes[0]['requestId'],rid)
+
+    def test_qml_to_rpc_with_native_id(self):
+        self.server.request_id=NATIVE_REQUEST_ID
+        self.server.request_projection['runtimeRequests'][0]['id']=NATIVE_REQUEST_ID
+        self.server.request_projection['turnItems'][0]['requestId']=NATIVE_REQUEST_ID
+        for name in ('Commons','Ui'):(self.root/name).symlink_to(Path('/usr/share/omarchy/shell')/name)
+        (self.root/'Island').symlink_to(project/'plugin')
+        (self.root/'home').mkdir()
+        (self.root/'shell.qml').write_text((project/'tests/T3Roundtrip.qml').read_text())
+        env=dict(os.environ,T3CODE_HOME=str(self.root),HOME=str(self.root/'home'),CLI_LOG=str(self.root/'cli.log'),
+                 PATH=str(self.root/'bin')+os.pathsep+os.environ['PATH'],QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
+        result=subprocess.run(['dbus-run-session','--','qs','-p',str(self.root),'--no-color'],env=env,capture_output=True,text=True,timeout=15)
+        output=result.stdout+result.stderr
+        self.assertIn('T3_ROUNDTRIP_PASS',output,output)
+        self.assertFalse(any(s in output for s in ['TypeError:','ReferenceError:','Binding loop','FAIL!','T3_ROUNDTRIP_FAIL']),output)
+        self.assertEqual(len(self.server.writes),1)
+        self.assertEqual(self.server.writes[0]['requestId'],NATIVE_REQUEST_ID)
+        self.assertEqual(self.server.writes[0]['answers'],{'q1':['local']})
 
     def test_termination_revokes_credential(self):
         self.start(True)

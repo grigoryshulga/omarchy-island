@@ -24,6 +24,8 @@ assert.deepEqual(model.answer({...question, multiSelect:true}, ['a'], 'a'), ['a'
 assert.deepEqual(model.answer({...question, allowCustomAnswer:false}, ['a'], 'custom'), ['a']);
 assert.equal(model.valid({...question, required:false}, []), true);
 assert.equal(model.valid(question, ['a', 'b']), false);
+assert.equal(model.optionDescription({label:'Вариант A',description:' Вариант A '}),'');
+assert.equal(model.optionDescription({label:'Local',description:'On this machine'}),'On this machine');
 assert.equal(model.duration({startedAt:100, finishedAt:165}, 200, String), '1:05');
 assert.equal(model.duration({startedAt:100}, 225, String), '2:05');
 assert.equal(model.duration({}, 200, String), '');

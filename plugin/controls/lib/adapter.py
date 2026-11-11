@@ -24,7 +24,7 @@ class AdaptationError(Exception):
     """The source does not satisfy Island's deliberately narrow contract."""
 
 
-ADAPTER_VERSION = "island-controls-adapter-v4"
+ADAPTER_VERSION = "island-controls-adapter-v5"
 PADDED_LAYOUT = "padded"
 EDGE_TO_EDGE_LAYOUT = "edge-to-edge"
 CONTENT_LAYOUTS = frozenset((PADDED_LAYOUT, EDGE_TO_EDGE_LAYOUT))
@@ -43,7 +43,7 @@ COPY_CHUNK_BYTES = 64 * 1024
 MAX_CACHED_ARTIFACTS = 8
 STALE_STAGING_SECONDS = 24 * 60 * 60
 MARKER_NAME = ".omarchy-island-adapted"
-HELPER_NAMES = ("IslandHost.qml", "IslandDisabledIpc.qml", "IslandHiddenBarButton.qml", "ControlKeyCatcher.qml", "ControlSwitch.qml")
+HELPER_NAMES = ("IslandHost.qml", "IslandDisabledIpc.qml", "IslandHiddenBarButton.qml", "ControlKeyCatcher.qml", "ControlSwitch.qml", "ControlGap.qml", "ControlSectionHeader.qml", "ControlActionButton.qml")
 # The compatibility shims ship with the plugin's QML; this module lives in lib/.
 DEFAULT_ADAPTER_DIR = Path(__file__).resolve().parents[1]
 VCS_ROOT_NAMES = frozenset((".git", ".hg", ".svn"))
@@ -412,6 +412,8 @@ def island_replacements(
             verify_shim_contract(node, token_list, "ControlKeyCatcher.qml", shims)
             replacements.append((node.type_token.start, node.type_token.end, "ControlKeyCatcher"))
         elif node.type_name in ("PanelSectionHeader", "Text"):
+            if node.type_name == "PanelSectionHeader":
+                replacements.append((node.type_token.start, node.type_token.end, "ControlSectionHeader"))
             # Text implicitHeight can depend on explicit height during reflow.
             # Hidden Text in Columns already collapses out of the layout.
             binding = binding_line(source, direct_property(token_list, node, "height"))
@@ -419,6 +421,11 @@ def island_replacements(
                 start, end, _ = binding
                 if source[start:end].strip() == "height: visible ? implicitHeight : 0":
                     replacements.append((start, end, ""))
+        elif node.type_name in ("PanelSeparator", "PanelActionButton", "Button", "TextField", "Dropdown"):
+            replacement = {"PanelSeparator": "ControlGap", "PanelActionButton": "ControlActionButton",
+                           "Button": "IslandKit.FeedbackButton", "TextField": "IslandKit.DesignTextField",
+                           "Dropdown": "IslandKit.DesignDropdown"}[node.type_name]
+            replacements.append((node.type_token.start, node.type_token.end, replacement))
         elif node.type_name == "Shortcut":
             sequence = direct_property(token_list, node, "sequence")
             if sequence is None:
@@ -499,7 +506,16 @@ def transform_standard_panel(
 
     replacements.extend(island_replacements(source, token_list, nodes, root, root_id, adapter_dir))
 
-    return replace_ranges(source, replacements)
+    # Only rewrite syntax tokens; strings, comments and JS payloads stay literal.
+    roles = {"caption": "caption", "bodySmall": "caption", "body": "body",
+             "subtitle": "label", "title": "title", "heading": "section",
+             "display": "page", "displayLarge": "metric"}
+    for i in range(len(token_list)-4):
+        seq = token_list[i:i+5]
+        if [t.value for t in seq[:4]] == ["Style", ".", "font", "."] and seq[4].value in roles:
+            replacements.append((seq[0].start, seq[4].end, "IslandKit.Design.type."+roles[seq[4].value]))
+    kit = (Path(adapter_dir) if adapter_dir is not None else DEFAULT_ADAPTER_DIR).parent.resolve().as_uri()
+    return "import " + json.dumps(kit) + " as IslandKit\n" + replace_ranges(source, replacements)
 
 
 def adapt_qml(source: str, adapter_dir: Path | None = None) -> tuple[str, str]:

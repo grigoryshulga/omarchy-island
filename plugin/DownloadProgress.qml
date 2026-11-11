@@ -6,7 +6,7 @@ Canvas {
   id:root
   property bool active:true
   property real phase:0
-  property color accent:Commons.Color.accent
+  property color accent:Design.accent
   implicitHeight:Style.space(8)
   onWidthChanged:requestPaint()
   onHeightChanged:requestPaint()

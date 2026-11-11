@@ -18,7 +18,7 @@ Item {
   readonly property int waitingCount:connected ? rows.filter(function(r){return !!r.requestId}).length : 0
   readonly property int workingCount:connected ? rows.filter(function(r){return T3.busy(r) && !r.requestId}).length : 0
   function row(id) {return rows.find(function(r){return r.id===id}) || null}
-  function response(id) {return responses[id] || ""}
+  function response(id) {return responses[id] ? responses[id].status : ""}
   function receive(line) {
     if(line.length>4194304) return
     var event
@@ -35,18 +35,25 @@ Item {
       responses=keep
     } else if(event.type==="response" && typeof event.requestId==="string") {
       if(!rows.some(function(r){return r.requestId===event.requestId})) return
-      var next=Object.assign({},responses);next[event.requestId]=event.status;responses=next
+      var next=Object.assign({},responses);next[event.requestId]={status:event.status,startedAt:0};responses=next
     }
   }
   function failPending() {
     var next=Object.assign({},responses)
-    for(var id in next) if(next[id]==="sending") next[id]="uncertain"
+    for(var id in next) if(next[id].status==="sending") next[id]={status:"uncertain",startedAt:0}
     responses=next
+  }
+  function expireResponses(now) {
+    var next=Object.assign({},responses),changed=false
+    for(var id in next) if(next[id].status==="sending" && now-next[id].startedAt>=20000) {
+      next[id]={status:"uncertain",startedAt:0};changed=true
+    }
+    if(changed) responses=next
   }
   function submit(id,request,answers) {
     var current=row(id),state=request ? response(request.id) : ""
     if(!connected || !canRespond || !responsesEnabled || !reader.running || !current || !request || !request.canRespond || !current.request || current.request.revision!==request.revision || ["sending","sent","uncertain"].indexOf(state)>=0) return false
-    var next=Object.assign({},responses);next[request.id]="sending";responses=next
+    var next=Object.assign({},responses);next[request.id]={status:"sending",startedAt:Date.now()};responses=next
     reader.write(JSON.stringify({type:"respond",threadId:id,requestId:request.id,revision:request.revision,answers:answers})+"\n")
     return true
   }
@@ -73,4 +80,9 @@ Item {
     onExited:{root.status="offline";root.canRespond=false;root.failPending();if(root.allowed) retry.restart()}
   }
   Timer {id:retry;interval:2000;onTriggered:if(root.allowed) reader.running=true}
+  Timer {
+    interval:1000;repeat:true
+    running:root.allowed && Object.keys(root.responses).some(function(id){return root.response(id)==="sending"})
+    onTriggered:root.expireResponses(Date.now())
+  }
 }

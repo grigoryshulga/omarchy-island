@@ -59,8 +59,8 @@ Item {
     id: progressRow
     anchors.fill: parent
     visible: root.hasProgress
-    spacing: Style.space(6)
-    PlainText {text:root.displayGlyph;font.pixelSize:Style.font.icon;color:Commons.Color.accent}
+    spacing:Design.gap.small
+    PlainText {text:root.displayGlyph;font.pixelSize:Style.font.icon;color:Design.accent}
     ShaderEffect {
       objectName:"brailleGaugeField"
       Layout.fillWidth:true
@@ -68,11 +68,11 @@ Item {
       Layout.preferredHeight:Style.space(14)
       property vector2d size:Qt.vector2d(width,height)
       property real amount:root.progress
-      property color accent:Commons.Color.accent
+      property color accent:Design.accent
       vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
       fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
     }
-    PlainText {Layout.maximumWidth:Style.space(70);Layout.preferredWidth:Math.min(Style.space(70),Math.max(percentMeasure.implicitWidth,implicitWidth));elide:Text.ElideRight;horizontalAlignment:Text.AlignRight;text:root.valueText || Commons.I18n.formatNumber(Math.round(root.value*100))+"%";font.pixelSize:Style.font.bodySmall}
+    PlainText {Layout.maximumWidth:Style.space(70);Layout.preferredWidth:Math.min(Style.space(70),Math.max(percentMeasure.implicitWidth,implicitWidth));elide:Text.ElideRight;horizontalAlignment:Text.AlignRight;text:root.valueText || Commons.I18n.formatNumber(Math.round(root.value*100))+"%";typeRole:"caption"}
   }
   RowLayout {
     id: eventRow
@@ -82,7 +82,7 @@ Item {
     height: parent.height
     visible: !root.hasProgress
     opacity: root.eventShown
-    spacing: Style.space(6)
+    spacing:Design.gap.small
     layer.enabled: GraphicsInfo.api!==GraphicsInfo.Software
     layer.effect: root.eventTransitioning ? eventDissolve : null
     Component {id:eventDissolve;BrailleDissolve {amount:1-root.eventShown}}
@@ -90,7 +90,7 @@ Item {
       objectName:"islandOsdEventIcon"
       text:root.currentEvent.glyph
       font.pixelSize:Style.font.icon
-      color:Commons.Color.accent
+      color:Design.accent
     }
     PlainText {
       objectName:"islandOsdMessage"
@@ -99,8 +99,8 @@ Item {
       visible:root.currentEvent.message!==""
       text:root.currentEvent.message
       font.bold:root.currentEvent.kind==="layout"
-      font.pixelSize:Style.font.body
+      typeRole:"bar"
     }
   }
-  PlainText {id:percentMeasure;visible:false;text:Commons.I18n.formatNumber(100)+"%";font.pixelSize:Style.font.bodySmall}
+  PlainText {id:percentMeasure;visible:false;text:Commons.I18n.formatNumber(100)+"%";typeRole:"caption"}
 }

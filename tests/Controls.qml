@@ -121,7 +121,7 @@ ShellRoot {
         check(loader.status===Loader.Ready && loader.item && loader.item.opened,"native section did not load: "+section)
         tryVerify(function(){return loader.item.inlineContentHeight>0},2000)
         var power=findChild(loader.item,"controlPowerSwitch")
-        if(power) check(power.trackHeight<=Commons.Style.space(16),"native switch is not compact: "+section)
+        if(power) check(power.trackHeight===Commons.Style.space(20),"native switch does not follow Island sizing: "+section)
         check(!loader.item.manageIpc,"native panel owns global IPC: "+section)
         check(view.section===section,"native section lost its selection")
         if(section!=="network") {

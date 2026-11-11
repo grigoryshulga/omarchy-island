@@ -8,6 +8,7 @@ ShellRoot {
   Island.Service {id:service}
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("Island/i18n")}
   FloatingWindow {
+    id:window
     visible:true;implicitWidth:540;implicitHeight:900
     Island.PopupPages {id:pages;anchors.fill:parent;anchors.margins:16;service:service;strings:strings;expanded:true;keyboardActive:true}
     Timer {interval:400;running:true;onTriggered:{try {test.test_sessions()} catch(error) {console.log("T3_QML_FAIL",error.stack);Qt.quit()}}}
@@ -16,6 +17,7 @@ ShellRoot {
       id:test;when:false;name:"T3"
       function snapshot(rows) {service.t3.receive(JSON.stringify({type:"sessions",rows:rows}))}
       function test_sessions() {
+        var originalCorners=Commons.Style.cornerRadius,originalReduceMotion=Commons.Style.reduceMotion
         service.t3.allowed=true
         tryCompare(service.t3,"connected",true,5000)
         tryVerify(function(){return service.t3.rows.length===1})
@@ -23,10 +25,22 @@ ShellRoot {
         var card=findChild(pages,"t3Session-thread-1")
         verify(card!==null)
         var field=findChild(card,"t3Answer-q1"),submit=findChild(card,"t3Submit")
+        verify(!field.visible,"Custom editor must be opt-in when choices exist")
+        verify(card.height<Commons.Style.space(300),"Question card is too tall")
+        verify(findChild(findChild(pages,"notificationsScroll"),"t3Session-thread-1")===null,"T3 is still inside the notification list")
         verify(!submit.enabled,"No implicit answer")
         var option=findChild(card,"t3Option-q1-0")
         option.forceActiveFocus();keyClick(Qt.Key_Return)
         tryVerify(function(){return submit.enabled})
+        verify(!findChild(option,"choiceDescription").visible,"Option descriptions repeat their labels")
+        var otherOption=findChild(card,"t3Option-q1-1")
+        compare(option.y,otherOption.y,"Short options must share a row")
+        verify(Math.abs(option.width-otherOption.width)<1,"Options need equal columns")
+        var choices=findChild(card,"t3Options-q1")
+        verify(Math.abs(option.width+otherOption.width+choices.columnSpacing-choices.width)<2,"Options must use the available width")
+        var customToggle=findChild(card,"t3Custom-q1")
+        customToggle.forceActiveFocus();keyClick(Qt.Key_Return)
+        verify(field.visible && field.activeFocus)
         field.forceActiveFocus();field.text="custom $ & <b>"
         var draft=field.text
         var row=JSON.parse(JSON.stringify(service.t3.rows[0]));row.summary="New progress"
@@ -35,12 +49,20 @@ ShellRoot {
         compare(findChild(card,"t3Answer-q1"),field)
         compare(field.text,draft)
         verify(field.activeFocus,"Progress must retain input focus")
-        var second=Object.assign({},row,{id:"thread-2",requestId:"",requestKind:"",request:null})
+        var second=Object.assign({},row,{id:"thread-2",title:"Проверка сборки",requestId:"",requestKind:"",request:null})
         var originalY=card.y
         snapshot([second,row]);wait(50)
         compare(card.y,originalY,"Incoming sessions must not reorder a focused card")
+        var workingCard=findChild(pages,"t3Session-thread-2"),spinner=findChild(workingCard,"t3SessionSpinner")
+        verify(workingCard.height<=Commons.Style.space(88),"Working session must be a compact row")
+        verify(spinner.animating,"Working session spinner is stopped")
+        var wheel=findChild(spinner,"t3SpinnerWheel"),rotation=wheel.rotation
+        wait(60);verify(wheel.rotation!==rotation,"Spinner did not rotate")
+        pages.controls=true;wait(30);verify(!spinner.animating,"Hidden page kept animating")
+        pages.controls=false;wait(300)
+        field.forceActiveFocus()
         if(Quickshell.env("ISLAND_T3_CAPTURE")) {
-          pages.grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_T3_CAPTURE"))})
+          findChild(pages,"t3Section").grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_T3_CAPTURE"))})
           wait(250)
         }
         keyClick(Qt.Key_Space)
@@ -51,25 +73,64 @@ ShellRoot {
         verify(field.activeFocus)
         // A new question with identical text must still clear the previous answer.
         row.requestId="request-2";row.request.id="request-2";row.request.revision="revision-2"
-        snapshot([row]);wait(50)
+        snapshot([row,second]);wait(50)
         field=findChild(card,"t3Answer-q1");submit=findChild(card,"t3Submit")
         compare(field.text,"");verify(!submit.enabled)
+        verify(!field.visible)
+        customToggle=findChild(card,"t3Custom-q1");customToggle.forceActiveFocus();keyClick(Qt.Key_Return)
         field.text="literal $(touch /tmp/never); <b>"
         var expected=field.text
         tryVerify(function(){return submit.enabled})
         Commons.Style.reduceMotion=true;Commons.Style.cornerRadius=0
         compare(card.radius,0,"Square system corners must remain square")
+        verify(!spinner.animating,"Reduced motion must stop the spinner")
         compare(field.text,expected,"Changing the theme must preserve the answer")
+        findChild(pages,"notificationsHistory").clicked();wait(30)
+        verify(findChild(pages,"t3Section").visible,"Notification history must not hide T3")
+        compare(field.text,expected,"Notification tabs must preserve answers")
+        findChild(pages,"notificationsActive").clicked()
         service.t3.receive('{"type":"connection","status":"offline"}')
         verify(!submit.enabled,"Disconnect disables answers")
+        verify(!findChild(pages,"t3Section").visible,"Offline T3 must be completely hidden")
         compare(field.text,expected,"Disconnect keeps drafts")
         service.t3.receive('{"type":"connection","status":"connected","canRespond":true,"environmentId":"env-1"}')
         tryVerify(function(){return submit.enabled})
+        var stuck={};stuck[row.request.id]={status:"sending",startedAt:Date.now()-21000}
+        service.t3.responses=stuck;service.t3.expireResponses(Date.now())
+        compare(service.t3.response(row.request.id),"uncertain","A lost reply must not leave Sending forever")
+        verify(!submit.enabled,"Uncertain sends must not be retried")
+        service.t3.responses=({});tryVerify(function(){return submit.enabled})
         submit.forceActiveFocus();keyClick(Qt.Key_Return)
         compare(service.t3.response("request-2"),"sending")
         verify(!submit.enabled,"No double-submit")
         tryCompare(service.t3,"waitingCount",0)
         tryCompare(service.t3,"workingCount",1)
+        Commons.Style.cornerRadius=originalCorners;Commons.Style.reduceMotion=originalReduceMotion
+        // Real answers are often paragraphs: preserve full labels and descriptions.
+        var longRow=JSON.parse(JSON.stringify(row));longRow.id="thread-long";longRow.requestId="long-question";longRow.request.id="long-question"
+        longRow.request.questions[0].options=[
+          {value:"one",label:"Запускать сборку и тесты локально после каждого изменения исходного кода",description:"Результат сразу доступен в рабочем каталоге; потребуется больше ресурсов компьютера."},
+          {value:"two",label:"Отправлять изменения на удалённый сервер и получать только итоговый отчёт",description:"Подходит для длительных проверок и работы с несколькими проектами одновременно."}
+        ]
+        snapshot([longRow,second]);wait(300)
+        var longCard=findChild(pages,"t3Session-thread-long"),longChoice=findChild(longCard,"t3Option-q1-0"),longLabel=findChild(longChoice,"choiceLabel")
+        verify(longLabel.lineCount>1 && !longLabel.truncated,"Long options must wrap without truncation")
+        var description=findChild(longChoice,"choiceDescription")
+        verify(description.visible && !description.truncated,"Meaningful descriptions must remain visible")
+        if(Quickshell.env("ISLAND_T3_CAPTURE")) {
+          findChild(pages,"t3Section").grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_T3_CAPTURE").replace(".png","-long.png"))});wait(150)
+        }
+        longCard.width=320;wait(300)
+        compare(findChild(longCard,"t3Options-q1").columns,1,"Narrow cards need a single column")
+        verify(!longLabel.truncated && !description.truncated,"Narrow cards must preserve full option text")
+        longChoice.forceActiveFocus();keyClick(Qt.Key_Return)
+        keyClick(Qt.Key_Tab);keyClick(Qt.Key_Tab);keyClick(Qt.Key_Tab)
+        var longSend=findChild(longCard,"t3Submit"),sessionScroll=findChild(pages,"t3SessionsScroll")
+        verify(longSend.activeFocus,"Tab must reach Send on a long form")
+        var buttonAt=longSend.mapToItem(sessionScroll,0,0)
+        verify(buttonAt.y>=0 && buttonAt.y+longSend.height<=sessionScroll.height+1,"Keyboard focus must scroll the send button into view")
+        snapshot([]);wait(30)
+        verify(!findChild(pages,"t3Section").visible,"Empty T3 must be completely hidden")
         service.t3.allowed=false
         compare(service.t3.rows.length,0)
         compare(service.t3.waitingCount,0)

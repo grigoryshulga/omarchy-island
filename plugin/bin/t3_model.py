@@ -15,6 +15,14 @@ def identifier(value):
     return isinstance(value, str) and value not in {"__proto__", "constructor", "prototype"} and bool(re.fullmatch(r"[A-Za-z0-9_:.-]{1,256}", value))
 
 
+def request_identifier(value):
+    # Runtime IDs embed URI-encoded provider IDs. Keep their exact bytes; they
+    # are JSON data, not paths or commands, and must never be URL-decoded here.
+    return (isinstance(value, str) and 0 < len(value) <= 2048
+            and value not in {"__proto__", "constructor", "prototype"}
+            and not re.search(r"[\x00-\x20\x7f]", value))
+
+
 def text(value, limit=2048):
     return value[:limit] if isinstance(value, str) else ""
 
@@ -59,7 +67,7 @@ def request_view(projection, request_id):
     kind = pending.get("kind", "unknown")
     result = {"id": request_id, "kind": kind, "questions": [], "canRespond": False,
               "prompt": text(item.get("prompt"), 4096), "reason": text(item.get("reason"), 2048)}
-    if kind == "user_input" and (pending.get("responseCapability") or {}).get("type") in ("live", "message"):
+    if request_identifier(request_id) and kind == "user_input" and (pending.get("responseCapability") or {}).get("type") in ("live", "message"):
         questions = item.get("questions", [])
         valid = isinstance(questions, list) and 0 < len(questions) <= 8
         seen = set()

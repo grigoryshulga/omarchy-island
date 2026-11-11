@@ -167,8 +167,8 @@ BarWidget {
   Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; interval: 3000; onTriggered: root.alertKind = "" }
-  PlainText {id:osdMeasure;visible:false;text:root.indicators && ("osdMessage" in root.indicators) ? root.indicators.osdMessage : "";font.pixelSize:Style.font.body}
-  PlainText { id: clockMeasure; text: root.clockText; visible: false }
+  PlainText {id:osdMeasure;visible:false;text:root.indicators && ("osdMessage" in root.indicators) ? root.indicators.osdMessage : "";typeRole:"bar"}
+  PlainText { id: clockMeasure; typeRole:"bar"; text: root.clockText; visible: false }
   WidgetButton {
     id: trigger
     objectName: "islandClock"
@@ -192,12 +192,21 @@ BarWidget {
     }
     RowLayout {
       id:leftIndicators
-      PlainText {
+      Item {
+        id:t3Indicator
         objectName:"islandT3Indicator"
         visible:!!root.t3 && root.t3.allowed && (root.t3.waitingCount>0 || root.t3.workingCount>0)
-        text:(root.t3 && root.t3.waitingCount>0 ? "󰋗 " : "⠿ ")+Commons.I18n.formatNumber(root.t3 ? root.t3.waitingCount || root.t3.workingCount : 0)
-        color:root.t3 && root.t3.waitingCount>0 ? Commons.Color.accent : Commons.Color.muted
-        font.pixelSize:Style.font.caption
+        readonly property bool waiting:!!root.t3 && root.t3.waitingCount>0
+        readonly property string text:Commons.I18n.formatNumber(root.t3 ? root.t3.waitingCount || root.t3.workingCount : 0)
+        readonly property color color:waiting ? Commons.Color.accent : Commons.Color.muted
+        implicitWidth:t3IndicatorBody.implicitWidth;implicitHeight:t3IndicatorBody.implicitHeight
+        RowLayout {
+          id:t3IndicatorBody
+          anchors.centerIn:parent;spacing:Style.space(4)
+          T3Spinner {objectName:"islandT3Spinner";visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:Style.space(14)}
+          PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;font.pixelSize:Design.type.bar}
+          PlainText {text:t3Indicator.text;color:t3Indicator.color;font.pixelSize:Design.type.bar}
+        }
         MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
       }
       objectName:"islandLeftIndicators"
@@ -206,8 +215,8 @@ BarWidget {
       anchors.verticalCenter:parent.verticalCenter
       z:1
       spacing:Style.space(5)
-      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRecording") && root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
-      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:"#9ece6a";waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
+      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
+      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:Design.barAccent;waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
     }
     Item {
       id:centerContent
@@ -233,6 +242,7 @@ BarWidget {
       PlainText {
         id:clockLabel
         objectName:"islandClockText"
+        typeRole:"bar"
         width:Math.min(parent.width,Math.ceil(implicitWidth*root.displayScale)/root.displayScale)
         height:parent.height
         x:Math.round((centerContent.parent.width-width)*root.displayScale/2)/root.displayScale-centerContent.x

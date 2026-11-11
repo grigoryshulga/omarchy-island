@@ -40,11 +40,11 @@ Item {
   ColumnLayout {
     id:content
     width:parent.width
-    spacing:Style.space(6)
+    spacing:Design.gap.small
     RowLayout {
       Layout.fillWidth:true
       Layout.preferredHeight:Style.space(30)
-      spacing:Style.space(8)
+      spacing:Design.gap.small
       PlainText {
         text:root.power ? root.power.icon : ""
         font.pixelSize:Style.font.icon
@@ -53,15 +53,15 @@ Item {
       PlainText {
         objectName:"batteryPercentage"
         text:root.power ? Commons.I18n.formatNumber(Math.round(root.power.fraction*100))+"%" : ""
-        font.pixelSize:Style.font.bodySmall
+        typeRole:"caption"
         font.bold:true
       }
       PlainText {
         Layout.fillWidth:true
         text:root.remaining && root.width>Style.space(430) ? root.mode+" · "+root.remaining : root.mode
         elide:Text.ElideRight
-        font.pixelSize:Style.font.caption
-        color:Commons.Color.muted
+        typeRole:"caption"
+        color:Design.secondaryText
       }
       ActionButton {
         id:profileButton
@@ -72,7 +72,7 @@ Item {
         text:root.power && root.power.activeProfile ? root.profileLabel(root.power.activeProfile) : root.strings.t("battery.profile")
         iconText:root.power ? Model.profileIcon(root.power.activeProfile) : ""
         tooltipText:root.strings.t("battery.profile")
-        horizontalPadding:Style.space(7);verticalPadding:Style.space(2)
+        horizontalPadding:Design.gap.small;verticalPadding:Design.gap.micro
         onClicked:root.toggleMenu()
       }
     }
@@ -91,12 +91,12 @@ Item {
     x:Commons.I18n.rightToLeft ? 0 : profileButton.width-width
     y:profileButton.height+Style.space(5)
     width:Style.space(190)
-    padding:Style.space(6)
+    padding:Design.gap.small
     focus:true
     closePolicy:Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
     enter:Transition {NumberAnimation {property:"opacity";from:0;to:1;duration:Preferences.duration(160)}}
     exit:Transition {NumberAnimation {property:"opacity";to:0;duration:Preferences.duration(100)}}
-    background:BorderSurface {color:Commons.Color.popups.background;borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)));radius:Style.cornerRadius}
+    background:BorderSurface {color:Design.canvas;borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)));radius:Design.cardRadius}
     onOpened:{root.power.refresh();Qt.callLater(root.focusProfile)}
     onClosed:if(root.active) profileButton.forceActiveFocus()
     contentItem:Item {
@@ -105,7 +105,7 @@ Item {
       Column {
         id:menuColumn
         width:parent.width
-        spacing:Style.space(3)
+        spacing:Design.gap.tight
       Repeater {
         id:choices
         model:root.power ? root.power.profiles : []
@@ -132,7 +132,7 @@ Item {
           Keys.onUpPressed:choices.itemAt((index+choices.count-1)%choices.count).forceActiveFocus()
         }
       }
-      PlainText {width:parent.width;visible:root.power && root.power.error!=="";text:root.strings.t("battery.profileFailed");color:Commons.Color.urgent;font.pixelSize:Style.font.caption;wrapMode:Text.Wrap}
+      PlainText {width:parent.width;visible:root.power && root.power.error!=="";text:root.strings.t("battery.profileFailed");color:Design.danger;typeRole:"caption";wrapMode:Text.Wrap}
       }
       BrailleSpotlight {id:menuGlow;surfaceRoot:menuContent;anchors.fill:parent;active:menuHover.hovered;pointer:menuHover.point.position;spotRadius:Style.space(55);intensity:1.8;z:10}
       HoverHandler {id:menuHover}

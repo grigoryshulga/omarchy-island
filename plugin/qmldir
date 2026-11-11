@@ -1,4 +1,9 @@
 ActionButton 1.0 ActionButton.qml
+singleton Design 1.0 Design.qml
+DesignTextField 1.0 DesignTextField.qml
+DesignDropdown 1.0 DesignDropdown.qml
+SectionHeading 1.0 SectionHeading.qml
+Surface 1.0 Surface.qml
 ArtworkBackground 1.0 ArtworkBackground.qml
 BarWidget 1.0 BarWidget.qml
 BatteryGauge 1.0 BatteryGauge.qml
@@ -38,9 +43,11 @@ Service 1.0 Service.qml
 SettingsView 1.0 SettingsView.qml
 StatusBeacon 1.0 StatusBeacon.qml
 T3Question 1.0 T3Question.qml
+T3Option 1.0 T3Option.qml
 T3SessionCard 1.0 T3SessionCard.qml
 T3SessionList 1.0 T3SessionList.qml
 T3State 1.0 T3State.qml
+T3Spinner 1.0 T3Spinner.qml
 TabButton 1.0 TabButton.qml
 ToastWaves 1.0 ToastWaves.qml
 VolumePopover 1.0 VolumePopover.qml
@@ -49,3 +56,4 @@ WeatherChip 1.0 WeatherChip.qml
 WeatherScene 1.0 WeatherScene.qml
 WeatherService 1.0 WeatherService.qml
 WeatherView 1.0 WeatherView.qml
+ChoiceButton 1.0 ChoiceButton.qml

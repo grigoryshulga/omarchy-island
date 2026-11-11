@@ -52,9 +52,9 @@ ShellRoot {
       check(gauge && findChild(gauge,"batterySegment-19"),"segmented gauge is missing")
       check(Math.abs(findChild(gauge,"batterySegment-15").fill-0.6)<0.001,"partial segment lost charge precision")
       fakePower.fraction=0.20;wait(20)
-      check(gauge.accent.toString()===Commons.Color.accent.toString(),"20 percent should keep the theme accent")
+      check(gauge.accent.toString()===Island.Design.accent.toString(),"20 percent should keep the theme accent")
       fakePower.fraction=0.199;wait(20)
-      check(gauge.accent.r>gauge.accent.g && gauge.accent.r>gauge.accent.b,"charge below 20 percent is not red")
+      check(gauge.accent.toString()===Island.Design.danger.toString(),"charge below 20 percent lost the danger role")
       fakePower.onBattery=false;wait(20)
       check(gauge.accent.toString()===gauge.lowChargeColor.toString(),"low charge lost its warning on AC")
       fakePower.onBattery=true

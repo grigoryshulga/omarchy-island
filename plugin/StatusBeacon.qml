@@ -3,7 +3,7 @@ import qs.Commons
 
 Item {
   id:root
-  property color tint:"#f7768e"
+  property color tint:Design.barDanger
   property bool bidirectional:false
   property real waveOffset:0
   property string glyph:""

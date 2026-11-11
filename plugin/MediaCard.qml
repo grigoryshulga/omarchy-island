@@ -40,26 +40,26 @@ Item {
   ColumnLayout {
     id: body
     width: parent.width
-    spacing: Style.space(10)
+    spacing:Design.gap.medium
     RowLayout {
       Layout.fillWidth: true
-      spacing: Style.space(12)
+      spacing:Design.gap.medium
       ColumnLayout {
         Layout.fillWidth: true
         Layout.minimumWidth: 0
-        spacing: Style.space(4)
-        PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); font.pixelSize: Math.round(Style.font.title*1.25) }
-        PlainText { Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Commons.Color.accent : Commons.Color.muted; font.pixelSize: Style.font.bodySmall }
+        spacing:Design.gap.tight
+        PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); typeRole: "section" }
+        PlainText { Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Design.accent : Design.secondaryText; typeRole:"caption" }
       }
       RowLayout {
         objectName:"mediaTransport"
         Layout.alignment: Qt.AlignVCenter
         Layout.minimumWidth: implicitWidth
         Layout.maximumWidth: implicitWidth
-        spacing: Style.space(2)
-        FeedbackButton { feedback: root.feedback; iconText: "󰒮"; tooltipText: root.strings.t("previous"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoPrevious; onClicked: root.service.media("previous") }
+        spacing:Design.gap.micro
+        FeedbackButton { feedback: root.feedback; iconText: "󰒮"; tooltipText: root.strings.t("previous"); radius: Design.controlRadius; iconSize: Style.font.iconLarge; horizontalPadding:Design.gap.small; verticalPadding:Design.gap.small; focusable: true; enabled: root.player !== null && root.player.canGoPrevious; onClicked: root.service.media("previous") }
         PlayPauseButton { feedback: root.feedback; objectName: "mediaToggle"; playing: root.player !== null && root.player.isPlaying; tooltipText: root.strings.t("playPause"); enabled: root.player !== null && root.player.canTogglePlaying; onClicked: root.service.media("toggle") }
-        FeedbackButton { feedback: root.feedback; iconText: "󰒭"; tooltipText: root.strings.t("next"); radius: Math.min(Style.cornerRadius,Style.space(6)); iconSize: Style.font.iconLarge; horizontalPadding: Style.space(6); verticalPadding: Style.space(5); focusable: true; enabled: root.player !== null && root.player.canGoNext; onClicked: root.service.media("next") }
+        FeedbackButton { feedback: root.feedback; iconText: "󰒭"; tooltipText: root.strings.t("next"); radius: Design.controlRadius; iconSize: Style.font.iconLarge; horizontalPadding:Design.gap.small; verticalPadding:Design.gap.small; focusable: true; enabled: root.player !== null && root.player.canGoNext; onClicked: root.service.media("next") }
       }
     }
     Item {
@@ -73,11 +73,11 @@ Item {
         id: details
         width: parent.width
         opacity: parent.reveal
-        spacing: Style.space(6)
+        spacing:Design.gap.small
         RowLayout {
           id: timeline
           Layout.fillWidth: true
-          spacing: Style.space(4)
+          spacing:Design.gap.tight
           IslandSlider {
             id: seek
             objectName: "mediaSeek"
@@ -102,9 +102,9 @@ Item {
         RowLayout {
           Layout.fillWidth: true
           Layout.rightMargin: volumeControl.implicitWidth+timeline.spacing
-          PlainText { objectName: "mediaElapsed"; text: Model.time(seek.liveValue); font.pixelSize: Style.font.body; font.bold: true; color: Commons.Color.foreground }
+          PlainText { objectName: "mediaElapsed"; text: Model.time(seek.liveValue); typeRole:"caption"; color: Design.text }
           Item { Layout.fillWidth: true }
-          PlainText { objectName: "mediaDuration"; text: Model.time(seek.maximum); font.pixelSize: Style.font.body; font.bold: true; color: Commons.Color.foreground }
+          PlainText { objectName: "mediaDuration"; text: Model.time(seek.maximum); typeRole:"caption"; color: Design.text }
         }
 
       }

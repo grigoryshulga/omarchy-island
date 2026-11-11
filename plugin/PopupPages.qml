@@ -49,9 +49,9 @@ Item {
   signal weatherRequested()
   signal inboxRequested()
   readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
-  readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(24)+tabDivider.implicitHeight : 0
+  readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Design.gap.section : 0
   implicitHeight: contentTop+Math.max(root.expanded ? calendarWeatherHeight : 0,controls ? controlsPage.implicitHeight : weather || calendar ? calendarWeatherHeight : inbox.implicitHeight)
-  readonly property real calendarWeatherHeight:Math.max(calendarPage.implicitHeight,weatherPage.implicitHeight)
+  readonly property real calendarWeatherHeight:Math.max(calendarPage.implicitHeight,weatherPage.implicitHeight,controlsPage.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
   function back() {if(controls && controlsPage.section==="settings") {controlsPage.back();return true}return false}
@@ -191,11 +191,11 @@ Item {
     objectName: "islandTabs"
     anchors.left: parent.left; anchors.right: parent.right
     visible: root.expanded
-    spacing: Style.space(4)
+    spacing:Design.gap.tight
     uniformCellSizes: true
     TabButton {
       feedback: root.externalFeedback
-      color: "transparent"; borderSpec: Border.none()
+
       objectName: "islandTabControls"
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -203,14 +203,14 @@ Item {
       Layout.minimumWidth: 0
       label: root.strings.t("tabs.controls")
       tabActive: root.controls
-      fontSize: Style.font.bodySmall
-      radius: Math.min(Style.cornerRadius,Style.space(6))
+      fontSize: Design.type.label
+      radius: Design.controlRadius
       focusable: true
       onClicked: root.requestPage(0)
     }
     TabButton {
       feedback: root.externalFeedback
-      color: "transparent"; borderSpec: Border.none()
+
       objectName: "islandTabOverview"
       visible:root.enabledPages.indexOf(1)>=0
       Layout.fillWidth: true
@@ -219,14 +219,14 @@ Item {
       Layout.minimumWidth: 0
       label: root.strings.t("tabs.overview")
       tabActive: !root.controls && !root.calendar && !root.weather
-      fontSize: Style.font.bodySmall
-      radius: Math.min(Style.cornerRadius,Style.space(6))
+      fontSize: Design.type.label
+      radius: Design.controlRadius
       focusable: true
       onClicked: root.requestPage(1)
     }
     TabButton {
       feedback: root.externalFeedback
-      color: "transparent"; borderSpec: Border.none()
+
       objectName: "calendarOpen"
       visible:root.enabledPages.indexOf(2)>=0
       Layout.fillWidth: true
@@ -235,14 +235,14 @@ Item {
       Layout.minimumWidth: 0
       label: root.strings.t("calendar.open")
       tabActive: root.calendar
-      fontSize: Style.font.bodySmall
-      radius: Math.min(Style.cornerRadius,Style.space(6))
+      fontSize: Design.type.label
+      radius: Design.controlRadius
       focusable: true
       onClicked: root.requestPage(2)
     }
     WeatherChip {
       feedback: root.externalFeedback
-      color: "transparent"; borderSpec: Border.none()
+
       objectName: "weatherOpen"
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -255,13 +255,6 @@ Item {
       selected: root.weather
       onClicked: root.requestPage(3)
     }
-  }
-  PanelSeparator {
-    id:tabDivider
-    objectName:"islandTabsDivider"
-    anchors.left:parent.left;anchors.right:parent.right
-    anchors.top:tabs.bottom;anchors.topMargin:Style.space(10)
-    visible:tabs.visible
   }
   Controls.SwipeView {
     id: pager

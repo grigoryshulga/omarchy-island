@@ -68,12 +68,12 @@ Rectangle {
   opacity: 0
   Component.onCompleted: opacity = 1
   Behavior on opacity { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
-  color: grouped ? "transparent" : Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
+  color: grouped ? "transparent" : Design.surface
   border.width: 0
-  radius: Style.cornerRadius
-  implicitHeight: content.implicitHeight + (grouped ? 0 : Style.space(20)) + (separated ? Style.space(12) : 0)
-  BorderSurface {anchors.fill:parent;color:"transparent";radius:Style.cornerRadius;borderSpec:Border.controlSpec("focus",Commons.Color.foreground,Commons.Color.accent);visible:root.keyboardFocused}
-  PanelSeparator { objectName: "notificationDivider"; anchors.top: parent.top; visible: root.separated }
+  radius: Design.cardRadius
+  implicitHeight: content.implicitHeight + (grouped ? 0 : 2*Design.cardPadding) + (separated ? Design.gap.large : 0)
+  BorderSurface {anchors.fill:parent;color:"transparent";radius:Design.cardRadius;borderSpec:Border.controlSpec("focus",Design.text,Design.accent);visible:root.keyboardFocused}
+
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
@@ -81,37 +81,37 @@ Rectangle {
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-    anchors.margins: root.grouped ? 0 : Style.space(10)
-    anchors.topMargin: root.separated ? Style.space(12) : root.grouped ? 0 : Style.space(10)
-    spacing: Style.space(root.compact ? 2 : 4)
+    anchors.margins: root.grouped ? 0 : Design.cardPadding
+    anchors.topMargin: root.separated ? Design.gap.large : root.grouped ? 0 : Design.cardPadding
+    spacing: root.compact ? Design.gap.tight : Design.gap.small
     RowLayout {
       visible: !root.grouped
       Layout.fillWidth: true
       Item {
         visible: !root.grouped
         Layout.preferredWidth: Style.space(18); Layout.preferredHeight: width
-        PlainText { anchors.centerIn: parent; text: "󰂚"; color: Commons.Color.accent; visible: appIcon.status !== Image.Ready }
+        PlainText { anchors.centerIn: parent; text: "󰂚"; color: Design.accent; visible: appIcon.status !== Image.Ready }
         Image { id: appIcon; anchors.fill: parent; source: root.row.appIcon ? Quickshell.iconPath(root.row.appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
-      PlainText { visible: !root.grouped; Layout.fillWidth: true; text: Model.source(root.row); color: Commons.Color.accent; font.pixelSize: Style.font.caption }
+      PlainText { visible: !root.grouped; Layout.fillWidth: true; text: Model.source(root.row); color: Design.accent; typeRole:"caption" }
       Item { visible: root.grouped; Layout.fillWidth: true }
-      PlainText { text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(4); verticalPadding: 0; focusable: true; onClicked: root.dismiss() }
+      PlainText { text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Design.secondaryText; typeRole:"caption" }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
     }
     RowLayout {
       Layout.fillWidth: true
-      PlainText { Layout.fillWidth: true; text: root.row.summary; font.pixelSize: root.compact ? Style.font.body : Style.font.subtitle; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 8 : 1; elide: Text.ElideRight }
-      PlainText {objectName:"notificationTime";Layout.alignment:Qt.AlignTop;visible:root.grouped && root.showTimestamp;text:new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm");color:Commons.Color.muted;font.pixelSize:Style.font.caption}
+      PlainText { Layout.fillWidth: true; text: root.row.summary; typeRole:root.compact ? "body" : "title"; wrapMode: Text.Wrap; maximumLineCount: root.expanded ? 8 : 1; elide: Text.ElideRight }
+      PlainText {objectName:"notificationTime";Layout.alignment:Qt.AlignTop;visible:root.grouped && root.showTimestamp;text:new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm");color:Design.secondaryText;typeRole:"caption"}
       Item {
         visible:root.grouped && root.expanded && root.individualDismiss
         Layout.preferredWidth:rowDismiss.implicitWidth*root.dismissShown
         Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
         Layout.preferredHeight:rowDismiss.implicitHeight
         clip:true
-      FeedbackButton { id:rowDismiss; objectName:"notificationDismiss"; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding: Style.space(3); verticalPadding: 0; focusable: true; onClicked: root.dismiss() }
+      FeedbackButton { id:rowDismiss; objectName:"notificationDismiss"; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
       }
     }
-    PlainText { objectName:"notificationBody"; Layout.fillWidth: true; visible: text !== ""; text: root.row.members ? root.row.body : Model.plain(root.row.body); font.pixelSize: Style.font.bodySmall; color: Commons.Color.muted; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
+    PlainText { objectName:"notificationBody"; Layout.fillWidth: true; visible: text !== ""; text: root.row.members ? root.row.body : Model.plain(root.row.body); typeRole:"caption"; color: Design.secondaryText; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
     Item {
       objectName:"notificationFooter"
       Layout.fillWidth: true
@@ -134,7 +134,7 @@ Rectangle {
         width: Math.max(0,Math.min(parent.width,naturalWidth))
         opacity: parent.reveal
         enabled: parent.reveal>0
-      spacing: Style.space(4)
+      spacing:Design.gap.tight
       Repeater {
         model: root.codeActions
         ActionButton {

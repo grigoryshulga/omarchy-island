@@ -18,7 +18,7 @@ PanelWindow {
   property bool frameSuppressed: false
   property string triggerMode: "hover"
   property bool centerOnBar: true
-  property int padding: frameSuppressed ? Style.space(6) : Style.spacing.popupPadding
+  property int padding: frameSuppressed ? Design.gap.small : Design.panelPadding
   property int margin: Style.gapsOut
   property int contentWidth: Style.space(420)
   property int contentHeight: Style.space(240)
@@ -150,7 +150,7 @@ PanelWindow {
       y: root.cardOrigin.y + (root.position === "bottom" ? -1 : 1)*reveal.offsetY
       width: root.drawnWidth
       height: root.drawnHeight
-      color: Commons.Color.popups.background
+      color: Design.canvas
       Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Preferences.duration(120)} }
       borderSpec: root.borderSpec
       radius: Math.min(Style.cornerRadius,width/2,height/2)

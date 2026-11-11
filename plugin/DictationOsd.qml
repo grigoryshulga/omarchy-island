@@ -45,28 +45,28 @@ Item {
       y:Math.round(Math.max(gap,Math.min(parent.height-height-gap,vertical ? root.anchorPosition.y+root.anchorItem.height/2-height/2 : (root.position==="bottom" ? parent.height-root.thickness-gap-height : root.thickness+gap))))-Style.space(6)*(1-root.shown)
       width:Math.min(Style.space(320),parent.width-Style.space(24))
       height:Style.space(88)
-      radius:Style.cornerRadius
-      color:Util.alpha(Commons.Color.background,0.97)
+      radius:Design.cardRadius
+      color:Util.alpha(Design.opaqueCanvas,0.97)
       borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(1)))
       opacity:panel.screen && panel.width===panel.screen.width && panel.height===panel.screen.height ? root.shown : 0
       ColumnLayout {
         anchors.fill:parent
-        anchors.margins:Style.space(14)
-        spacing:Style.space(5)
+        anchors.margins:Design.gap.large
+        spacing:Design.gap.small
         RowLayout {
           Layout.fillWidth:true
-          spacing:Style.space(7)
-          PlainText {text:root.dictation.recording ? "󰍬" : "󰔟";color:Commons.Color.accent;font.pixelSize:Style.font.icon}
+          spacing:Design.gap.small
+          PlainText {text:root.dictation.recording ? "󰍬" : "󰔟";color:Design.accent;font.pixelSize:Style.font.icon}
           PlainText {
             objectName:"islandDictationLabel"
             Layout.fillWidth:true
             text:strings.t(root.dictation.recording ? "dictation.listening" : "dictation.transcribing")
-            font.pixelSize:Style.font.bodySmall
+            typeRole:"caption"
           }
           PlainText {
             text:Math.floor(root.dictation.elapsed/60)+":"+String(root.dictation.elapsed%60).padStart(2,"0")
-            color:Commons.Color.accent
-            font.pixelSize:Style.font.bodySmall
+            color:Design.accent
+            typeRole:"caption"
           }
         }
         DictationField {

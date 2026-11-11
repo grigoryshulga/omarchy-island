@@ -81,11 +81,11 @@ Item {
     id: body
     width: parent.width
     height:Math.max(implicitHeight,root.height)
-    spacing: Style.space(10)
+    spacing:Design.gap.medium
     RowLayout {
       Layout.fillWidth: true
-      spacing: Style.space(4)
-      FeedbackButton { objectName: "weatherBack"; visible: root.showBack; feedback: root.feedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; onClicked: root.backRequested() }
+      spacing:Design.gap.tight
+      FeedbackButton { objectName: "weatherBack"; visible: root.showBack; feedback: root.feedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: root.backRequested() }
       Item {
         id: locationSlot
         Layout.fillWidth: true
@@ -98,14 +98,15 @@ Item {
           visible: !root.editing
           feedback: root.feedback
           text: root.report && root.report.location ? root.report.location : root.strings.t("weather.title")
-          fontSize: Style.font.title
-          radius: Math.min(Style.cornerRadius,Style.space(6))
+          fontSize: Design.type.section
+          fontWeight: Design.weight("section")
+          radius: Design.controlRadius
           leftAlign: true
           focusable: true
           tooltipText: root.strings.t("weather.changeCity")
           onClicked: root.startEditing()
         }
-        TextField {
+        DesignTextField {
           id: city
           objectName: "weatherCityInput"
           anchors.fill: parent
@@ -130,16 +131,16 @@ Item {
         Layout.maximumWidth: root.width*0.45
         visible: !root.editing && text!==""
         text: root.weather && root.weather.loading ? root.strings.t("weather.loading") : root.report ? root.strings.t("weather.updated").arg(new Date(root.report.fetchedAt*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm")) : ""
-        color: Commons.Color.muted
-        font.pixelSize: Style.font.caption
+        color: Design.secondaryText
+        typeRole:"caption"
       }
-      FeedbackButton { objectName: "weatherRefresh"; feedback: root.feedback; iconText: "󰑐"; tooltipText: root.strings.t("weather.refresh"); radius: Math.min(Style.cornerRadius,Style.space(6)); horizontalPadding: Style.space(5); focusable: true; enabled: root.weather!==null && !root.weather.loading; onClicked: root.weather.refresh() }
+      FeedbackButton { objectName: "weatherRefresh"; feedback: root.feedback; iconText: "󰑐"; tooltipText: root.strings.t("weather.refresh"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; enabled: root.weather!==null && !root.weather.loading; onClicked: root.weather.refresh() }
     }
     ColumnLayout {
       id: suggestions
       Layout.fillWidth: true
       visible: root.editing && root.weather && (root.weather.suggestions.length>0 || root.weather.searching)
-      spacing: Style.space(6)
+      spacing:Design.gap.small
       Repeater {
         model: root.weather ? root.weather.suggestions : []
         FeedbackButton {
@@ -148,13 +149,13 @@ Item {
           Layout.fillWidth: true
           text: modelData.name+" · "+modelData.description
           leftAlign: true
-          fontSize: Style.font.bodySmall
-          radius: Math.min(Style.cornerRadius,Style.space(6))
+          fontSize: Design.type.label
+          radius: Design.controlRadius
           focusable: true
           onClicked: {var place=modelData;city.text=place.name;searchDelay.stop();root.draftPlace=place;city.forceActiveFocus()}
         }
       }
-      PlainText { visible: root.weather!==null && root.weather.searching; text: root.strings.t("weather.searching"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+      PlainText { visible: root.weather!==null && root.weather.searching; text: root.strings.t("weather.searching"); color: Design.secondaryText; typeRole:"caption" }
     }
     Item {
       Layout.fillWidth: true
@@ -179,7 +180,7 @@ Item {
         PlainText {
           objectName: "weatherTemperature"
           text: Commons.I18n.formatNumber(Model.temperature(root.current ? root.current.temperature : null,root.temperatureUnit))
-          font.pixelSize: Style.space(42)
+          typeRole: "hero"
           font.bold: true
         }
         BorderSurface {
@@ -190,16 +191,16 @@ Item {
           implicitWidth: unitLabel.implicitWidth+Style.space(4)
           implicitHeight: unitLabel.implicitHeight
           color: "transparent"
-          borderSpec: activeFocus ? Border.controlSpec("focus",Commons.Color.foreground,Commons.Color.accent) : Border.none()
-          radius: Math.min(Style.cornerRadius,Style.space(6))
+          borderSpec: activeFocus ? Border.controlSpec("focus",Design.text,Design.accent) : Border.none()
+          radius: Design.controlRadius
           activeFocusOnTab: true
           function activate() {root.feedback.pulseFrom(unitButton);root.cycleTemperatureUnit()}
           PlainText {
             id: unitLabel
             anchors.centerIn: parent
             text: unitButton.text
-            font.pixelSize: Style.space(42)
-            color: unitButton.hot || unitButton.activeFocus ? Commons.Color.accent : Commons.Color.foreground
+            typeRole: "hero"
+            color: unitButton.hot || unitButton.activeFocus ? Design.accent : Design.text
           }
           MouseArea {
             id: unitMouse
@@ -213,9 +214,9 @@ Item {
             visible: unitMouse.containsMouse
             delay: 400
             text: root.strings.t("weather.changeUnit")
-            padding: Style.space(6)
+            padding:Design.gap.small
             background: BorderSurface {color:Commons.Color.tooltip.background;borderSpec:Border.surfaceSpec("tooltip","border",Commons.Color.tooltip.border,Math.max(1,Style.normalBorderWidth));radius:0}
-            contentItem: PlainText {text:root.strings.t("weather.changeUnit");color:Commons.Color.tooltip.text;font.pixelSize:Style.font.bodySmall}
+            contentItem: PlainText {text:root.strings.t("weather.changeUnit");color:Commons.Color.tooltip.text;typeRole:"caption"}
           }
           Keys.onReturnPressed: activate()
           Keys.onEnterPressed: activate()
@@ -229,15 +230,15 @@ Item {
         visible: root.current===null
         horizontalAlignment: Text.AlignHCenter
         text: root.strings.t(root.weather && root.weather.loading ? "weather.loading" : "weather.noData")
-        font.pixelSize: Style.font.bodySmall
-        color: Commons.Color.muted
+        typeRole:"caption"
+        color: Design.secondaryText
       }
     }
     RowLayout {
       Layout.fillWidth: true
       visible: root.current!==null
       uniformCellSizes: true
-      spacing: Style.space(8)
+      spacing:Design.gap.small
       Repeater {
         model: [
           {label:root.strings.t("weather.feels"),value:root.temp(root.current ? root.current.feels : null)},
@@ -255,17 +256,17 @@ Item {
           ColumnLayout {
             id: statColumn
             width: parent.width
-            spacing: Style.space(4)
-            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.label; color: Commons.Color.muted; font.pixelSize: Style.font.caption }
-            PlainText { objectName: "weatherStat-"+statItem.index; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.value; font.pixelSize: Style.font.body }
+            spacing:Design.gap.tight
+            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.label; color: Design.secondaryText; typeRole:"caption" }
+            PlainText { objectName: "weatherStat-"+statItem.index; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.value; typeRole:"body" }
           }
         }
       }
     }
-    PanelSeparator { Layout.fillWidth: true; visible: root.report!==null }
+
     RowLayout {
       Layout.fillWidth: true
-      spacing: Style.space(4)
+      spacing:Design.gap.tight
       uniformCellSizes: true
       visible: root.report!==null
       Repeater {
@@ -283,11 +284,11 @@ Item {
           ColumnLayout {
             id: dayColumn
             width: parent.width
-            spacing: Style.space(3)
-            PlainText { Layout.alignment: Qt.AlignHCenter; text: new Date(modelData.date+"T12:00:00").toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+            spacing:Design.gap.tight
+            PlainText { Layout.alignment: Qt.AlignHCenter; text: new Date(modelData.date+"T12:00:00").toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd"); color: Design.secondaryText; typeRole:"caption" }
             WeatherScene { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: Math.min(forecastDay.width,Style.space(56)); Layout.preferredHeight: Style.space(44); condition: Model.kind(modelData.code)<0 ? 2 : Model.kind(modelData.code); animated: false }
-            PlainText { objectName: "weatherDayHigh"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.max); font.pixelSize: Style.font.bodySmall }
-            PlainText { objectName: "weatherDayLow"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.min); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+            PlainText { objectName: "weatherDayHigh"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.max); typeRole:"caption" }
+            PlainText { objectName: "weatherDayLow"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.min); color: Design.secondaryText; typeRole:"caption" }
           }
         }
       }
@@ -296,9 +297,9 @@ Item {
       Layout.fillWidth: true
       visible: root.weather!==null && (root.weather.error!=="" || root.weather.stale)
       text: root.strings.t(root.report ? "weather.stale" : "weather.failure")
-      color: Commons.Color.muted
+      color: Design.secondaryText
       wrapMode: Text.Wrap
-      font.pixelSize: Style.font.caption
+      typeRole:"caption"
       horizontalAlignment: Text.AlignHCenter
     }
   }

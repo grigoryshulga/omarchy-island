@@ -129,11 +129,11 @@ Item {
     pluginId:"gshulga.island"
     moduleName:"gshulga.island.controls"
     shell:embeddedShell
-    foreground:root.bar ? root.bar.foreground : Commons.Color.foreground
+    foreground:Design.text
     barForeground:foreground
-    background:root.bar ? root.bar.background : Commons.Color.background
-    urgent:Commons.Color.urgent
-    fontFamily:root.bar ? root.bar.fontFamily : ""
+    background:Design.opaqueCanvas
+    urgent:Design.danger
+    fontFamily:Design.fontFamily
     _moduleWidgets:function(id){return root.bar && typeof root.bar.moduleWidgets==="function" ? root.bar.moduleWidgets(id) : []}
     _run:function(command){if(root.bar) root.bar.run(command)}
   }
@@ -141,13 +141,13 @@ Item {
     id:landing
     anchors.left:parent.left;anchors.right:parent.right
     visible:!root.section
-    spacing:Style.space(12)
+    spacing:Design.gap.section
     GridLayout {
       objectName:"controlMainGrid"
       Layout.fillWidth:true
       columns:2
       uniformCellWidths:true
-      columnSpacing:Style.space(8);rowSpacing:Style.space(8)
+      columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
       Repeater {
         id:mainTiles
         model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"},{key:"settings",icon:"󰒓"}]
@@ -164,13 +164,13 @@ Item {
         }
       }
     }
-    PanelSeparator {Layout.fillWidth:true}
+
     GridLayout {
       objectName:"controlQuickGrid"
       Layout.fillWidth:true
       columns:3
       uniformCellWidths:true
-      columnSpacing:Style.space(8);rowSpacing:Style.space(8)
+      columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
       ControlTile {
         compact:true
         objectName:"controlMicrophone";Layout.fillWidth:true;feedback:root.externalFeedback
@@ -210,7 +210,7 @@ Item {
         title:root.strings.t("controls.recordingShort");glyph:"󰻂"
         description:root.strings.t(root.indicators && root.indicators.recording ? "controls.stopRecording" : "controls.startRecording")
         selected:root.indicators && root.indicators.recording
-        glyphColor:selected ? "#f7768e" : Commons.Color.foreground
+        glyphColor:selected ? Design.danger : Design.text
         onClicked:root.toggleMode("recording")
       }
       ControlTile {
@@ -219,18 +219,18 @@ Item {
         title:root.strings.t("controls.remoteShort");glyph:"󰢹"
         description:root.strings.t(root.indicators && root.indicators.remoteActive ? "controls.connected" : "controls.noConnection")
         selected:root.indicators && root.indicators.remoteActive
-        glyphColor:selected ? "#9ece6a" : Commons.Color.muted
+        glyphColor:selected ? Design.accent : Design.secondaryText
         enabled:false
       }
     }
-    PlainText {Layout.fillWidth:true;visible:root.error!=="";text:root.error;color:Commons.Color.urgent;wrapMode:Text.Wrap;font.pixelSize:Style.font.caption}
+    PlainText {Layout.fillWidth:true;visible:root.error!=="";text:root.error;color:Design.danger;wrapMode:Text.Wrap;typeRole:"caption"}
   }
   Loader {
     id:nativeLoader
     objectName:"islandNativeControl"
     anchors.left:parent.left;anchors.right:parent.right
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
-    anchors.topMargin:Style.space(8)
+    anchors.topMargin:Design.gap.small
     active:root.active && !!root.section && root.section!=="settings"
     visible:active
     onLoaded:{item.settings=Qt.binding(function(){return root.settings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
@@ -248,9 +248,10 @@ Item {
     onClicked:root.back()
   }
   PlainText {
-    anchors.left:detailBack.right;anchors.leftMargin:Style.space(10)
+    anchors.left:detailBack.right;anchors.leftMargin:Design.gap.medium
     anchors.verticalCenter:detailBack.verticalCenter
     visible:root.section==="settings"
+    typeRole:"section"
     text:root.strings.t("settings.title")
   }
   SettingsView {
@@ -258,7 +259,7 @@ Item {
     objectName:"islandSettings"
     anchors.left:parent.left;anchors.right:parent.right
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
-    anchors.topMargin:Style.space(8)
+    anchors.topMargin:Design.gap.small
     visible:root.section==="settings"
     settings:root.settings;strings:root.strings
     feedback:root.externalFeedback
@@ -272,5 +273,5 @@ Item {
         Qt.callLater(function(){if(!root.changing && nativeLoader.item===item && !item.opened && root.active) root.back()})
     }
   }
-  PlainText {anchors.centerIn:parent;visible:!!root.section && root.error!=="";text:root.error;color:Commons.Color.urgent;wrapMode:Text.Wrap}
+  PlainText {anchors.centerIn:parent;visible:!!root.section && root.error!=="";text:root.error;color:Design.danger;wrapMode:Text.Wrap}
 }

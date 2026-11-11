@@ -29,7 +29,7 @@ Item {
     feedback: root.feedback
     objectName: "mediaVolumeTrigger"
     anchors.fill: parent
-    radius: Math.min(Style.cornerRadius,Style.space(6))
+    radius: Design.controlRadius
     iconText: root.player && root.player.volumeSupported && root.player.volume === 0 ? "󰝟" : "󰕾"
     tooltipText: root.controllable ? "" : root.strings.t("noVolume")
     focusable: true
@@ -54,7 +54,7 @@ Item {
     height: reveal.drawnHeight
     x: -reveal.targetWidth/2-width/2-Style.space(6)
     y: reveal.offsetY
-    color: Commons.Color.popups.background
+    color: Design.canvas
     radius: Math.min(Style.cornerRadius,Style.space(6),height/2)
     borderSpec: Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(1)))
     opacity: shown
@@ -67,7 +67,7 @@ Item {
       width: reveal.targetWidth-Style.space(10)
       height: reveal.targetHeight-Style.space(10)
       opacity: reveal.contentShown
-      spacing: Style.space(6)
+      spacing:Design.gap.small
       IslandSlider {
         id: volume
         objectName: "mediaVolume"
@@ -83,7 +83,7 @@ Item {
         Layout.preferredWidth: Style.space(38)
         horizontalAlignment: Text.AlignRight
         text: root.controllable ? Commons.I18n.formatNumber(Math.round(root.player.volume*100))+"%" : "—"
-        font.pixelSize: Style.font.bodySmall
+        typeRole:"caption"
       }
     }
   }

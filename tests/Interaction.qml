@@ -141,7 +141,7 @@ ShellRoot {
       wait(200)
       var toggle=findChild(media,"mediaToggle")
       check(toggle !== null,"missing toggle")
-      check(findChild(media,"mediaTitle").font.pixelSize===Math.round(Commons.Style.font.title*1.25),"track title did not use its larger size")
+      check(findChild(media,"mediaTitle").font.pixelSize===Island.Design.type.section,"track title did not use its larger size")
       mouseClick(toggle)
       check(service.mediaCalls===1,"toggle click did not reach player: " + service.mediaCalls)
       check(Spotlight.pick(media,media,Qt.point(media.width/2,1))===null,"transparent media wrapper captured the spotlight")
@@ -225,7 +225,7 @@ ShellRoot {
       mouseMove(first,first.width/2,first.height/2)
       wait(220)
       check(Math.abs(group.implicitHeight-stableGroupHeight)<1,"grouped notifications changed height on hover")
-      check(findChild(findChild(composed,"notification-n2"),"notificationDivider").visible,"grouped notifications lack a divider")
+      check(findChild(findChild(composed,"notification-n2"),"notificationDivider")===null,"Grouped notifications must use spacing, not a divider")
       check(findChild(first,"notificationTime").mapToItem(first,0,0).y<first.height/2,"message timestamp is not at the top")
       check(findChild(group,"groupSpotlight").shown>0.9,"group spotlight did not fade in")
       mouseClick(first,first.width*0.4,first.height*0.25)
@@ -247,7 +247,7 @@ ShellRoot {
       check(panelPlayer.visible,"paused track disappeared")
       p.playbackState=MprisPlaybackState.Stopped
       wait(20)
-      check(!panelPlayer.visible && !separator.visible,"stopped player left an empty section")
+      check(!panelPlayer.visible && separator===null,"stopped player left an empty section")
       p.playbackState=MprisPlaybackState.Playing; p.isPlaying=true
       wait(20)
       check(panelPlayer.visible,"playing track did not return")
@@ -269,10 +269,10 @@ ShellRoot {
       var single=findChild(composed,"notificationGroup-Test"),singleHeight=single.implicitHeight
       mouseMove(win.contentItem,1,1);wait(180)
       var singleStamp=findChild(single,"groupTime"),idleStampX=singleStamp.mapToItem(single,0,0).x
-      check(idleStampX+singleStamp.width>=single.width-Commons.Style.space(14),"timestamp does not reach the top-right corner at rest")
+      check(idleStampX+singleStamp.width>=single.width-Island.Design.cardPadding-1,"timestamp does not reach the top-right corner at rest")
       check(findChild(single,"groupTime").visible,"single notification timestamp is not in its source header")
       check(!findChild(single,"notificationFooter").visible,"single notification reserves an empty footer")
-      check(singleHeight<=Commons.Style.space(100),"single notification is still too tall: "+singleHeight)
+      check(singleHeight<=Commons.Style.space(112),"single notification is still too tall: "+singleHeight)
       mouseMove(single,single.width/2,single.height/2);wait(160)
       check(single.implicitHeight===singleHeight,"compact single notification changes height on hover")
       check(singleStamp.mapToItem(single,0,0).x<idleStampX-Commons.Style.space(15),"timestamp did not make room for hover actions")
@@ -367,7 +367,7 @@ ShellRoot {
       check(findChild(calendar,"calendarToday")===null,"redundant Today button remains")
       var today=findChild(calendar,"calendar-day-2024-02-29")
       wait(150)
-      check(today.color===Commons.Color.accent && today.foreground===Commons.Color.background,"today does not use accent fill with inverse text")
+      check(today.color===Island.Design.accent && today.foreground===Island.Design.onAccent,"today does not use accent fill with inverse text")
       check(findChild(today,"calendarTodayGlow").active,"today has no braille glow")
       check(findChild(calendar,"calendarMonth").font.pixelSize<findChild(calendar,"calendarCurrentDate").fontSize,"calendar typography hierarchy is reversed")
       check(findChild(calendar,"calendarPrevious").y>=0 && findChild(calendar,"calendarMonth").mapToItem(calendar,0,0).y>today.mapToItem(calendar,0,0).y,"month navigation is not below the grid")
@@ -454,7 +454,7 @@ ShellRoot {
       calendarTab.clicked()
       wait(350)
       var calendarPageHeight=pages.implicitHeight
-      check(findChild(calendarTab,"tabLabel").color===Commons.Color.accent,"active tab label did not use the theme accent")
+      check(findChild(calendarTab,"tabLabel").color===Island.Design.selectedText,"active tab label did not use the theme accent")
       check(pages.calendar && Math.abs(findChild(pages,"islandCalendar").mapToItem(pager,0,0).x)<1,"weather-to-calendar tab switched height without contents")
       var weatherTab=findChild(pages,"weatherOpen")
       weatherTab.clicked()

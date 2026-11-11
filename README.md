@@ -8,7 +8,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 
 ## Features
 
-- **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show a 20-segment charge gauge and power profiles. The gauge shows partial segments, turns red below 20% (with saturation and lightness derived from the theme alert color), and gently pulses the leading segment while charging (unless reduced motion is enabled).
+- **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show a 20-segment charge gauge and power profiles. The gauge shows partial segments, uses the theme danger role below 20%, and gently pulses the leading segment while charging (unless reduced motion is enabled).
 - **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
 - **Calendar and weather:** month navigation, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
@@ -148,13 +148,14 @@ For a single dictation OSD, disable other dictation visualizers and the native V
 
 Requires a running **local T3 Code server**, its `t3` CLI on the shell's `PATH`, and orchestration protocol **2**. Tested against `0.1.9-nightly.20261111.4515`. The bridge uses Python's standard library; Node.js and extra Python packages are not required.
 
-Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions appear in **Overview → Active**. The bar shows the number of pending requests, or working sessions when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. New requests do not open a popup or steal focus, including during DND.
+Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions appear in a dedicated **T3 Code** section in **Overview**, above Notifications and History. Switching notification tabs does not hide T3 sessions. Working sessions use compact rows with a spinner, title, project, status, and elapsed time. The bar shows the number of pending requests, or a spinner and working-session count when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. New requests do not open a popup or steal focus, including during DND.
 
-- Choose a single option, select several options when the question permits it, or enter a custom answer. Complete required questions, then choose **Send answer**. Tab / Shift+Tab navigates the form; typing and caret keys stay in the text field.
+- Options use equal-width columns with complete, wrapping labels and descriptions; narrow cards use one column. Choose a single option, select several when permitted, or expand **Custom answer**. The send button shares the custom-answer row instead of taking its own row. Complete required questions, then choose **Send answer**. Tab / Shift+Tab navigates the form; typing and caret keys stay in the text field.
 - Session updates preserve existing card order, drafts, and focus. A replacement question resets its draft. Questions answered in another T3 client disappear after synchronization.
-- **Details** expands the latest message or request context. **Open T3** uses T3's official `https://app.t3.codes/threads/...` link, which offers the desktop or web client; the chosen client must already have access to the environment.
+- The chevron expands the latest message or request context. Click the session title to open T3 using T3's official `https://app.t3.codes/threads/...` link, which offers the desktop or web client; the chosen client must already have access to the environment.
 - Permission approvals, secrets/authentication, non-resumable requests, and forms outside the supported bounds are handled in T3. Island never interprets request text as a command.
-- Disconnects keep the last cards visibly stale and disable responses. An unconfirmed send is never retried automatically; check it in T3. Reconnection is automatic.
+- Spinners stop on hidden pages, outside the visible list, and when reduced motion is enabled.
+- When T3 is disconnected or has no sessions, its entire section is hidden. Drafts stay in memory for reconnection, and responses remain disabled while disconnected. If no result arrives within 20 seconds, the card marks the send as unconfirmed instead of waiting indefinitely. An unconfirmed send is never retried automatically; check it in T3. Reconnection is automatic.
 - Up to 30 top-level sessions are shown, prioritizing pending requests and running work. Recently finished sessions remain for 30 minutes. Archived, explicitly settled, and child-agent threads are excluded. Overview must be enabled to use the cards.
 
 Discovery reads `$T3CODE_HOME/userdata/server-runtime.json`, defaulting to `~/.t3/userdata/server-runtime.json`. `T3CODE_HOME`, if set, must be available in the Omarchy shell environment. Only literal loopback HTTP origins are accepted; remote environments are outside this integration's scope.
@@ -188,6 +189,27 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. Blur strength foll
 - T3 integration is off by default. When enabled, session data, draft answers, and the scoped access token stay in memory. Opening a session uses T3's official hosted thread link. See [T3 Code session cards](#t3-code-session-cards) for permissions and lifecycle.
 - Weather requests begin on first opening or hovering, with no requests beforehand. Automatic location uses `geo.omarchy.org`; search and forecasts use [Open-Meteo](https://open-meteo.com/). Requests use HTTPS, timeouts, and response limits. On failure, the last forecast remains marked stale; the cache is `~/.local/state/omarchy/island/weather.json`.
 
+## Design system
+
+Island uses one live design system across Overview, notifications, downloads, T3, media, Calendar, Weather, Controls and settings. [Design specification](design/DESIGN.md) documents typography, spacing, surfaces, color sources, interaction states and component APIs.
+
+- `plugin/DesignTokens.js` holds primitives and contrast calculations; `plugin/Design.qml` maps them to live Omarchy `Color` and `Style` values.
+- `PlainText` uses named roles (`caption`, `label`, `body`, `title`, `section`, `page`, `metric`, `hero`, `bar`). Buttons, choices, inputs and surfaces share geometry and focus treatment. System scaling and square corners remain supported.
+- Sections use spacing and typography instead of decorative dividers. Data cards have opaque, quiet surfaces; artwork stays behind them. Theme colors are corrected only when necessary for legibility.
+- Native system panels receive the same typography and adapted controls in the generated cache. Their device logic, keyboard behavior and installed source files are preserved.
+
+Open the isolated, interactive **native QML gallery** without installing or restarting Island:
+
+```bash
+bin/design-gallery
+```
+
+It supports system/dark/light/monochrome palettes, larger text, square corners, reduced motion and narrow question cards. The sample T3 form uses a local stub and sends nothing to T3. Preview settings affect only the gallery process. For offscreen screenshots:
+
+```bash
+bin/design-gallery --capture-dir /tmp/island-design
+```
+
 ## Development
 
 Sources live in `plugin/`. Register new top-level QML types in `plugin/qmldir`, which also declares the shared Preferences singleton. The root `manifest.json` serves the native plugin manager; `plugin/manifest.json` serves legacy flat installations. Keep shared metadata consistent and preserve their different entry point paths.
@@ -208,12 +230,13 @@ Additional checks for the affected feature:
 python3 tests/live-notifications.py        # Requires a running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
-python3 tests/t3-bridge.py                 # Local fake T3 HTTP/WebSocket server; no live T3 changes
+python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/keyboard.py                  # Keyboard input and focus
 QT_QPA_PLATFORM=offscreen python3 tests/keyboard.py # Keyboard checks without Wayland focus
 python3 tests/indicators.py                # Wayland indicators and native OSD
+ISLAND_T3_ONLY=1 python3 tests/indicators.py # T3 count, spinner, reduced motion and clock alignment
 python3 tests/dictation.py                 # Dictation states and reduced motion
 ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
 python3 tests/artwork-render.py            # GPU artwork frames and reduced motion

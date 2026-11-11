@@ -142,14 +142,23 @@ ShellRoot {
       check(!t3Indicator.visible,"disabled T3 indicator is visible")
       t3State.allowed=true;t3State.workingCount=3;wait(25)
       check(t3Indicator.visible && t3Indicator.text.indexOf(Commons.I18n.formatNumber(3))>=0,"T3 working count is missing")
+      var spinner=findChild(widget,"islandT3Spinner"),wheel=findChild(spinner,"t3SpinnerWheel")
+      check(spinner.animating,"T3 bar spinner is not running")
+      var angle=wheel.rotation;wait(70)
+      check(wheel.rotation!==angle,"T3 bar spinner did not rotate")
+      Commons.Style.reduceMotion=true;wait(25)
+      check(!spinner.animating,"T3 bar spinner ignored reduced motion")
+      Commons.Style.reduceMotion=false
       t3State.waitingCount=2;wait(25)
       check(t3Indicator.text.indexOf(Commons.I18n.formatNumber(2))>=0 && t3Indicator.color===Commons.Color.accent,"T3 input requests did not take priority")
+      check(!spinner.animating,"Pending inputs kept an invisible spinner running")
       var clockAt=label.mapToItem(clock,0,0)
       check(Math.abs(clockAt.x+label.width/2-clock.width/2)<1,"T3 indicator moved the clock off center")
       t3State.waitingCount=0;t3State.workingCount=0;wait(25)
       check(!t3Indicator.visible,"settled T3 sessions kept the bar indicator")
       t3State.allowed=false
       console.log("T3_INDICATOR_PASS")
+      if(Quickshell.env("ISLAND_T3_ONLY")) {console.log("INDICATORS_PASS");Qt.quit();return}
       if(Quickshell.env("ISLAND_TEST_GPU")) {
         var frozen=new Date(2026,10,10,19,47),saved=widget.now
         widget.now=frozen;wait(30)

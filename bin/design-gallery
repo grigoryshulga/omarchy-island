@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Open the isolated native component gallery; optionally capture it offscreen."""
+import argparse
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+project=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--capture-dir',type=Path)
+args=parser.parse_args()
+with tempfile.TemporaryDirectory(prefix='island-design-') as temporary:
+    root=Path(temporary)
+    for name in ('Commons','Ui'):
+        (root/name).symlink_to(Path('/usr/share/omarchy/shell')/name)
+    (root/'Island').symlink_to(project/'plugin')
+    for name in ('shell.qml','Gallery.qml'):
+        shutil.copyfile(project/'design'/name,root/name)
+    env=dict(os.environ)
+    if args.capture_dir:
+        args.capture_dir.mkdir(parents=True,exist_ok=True)
+        env.update(ISLAND_DESIGN_CAPTURE=str(args.capture_dir.resolve()),QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
+    raise SystemExit(subprocess.call(['qs','-p',str(root),'--no-color'],env=env))

@@ -9,26 +9,25 @@ FeedbackButton {
   property string description: ""
   property string glyph: ""
   property bool drillDown: false
-  property bool compact: false
   property bool showLed: !drillDown
-  property color glyphColor: selected ? Commons.Color.accent : Commons.Color.foreground
+  property color glyphColor: selected ? Design.accent : Design.text
   implicitWidth:Style.space(compact ? 120 : 190)
-  implicitHeight:Style.space(compact ? 60 : 72)
+  implicitHeight:Style.space(compact ? 72 : 88)
   focusable:true
-  background:Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
+  background:Design.surface
   Rectangle {
     visible:root.showLed
     anchors.right:parent.right;anchors.top:parent.top
-    anchors.margins:Style.space(9)
+    anchors.margins:Design.gap.medium
     width:Style.space(5);height:width;radius:width/2
-    color:root.selected ? root.glyphColor : Commons.Color.muted
+    color:root.selected ? root.glyphColor : Design.secondaryText
     opacity:root.selected ? 1 : 0.35
     IndicatorGlow {anchors.centerIn:parent;active:root.selected && root.visible;accent:root.glyphColor;width:Style.space(34);height:width}
   }
   RowLayout {
     anchors.fill:parent
-    anchors.margins:Style.space(root.compact ? 10 : 12)
-    spacing:Style.space(root.compact ? 7 : 10)
+    anchors.margins:root.compact ? Design.gap.medium : Design.cardPadding
+    spacing:Design.gap.medium
     PlainText {
       id:glyph
       text:root.glyph;font.pixelSize:root.compact ? Style.font.icon : Style.font.iconLarge;color:root.glyphColor
@@ -36,10 +35,10 @@ FeedbackButton {
     }
     ColumnLayout {
       Layout.fillWidth:true
-      spacing:Style.space(4)
-      PlainText {Layout.fillWidth:true;text:root.title;font.pixelSize:root.compact ? Style.font.bodySmall : Style.font.body;elide:Text.ElideRight}
-      PlainText {Layout.fillWidth:true;text:root.description;font.pixelSize:Style.font.caption;color:Commons.Color.muted;elide:Text.ElideRight}
+      spacing:Design.gap.tight
+      PlainText {Layout.fillWidth:true;text:root.title;typeRole:"title";font.pixelSize:root.compact ? Design.type.label : Design.type.title;elide:Text.ElideRight}
+      PlainText {Layout.fillWidth:true;text:root.description;typeRole:"caption";color:root.selected ? Design.selectedSecondaryText : Design.secondaryText;elide:Text.ElideRight}
     }
-    PlainText {visible:root.drillDown;text:Commons.I18n.rightToLeft ? "󰅁" : "󰅂";color:Commons.Color.muted;font.pixelSize:Style.font.iconSmall}
+    PlainText {visible:root.drillDown;text:Commons.I18n.rightToLeft ? "󰅁" : "󰅂";color:Design.secondaryText;font.pixelSize:Style.font.iconSmall}
   }
 }

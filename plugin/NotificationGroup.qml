@@ -29,10 +29,10 @@ Rectangle {
     keys.forEach(function(key){backend.remove(key)})
   }
   objectName: "notificationGroup-" + group.source
-  color: compact ? "transparent" : Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
+  color: compact ? "transparent" : Design.surface
   border.width: 0
-  radius: Style.cornerRadius
-  implicitHeight: content.implicitHeight + Style.space(compact ? 4 : 16)
+  radius: Design.cardRadius
+  implicitHeight: content.implicitHeight + (compact ? 2*Design.gap.micro : 2*Design.cardPadding)
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
@@ -40,23 +40,25 @@ Rectangle {
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-    anchors.margins: Style.space(root.compact ? 2 : 8)
-    spacing: Style.space(root.compact ? 2 : 6)
+    anchors.margins: root.compact ? Design.gap.micro : Design.cardPadding
+    spacing: root.compact ? Design.gap.tight : Design.gap.small
     RowLayout {
       Layout.fillWidth: true
+      Layout.preferredHeight:root.compact ? Design.lineHeight("caption") : Design.inlineControlHeight
       Item {
         Layout.preferredWidth: Style.space(root.compact ? 12 : 16); Layout.preferredHeight: width
-        PlainText { anchors.centerIn: parent; text: "󰂚"; font.pixelSize: root.compact ? Style.font.caption : Style.font.body; color: Commons.Color.accent; visible: icon.status !== Image.Ready }
+        PlainText { anchors.centerIn: parent; text: "󰂚"; font.pixelSize: root.compact ? Style.font.caption : Style.font.body; color: Design.accent; visible: icon.status !== Image.Ready }
         Image { id: icon; anchors.fill: parent; source: root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
-      PlainText { Layout.fillWidth: true; Layout.minimumWidth:0; text: root.group.source; color: Commons.Color.accent; font.pixelSize: Style.font.caption }
-      PlainText { objectName:"groupTime";visible: root.compact || root.mergedRows.length===1; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Commons.Color.muted; font.pixelSize: Style.font.caption }
+      PlainText { Layout.fillWidth: true; Layout.minimumWidth:0; text: root.group.source; color: Design.accent; typeRole:"caption" }
+      PlainText { objectName:"groupTime";visible: root.compact || root.mergedRows.length===1; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Design.secondaryText; typeRole:"caption" }
       Item {
+        visible:root.toolsShown>0
         Layout.preferredWidth:tools.implicitWidth*root.toolsShown
         Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
         Layout.preferredHeight:tools.implicitHeight
         clip:true
-        RowLayout {id:tools;anchors.right:parent.right;spacing:Style.space(4)
+        RowLayout {id:tools;anchors.right:parent.right;spacing:Design.gap.tight
       ActionButton {
         feedback: root.feedback
         objectName: "groupMute"
@@ -65,7 +67,7 @@ Rectangle {
         enabled: hover.hovered || root.keyboardFocused
         iconText: root.service.mutedSources.indexOf(root.group.source) >= 0 ? "󰂚" : "󰂛"
         tooltipText: root.service.mutedSources.indexOf(root.group.source) >= 0 ? root.strings.t("unmute") : root.strings.t("mute")
-        horizontalPadding: Style.space(5); verticalPadding: 0
+        horizontalPadding:Design.gap.small; verticalPadding: 0; implicitHeight:Design.inlineControlHeight
         onClicked: root.service.mute(root.group.source)
         Behavior on opacity { NumberAnimation { duration: Preferences.duration(120) } }
       }
@@ -77,7 +79,7 @@ Rectangle {
         enabled: hover.hovered || root.keyboardFocused
         iconText: "󰅖"
         tooltipText: root.strings.t("deleteGroup")
-        horizontalPadding: Style.space(5); verticalPadding: 0
+        horizontalPadding:Design.gap.small; verticalPadding: 0; implicitHeight:Design.inlineControlHeight
         onClicked: root.dismissGroup()
         Behavior on opacity { NumberAnimation { duration: Preferences.duration(120) } }
       }

@@ -7,7 +7,7 @@ Column {
   required property var service
   required property var strings
   property bool expanded:false
-  spacing:Style.space(6)
+  spacing:Design.gap.small
   // Keep delegates and pointer focus stable as byte counts change.
   function sync() {
     for(var i=0;i<rows.length;i++) {

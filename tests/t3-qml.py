@@ -15,10 +15,10 @@ with tempfile.TemporaryDirectory(prefix='island-t3-qml-') as temporary:
     (root/'shell.qml').write_text((project/'tests/T3.qml').read_text())
     home=root/'home';home.mkdir()
     binary=root/'bin';binary.mkdir()
-    fixture={'id':'thread-1','title':'Session','project':'Project','status':'running','startedAt':0,'finishedAt':0,'summary':'Working',
+    fixture={'id':'thread-1','title':'Идеи развития плагина','project':'Island','status':'running','startedAt':0,'finishedAt':0,'summary':'Working',
              'requestId':'request-1','requestKind':'user_input','request':{'id':'request-1','kind':'user_input','revision':'revision-1','canRespond':True,
-             'questions':[{'id':'q1','text':'Where?', 'required':True,'multiSelect':False,'allowCustomAnswer':True,
-                           'options':[{'label':'Local','value':'local','description':'Here'}]}]}}
+             'questions':[{'id':'q1','text':'Какой вариант выбираешь для проверки интеграции Island?', 'required':True,'multiSelect':False,'allowCustomAnswer':True,
+                           'options':[{'label':'Вариант A','value':'local','description':'Вариант A'}, {'label':'Вариант B','value':'remote','description':'Вариант B'}]}]}}
     (root/'fixture.json').write_text(json.dumps(fixture))
     fake=binary/'python3'
     fake.write_text('#!'+sys.executable+'\n'+'''import sys,os,json

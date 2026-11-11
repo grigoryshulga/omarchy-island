@@ -6,8 +6,38 @@ import ".."
 ToggleSwitch {
   id:root
   objectName:"controlPowerSwitch"
-  trackHeight:Style.space(16)
-  cursorPad:Style.space(4)
+  foreground:Design.text
+  accent:Design.accent
+  trackHeight:Style.space(20)
+  cursorPad:Design.gap.small
+  cursorRing:false
+  implicitWidth:trackWidth+2*Design.gap.small
+  implicitHeight:Design.controlHeight
+  Accessible.role:Accessible.CheckBox
+  Accessible.checked:checked
+  Rectangle {
+    anchors.fill:parent
+    visible:root.interactive && (root.activeFocus || root.hasCursor)
+    color:"transparent";radius:Design.controlRadius
+    border.width:2;border.color:Design.focusRing
+  }
+  // Native switch owns input and keyboard semantics. An opaque theme-aware
+  // face keeps its indicator legible even with low-contrast state overrides.
+  Rectangle {
+    anchors.centerIn:parent
+    width:root.trackWidth;height:root.trackHeight
+    radius:root.rounded ? height/2 : 0
+    color:root.checked ? Design.selection : Design.raised
+    border.width:1;border.color:Design.fieldBorder
+    Rectangle {
+      width:root.knobSize;height:width
+      y:root.knobInset
+      x:root.checked!==root.mirrored ? root.trackWidth-root.knobInset-width : root.knobInset
+      radius:root.rounded ? width/2 : 0
+      color:root.checked ? Design.accent : Design.secondaryText
+      Behavior on x {NumberAnimation {duration:Design.feedbackDuration;easing.type:Easing.OutCubic}}
+    }
+  }
   IndicatorGlow {
     active:(root.checked || root.hot) && root.visible
     intensity:root.checked ? 2.8 : 1.6

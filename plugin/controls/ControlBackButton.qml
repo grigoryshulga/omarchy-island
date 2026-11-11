@@ -6,13 +6,11 @@ import ".."
 FeedbackButton {
   objectName:"controlBack"
   property bool islandExternalNavigation:true
-  implicitWidth:Style.space(26)
-  implicitHeight:Style.space(28)
+  implicitWidth:Design.compactControlHeight
+  implicitHeight:Design.compactControlHeight
   iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍"
   iconSize:Style.font.iconLarge
-  foreground:activeFocus || hot ? Commons.Color.accent : Commons.Color.foreground
-  color:"transparent"
-  borderSpec:Border.none()
+  foreground:activeFocus || hot ? Design.accent : Design.text
   horizontalPadding:0
   verticalPadding:0
   focusable:true

@@ -125,6 +125,21 @@ class ControlsAdapter(unittest.TestCase):
                 self.assertTrue(output.is_file())
                 self.assertEqual(before, adapter.tree_digest(directory, skip_vcs=True))
 
+    def test_design_preserves_literal_text_and_visibility(self):
+        source = SOURCE.replace('content: PanelKeyCatcher { implicitHeight: 100 }', '''content: PanelKeyCatcher {
+          property string payload: "Style.font.body and PanelSeparator { are plain data"
+          Text { text: parent.payload; font.pixelSize: Style.font.body }
+          PanelSeparator { visible: root.opened }
+          TextField { text: "literal $ & <b>"; password: true }
+          Button { text: "Open"; onClicked: root.close() }
+        }''')
+        transformed = adapter.transform_qml(source)
+        self.assertIn('"Style.font.body and PanelSeparator { are plain data"', transformed)
+        self.assertIn('ControlGap { visible: root.opened }', transformed)
+        self.assertIn('font.pixelSize: IslandKit.Design.type.body', transformed)
+        self.assertIn('text: "literal $ & <b>"; password: true', transformed)
+        self.assertIn('onClicked: root.close()', transformed)
+
 
 if __name__ == '__main__':
     unittest.main()

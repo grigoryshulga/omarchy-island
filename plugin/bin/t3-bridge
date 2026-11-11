@@ -18,7 +18,7 @@ import time
 from urllib.parse import quote, urlencode
 import uuid
 
-from t3_model import identifier, request_view, select_threads, session_view, validate_answers
+from t3_model import identifier, request_identifier, request_view, select_threads, session_view, validate_answers
 from t3_transport import TransportError, WebSocket, http_json
 
 # Eight custom answers plus selected options, including multibyte UTF-8 text.
@@ -118,7 +118,9 @@ class Bridge:
 
     def respond(self, action):
         thread_id, request_id = action.get("threadId"), action.get("requestId")
-        if not identifier(thread_id) or not identifier(request_id):
+        if not identifier(thread_id) or not request_identifier(request_id):
+            if isinstance(request_id, str) and len(request_id) <= 2048:
+                self.result(request_id, "invalid")
             return
         if self.readonly or not self.ws:
             self.result(request_id, "readonly" if self.readonly else "offline")

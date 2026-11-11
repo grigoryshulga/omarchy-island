@@ -21,7 +21,7 @@ FeedbackButton {
     property bool playing: root.playing
     property bool rounded: root.rounded
     onRoundedChanged: requestPaint()
-    property color fill: !root.enabled ? Commons.Color.muted : root.hot || root.activeFocus ? Commons.Color.accent : Commons.Color.foreground
+    property color fill: !root.enabled ? Design.secondaryText : root.hot || root.activeFocus ? Design.accent : Design.text
     onPlayingChanged: requestPaint()
     onFillChanged: requestPaint()
     onWidthChanged: requestPaint()

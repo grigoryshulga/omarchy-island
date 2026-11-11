@@ -10,9 +10,9 @@ Item {
   property real fraction:0
   property bool charging:false
   property bool active:false
-  // Keep low charge visibly red even in themes whose urgent role is monochrome.
-  readonly property color lowChargeColor:Qt.hsla(0,Math.max(0.65,Commons.Color.urgent.hslSaturation),Math.max(0.55,Math.min(0.7,Commons.Color.urgent.hslLightness)),1)
-  readonly property color accent:fraction<0.20 ? lowChargeColor : Commons.Color.accent
+  // Urgency uses the same semantic role as every other Island warning.
+  readonly property color lowChargeColor:Design.danger
+  readonly property color accent:fraction<0.20 ? lowChargeColor : Design.accent
   readonly property bool animating:active && visible && charging && fraction<1 && !Preferences.reduceMotion
   property real pulse:1
   implicitHeight:Style.space(10)
@@ -26,7 +26,7 @@ Item {
   }
   RowLayout {
     anchors.fill:parent
-    spacing:Style.space(3)
+    spacing:Design.gap.tight
     layoutDirection:Commons.I18n.rightToLeft ? Qt.RightToLeft : Qt.LeftToRight
     Repeater {
       model:20
