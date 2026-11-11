@@ -17,7 +17,21 @@ BarWidget {
   property real osdShown:showOsd ? 1 : 0
   readonly property bool osdTransitioning: osdShown>0 && osdShown<1 && !Style.reduceMotion
   Behavior on osdShown {NumberAnimation {duration:Style.duration(root.showOsd ? 240 : 200);easing.type:Easing.OutCubic}}
-  readonly property real indicatorGutter: Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(6) : 0
+  readonly property real indicatorGutter: Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
+  function activateIndicator(mode) {
+    if(mode==="dnd") {if(service) service.setDoNotDisturb(false);return}
+    if(mode==="nightLight" || mode==="stayAwake") {
+      IpcRegistry.call(mode==="nightLight" ? "nightlight" : "idle","toggle",[])
+      indicators.refreshControls()
+      return
+    }
+    var commands={
+      microphone:"omarchy-audio-input-mute",
+      recording:"omarchy-capture-screenrecording --stop-recording",
+      update:"omarchy-launch-floating-terminal-with-presentation omarchy-update"
+    }
+    if(bar && commands[mode]) bar.run(commands[mode])
+  }
   function connectIndicators() {
     if(registeredIndicators===indicators) return
     if(registeredIndicators) registeredIndicators.detach(root)
@@ -166,11 +180,11 @@ BarWidget {
       id:leftIndicators
       objectName:"islandLeftIndicators"
       anchors.right:centerContent.horizontalCenter
-      anchors.rightMargin:centerContent.indicatorSpan/2+Style.space(6)
+      anchors.rightMargin:centerContent.indicatorSpan/2+Style.space(11)
       anchors.verticalCenter:parent.verticalCenter
       z:1
       spacing:Style.space(5)
-      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator";Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
+      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")};Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
       StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.remoteActive;tint:"#9ece6a";waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
     }
     Item {
@@ -224,13 +238,13 @@ BarWidget {
       id:rightIndicators
       objectName:"islandRightIndicators"
       anchors.left:centerContent.horizontalCenter
-      anchors.leftMargin:centerContent.indicatorSpan/2+Style.space(6)
+      anchors.leftMargin:centerContent.indicatorSpan/2+Style.space(11)
       anchors.verticalCenter:parent.verticalCenter
       spacing:Style.space(5)
       z:1
       StatusBeacon {
         id:updateBeacon
-        objectName:"islandUpdateIndicator"
+        objectName:"islandUpdateIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("update")}
         Layout.preferredHeight:trigger.height
         visible:!!root.indicators && !!root.indicators.updateAvailable
         tint:Commons.Color.foreground
@@ -239,10 +253,10 @@ BarWidget {
         waveWidth:trigger.width
         waveOffset:-rightIndicators.x-updateBeacon.x
       }
-      PlainText {objectName:"islandMicrophoneIndicator";visible:root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandDndIndicator";visible:root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandNightLightIndicator";visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandStayAwakeIndicator";visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")};visible:root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("dnd")};visible:root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("nightLight")};visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("stayAwake")};visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
     }
   }
   Loader {
