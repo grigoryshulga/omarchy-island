@@ -1,11 +1,27 @@
 import QtQuick
 import qs.Commons
 import qs.Commons as Commons
+import "SpotlightModel.js" as Spotlight
 
 ShaderEffect {
   id: root
   property bool active: false
   property bool adaptive: true
+  property Item surfaceRoot: null
+  readonly property var hoveredSurface: active && surfaceRoot ? Spotlight.pick(surfaceRoot,root,pointer) : null
+  readonly property real focused: hoveredSurface ? 1 : 0
+  readonly property vector4d focusRect: {
+    if (!hoveredSurface) return Qt.vector4d(0,0,width,height)
+    var at=hoveredSurface.mapToItem(root,0,0)
+    return Qt.vector4d(at.x,at.y,hoveredSurface.width,hoveredSurface.height)
+  }
+  readonly property real focusRadius: hoveredSurface ? Spotlight.radius(hoveredSurface) : cornerRadius
+  property real trailX: pointer.x
+  property real trailY: pointer.y
+  readonly property vector2d trailCenter: Qt.vector2d(trailX,trailY)
+  readonly property real trailEnabled: active && !Style.reduceMotion ? 1 : 0
+  Behavior on trailX { enabled: root.active && !Style.reduceMotion; NumberAnimation {duration:Style.duration(180);easing.type:Easing.OutCubic} }
+  Behavior on trailY { enabled: root.active && !Style.reduceMotion; NumberAnimation {duration:Style.duration(180);easing.type:Easing.OutCubic} }
   property url artworkUrl: ""
   property var source: cover
   property real artworkStrength: 1

@@ -9,6 +9,7 @@ import "Security.js" as Security
 
 Rectangle {
   id: root
+  readonly property bool islandSpotlightSurface: true
   objectName: "notification-" + row.key
   required property var row
   required property var service
@@ -77,7 +78,7 @@ Rectangle {
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
-  BrailleSpotlight { id: glow; objectName: "notificationSpotlight"; anchors.fill: parent; active: !root.grouped && root.feedback===brailleFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleSpotlight { id: glow; surfaceRoot: root; objectName: "notificationSpotlight"; anchors.fill: parent; active: !root.grouped && root.feedback===brailleFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top

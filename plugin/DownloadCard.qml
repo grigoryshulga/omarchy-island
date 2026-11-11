@@ -7,6 +7,7 @@ import "Downloads.js" as Downloads
 
 Rectangle {
   id:root
+  readonly property bool islandSpotlightSurface: true
   required property var row
   required property var service
   required property var strings

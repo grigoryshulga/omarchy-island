@@ -15,6 +15,11 @@ layout(std140, binding = 0) uniform buf {
   vec2 rippleCenter;
   float rippleProgress;
   float artworkMix;
+  vec4 focusRect;
+  float focusRadius;
+  float focused;
+  vec2 trailCenter;
+  float trailEnabled;
 };
 layout(binding = 1) uniform sampler2D source;
 uint mixBits(uint v) {
@@ -34,12 +39,19 @@ float dots(vec2 local,float core,float a,float b,float blend) {
   float pattern=mix(step(1.0-coverage,a),step(1.0-coverage,b),blend);
   return (1.0-smoothstep(radius,radius+softness,length(local)))*pattern;
 }
+float roundedDistance(vec2 pixel, vec4 rect, float radius) {
+  vec2 halfSize=rect.zw*0.5;
+  float r=clamp(radius,0.0,min(halfSize.x,halfSize.y));
+  vec2 box=abs(pixel-rect.xy-halfSize)-(halfSize-vec2(r));
+  return length(max(box,vec2(0.0)))+min(max(box.x,box.y),0.0)-r;
+}
 void main() {
   vec2 pixel=qt_TexCoord0*size;
   vec2 delta=pixel-center;
   float angle=atan(delta.y,delta.x);
   float edge=1.0+0.045*sin(angle*3.0+phase*0.8)+0.025*sin(angle*7.0-phase*0.6)+0.012*sin(angle*11.0+phase*0.3);
-  float normalized=length(delta)/(spotRadius*edge);
+  float radius=spotRadius*mix(1.0,0.58,focused);
+  float normalized=length(delta)/(radius*edge);
   float falloff=1.0-smoothstep(0.20,1.0,normalized);
   float core=1.0-smoothstep(0.0,0.95,normalized);
   vec2 local=mod(pixel,3.0)-vec2(1.5);
@@ -48,7 +60,22 @@ void main() {
   uint frame=uint(floor(clock));
   float a=noise(site,frame), b=noise(site,frame+1u);
   float blend=smoothstep(0.0,1.0,fract(clock));
-  float alpha=dots(local,core,a,b,blend)*falloff*hoverOpacity*0.18;
+  // A short tapered wake. Its delayed endpoint catches up once the pointer
+  // stops; cap its length so fast jumps never draw a stripe across a card.
+  vec2 tail=trailCenter-center;
+  float tailLength=length(tail);
+  tail*=min(1.0,radius*1.15/max(tailLength,0.001));
+  float t=clamp(dot(delta,tail)/max(dot(tail,tail),0.001),0.0,1.0);
+  float wakeWidth=radius*mix(0.30,0.10,t);
+  float wake=exp(-dot(delta-tail*t,delta-tail*t)/(wakeWidth*wakeWidth));
+  wake*=pow(1.0-t,1.5)*smoothstep(0.0,12.0,tailLength)*trailEnabled*0.40;
+  float field=falloff+wake*(1.0-falloff);
+  float boundary=roundedDistance(pixel,focusRect,focusRadius);
+  float rim=exp(-max(0.0,-boundary)/3.0)*focused;
+  float ink=dots(local,max(core,wake),a,b,blend);
+  float alpha=ink*field*hoverOpacity*mix(0.18,0.42,focused);
+  // A little continuous light beneath the dots blooms inward at the rim.
+  alpha+=field*rim*hoverOpacity*(0.12+ink*0.30);
 
   float reach=max(1.0,length(max(rippleCenter,size-rippleCenter)));
   float distanceFromClick=length(pixel-rippleCenter);
@@ -60,9 +87,11 @@ void main() {
   float waveCore=1.0-smoothstep(0.0,1.0,distanceFromClick/reach);
   alpha+=dots(local,waveCore,a,b,blend)*ring*0.38;
 
-  vec2 box=abs(pixel-size*0.5)-(size*0.5-vec2(cornerRadius));
-  float distanceToEdge=length(max(box,vec2(0.0)))+min(max(box.x,box.y),0.0)-cornerRadius;
-  alpha=clamp(alpha,0.0,1.0)*(1.0-smoothstep(-0.5,0.5,distanceToEdge));
+  float distanceToEdge=roundedDistance(pixel,vec4(0.0,0.0,size),cornerRadius);
+  float mask=1.0-smoothstep(-1.0,0.0,distanceToEdge);
+  // The antialias band is entirely inside the surface, including square corners.
+  mask*=mix(1.0,1.0-smoothstep(-1.0,0.0,boundary),focused);
+  alpha=clamp(alpha,0.0,1.0)*mask;
   // Keep music feedback in the cover's colors, with the same 18% theme tint
   // as the music backdrop. Other surfaces retain the pure theme accent.
   vec4 cover=texture(source,(vec2(site)*3.0+vec2(1.5))/size);

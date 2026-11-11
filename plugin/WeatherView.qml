@@ -8,6 +8,7 @@ import "WeatherModel.js" as Model
 
 Item {
   id: root
+  readonly property bool islandSpotlightSurface: true
   required property var strings
   property var weather: null
   property bool active: true
@@ -76,7 +77,7 @@ Item {
   }
   HoverHandler { id: hover }
   BrailleFeedback { id: weatherFeedback; surface: root; effect: glow; hover: hover }
-  BrailleSpotlight { id: glow; objectName: "weatherSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleSpotlight { id: glow; surfaceRoot: root; objectName: "weatherSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: body
     width: parent.width

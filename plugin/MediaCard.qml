@@ -7,6 +7,7 @@ import "Model.js" as Model
 
 Item {
   id: root
+  readonly property bool islandSpotlightSurface: true
   required property var service
   required property var strings
   property var bar: null
@@ -23,6 +24,7 @@ Item {
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight {
     id: glow
+    surfaceRoot: root
     objectName: "mediaSpotlight"
     anchors.fill: parent
     active: !root.externalFeedback && hover.hovered

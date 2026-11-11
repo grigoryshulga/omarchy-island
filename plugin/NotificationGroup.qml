@@ -8,6 +8,7 @@ import "Model.js" as Model
 
 Rectangle {
   id: root
+  readonly property bool islandSpotlightSurface: true
   required property var group
   required property var strings
   required property var service
@@ -36,7 +37,7 @@ Rectangle {
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
-  BrailleSpotlight { id: glow; objectName: "groupSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  BrailleSpotlight { id: glow; surfaceRoot: root; objectName: "groupSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top

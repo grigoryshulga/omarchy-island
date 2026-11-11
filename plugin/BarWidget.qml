@@ -307,7 +307,7 @@ BarWidget {
     }
     BrailleSpotlight {
       id: panelGlow
-      intensity: previewContent.controlsCursorIntensity
+      surfaceRoot: previewContent
       objectName: "islandPanelSpotlight"
       x: -preview.insetLeft; y: -preview.insetTop
       width: preview.layoutWidth; height: preview.layoutHeight

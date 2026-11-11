@@ -227,7 +227,11 @@ ShellRoot {
         service.setDoNotDisturb(true)
       }
       if(tick===7) {
-        var dnd=test.findChild(widget,"islandDndIndicator"),clock=test.findChild(widget,"islandClock"),at=dnd.mapToItem(clock,0,0)
+        var dnd=test.findChild(widget,"islandDndIndicator"),clock=test.findChild(widget,"islandClock")
+        // Visibility schedules a layout polish; timer ticks alone do not
+        // guarantee it ran before we measure the newly shown indicator.
+        dnd.parent.ensurePolished()
+        var at=dnd.mapToItem(clock,0,0)
         if(!dnd.visible || dnd.height<Commons.Style.font.bodySmall || at.x<0 || at.x+dnd.width>clock.width || at.y<0 || at.y+dnd.height>clock.height) {console.log("ISLAND_MOTION_FAIL: DND indicator is tiny or outside the clock",JSON.stringify({x:at.x,y:at.y,w:dnd.width,h:dnd.height,cw:clock.width,ch:clock.height}));Qt.quit();return}
         service.setDoNotDisturb(false)
       }

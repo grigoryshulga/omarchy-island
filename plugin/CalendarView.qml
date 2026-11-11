@@ -76,6 +76,7 @@ Item {
   HoverHandler { id: hover }
   BrailleSpotlight {
     id: glow
+    surfaceRoot: root
     objectName: "calendarSpotlight"
     anchors.fill: parent
     active: !root.externalFeedback && hover.hovered

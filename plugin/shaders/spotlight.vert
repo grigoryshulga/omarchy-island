@@ -17,6 +17,11 @@ layout(std140, binding = 0) uniform buf {
   vec2 rippleCenter;
   float rippleProgress;
   float artworkMix;
+  vec4 focusRect;
+  float focusRadius;
+  float focused;
+  vec2 trailCenter;
+  float trailEnabled;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

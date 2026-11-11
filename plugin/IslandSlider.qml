@@ -6,6 +6,7 @@ import qs.Commons as Commons
 
 Item {
   id: root
+  readonly property bool islandSpotlightSurface: true
 
   property bool islandHandlesHorizontalKeys:true
   activeFocusOnTab:true

@@ -12,7 +12,6 @@ Item {
   property var bar: null
   property var settings: ({})
   property var externalFeedback: null
-  readonly property real controlsCursorIntensity:controls ? controlsPage.cursorIntensity : 1
   readonly property bool musicHovered: !controls && !calendar && !weather && inbox.musicHovered
   property bool keyboardActive: false
   property bool expanded: false

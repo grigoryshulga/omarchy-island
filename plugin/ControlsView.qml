@@ -19,9 +19,6 @@ Item {
   property string error:""
   property bool changing:false
   property real detailHeight:0
-  property string hoveredTile:""
-  readonly property real cursorIntensity:active && (hoveredTile!=="" || (!!section && nativeHover.hovered)) ? 2.2 : 1
-  function tileHover(name,on) {if(on) hoveredTile=name;else if(hoveredTile===name) hoveredTile=""}
   readonly property var indicators:service && ("indicators" in service) ? service.indicators : null
   readonly property var microphone:indicators ? indicators.microphone : null
   property var execute:function(command){Quickshell.execDetached(command)}
@@ -143,7 +140,6 @@ Item {
       Repeater {
         model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"}]
         ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
           required property var modelData
           objectName:"controlOpen-"+modelData.key
           Layout.fillWidth:true
@@ -164,7 +160,6 @@ Item {
       uniformCellWidths:true
       columnSpacing:Style.space(8);rowSpacing:Style.space(8)
       ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
         compact:true
         objectName:"controlMicrophone";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.microphone");glyph:"󰍭"
@@ -174,7 +169,6 @@ Item {
         onClicked:root.toggleMode("microphone")
       }
       ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
         compact:true
         objectName:"controlDnd";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.dndShort");glyph:"󰂛"
@@ -183,7 +177,6 @@ Item {
         onClicked:root.toggleMode("dnd")
       }
       ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
         compact:true
         objectName:"controlNightLight";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("indicator.nightLight");glyph:"󰔎"
@@ -192,7 +185,6 @@ Item {
         onClicked:root.toggleMode("nightLight")
       }
       ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
         compact:true
         objectName:"controlStayAwake";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.stayAwakeShort");glyph:""
@@ -201,7 +193,6 @@ Item {
         onClicked:root.toggleMode("stayAwake")
       }
       ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
         compact:true
         objectName:"controlRecording";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.recordingShort");glyph:"󰻂"
@@ -211,7 +202,6 @@ Item {
         onClicked:root.toggleMode("recording")
       }
       ControlTile {
-        onHovered:on=>root.tileHover(objectName,on)
         compact:true
         objectName:"controlRemote";Layout.fillWidth:true
         title:root.strings.t("controls.remoteShort");glyph:"󰢹"
@@ -231,7 +221,6 @@ Item {
     anchors.topMargin:Style.space(8)
     active:root.active && !!root.section
     visible:active
-    HoverHandler {id:nativeHover}
     onLoaded:{item.settings=Qt.binding(function(){return root.settings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
     onStatusChanged:if(status===Loader.Error) root.error=root.strings.t("controls.unavailable")
     TapHandler {

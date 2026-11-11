@@ -23,6 +23,15 @@ ShellRoot {
     Island.BrailleGauge {id:gauge;anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom;height:24;value:0.2}
     Island.BrailleClap {id:clap;anchors.centerIn:parent;width:220;height:150;visible:false;active:false}
     Item {
+      id:spotScene
+      anchors.fill:parent
+      visible:false
+      Rectangle {id:spotCard;x:40;y:30;width:220;height:130;radius:18;color:"black";property bool islandSpotlightSurface:true
+        Island.ActionButton {id:spotButton;x:100;y:25;width:70;height:40;visible:false}
+      }
+      Island.BrailleSpotlight {id:spot;anchors.fill:parent;surfaceRoot:spotCard;active:spotScene.visible;pointer:Qt.point(90,80);accent:"white"}
+    }
+    Item {
       id:dissolveProbe
       visible:false
       width:320;height:30;y:125
@@ -114,6 +123,40 @@ ShellRoot {
       var pausedPhase=clap.phase;wait(100)
       check(clap.phase===pausedPhase,"hidden overview kept clapping")
       console.log("CLAP_FRAMES_PASS")
+      clap.visible=false;spotScene.visible=true
+      Commons.Style.reduceMotion=true;wait(80)
+      check(spot.hoveredSurface===spotCard,"cursor did not pick the card")
+      spot.pointer=Qt.point(44,80);wait(80)
+      var edgeFrame=grabImage(spotScene),inside=0
+      for(var y=0;y<edgeFrame.height;y++) for(var x=0;x<edgeFrame.width;x++) {
+        var ink=edgeFrame.red(x,y)+edgeFrame.green(x,y)+edgeFrame.blue(x,y)
+        if(x<40 || x>=260 || y<30 || y>=160) check(ink===0,"spotlight leaked outside the card")
+        else inside+=ink
+      }
+      check(inside>100,"scoped GPU spotlight is empty")
+      check(edgeFrame.red(40,30)===0,"spotlight leaked through a rounded corner")
+      spotButton.visible=true
+      spot.pointer=Qt.point(170,80);wait(60)
+      check(spot.hoveredSurface===spotButton,"nested qs.Ui button did not override the card")
+      check(spot.focusRect.x===140 && spot.focusRect.y===55 && spot.focusRect.z===70,"nested button bounds were mapped incorrectly")
+      spotButton.visible=false
+      spot.pointer=Qt.point(44,80)
+      spotCard.radius=0;wait(60)
+      check(spot.focusRadius===0,"square corners were not respected")
+      Commons.Style.reduceMotion=false
+      spot.pointer=Qt.point(180,80);wait(30)
+      check(spot.trailX<175,"trail did not lag behind the pointer")
+      wait(240)
+      check(Math.abs(spot.trailX-180)<0.1,"trail did not settle")
+      Commons.Style.reduceMotion=true
+      spot.pointer=Qt.point(100,80);wait(30)
+      check(spot.trailX===100 && spot.trailEnabled===0,"reduced motion kept the trail")
+      var staticSpot=grabImage(spotScene);wait(100)
+      check(staticSpot.equals(grabImage(spotScene)),"reduced-motion spotlight kept moving")
+      spotScene.visible=false;wait(30)
+      var stoppedPhase=spot.phase;wait(60)
+      check(spot.phase===stoppedPhase,"hidden spotlight kept animating")
+      console.log("SPOTLIGHT_FRAMES_PASS")
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()
     }

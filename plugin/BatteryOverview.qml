@@ -134,7 +134,7 @@ Item {
       }
       PlainText {width:parent.width;visible:root.power && root.power.error!=="";text:root.strings.t("battery.profileFailed");color:Commons.Color.urgent;font.pixelSize:Style.font.caption;wrapMode:Text.Wrap}
       }
-      BrailleSpotlight {id:menuGlow;anchors.fill:parent;active:menuHover.hovered;pointer:menuHover.point.position;spotRadius:Style.space(55);intensity:1.8;z:10}
+      BrailleSpotlight {id:menuGlow;surfaceRoot:menuContent;anchors.fill:parent;active:menuHover.hovered;pointer:menuHover.point.position;spotRadius:Style.space(55);intensity:1.8;z:10}
       HoverHandler {id:menuHover}
       BrailleFeedback {id:menuFeedback;surface:menuContent;effect:menuGlow;hover:menuHover}
     }
