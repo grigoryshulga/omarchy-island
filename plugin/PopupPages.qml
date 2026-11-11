@@ -4,6 +4,7 @@ import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "SettingsModel.js" as Settings
 
 Item {
   id: root
@@ -23,6 +24,13 @@ Item {
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   readonly property var weatherData: service && ("weather" in service) ? service.weather : null
   readonly property int lastPage: weatherData && weatherData.allowed ? 3 : 2
+  readonly property string pageSignature:{
+    var result=Settings.pages(settings,lastPage===3)
+    if(!expanded && alertKind && result.indexOf(1)<0) result.splice(1,0,1)
+    return result.join(",")
+  }
+  readonly property var enabledPages:pageSignature.split(",").map(Number)
+  readonly property int selectedPage:controls ? 0 : calendar ? 2 : weather ? 3 : 1
   property bool radialBraille: true
   property bool ready: false
   property real wheelDistance: 0
@@ -40,22 +48,38 @@ Item {
   signal calendarRequested()
   signal weatherRequested()
   signal inboxRequested()
-  readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(1) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(1).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
+  readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
   readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Style.space(24)+tabDivider.implicitHeight : 0
   implicitHeight: contentTop+Math.max(root.expanded ? calendarWeatherHeight : 0,controls ? controlsPage.implicitHeight : weather || calendar ? calendarWeatherHeight : inbox.implicitHeight)
   readonly property real calendarWeatherHeight:Math.max(calendarPage.implicitHeight,weatherPage.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
+  function back() {if(controls && controlsPage.section==="settings") {controlsPage.back();return true}return false}
+  function pageHolder(index) {return [controlsHolder,inboxHolder,calendarHolder,weatherHolder][index]}
+  function updatePages() {
+    if(!ready) return
+    for(var i=pager.count-1;i>=0;i--) {
+      var item=pager.itemAt(i)
+      if(enabledPages.indexOf(item.pageIndex)<0) {pager.takeItem(i);item.parent=parking}
+    }
+    for(var at=0;at<enabledPages.length;at++) {
+      var target=pageHolder(enabledPages[at]),from=-1
+      for(var j=0;j<pager.count;j++) if(pager.itemAt(j)===target) {from=j;break}
+      if(from<0) pager.insertItem(at,target)
+      else if(from!==at) pager.moveItem(from,at)
+    }
+    scheduleSync()
+  }
   function cancelEdits() {weatherPage.cancelEditing()}
   function handleCalendarKey(event) { return calendarPage.handleKey(event) }
   function currentPage() {return controls ? controlsPage : weather ? weatherPage : calendar ? calendarPage : inbox}
   function keyboardPage(index) {
-    if(!keyboardActive || index>lastPage) return
+    if(!keyboardActive || enabledPages.indexOf(index)<0) return
     requestPage(index)
     Qt.callLater(function(){if(root.calendar) calendarPage.focusSelectedDay();else navigation.first(root.currentPage())})
   }
   function directionEnabled(horizontal) {
-    return keyboardActive && navigation.contains(root,navigation.focused) && !navigation.editing(navigation.focused) && !navigation.nativeFocus() && !(horizontal && navigation.focused && "islandHandlesHorizontalKeys" in navigation.focused)
+    return keyboardActive && !controlsPage.settingsOwnKeys && navigation.contains(root,navigation.focused) && !navigation.editing(navigation.focused) && !navigation.nativeFocus() && !(horizontal && navigation.focused && "islandHandlesHorizontalKeys" in navigation.focused)
   }
   function keyboardDirection(x,y) {
     if(calendar && navigation.focused && "islandCalendarDay" in navigation.focused) {
@@ -91,7 +115,7 @@ Item {
     if(!ready || pager.width<=0) return
     var view=pager.contentItem
     if(view.dragging || view.flicking) return
-    var next=Math.min(lastPage,weather ? 3 : calendar ? 2 : controls ? 0 : 1)
+    var next=Math.max(0,enabledPages.indexOf(selectedPage))
     pageMotion.stop()
     var from=view.contentX
     pager.setCurrentIndex(next)
@@ -99,7 +123,7 @@ Item {
     var page=pager.itemAt(next)
     if(!page) return
     var target=page.x
-    if(!positioned || Math.abs(from-target)<0.5 || Style.reduceMotion) {view.contentX=target;wrapping=false}
+    if(!positioned || Math.abs(from-target)<0.5 || Preferences.reduceMotion) {view.contentX=target;wrapping=false}
     else {
       view.contentX=from
       pageMotion.from=from;pageMotion.to=target;pageMotion.restart()
@@ -113,11 +137,11 @@ Item {
     if(edgeTarget>=0) {var target=edgeTarget;edgeTarget=-1;requestPage(target);return}
     var closest=0,distance=Infinity
     pager.contentItem.forceLayout()
-    for(var i=0;i<=lastPage;i++) {
+    for(var i=0;i<enabledPages.length;i++) {
       var page=pager.itemAt(i),delta=page ? Math.abs(pager.contentItem.contentX-page.x) : Infinity
       if(delta<distance) {distance=delta;closest=i}
     }
-    requestPage(closest)
+    requestPage(enabledPages[closest])
   }
   function handleWheel(event) {
     var x=event.pixelDelta.x || event.angleDelta.x
@@ -134,13 +158,13 @@ Item {
     var threshold=event.pixelDelta.x || event.pixelDelta.y ? 40 : 90
     if (Math.abs(root.wheelDistance)<threshold) return
     var step=(Commons.I18n.rightToLeft ? sign>0 : sign<0) ? 1 : -1
-    var count=root.lastPage+1
-    var next=(pager.currentIndex+step+count)%count
+    var next=Settings.nextPage(enabledPages,selectedPage,step)
     root.wheelLatched=true
     requestPage(next)
   }
   function requestPage(index) {
-    wrapping=(pager.currentIndex===0 && index===lastPage) || (pager.currentIndex===lastPage && index===0)
+    if(enabledPages.indexOf(index)<0) return
+    wrapping=(pager.currentIndex===0 && index===enabledPages[enabledPages.length-1]) || (pager.currentIndex===enabledPages.length-1 && index===0)
     edgeTarget=-1
     gesturing=false
     navigating=true
@@ -159,7 +183,8 @@ Item {
   onWidthChanged: scheduleSync()
   onHeightChanged: scheduleSync()
   onLastPageChanged: if(ready) {if(weather && lastPage<3) inboxRequested();else scheduleSync()}
-  Component.onCompleted: { ready = true; scheduleSync() }
+  onEnabledPagesChanged:Qt.callLater(updatePages)
+  Component.onCompleted: { ready = true; updatePages(); scheduleSync() }
 
   RowLayout {
     id: tabs
@@ -187,6 +212,7 @@ Item {
       feedback: root.externalFeedback
       color: "transparent"; borderSpec: Border.none()
       objectName: "islandTabOverview"
+      visible:root.enabledPages.indexOf(1)>=0
       Layout.fillWidth: true
       Layout.fillHeight: true
       Layout.preferredWidth: 1
@@ -202,6 +228,7 @@ Item {
       feedback: root.externalFeedback
       color: "transparent"; borderSpec: Border.none()
       objectName: "calendarOpen"
+      visible:root.enabledPages.indexOf(2)>=0
       Layout.fillWidth: true
       Layout.fillHeight: true
       Layout.preferredWidth: 1
@@ -221,7 +248,7 @@ Item {
       Layout.fillHeight: true
       Layout.preferredWidth: 1
       Layout.minimumWidth: 0
-      visible: root.lastPage===3
+      visible: root.enabledPages.indexOf(3)>=0
       showLabel: true
       weather: root.weatherData
       strings: root.strings
@@ -248,65 +275,80 @@ Item {
     Binding {target:pager.contentItem;property:"boundsBehavior";value:Flickable.DragOverBounds}
     Binding { target: pager.contentItem; property: "highlightRangeMode"; value: ListView.NoHighlightRange }
     Binding { target: pager.contentItem; property: "highlightFollowsCurrentItem"; value: false }
-    ControlsView {
-      id: controlsPage
-      settings: root.settings
-      onSettingRequested:(key,value)=>root.settingRequested(key,value)
-      objectName: "islandControls"
-      service: root.service; strings: root.strings; bar: root.bar
-      externalFeedback: root.externalFeedback
-      active: root.controls && root.visible && (root.expanded || root.hovering)
-      onDismissRequested: root.dismissRequested()
-    }
-    IslandContent {
-      id: inbox
-      overviewActive:!root.controls && !root.calendar && !root.weather
-      externalFeedback: root.externalFeedback
-      service: root.service; strings: root.strings; bar: root.bar
-      expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
-      compactNotifications: root.compactNotifications
-      weather: root.weatherData
-      radialBraille: root.radialBraille
-      onExpandRequested: root.expandRequested()
-      onCalendarRequested: root.calendarRequested()
-      onWeatherRequested: root.weatherRequested()
-    }
-    CalendarView {
-      id: calendarPage
-      externalFeedback: root.externalFeedback
-      objectName: "islandCalendar"
-      strings: root.strings
-      showBack: false
-      active: root.calendar && root.visible && (root.expanded || root.hovering)
-      weekStart: String(root.settings.calendarWeekStart || "")
-      onWeekStartRequested: value => root.settingRequested("calendarWeekStart",value)
-      radialBraille: root.radialBraille
-      onBackRequested: root.inboxRequested()
-    }
-    WeatherView {
-      id: weatherPage
-      externalFeedback: root.externalFeedback
-      objectName: "islandWeather"
-      strings: root.strings
-      showBack: false
-      weather: root.weatherData
-      active: root.weather && (root.expanded || root.hovering)
-      radialBraille: root.radialBraille
-      onTemperatureUnitRequested: value => root.settingRequested("weatherTemperatureUnit",value)
-      onBackRequested: root.inboxRequested()
-    }
   }
-  NumberAnimation { id: pageMotion; onFinished:root.wrapping=false; target: pager.contentItem; property: "contentX"; duration: Style.duration(230); easing.type: Easing.OutCubic }
+  Item {id:parking;visible:false}
+  Item {id:controlsHolder;property int pageIndex:0}
+  Item {id:inboxHolder;property int pageIndex:1}
+  Item {id:calendarHolder;property int pageIndex:2}
+  Item {id:weatherHolder;property int pageIndex:3}
+  ControlsView {
+    id: controlsPage
+    parent:root.pageHolder(0)
+    anchors.fill:parent
+    settings: root.settings
+    onSettingRequested:(key,value)=>root.settingRequested(key,value)
+    objectName: "islandControls"
+    service: root.service; strings: root.strings; bar: root.bar
+    externalFeedback: root.externalFeedback
+    active: root.controls && root.visible && (root.expanded || root.hovering)
+    onDismissRequested: root.dismissRequested()
+  }
+  IslandContent {
+    id: inbox
+    parent:root.pageHolder(1)
+    anchors.fill:parent
+    overviewActive:!root.controls && !root.calendar && !root.weather
+    externalFeedback: root.externalFeedback
+    service: root.service; strings: root.strings; bar: root.bar
+    expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
+    compactNotifications: root.compactNotifications
+    weather: root.weatherData
+    radialBraille: root.radialBraille
+    onExpandRequested: root.expandRequested()
+    onCalendarRequested: root.calendarRequested()
+    onWeatherRequested: root.weatherRequested()
+  }
+  CalendarView {
+    id: calendarPage
+    parent:root.pageHolder(2)
+    anchors.fill:parent
+    externalFeedback: root.externalFeedback
+    objectName: "islandCalendar"
+    strings: root.strings
+    showBack: false
+    active: root.calendar && root.visible && (root.expanded || root.hovering)
+    weekStart: String(root.settings.calendarWeekStart || "")
+    onWeekStartRequested: value => root.settingRequested("calendarWeekStart",value)
+    radialBraille: root.radialBraille
+    onBackRequested: root.inboxRequested()
+  }
+  WeatherView {
+    id: weatherPage
+    parent:root.pageHolder(3)
+    anchors.fill:parent
+    externalFeedback: root.externalFeedback
+    objectName: "islandWeather"
+    strings: root.strings
+    showBack: false
+    weather: root.weatherData
+    active: root.weather && (root.expanded || root.hovering)
+    radialBraille: root.radialBraille
+    onTemperatureUnitRequested: value => root.settingRequested("weatherTemperatureUnit",value)
+    onBackRequested: root.inboxRequested()
+  }
+
+  NumberAnimation { id: pageMotion; onFinished:root.wrapping=false; target: pager.contentItem; property: "contentX"; duration: Preferences.duration(230); easing.type: Easing.OutCubic }
+  Connections {target:Preferences;function onReduceMotionChanged(){if(Preferences.reduceMotion) {pageMotion.stop();root.scheduleSync()}}}
   Connections {
     target: pager.contentItem
     function onDraggingChanged() {if(pager.contentItem.dragging) {root.gesturing=true;root.edgeTarget=-1;pageMotion.stop()}}
     function onContentXChanged() {
       var view=pager.contentItem
       if(!root.gesturing || !view.dragging) return
-      var first=pager.itemAt(0),last=pager.itemAt(root.lastPage)
+      var first=pager.itemAt(0),last=pager.itemAt(root.enabledPages.length-1)
       if(!first || !last) return
       var low=Math.min(first.x,last.x),high=Math.max(first.x,last.x),threshold=Style.space(40)
-      root.edgeTarget=view.contentX<low-threshold ? (first.x<last.x ? root.lastPage : 0) : view.contentX>high+threshold ? (first.x<last.x ? 0 : root.lastPage) : -1
+      root.edgeTarget=view.contentX<low-threshold ? (first.x<last.x ? root.enabledPages[root.enabledPages.length-1] : 0) : view.contentX>high+threshold ? (first.x<last.x ? 0 : root.enabledPages[root.enabledPages.length-1]) : -1
     }
     function onMovementEnded() {root.finishGesture()}
     function onContentWidthChanged() {root.scheduleSync()}

@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const settings = require('../plugin/SettingsModel.js');
+const osd = require('../plugin/Osd.js');
+
+assert.deepEqual(settings.pages({}), [0, 1, 2, 3]);
+assert.deepEqual(settings.pages({overviewEnabled:false, calendarEnabled:false, weatherEnabled:false}), [0]);
+assert.deepEqual(settings.pages({}, false), [0, 1, 2]);
+assert.equal(settings.nextPage([0, 2], 0, -1), 2);
+assert.equal(settings.nextPage([0, 2], 2, 1), 0);
+assert.equal(settings.nextPage([0], 0, 1), 0);
+assert.equal(settings.openingPage({openingPage:'last'}, 2), 2);
+assert.equal(settings.openingPage({openingPage:'last', calendarEnabled:false}, 2), 0);
+assert.equal(settings.openingPage({overviewEnabled:false}, 1), 0);
+assert.equal(settings.get({hoverDelay:-1}, 'hoverDelay'), 140);
+assert.equal(settings.get({hoverDelay:1000}, 'hoverDelay'), 1000);
+for (const invalid of [-1, 1001, 1.5, NaN, Infinity, '140']) assert.equal(settings.valid('hoverDelay', invalid), false);
+for (const invalid of ['false', 0, null, undefined]) assert.equal(settings.valid('animationsEnabled', invalid), false);
+assert.equal(settings.valid('controlsEnabled', false), false);
+assert.equal(settings.valid('__proto__', true), false);
+assert.equal(settings.valid('notificationStyle', 'invalid'), false);
+assert.equal(settings.valid('notificationStyle', 'bar'), true);
+assert.equal(settings.valid('notificationStyle', 'card'), true);
+assert.equal(settings.valid('musicVisualizationStyle', 'future'), false);
+assert.equal(settings.osdAllowed({osdVolume:false}, 'volume'), false);
+assert.equal(settings.osdAllowed({osdVolume:false}, 'download'), true);
+assert.equal(settings.osdAllowed({osdModes:false}, osd.parse(JSON.stringify({icon:'󰂛', message:'DND'})).kind), false);
+console.log('PASS: Island settings validation, disabled pages, opening fallback and OSD filtering.');

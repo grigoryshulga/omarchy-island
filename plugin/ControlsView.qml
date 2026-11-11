@@ -19,6 +19,7 @@ Item {
   property string error:""
   property bool changing:false
   property real detailHeight:0
+  readonly property bool settingsOwnKeys:section==="settings" && settingsPage.ownsKeys
   readonly property var indicators:service && ("indicators" in service) ? service.indicators : null
   readonly property var microphone:indicators ? indicators.microphone : null
   property var execute:function(command){Quickshell.execDetached(command)}
@@ -28,14 +29,15 @@ Item {
   implicitHeight:section ? detailHeight : landing.implicitHeight
 
   function openSection(name) {
-    if(["audio","bluetooth","network","tailscale","monitors"].indexOf(name)<0) return
+    if(["audio","bluetooth","network","tailscale","monitors","settings"].indexOf(name)<0) return
     if(!section) detailHeight=landing.implicitHeight
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
     nativeLoader.source=""
     section=name;error=""
     changing=false
-    requestPanel()
+    if(name==="settings") Qt.callLater(function(){settingsPage.focusContent()})
+    else requestPanel()
   }
   function launchExternalPanel(id,payload) {
     if(["omarchy.wifiqr","omarchy.speedtest"].indexOf(id)<0) return
@@ -43,11 +45,19 @@ Item {
     execute(["omarchy-shell","shell","summon",id,payload])
   }
   function back() {
+    var previous=section
+    settingsPage.closeEditors()
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
     nativeLoader.source=""
     section="";error=""
     changing=false
+    Qt.callLater(function(){
+      if(!root.active || root.section) return
+      for(var i=0;i<mainTiles.count;i++) {
+        if(mainTiles.model[i].key===previous) {mainTiles.itemAt(i).forceActiveFocus();break}
+      }
+    })
   }
   function modeState(enabled) {return strings.t(enabled ? "controls.on" : "controls.off")}
   function toggleMode(mode) {
@@ -71,7 +81,7 @@ Item {
   property string buildOutput:""
   property string buildError:""
   function requestPanel() {
-    if(!active || !section || panelBuilder.running) return
+    if(!active || !section || section==="settings" || panelBuilder.running) return
     buildingSection=section;buildOutput="";buildError=""
     panelBuilder.command=["python3",decodeURIComponent(Qt.resolvedUrl("controls/build-panel.py").toString().replace(/^file:\/\//,"")),section]
     panelBuilder.running=true
@@ -79,6 +89,7 @@ Item {
   onActiveChanged: {
     changing=true
     if(!active) {
+      settingsPage.closeEditors()
       if(nativeLoader.item) nativeLoader.item.close()
       nativeLoader.source=""
     } else requestPanel()
@@ -138,14 +149,15 @@ Item {
       uniformCellWidths:true
       columnSpacing:Style.space(8);rowSpacing:Style.space(8)
       Repeater {
-        model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"}]
+        id:mainTiles
+        model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"},{key:"settings",icon:"󰒓"}]
         ControlTile {
           required property var modelData
           objectName:"controlOpen-"+modelData.key
           Layout.fillWidth:true
           feedback:root.externalFeedback
           title:root.strings.t("controls."+modelData.key)
-          description:root.strings.t("controls."+modelData.key+"Hint")
+          description:modelData.key==="settings" ? "" : root.strings.t("controls."+modelData.key+"Hint")
           glyph:modelData.icon
           drillDown:true
           onClicked:root.openSection(modelData.key)
@@ -219,7 +231,7 @@ Item {
     anchors.left:parent.left;anchors.right:parent.right
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
     anchors.topMargin:Style.space(8)
-    active:root.active && !!root.section
+    active:root.active && !!root.section && root.section!=="settings"
     visible:active
     onLoaded:{item.settings=Qt.binding(function(){return root.settings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
     onStatusChanged:if(status===Loader.Error) root.error=root.strings.t("controls.unavailable")
@@ -234,6 +246,23 @@ Item {
     visible:!!root.section
     anchors.top:parent.top
     onClicked:root.back()
+  }
+  PlainText {
+    anchors.left:detailBack.right;anchors.leftMargin:Style.space(10)
+    anchors.verticalCenter:detailBack.verticalCenter
+    visible:root.section==="settings"
+    text:root.strings.t("settings.title")
+  }
+  SettingsView {
+    id:settingsPage
+    objectName:"islandSettings"
+    anchors.left:parent.left;anchors.right:parent.right
+    anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
+    anchors.topMargin:Style.space(8)
+    visible:root.section==="settings"
+    settings:root.settings;strings:root.strings
+    feedback:root.externalFeedback
+    onSettingRequested:(key,value)=>root.settingRequested(key,value)
   }
   Connections {
     target:nativeLoader.item

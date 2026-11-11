@@ -7,7 +7,7 @@ ShaderEffect {
   property bool active: true
   property vector2d size: Qt.vector2d(width,height)
   property real phase: 0
-  readonly property real motionPhase: Style.reduceMotion ? 0 : phase
+  readonly property real motionPhase: Preferences.reduceMotion ? 0 : phase
   property color accent: Commons.Color.accent
   property var source: atlas
   vertexShader: Qt.resolvedUrl("shaders/clap.vert.qsb")
@@ -19,7 +19,7 @@ ShaderEffect {
     smooth: true
   }
   NumberAnimation on phase {
-    running: root.visible && root.active && !Style.reduceMotion
+    running: root.visible && root.active && !Preferences.reduceMotion
     from: 0; to: 1; duration: 960; loops: Animation.Infinite
   }
 }

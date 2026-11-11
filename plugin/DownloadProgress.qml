@@ -14,15 +14,15 @@ Canvas {
   onActiveChanged:requestPaint()
   onAccentChanged:requestPaint()
   NumberAnimation on phase {
-    from:0;to:1;duration:Style.duration(1600);loops:Animation.Infinite
-    running:root.active && root.visible && !Style.reduceMotion
+    from:0;to:1;duration:Preferences.duration(1600);loops:Animation.Infinite
+    running:root.active && root.visible && !Preferences.reduceMotion
   }
   onPaint: {
     var ctx=getContext("2d"),pitch=Style.space(3),band=0.25
     ctx.clearRect(0,0,width,height)
     ctx.fillStyle=accent
     // Unknown total: move a braille segment rather than imply a percentage.
-    var position=Style.reduceMotion ? 0.4 : phase*(1+band)-band
+    var position=Preferences.reduceMotion ? 0.4 : phase*(1+band)-band
     for(var x=pitch/2;x<width;x+=pitch) {
       var lit=!active || (x/width>=position && x/width<=position+band)
       ctx.globalAlpha=lit ? 0.95 : 0.18

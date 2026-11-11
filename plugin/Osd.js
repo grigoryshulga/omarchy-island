@@ -28,6 +28,7 @@ function parse(raw) {
   }
   var name=icon.toLowerCase()
   var kind=name==="download" ? "download" : name==="layout" ? "layout" : name.indexOf("volume")===0 || ["mute","muted"].indexOf(name)>=0 ? "volume" : ["brightness","display"].indexOf(name)>=0 ? "brightness" : name==="keyboard" ? "keyboard" : name.indexOf("mic")===0 ? "microphone" : "message"
+  if(["dnd","nightlight","stayawake","󰂛","󰂚","󰔎",""].indexOf(name)>=0) kind="mode"
   return {iconName:icon,message:message,progressText:progressText,hasProgress:hasProgress,value:value,duration:duration,kind:kind,muted:kind==="volume" && name.indexOf("mute")>=0}
 }
 if(typeof module!=="undefined") module.exports={parse:parse}

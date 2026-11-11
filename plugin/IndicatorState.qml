@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Commons as Commons
 import "Osd.js" as Osd
 import "osd-bridge/OsdModel.js" as NativeOsd
+import "SettingsModel.js" as Settings
 
 Item {
   id: root
@@ -23,7 +24,7 @@ Item {
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("i18n")}
   function announceMode(mode,on) {
     var icons={dnd:on ? "󰂛" : "󰂚",nightLight:"󰔎",stayAwake:""}
-    showOsd(JSON.stringify({icon:icons[mode],message:strings.t("osd."+mode+(on ? ".on" : ".off")),duration:1400}))
+    if(Preferences.get("osdModes")) showOsd(JSON.stringify({icon:icons[mode],message:strings.t("osd."+mode+(on ? ".on" : ".off")),duration:1400}))
   }
   readonly property var microphone: Pipewire.defaultAudioSource
   readonly property bool microphoneMuted: !!microphone && (UntypedInput.active ? (UntypedInput.known && UntypedInput.muted) : (!!microphone.audio && microphone.audio.muted))
@@ -70,6 +71,9 @@ Item {
     if(!consumers.length) return false
     var next=Osd.parse(raw)
     if(!next) return false
+    // A disabled Island event is handled silently; do not re-open the native
+    // fallback OSD through the bridge's "unavailable" result.
+    if(!Settings.osdAllowed(Preferences.values,next.kind)) return true
     osdValue=next.value
     osdKind=next.kind
     osdMuted=next.muted
@@ -84,6 +88,10 @@ Item {
     return true
   }
   readonly property alias layouts:layoutState
+  Connections {
+    target:Preferences
+    function onValuesChanged() {if(!Settings.osdAllowed(Preferences.values,root.osdKind)) root.hideOsd()}
+  }
   KeyboardLayoutState {
     id:layoutState
     active:root.consumers.length>0

@@ -9,9 +9,13 @@ Item {
   property bool horizontalFade: false
   property real reveal: 1
   property real artworkReveal: Math.max(0,Math.min(1,reveal))
-  Behavior on artworkReveal { NumberAnimation { duration: Style.duration(280); easing.type: Easing.OutCubic } }
+  Behavior on artworkReveal { NumberAnimation { duration: Preferences.duration(280); easing.type: Easing.OutCubic } }
   readonly property real phase: service ? service.visualPhase : 0
-  readonly property bool active: service !== null && service.hasMedia && service.playing
+  readonly property bool active: service !== null && service.hasMedia && service.playing && Preferences.visualizationAllowed(horizontalFade)
+  readonly property bool sampling:active && visible && opacity>0 && reveal>0 && !Preferences.reduceMotion
+  onSamplingChanged:Preferences.watchVisualizer(root,sampling)
+  Component.onCompleted:Preferences.watchVisualizer(root,sampling)
+  Component.onDestruction:Preferences.watchVisualizer(root,false)
   clip: true
   layer.enabled: true
   layer.effect: ShaderEffect {
@@ -22,7 +26,7 @@ Item {
     fragmentShader: Qt.resolvedUrl("shaders/fade.frag.qsb")
   }
   opacity: active ? 1 : 0
-  Behavior on opacity { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
+  Behavior on opacity { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   Image {
     id: artwork
     anchors.fill: parent
@@ -40,7 +44,7 @@ Item {
     anchors.fill: parent
     property var source: artwork
     property vector2d size: Qt.vector2d(width,height)
-    property real phase: Style.reduceMotion ? 0 : root.phase
+    property real phase: Preferences.reduceMotion ? 0 : root.phase
     property real level: root.service ? root.service.audioLevel : 0
     property real bass: root.service ? root.service.audioBass : 0
     property real treble: root.service ? root.service.audioTreble : 0

@@ -16,7 +16,7 @@ ShaderEffect {
   vertexShader: Qt.resolvedUrl("shaders/weather.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/weather.frag.qsb")
   NumberAnimation on phase {
-    running: root.visible && root.animated && !Style.reduceMotion
+    running: root.visible && root.animated && !Preferences.reduceMotion
     from: 0; to: 7200; duration: 7200000; loops: Animation.Infinite
   }
 }

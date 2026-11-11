@@ -17,7 +17,7 @@ Rectangle {
   readonly property bool keyboardFocused:focusWatch.contains(root,focusWatch.focused)
   property bool compact: false
   property real toolsShown:!compact && (hover.hovered || keyboardFocused) ? 1 : 0
-  Behavior on toolsShown {NumberAnimation {duration:Style.duration(150);easing.type:Easing.OutCubic}}
+  Behavior on toolsShown {NumberAnimation {duration:Preferences.duration(150);easing.type:Easing.OutCubic}}
   property var externalFeedback: null
   property bool radialBraille: true
   property int limit: 3
@@ -68,7 +68,7 @@ Rectangle {
         tooltipText: root.service.mutedSources.indexOf(root.group.source) >= 0 ? root.strings.t("unmute") : root.strings.t("mute")
         horizontalPadding: Style.space(5); verticalPadding: 0
         onClicked: root.service.mute(root.group.source)
-        Behavior on opacity { NumberAnimation { duration: Style.duration(120) } }
+        Behavior on opacity { NumberAnimation { duration: Preferences.duration(120) } }
       }
       ActionButton {
         objectName: "groupDismiss"
@@ -80,7 +80,7 @@ Rectangle {
         tooltipText: root.strings.t("deleteGroup")
         horizontalPadding: Style.space(5); verticalPadding: 0
         onClicked: root.dismissGroup()
-        Behavior on opacity { NumberAnimation { duration: Style.duration(120) } }
+        Behavior on opacity { NumberAnimation { duration: Preferences.duration(120) } }
       }
         }
       }

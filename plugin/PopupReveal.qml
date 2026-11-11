@@ -23,6 +23,11 @@ Item {
 
   function sync() {
     if (!ready) return
+    if(Preferences.reduceMotion) {
+      entering.stop();leaving.stop()
+      shown=open ? 1 : 0;contentShown=shown;drop=shown;stretch=shown;closingScale=1
+      return
+    }
     if (open) {
       leaving.stop()
       if (shown <= 0) { drop = 0; stretch = 0; contentShown = 0; closingScale = 1 }
@@ -34,27 +39,28 @@ Item {
   }
   Component.onCompleted: { ready = true; sync() }
   onOpenChanged: sync()
+  Connections {target:Preferences;function onReduceMotionChanged(){root.sync()}}
 
   ParallelAnimation {
     id: entering
-    NumberAnimation { target: root; property: "shown"; to: 1; duration: Style.duration(100); easing.type: Easing.OutCubic }
-    NumberAnimation { target: root; property: "closingScale"; to: 1; duration: Style.duration(160); easing.type: Easing.OutCubic }
-    NumberAnimation { target: root; property: "drop"; to: 1; duration: Style.duration(200); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut }
+    NumberAnimation { target: root; property: "shown"; to: 1; duration: Preferences.duration(100); easing.type: Easing.OutCubic }
+    NumberAnimation { target: root; property: "closingScale"; to: 1; duration: Preferences.duration(160); easing.type: Easing.OutCubic }
+    NumberAnimation { target: root; property: "drop"; to: 1; duration: Preferences.duration(200); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut }
     SequentialAnimation {
-      PauseAnimation { duration: Style.duration(45) }
-      NumberAnimation { target: root; property: "stretch"; to: 1; duration: Style.duration(230); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut }
+      PauseAnimation { duration: Preferences.duration(45) }
+      NumberAnimation { target: root; property: "stretch"; to: 1; duration: Preferences.duration(230); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut }
     }
     SequentialAnimation {
-      PauseAnimation { duration: Style.duration(95) }
-      NumberAnimation { target: root; property: "contentShown"; to: 1; duration: Style.duration(150); easing.type: Easing.OutCubic }
+      PauseAnimation { duration: Preferences.duration(95) }
+      NumberAnimation { target: root; property: "contentShown"; to: 1; duration: Preferences.duration(150); easing.type: Easing.OutCubic }
     }
   }
   SequentialAnimation {
     id: leaving
     ParallelAnimation {
-      NumberAnimation { target: root; property: "shown"; to: 0; duration: Style.duration(200); easing.type: Easing.OutCubic }
-      NumberAnimation { target: root; property: "closingScale"; to: 0.94; duration: Style.duration(200); easing.type: Easing.OutCubic }
-      NumberAnimation { target: root; property: "drop"; to: 0.65; duration: Style.duration(200); easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "shown"; to: 0; duration: Preferences.duration(200); easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "closingScale"; to: 0.94; duration: Preferences.duration(200); easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "drop"; to: 0.65; duration: Preferences.duration(200); easing.type: Easing.OutCubic }
     }
     ScriptAction { script: { root.stretch = 0; root.drop = 0; root.contentShown = 0 } }
   }

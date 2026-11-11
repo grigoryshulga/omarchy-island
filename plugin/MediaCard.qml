@@ -69,7 +69,7 @@ Item {
       implicitHeight: details.implicitHeight * reveal
       visible: reveal > 0
       clip: true
-      Behavior on reveal { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
+      Behavior on reveal { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
       ColumnLayout {
         id: details
         width: parent.width

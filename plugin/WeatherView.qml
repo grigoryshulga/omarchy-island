@@ -73,7 +73,7 @@ Item {
     solarHour: Model.skyHour(root.skyNow,root.report)
     animated: root.active
     opacity: root.current ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: Style.duration(300) } }
+    Behavior on opacity { NumberAnimation { duration: Preferences.duration(300) } }
   }
   HoverHandler { id: hover }
   BrailleFeedback { id: weatherFeedback; surface: root; effect: glow; hover: hover }

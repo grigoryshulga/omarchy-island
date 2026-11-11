@@ -108,6 +108,7 @@ ShellRoot {
       onInboxRequested:{pages.controls=false;pages.calendar=false;pages.weather=false}
       onCalendarRequested:{pages.controls=false;pages.calendar=true;pages.weather=false}
       onWeatherRequested:{pages.controls=false;pages.calendar=false;pages.weather=true}
+      onSettingRequested:(key,value)=>{var updated=Object.assign({},pages.settings);updated[key]=value;pages.settings=updated}
     }
     Commons.Translations {id:translations;directory:Qt.resolvedUrl("Island/i18n")}
     TestCase {
@@ -166,6 +167,29 @@ ShellRoot {
         fakeWeather.allowed=false
         keyClick(Qt.Key_4,Qt.AltModifier);wait(50)
         check(pages.controls,"disabled weather tab still had an active shortcut")
+        var settingsTile=findChild(pages,"controlOpen-settings")
+        settingsTile.forceActiveFocus();keyClick(Qt.Key_Return);wait(60)
+        var settingsView=findChild(pages,"islandSettings")
+        check(settingsView.visible,"keyboard did not open Settings")
+        var previewToggle=findChild(settingsView,"setting-hoverPreview")
+        previewToggle.forceActiveFocus();keyClick(Qt.Key_Space);wait(30)
+        check(pages.settings.hoverPreview===false && previewToggle.activeFocus,"settings update lost focus or ignored Space")
+        findChild(settingsView,"settingsTab-events").clicked();wait(20)
+        var notificationStyle=findChild(settingsView,"setting-notificationStyle")
+        notificationStyle.open();wait(180)
+        check(notificationStyle.popupOpen,"notification style chooser did not open")
+        keyClick(Qt.Key_Down);keyClick(Qt.Key_Return);wait(160)
+        check(pages.settings.notificationStyle==="bar" && !notificationStyle.popupOpen,"page navigation stole dropdown keys")
+        var settingsHeight=findChild(pages,"islandControls").implicitHeight
+        pages.settings={overviewEnabled:false,calendarEnabled:false,weatherEnabled:false};wait(80)
+        check(findChild(pages,"islandPageSwipe").count===1 && pages.enabledPages.join(",")==="0","disabled pages remained in swipe navigation")
+        keyClick(Qt.Key_2,Qt.AltModifier);keyClick(Qt.Key_3,Qt.AltModifier);wait(30)
+        check(pages.controls && findChild(pages,"islandControls").implicitHeight===settingsHeight,"disabled shortcuts navigated or resized Settings")
+        pages.settings={calendarEnabled:false,weatherEnabled:false};wait(80)
+        pages.requestPage(1);wait(280)
+        check(!pages.controls && Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(findChild(pages,"islandPageSwipe"),0,0).x)<1,"re-enabling Overview lost its content")
+        pages.requestPage(0);wait(280)
+        pages.back();wait(30)
         pages.keyboardActive=false
         keyClick(Qt.Key_2,Qt.AltModifier);wait(50)
         check(pages.controls,"shortcuts remained enabled outside persistent menu")

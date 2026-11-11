@@ -9,7 +9,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 ## Features
 
 - **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show a 20-segment charge gauge and power profiles. The gauge shows partial segments, turns red below 20% (with saturation and lightness derived from the theme alert color), and gently pulses the leading segment while charging (unless reduced motion is enabled).
-- **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
+- **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
 - **Calendar and weather:** month navigation, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
@@ -82,7 +82,7 @@ The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, a
 
 ### Keyboard
 
-In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weather. A disabled Weather tab has no shortcut. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control.
+In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weather. Disabled sections have no shortcut and are skipped by wheel and swipe navigation; the remaining shortcuts keep their numbers. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control. Escape returns from Island settings to Controls before closing the popup. Dropdowns handle their own selection keys and Escape.
 
 In the calendar, arrows or Vim keys move the selected date, **Page Up / Page Down** changes months, and **Home** returns to today. Sliders use **Left / Right** or **H / L**. Embedded system panels retain their native navigation.
 
@@ -99,6 +99,24 @@ omarchy-shell island-update refresh|clear
 ## Settings
 
 Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
+
+Open **Controls → Settings** (the sixth tile) for Island behavior, section visibility, music visualization, indicators, and events. Changes apply and save immediately. Settings inherit the Controls container size, with internal scrolling for longer categories. Controls always remain available so settings cannot become inaccessible. Disabling Overview does not suppress incoming notifications. Disabling Weather also stops weather requests.
+
+| Menu setting | Configuration and default |
+|---|---|
+| Preview on hover | `hoverPreview: true`; `hoverDelay: 140` ms, range `0`–`1000` |
+| Opening page | `openingPage: "overview"`; also `controls` or `last` (last page during this shell session); a disabled destination falls back to Controls |
+| Bar animation | `panelAnimation: true`; controls bar artwork, beacon waves, and bar transitions |
+| Interface animations | `animationsEnabled: true`; system reduced motion always takes precedence; embedded system panels retain native Omarchy behavior |
+| Sections | `overviewEnabled`, `calendarEnabled`, `weatherEnabled`: all `true` |
+| Track announcements | `trackAlerts: true` |
+| Music visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
+| Visualization style | `musicVisualizationStyle: "default"`; reserved, currently a disabled choice |
+| Notification style | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
+| Indicators | `indicatorDnd`, `indicatorMicrophone`, `indicatorRecording`, `indicatorRemote`, `indicatorNightLight`, `indicatorStayAwake`, `indicatorUpdate`: all `true`; visibility only, without changing system state |
+| System events | `osdVolume`, `osdBrightness`, `osdKeyboard`, `osdLayout`, `osdMicrophone`, `osdModes`: all `true`; disabled events are suppressed without invoking the native OSD fallback |
+
+Other settings and existing contextual controls:
 
 | Setting | Behavior |
 |---|---|
@@ -147,7 +165,7 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. Blur strength foll
 
 ## Development
 
-Sources live in `plugin/`. The root `manifest.json` serves the native plugin manager; `plugin/manifest.json` serves legacy flat installations. Keep shared metadata consistent and preserve their different entry point paths.
+Sources live in `plugin/`. Register new top-level QML types in `plugin/qmldir`, which also declares the shared Preferences singleton. The root `manifest.json` serves the native plugin manager; `plugin/manifest.json` serves legacy flat installations. Keep shared metadata consistent and preserve their different entry point paths.
 
 After editing fragment shaders, run `bin/build-shaders` with Qt `qsb` installed. Include the generated vertex shaders and `.qsb` files in the change.
 
@@ -164,6 +182,7 @@ Additional checks for the affected feature:
 ```bash
 python3 tests/live-notifications.py        # Requires a running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
+python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/keyboard.py                  # Keyboard input and focus
 QT_QPA_PLATFORM=offscreen python3 tests/keyboard.py # Keyboard checks without Wayland focus

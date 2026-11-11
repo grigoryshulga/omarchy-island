@@ -22,7 +22,7 @@ Item {
   TransformWatcher {id:anchorWatcher;a:root.anchorWindow ? root.anchorWindow.contentItem : null;b:root.anchorItem}
   property real shown: 0
   Component.onCompleted:shown=Qt.binding(function(){return root.open ? 1 : 0})
-  Behavior on shown {NumberAnimation {duration:Style.duration(root.open ? 220 : 180);easing.type:Easing.OutCubic}}
+  Behavior on shown {NumberAnimation {duration:Preferences.duration(root.open ? 220 : 180);easing.type:Easing.OutCubic}}
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("i18n")}
   PanelWindow {
     id: panel

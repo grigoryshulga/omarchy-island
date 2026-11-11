@@ -22,21 +22,21 @@ Item {
   readonly property bool eventTransitioning: eventSwap.running
   readonly property string displayGlyph: glyph || (kind==="brightness" ? "󰃠" : muted || value<=0 ? "󰝟" : "󰕾")
   property real eventWidth: Math.min(width,eventRow.implicitWidth)
-  Behavior on eventWidth {enabled:root.animateEvents && !root.hasProgress;NumberAnimation {duration:Style.duration(160);easing.type:Easing.OutCubic}}
+  Behavior on eventWidth {enabled:root.animateEvents && !root.hasProgress;NumberAnimation {duration:Preferences.duration(160);easing.type:Easing.OutCubic}}
   readonly property real contentWidth: hasProgress ? width : Math.min(width,eventWidth)
   implicitWidth: hasProgress ? progressRow.implicitWidth : eventRow.implicitWidth
   implicitHeight: Style.space(18)
-  Behavior on progress {NumberAnimation {duration:Style.duration(90);easing.type:Easing.OutCubic}}
+  Behavior on progress {NumberAnimation {duration:Preferences.duration(90);easing.type:Easing.OutCubic}}
   function sameEvent(a,b) {return a.glyph===b.glyph && a.message===b.message && a.kind===b.kind}
   function syncEvent() {
     if(!eventReady) return
     var next={glyph:displayGlyph,message:message,kind:kind}
     pendingEvent=next
-    var immediate=hasProgress || eventWasProgress || !animateEvents || Style.reduceMotion
+    var immediate=hasProgress || eventWasProgress || !animateEvents || Preferences.reduceMotion
     eventWasProgress=hasProgress
     // Let an in-flight message dissolve finish under the clock's exit fade;
     // resetting its opacity here would flash the new text at full strength.
-    if(!animateEvents && eventSwap.running && !hasProgress && !Style.reduceMotion) return
+    if(!animateEvents && eventSwap.running && !hasProgress && !Preferences.reduceMotion) return
     if(immediate) {eventSwap.stop();currentEvent=next;eventShown=1}
     else if(!eventSwap.running && !sameEvent(currentEvent,next)) eventSwap.start()
   }
@@ -47,12 +47,12 @@ Item {
   onKindChanged: scheduleEvent()
   onHasProgressChanged: scheduleEvent()
   onAnimateEventsChanged: syncEvent()
-  Connections {target:Style;function onReduceMotionChanged() {root.syncEvent()}}
+  Connections {target:Preferences;function onReduceMotionChanged() {root.syncEvent()}}
   SequentialAnimation {
     id:eventSwap
-    NumberAnimation {target:root;property:"eventShown";to:0;duration:Style.duration(80);easing.type:Easing.OutCubic}
+    NumberAnimation {target:root;property:"eventShown";to:0;duration:Preferences.duration(80);easing.type:Easing.OutCubic}
     ScriptAction {script:root.currentEvent=root.pendingEvent}
-    NumberAnimation {target:root;property:"eventShown";to:1;duration:Style.duration(120);easing.type:Easing.OutCubic}
+    NumberAnimation {target:root;property:"eventShown";to:1;duration:Preferences.duration(120);easing.type:Easing.OutCubic}
     onFinished:Qt.callLater(root.syncEvent)
   }
   RowLayout {

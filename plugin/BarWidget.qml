@@ -6,6 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 import "ClockModel.js" as Clock
+import "SettingsModel.js" as Settings
 
 BarWidget {
   id: root
@@ -15,8 +16,8 @@ BarWidget {
   property var registeredIndicators: null
   readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
   property real osdShown:showOsd ? 1 : 0
-  readonly property bool osdTransitioning: osdShown>0 && osdShown<1 && !Style.reduceMotion
-  Behavior on osdShown {NumberAnimation {duration:Style.duration(root.showOsd ? 240 : 200);easing.type:Easing.OutCubic}}
+  readonly property bool osdTransitioning: osdShown>0 && osdShown<1 && !Preferences.reduceMotion && Preferences.get("panelAnimation")
+  Behavior on osdShown {NumberAnimation {duration:Preferences.panelDuration(root.showOsd ? 240 : 200);easing.type:Easing.OutCubic}}
   readonly property real indicatorGutter: Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
   function activateIndicator(mode) {
     if(mode==="dnd") {if(service) service.setDoNotDisturb(false);return}
@@ -42,11 +43,14 @@ BarWidget {
   Component.onCompleted: connectIndicators()
   Component.onDestruction: if(registeredIndicators) registeredIndicators.detach(root)
   property bool pinned: false
+  property int lastOpenedPage:1
+  readonly property bool stripNotification: notificationToast && Settings.get(settings,"notificationStyle")==="bar"
   property bool contentExpanded: false
   property bool controlsMode: false
   property bool calendarMode: false
   property bool weatherMode: false
   property bool hoverOpen: false
+  property bool hoverContentAvailable:false
   property string alertKind: ""
   property bool hoverSuppressed: false
   property date now: new Date()
@@ -68,13 +72,13 @@ BarWidget {
   }
   function cyclePage(step) {
     var index=controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1
-    previewContent.requestPage((index+step+previewContent.lastPage+1)%(previewContent.lastPage+1))
+    previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
-  readonly property string barText: showAlert && service ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
+  readonly property string barText: showAlert && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
-  function activateWeather() { if(service && ("weather" in service)) service.weather.activate() }
+  function activateWeather() { if(Settings.get(settings,"weatherEnabled") && service && ("weather" in service)) service.weather.activate() }
   function syncContentPresentation() {
     // Coalesce interaction changes so an exit never applies the closed
     // presentation before its fade. A reopen uses the latest state instead.
@@ -82,21 +86,24 @@ BarWidget {
     previewContent.hovering = hoverOpen || pinned
     previewContent.alertKind = alertKind
   }
-  function open() { controlsMode = false; weatherMode = false; calendarMode = false; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""; activateWeather(); Qt.callLater(function() { previewContent.forceActiveFocus() }) }
-  function openCalendar() {
-    controlsMode = false; weatherMode = false; calendarMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
+  function openPage(index) {
+    if(Settings.pages(settings, !service || !("weather" in service) || service.weather.allowed).indexOf(index)<0) index=0
+    controlsMode=index===0;calendarMode=index===2;weatherMode=index===3
+    contentExpanded=true;pinned=true;hoverOpen=false;alertKind="";lastOpenedPage=index
     activateWeather()
-    previewContent.showToday()
-    Qt.callLater(function() { previewContent.forceActiveFocus() })
+    Qt.callLater(function(){previewContent.forceActiveFocus()})
+  }
+  function open() {openPage(Settings.openingPage(settings,lastOpenedPage))}
+  function openOverview() {openPage(1)}
+  function openCalendar() {
+    openPage(2)
+    if(calendarMode) previewContent.showToday()
   }
   function openWeather() {
-    controlsMode = false; calendarMode = false; weatherMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
-    activateWeather()
-    Qt.callLater(function() { previewContent.forceActiveFocus() })
+    openPage(3)
   }
   function openControls() {
-    weatherMode = false; calendarMode = false; controlsMode = true; contentExpanded = true; pinned = true; hoverOpen = false; alertKind = ""
-    Qt.callLater(function() { previewContent.forceActiveFocus() })
+    openPage(0)
   }
   function toggleCalendar() { if (pinned && calendarMode) close(); else openCalendar() }
   function close() { hoverSuppressed = true; pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop() }
@@ -106,6 +113,10 @@ BarWidget {
     contentExpanded = false; alertKind = "notification"; alertLife.interval = Number(setting("notificationDuration",5000)); alertLife.restart()
   }
   function syncSettings() {
+    Preferences.values=root.settings
+    if(!Settings.get(settings,"hoverPreview") || !Settings.get(settings,"overviewEnabled")) {hoverDelay.stop();hoverOpen=false}
+    if(!Settings.get(settings,"trackAlerts") && alertKind==="media") {alertKind="";alertLife.stop()}
+    if(pinned && Settings.pages(settings).indexOf(controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1)<0) openControls()
     if (service && Array.isArray(setting("musicApps",null))) service.allowedPlayers = setting("musicApps",[])
     if(service && ("weather" in service)) {
       service.weather.allowed=setting("weatherEnabled",true)!==false
@@ -117,7 +128,7 @@ BarWidget {
   function updateSetting(key,value) {
     if(key==="calendarWeekStart" && value!=="sunday" && value!=="monday") return
     if(key==="weatherTemperatureUnit" && ["celsius","fahrenheit","kelvin"].indexOf(value)<0) return
-    if(["recentMullvadRegions","calendarWeekStart","weatherTemperatureUnit","format","verticalFormat"].indexOf(key)<0) return
+    if(["recentMullvadRegions","calendarWeekStart","weatherTemperatureUnit","format","verticalFormat"].indexOf(key)<0 && !Settings.valid(key,value)) return
     var entry={id:root.moduleName}
     for(var name in root.settings) if(name!=="id") entry[name]=root.settings[name]
     entry[key]=value
@@ -125,32 +136,34 @@ BarWidget {
     if(root.bar && root.bar.shell) root.bar.shell.updateEntryInline(root.moduleName,entry)
   }
   onHoverOpenChanged: {
-    if(hoverOpen) {
-      if(!pinned) {contentExpanded=false;controlsMode=false;calendarMode=false;weatherMode=false}
-      activateWeather()
-    }
-    Qt.callLater(syncContentPresentation)
+    Qt.callLater(function(){
+      if(root.hoverOpen) {
+        if(!root.pinned) {root.contentExpanded=false;root.controlsMode=false;root.calendarMode=false;root.weatherMode=false}
+        root.activateWeather()
+      }
+      root.syncContentPresentation()
+    })
   }
   onPinnedChanged: Qt.callLater(syncContentPresentation)
   onAlertKindChanged: Qt.callLater(syncContentPresentation)
   onServiceChanged: syncSettings()
   onSettingsChanged: syncSettings()
   onSignatureChanged: {
-    if (service && service.playing && !pinned && alertKind !== "notification") {
+    if (Settings.get(settings,"trackAlerts") && service && service.playing && !pinned && alertKind !== "notification") {
       alertKind = "media"; alertLife.interval = 3000; alertLife.restart()
     }
   }
   onIsHoveredChanged: {
-    if (isHovered) { leaveGrace.stop(); if (!pinned && !hoverSuppressed) hoverDelay.restart() }
+    if (isHovered) { leaveGrace.stop(); if (!pinned && !hoverSuppressed && Settings.get(settings,"hoverPreview") && Settings.get(settings,"overviewEnabled")) hoverDelay.restart() }
     else { hoverSuppressed = false; hoverDelay.stop(); leaveGrace.restart() }
   }
   implicitWidth: vertical ? barSize : Math.min(Style.space(600),Math.max(Style.space(360), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(120), showAlert ? Style.space(420) : 0, showOsd ? osdMeasure.implicitWidth+2*indicatorGutter+Style.space(50) : 0))
   implicitHeight: vertical ? Style.space(80) : barSize
-  Behavior on implicitWidth { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
+  Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
   Connections { target: root.service; function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
   Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
-  Timer { id: hoverDelay; interval: 140; onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered) { root.contentExpanded = false; root.hoverOpen = true } }
+  Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; interval: 3000; onTriggered: root.alertKind = "" }
   PlainText {id:osdMeasure;visible:false;text:root.indicators && ("osdMessage" in root.indicators) ? root.indicators.osdMessage : "";font.pixelSize:Style.font.body}
@@ -184,8 +197,8 @@ BarWidget {
       anchors.verticalCenter:parent.verticalCenter
       z:1
       spacing:Style.space(5)
-      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
-      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.remoteActive;tint:"#9ece6a";waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
+      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRecording") && root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
+      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:"#9ece6a";waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
     }
     Item {
       id:centerContent
@@ -224,7 +237,7 @@ BarWidget {
       BrailleGauge {
         id:osdGauge
         objectName:"islandOsdGauge";anchors.fill:parent;opacity:root.osdShown;visible:opacity>0
-        animateEvents:root.showOsd && root.osdShown===1
+        animateEvents:Preferences.get("panelAnimation") && root.showOsd && root.osdShown===1
         kind:root.indicators ? root.indicators.osdKind : "volume"
         value:root.indicators ? root.indicators.osdValue : 0
         muted:root.indicators ? root.indicators.osdMuted : false
@@ -246,17 +259,17 @@ BarWidget {
         id:updateBeacon
         objectName:"islandUpdateIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("update")}
         Layout.preferredHeight:trigger.height
-        visible:!!root.indicators && !!root.indicators.updateAvailable
+        visible:Preferences.get("indicatorUpdate") && !!root.indicators && !!root.indicators.updateAvailable
         tint:Commons.Color.foreground
         glyph:""
         bidirectional:true
         waveWidth:trigger.width
         waveOffset:-rightIndicators.x-updateBeacon.x
       }
-      PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")} visible:root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("dnd")} visible:root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("nightLight")} visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("stayAwake")} visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")} visible:Preferences.get("indicatorMicrophone") && root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("dnd")} visible:Preferences.get("indicatorDnd") && root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("nightLight")} visible:Preferences.get("indicatorNightLight") && root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("stayAwake")} visible:Preferences.get("indicatorStayAwake") && root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
     }
   }
   Loader {
@@ -282,10 +295,12 @@ BarWidget {
     owner: root
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: true
-    open: root.pinned || (root.hoverOpen && previewContent.implicitHeight > 0) || root.showAlert
+    open: root.pinned || (root.hoverOpen && root.hoverContentAvailable) || (root.showAlert && !root.stripNotification)
     frameless: root.notificationToast
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
-    onVisibleChanged: if (!visible) { root.contentExpanded = false; root.calendarMode = false; root.weatherMode = false; root.controlsMode = false }
+    onVisibleChanged: if (!visible) Qt.callLater(function(){
+      if(!preview.visible && !preview.open) {root.contentExpanded=false;root.calendarMode=false;root.weatherMode=false;root.controlsMode=false}
+    })
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
     ToastWaves {
@@ -321,6 +336,7 @@ BarWidget {
     BrailleFeedback {id:panelFeedback;surface:panelGlow;effect:panelGlow;hover:null}
     PopupPages {
       id: previewContent
+      onImplicitHeightChanged:Qt.callLater(function(){root.hoverContentAvailable=previewContent.implicitHeight>0})
       objectName:"islandPopupPages"
       keyboardActive:root.pinned && preview.open
       settings: root.settings
@@ -335,15 +351,15 @@ BarWidget {
       service: root.service; strings: strings; bar: root.bar
       expanded: root.contentExpanded
       focus: root.pinned
-      Keys.onEscapePressed: root.close()
+      Keys.onEscapePressed: {if(!previewContent.back()) root.close()}
       Keys.onSpacePressed: event => { if (!root.controlsMode && !root.calendarMode && !root.weatherMode && root.service) root.service.media("toggle"); else event.accepted = false }
 
-      onExpandRequested: root.open()
+      onExpandRequested: root.openOverview()
       onControlsRequested: root.openControls()
       onDismissRequested: root.close()
       onCalendarRequested: root.openCalendar()
       onWeatherRequested: root.openWeather()
-      onInboxRequested: root.open()
+      onInboxRequested: root.openOverview()
     }
   }
   ShellIpc {
@@ -354,7 +370,7 @@ BarWidget {
     function calendar(): void { root.openCalendar() }
     function weather(): void { root.openWeather() }
     function toggle(): void { root.toggle() }
-    function hover(): void { root.hoverOpen = !root.hoverOpen }
+    function hover(): void { if(Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) root.hoverOpen = !root.hoverOpen }
     function status(): string { return JSON.stringify({pinned:root.pinned,page:root.controlsMode ? "controls" : root.weatherMode ? "weather" : root.calendarMode ? "calendar" : "inbox",hover:root.hoverOpen,alert:root.alertKind,service:root.service!==null,screen:root.screenName,appearance:preview.entranceStyle || "legacy"}) }
   }
 }

@@ -103,21 +103,22 @@ Item {
 
   // One phase keeps the clock and popup on the same braille shimmer frame.
   property real visualPhase: 0
+  readonly property bool samplingAudio:root.playing && !Preferences.reduceMotion && Preferences.visualizers.length>0
   NumberAnimation on visualPhase {
-    running: root.playing && !Style.reduceMotion
+    running: root.samplingAudio
     from: 0; to: 86400; duration: 86400000; loops: Animation.Infinite
   }
   property real audioLevel: 0
   property real audioBass: 0
   property real audioTreble: 0
   property bool audioFailed: false
-  Behavior on audioLevel { NumberAnimation { duration: Style.duration(90) } }
-  Behavior on audioBass { NumberAnimation { duration: Style.duration(90) } }
-  Behavior on audioTreble { NumberAnimation { duration: Style.duration(90) } }
+  Behavior on audioLevel { NumberAnimation { duration: Preferences.duration(90) } }
+  Behavior on audioBass { NumberAnimation { duration: Preferences.duration(90) } }
+  Behavior on audioTreble { NumberAnimation { duration: Preferences.duration(90) } }
   onPlayingChanged: if (!playing) { audioLevel = 0; audioBass = 0; audioTreble = 0 }
   onTrackChanged: audioFailed = false
   Process {
-    running: root.playing && !Style.reduceMotion && !root.audioFailed
+    running: root.samplingAudio && !root.audioFailed
     command: ["python3",String(Qt.resolvedUrl("bin/audio-envelope")).replace(/^file:\/\//, "")]
     stdout: SplitParser {
       onRead: data => {
@@ -131,7 +132,7 @@ Item {
         } catch(e) {}
       }
     }
-    onExited: function(code) { if (code !== 0 && root.playing) { root.audioFailed = true; root.error = "audio monitor" } }
+    onExited: function(code) { if (code !== 0 && root.samplingAudio) { root.audioFailed = true; root.error = "audio monitor" } }
   }
 
   function receive(n) {

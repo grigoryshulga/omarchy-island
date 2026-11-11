@@ -29,7 +29,7 @@ Rectangle {
   property bool individualDismiss: true
   property bool showTimestamp: true
   property real dismissShown: hover.hovered || keyboardFocused ? 1 : 0
-  Behavior on dismissShown {NumberAnimation {duration:Style.duration(150);easing.type:Easing.OutCubic}}
+  Behavior on dismissShown {NumberAnimation {duration:Preferences.duration(150);easing.type:Easing.OutCubic}}
   readonly property var members: row.members || [row]
   readonly property var senderActions: Model.notificationActions(row,function(member) { return service.actions(member) })
   readonly property var codeActions: {
@@ -67,7 +67,7 @@ Rectangle {
   signal expandRequested()
   opacity: 0
   Component.onCompleted: opacity = 1
-  Behavior on opacity { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
+  Behavior on opacity { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   color: grouped ? "transparent" : Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
   border.width: grouped ? 0 : Math.max(1,Style.space(1))
   border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
@@ -120,7 +120,7 @@ Rectangle {
       implicitHeight: actions.implicitHeight
       visible: !root.compact && root.hasActions
       clip: true
-      Behavior on reveal { NumberAnimation { duration: Style.duration(150); easing.type: Easing.OutCubic } }
+      Behavior on reveal { NumberAnimation { duration: Preferences.duration(150); easing.type: Easing.OutCubic } }
       Flow {
         id: actions
         anchors.right: parent.right

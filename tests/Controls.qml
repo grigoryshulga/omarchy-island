@@ -83,6 +83,25 @@ ShellRoot {
       view.toggleMode("recording");states.recording=true;view.toggleMode("recording")
       check(scene.commands[1][0]==="omarchy-menu" && scene.commands[2][1]==="--stop-recording","capture actions differ from stock")
       var stableHeight=view.implicitHeight
+      check(findChild(view,"controlOpen-settings"),"sixth Settings tile is missing")
+      view.openSection("settings");wait(40)
+      var settingsView=findChild(view,"islandSettings")
+      check(view.implicitHeight===stableHeight && !loader.active && settingsView.visible,"Settings did not inherit Controls size or started native backend")
+      var hover=findChild(settingsView,"setting-hoverPreview")
+      hover.toggled()
+      check(scene.preferences[0]==="hoverPreview" && scene.preferences[1]===false,"toggle did not persist")
+      for(var category of ["sections","music","indicators","events","behavior"]) {
+        findChild(settingsView,"settingsTab-"+category).clicked();wait(20)
+        check(view.implicitHeight===stableHeight,"settings category resized Controls")
+        if(category==="sections") check(!findChild(settingsView,"setting-controlsEnabled").enabled,"Controls can be disabled, losing Settings access")
+        if(category==="music") check(!findChild(settingsView,"setting-musicVisualizationStyle").enabled,"placeholder style is interactive")
+        if(category==="events") {
+          var style=findChild(settingsView,"setting-notificationStyle")
+          style.changed("bar")
+          check(scene.preferences[0]==="notificationStyle" && scene.preferences[1]==="bar","notification style did not persist")
+        }
+      }
+      view.back();wait(30)
       for(var section of ["audio","bluetooth","network","tailscale","monitors"]){
         view.openSection(section)
         check(view.implicitHeight===stableHeight,"opening a native section resized Controls: "+section)

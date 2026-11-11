@@ -59,7 +59,7 @@ ShellRoot {
   }
   Commons.ShellIpc {target:"island-osd";function show(payload:string):string{return backend.showOsd(payload) ? "ok" : "unavailable"} function hide():string{backend.hideOsd();return "ok"}}
   Bridge.Panel {id:bridge}
-  QtObject {id:shell;function serviceFor(id){return service}}
+  QtObject {id:shell;function serviceFor(id){return service} function updateEntryInline(id,entry){return true}}
   QtObject {
     id:bar
     property var shell:shell
@@ -259,6 +259,19 @@ ShellRoot {
       check(widget.osdShown===0 && !widget.osdTransitioning && !gauge.visible,"reduced motion animated the OSD exit")
       Commons.Style.reduceMotion=false
       check(!backend.showOsd('{"icon":"volume","value":"oops"}') && !backend.showOsd('{"icon":"volume","value":1,"max":0}'),"invalid OSD accepted")
+      widget.updateSetting("osdVolume",false)
+      osd("volume",20,100,1200)
+      check(!backend.osdActive && !bridge.opened,"disabled OSD used Island or native fallback")
+      widget.updateSetting("osdVolume",true)
+      osd("volume",20,100,1200)
+      check(backend.osdActive && !bridge.opened,"re-enabled OSD did not return to Island")
+      widget.updateSetting("osdVolume",false)
+      check(!backend.osdActive,"disabling an active OSD did not dismiss it")
+      widget.updateSetting("indicatorDnd",false)
+      service.doNotDisturb=true
+      check(!findChild(widget,"islandDndIndicator").visible && service.doNotDisturb,"indicator preference changed system DND state")
+      widget.updateSetting("indicatorDnd",true)
+      widget.updateSetting("osdVolume",true)
       backend.detach(widget)
       osd("volume",20,100,1200)
       check(bridge.opened,"OSD did not fall back when Island had no consumer")

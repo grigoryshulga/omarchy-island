@@ -13,7 +13,7 @@ Item {
   // Keep low charge visibly red even in themes whose urgent role is monochrome.
   readonly property color lowChargeColor:Qt.hsla(0,Math.max(0.65,Commons.Color.urgent.hslSaturation),Math.max(0.55,Math.min(0.7,Commons.Color.urgent.hslLightness)),1)
   readonly property color accent:fraction<0.20 ? lowChargeColor : Commons.Color.accent
-  readonly property bool animating:active && visible && charging && fraction<1 && !Style.reduceMotion
+  readonly property bool animating:active && visible && charging && fraction<1 && !Preferences.reduceMotion
   property real pulse:1
   implicitHeight:Style.space(10)
   onAnimatingChanged:if(!animating) pulse=1
@@ -21,8 +21,8 @@ Item {
   SequentialAnimation on pulse {
     running:root.animating
     loops:Animation.Infinite
-    NumberAnimation {from:1;to:0.45;duration:Style.duration(800);easing.type:Easing.InOutSine}
-    NumberAnimation {from:0.45;to:1;duration:Style.duration(800);easing.type:Easing.InOutSine}
+    NumberAnimation {from:1;to:0.45;duration:Preferences.duration(800);easing.type:Easing.InOutSine}
+    NumberAnimation {from:0.45;to:1;duration:Preferences.duration(800);easing.type:Easing.InOutSine}
   }
   RowLayout {
     anchors.fill:parent

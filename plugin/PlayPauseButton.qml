@@ -26,7 +26,7 @@ FeedbackButton {
     onFillChanged: requestPaint()
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
-    Behavior on fill { ColorAnimation { duration: Style.duration(120) } }
+    Behavior on fill { ColorAnimation { duration: Preferences.duration(120) } }
     onPaint: {
       var ctx=getContext("2d"), w=width, h=height
       ctx.reset()

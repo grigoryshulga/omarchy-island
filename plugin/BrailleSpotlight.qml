@@ -23,7 +23,7 @@ ShaderEffect {
   readonly property bool trailPending: trailSamples.length>0 || Math.abs(pointer.x-lastTrailPoint.x)>=1 || Math.abs(pointer.y-lastTrailPoint.y)>=1
   function clearTrail() { trailSamples=[];lastTrailPoint=pointer }
   function trailSample(index) {
-    if(index>=trailSamples.length || Style.reduceMotion) return Qt.vector4d(0,0,0,0)
+    if(index>=trailSamples.length || Preferences.reduceMotion) return Qt.vector4d(0,0,0,0)
     var sample=trailSamples[index]
     return Qt.vector4d(sample.x,sample.y,Trail.weight(trailTime-sample.time),0)
   }
@@ -41,27 +41,27 @@ ShaderEffect {
   readonly property vector4d trail11: trailSample(11)
   property vector4d edgeImpact: Qt.vector4d(0,0,0,0)
   property real edgeProgress: 1
-  readonly property real edgeEnabled: focused && active && !Style.reduceMotion ? 1 : 0
+  readonly property real edgeEnabled: focused && active && !Preferences.reduceMotion ? 1 : 0
   function clearEdge() {edgeBurst.stop();edgeProgress=1}
   function collide(previous, point) {
-    if(!hoveredSurface || Style.reduceMotion) return
+    if(!hoveredSurface || Preferences.reduceMotion) return
     var rect={x:focusRect.x,y:focusRect.y,width:focusRect.z,height:focusRect.w}
     var hit=Spotlight.collision(previous,point,rect,focusRadius,spotRadius*0.32)
     if(!hit) return
     edgeImpact=Qt.vector4d(hit.x,hit.y,hit.nx,hit.ny)
     edgeBurst.restart()
   }
-  NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Style.duration(800);easing.type:Easing.Linear}
+  NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Preferences.duration(800);easing.type:Easing.Linear}
   onActiveChanged: {clearTrail();clearEdge()}
   onHoveredSurfaceChanged: {clearTrail();clearEdge()}
   Connections {
-    target: Style
+    target: Preferences
     function onReduceMotionChanged() {root.clearTrail();root.clearEdge()}
   }
   Timer {
     objectName:"spotlightTrailClock"
     interval:32;repeat:true
-    running:root.active && root.visible && !Style.reduceMotion && root.trailPending
+    running:root.active && root.visible && !Preferences.reduceMotion && root.trailPending
     onTriggered: {
       var now=Date.now()
       root.collide(root.lastTrailPoint,root.pointer)
@@ -87,7 +87,7 @@ ShaderEffect {
   property real profile: adaptive ? 1 : 0
   property real intensity: 1
   property real hoverOpacity: shown*intensity
-  Behavior on intensity {NumberAnimation {duration:Style.duration(140);easing.type:Easing.OutCubic}}
+  Behavior on intensity {NumberAnimation {duration:Preferences.duration(140);easing.type:Easing.OutCubic}}
   property real rippleProgress: 1
   readonly property bool rippling: rippleProgress < 0.24
   visible: shown > 0 || rippling
@@ -103,15 +103,15 @@ ShaderEffect {
     visible: false
     layer.enabled: true
   }
-  Behavior on artworkMix { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
+  Behavior on artworkMix { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   function pulse(point) {
-    if (Style.reduceMotion) return
+    if (Preferences.reduceMotion) return
     rippleOrigin=point
     rippleProgress=0
     wave.restart()
   }
-  Behavior on shown { NumberAnimation { duration: Style.duration(root.active ? 160 : 120); easing.type: Easing.OutCubic } }
-  NumberAnimation on phase { running: root.visible && !Style.reduceMotion; from: 0; to: 1200; duration: 1200000; loops: Animation.Infinite }
+  Behavior on shown { NumberAnimation { duration: Preferences.duration(root.active ? 160 : 120); easing.type: Easing.OutCubic } }
+  NumberAnimation on phase { running: root.visible && !Preferences.reduceMotion; from: 0; to: 1200; duration: 1200000; loops: Animation.Infinite }
   // A time cursor lets travel and brightness ease independently in the shader.
-  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Style.duration(1560); easing.type: Easing.Linear }
+  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Preferences.duration(1560); easing.type: Easing.Linear }
 }

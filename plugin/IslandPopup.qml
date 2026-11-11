@@ -108,8 +108,8 @@ PanelWindow {
     else { focusPrime.stop(); focusPrimed = false }
   }
   Timer { id: focusPrime; interval: 75; onTriggered: root.focusPrimed = true }
-  Behavior on settledWidth { enabled: root.paintOpen && reveal.stretch >= 1; NumberAnimation { duration: Style.duration(200); easing.type: Easing.OutCubic } }
-  Behavior on settledHeight { enabled: root.paintOpen && reveal.stretch >= 1; NumberAnimation { duration: Style.duration(200); easing.type: Easing.OutCubic } }
+  Behavior on settledWidth { enabled: root.paintOpen && reveal.stretch >= 1; NumberAnimation { duration: Preferences.duration(200); easing.type: Easing.OutCubic } }
+  Behavior on settledHeight { enabled: root.paintOpen && reveal.stretch >= 1; NumberAnimation { duration: Preferences.duration(200); easing.type: Easing.OutCubic } }
   PopupReveal {
     id: reveal
     open: root.paintOpen
@@ -151,7 +151,7 @@ PanelWindow {
       width: root.drawnWidth
       height: root.drawnHeight
       color: Commons.Color.popups.background
-      Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Style.duration(120)} }
+      Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Preferences.duration(120)} }
       borderSpec: root.borderSpec
       radius: Math.min(Style.cornerRadius,width/2,height/2)
       opacity: root.shown

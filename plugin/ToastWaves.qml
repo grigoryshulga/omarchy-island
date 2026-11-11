@@ -19,7 +19,7 @@ ShaderEffect {
   vertexShader: Qt.resolvedUrl("shaders/toast-waves.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/toast-waves.frag.qsb")
   NumberAnimation on phase {
-    running: root.visible && !Style.reduceMotion
+    running: root.visible && !Preferences.reduceMotion
     from: 0; to: 7200; duration: 7200000; loops: Animation.Infinite
   }
 }

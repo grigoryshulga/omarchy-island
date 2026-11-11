@@ -94,8 +94,8 @@ Item {
     padding:Style.space(6)
     focus:true
     closePolicy:Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
-    enter:Transition {NumberAnimation {property:"opacity";from:0;to:1;duration:Style.duration(160)}}
-    exit:Transition {NumberAnimation {property:"opacity";to:0;duration:Style.duration(100)}}
+    enter:Transition {NumberAnimation {property:"opacity";from:0;to:1;duration:Preferences.duration(160)}}
+    exit:Transition {NumberAnimation {property:"opacity";to:0;duration:Preferences.duration(100)}}
     background:BorderSurface {color:Commons.Color.popups.background;borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)));radius:Style.cornerRadius}
     onOpened:{root.power.refresh();Qt.callLater(root.focusProfile)}
     onClosed:if(root.active) profileButton.forceActiveFocus()

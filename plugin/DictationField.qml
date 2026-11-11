@@ -10,9 +10,9 @@ Item {
   property bool active:false
   property real morph:processing ? 1 : 0
   property real phase:0
-  Behavior on morph {NumberAnimation {duration:Style.duration(320);easing.type:Easing.InOutCubic}}
+  Behavior on morph {NumberAnimation {duration:Preferences.duration(320);easing.type:Easing.InOutCubic}}
   NumberAnimation on phase {
-    running:root.active && root.processing && !Style.reduceMotion
+    running:root.active && root.processing && !Preferences.reduceMotion
     from:0;to:86400;duration:86400000;loops:Animation.Infinite
   }
   // Each column is a tiny shader: the same three-pixel pitch as our gauges
@@ -24,7 +24,7 @@ Item {
       Item {
         required property int index
         width:root.width/48;height:root.height
-        readonly property real amplitude:Style.reduceMotion ? 0.35 : Math.min(1,Math.sqrt(root.history[index] || 0)*2.4)
+        readonly property real amplitude:Preferences.reduceMotion ? 0.35 : Math.min(1,Math.sqrt(root.history[index] || 0)*2.4)
         ShaderEffect {
           anchors.fill:parent
           visible:GraphicsInfo.api!==GraphicsInfo.Software

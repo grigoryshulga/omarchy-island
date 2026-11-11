@@ -15,7 +15,7 @@ ToggleSwitch {
     width:Style.space(38);height:width
     x:root.width/2-root.trackWidth/2+(root.checked!==root.mirrored ? root.trackWidth-root.knobInset-root.knobSize/2 : root.knobInset+root.knobSize/2)-width/2
     y:(root.height-height)/2
-    Behavior on x {NumberAnimation {duration:Style.duration(120);easing.type:Easing.OutCubic}}
+    Behavior on x {NumberAnimation {duration:Preferences.duration(120);easing.type:Easing.OutCubic}}
     z:1
   }
 }
