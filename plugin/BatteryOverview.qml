@@ -21,7 +21,7 @@ Item {
     return minutes>=60 ? strings.t("battery.hoursMinutes").arg(Commons.I18n.formatNumber(Math.floor(minutes/60))).arg(Commons.I18n.formatNumber(minutes%60)) : strings.t("battery.minutes").arg(Commons.I18n.formatNumber(minutes))
   }
   visible:present
-  implicitHeight:present ? Style.space(30) : 0
+  implicitHeight:present ? content.implicitHeight : 0
   PowerState {id:localPower;active:root.active && root.power===localPower}
   function profileLabel(profile) {return Model.profileLabel(profile,Commons.I18n.t)}
   function focusProfile() {
@@ -37,39 +37,51 @@ Item {
   }
   onActiveChanged:if(!active) profileMenu.close()
   onVisibleChanged:if(!visible) profileMenu.close()
-  RowLayout {
-    anchors.fill:parent
-    spacing:Style.space(8)
-    PlainText {
-      text:root.power ? root.power.icon : ""
-      font.pixelSize:Style.font.icon
-      color:root.power && root.power.onBattery && root.power.fraction<=0.15 ? Commons.Color.urgent : Commons.Color.accent
-      IndicatorGlow {anchors.centerIn:parent;width:Style.space(30);height:width;active:root.active && root.power && !root.power.onBattery;accent:Commons.Color.accent}
-    }
-    PlainText {
-      objectName:"batteryPercentage"
-      text:root.power ? Commons.I18n.formatNumber(Math.round(root.power.fraction*100))+"%" : ""
-      font.pixelSize:Style.font.bodySmall
-      font.bold:true
-    }
-    PlainText {
+  ColumnLayout {
+    id:content
+    width:parent.width
+    spacing:Style.space(6)
+    RowLayout {
       Layout.fillWidth:true
-      text:root.remaining && root.width>Style.space(430) ? root.mode+" · "+root.remaining : root.mode
-      elide:Text.ElideRight
-      font.pixelSize:Style.font.caption
-      color:Commons.Color.muted
+      Layout.preferredHeight:Style.space(30)
+      spacing:Style.space(8)
+      PlainText {
+        text:root.power ? root.power.icon : ""
+        font.pixelSize:Style.font.icon
+        color:chargeGauge.accent
+      }
+      PlainText {
+        objectName:"batteryPercentage"
+        text:root.power ? Commons.I18n.formatNumber(Math.round(root.power.fraction*100))+"%" : ""
+        font.pixelSize:Style.font.bodySmall
+        font.bold:true
+      }
+      PlainText {
+        Layout.fillWidth:true
+        text:root.remaining && root.width>Style.space(430) ? root.mode+" · "+root.remaining : root.mode
+        elide:Text.ElideRight
+        font.pixelSize:Style.font.caption
+        color:Commons.Color.muted
+      }
+      ActionButton {
+        id:profileButton
+        objectName:"batteryProfileButton"
+        feedback:root.externalFeedback
+        visible:root.power && root.power.profiles.length>0
+        enabled:!root.power.busy
+        text:root.power && root.power.activeProfile ? root.profileLabel(root.power.activeProfile) : root.strings.t("battery.profile")
+        iconText:root.power ? Model.profileIcon(root.power.activeProfile) : ""
+        tooltipText:root.strings.t("battery.profile")
+        horizontalPadding:Style.space(7);verticalPadding:Style.space(2)
+        onClicked:root.toggleMenu()
+      }
     }
-    ActionButton {
-      id:profileButton
-      objectName:"batteryProfileButton"
-      feedback:root.externalFeedback
-      visible:root.power && root.power.profiles.length>0
-      enabled:!root.power.busy
-      text:root.power && root.power.activeProfile ? root.profileLabel(root.power.activeProfile) : root.strings.t("battery.profile")
-      iconText:root.power ? Model.profileIcon(root.power.activeProfile) : ""
-      tooltipText:root.strings.t("battery.profile")
-      horizontalPadding:Style.space(7);verticalPadding:Style.space(2)
-      onClicked:root.toggleMenu()
+    BatteryGauge {
+      id:chargeGauge
+      Layout.fillWidth:true
+      fraction:root.power ? root.power.fraction : 0
+      active:root.active
+      charging:!!(root.power && root.power.device && root.power.device.state===root.power.states.Charging && !Model.chargeThresholdActive(root.power.device,root.power.onBattery,root.power.states))
     }
   }
   Controls.Popup {

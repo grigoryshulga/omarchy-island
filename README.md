@@ -8,7 +8,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 
 ## Features
 
-- **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show charge and power profiles.
+- **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show a 20-segment charge gauge and power profiles. The gauge shows partial segments, turns red below 20% (with saturation and lightness derived from the theme alert color), and gently pulses the leading segment while charging (unless reduced motion is enabled).
 - **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
 - **Calendar and weather:** month navigation, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.

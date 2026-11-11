@@ -46,8 +46,38 @@ ShellRoot {
     function check(ok,message){if(!ok){console.log("BATTERY_FAIL:",message);Qt.quit();throw new Error(message)}}
     function test_battery(){
       wait(120)
-      check(row.visible && row.height<=Commons.Style.space(32),"battery overview is not a compact row")
+      check(row.visible && row.height<=Commons.Style.space(50),"battery overview is not a compact block")
       check(findChild(row,"batteryPercentage").text.indexOf("78")>=0,"battery percentage is incorrect")
+      var gauge=findChild(row,"batteryGauge")
+      check(gauge && findChild(gauge,"batterySegment-19"),"segmented gauge is missing")
+      check(Math.abs(findChild(gauge,"batterySegment-15").fill-0.6)<0.001,"partial segment lost charge precision")
+      fakePower.fraction=0.20;wait(20)
+      check(gauge.accent.toString()===Commons.Color.accent.toString(),"20 percent should keep the theme accent")
+      fakePower.fraction=0.199;wait(20)
+      check(gauge.accent.r>gauge.accent.g && gauge.accent.r>gauge.accent.b,"charge below 20 percent is not red")
+      fakePower.onBattery=false;wait(20)
+      check(gauge.accent.toString()===gauge.lowChargeColor.toString(),"low charge lost its warning on AC")
+      fakePower.onBattery=true
+      fakePower.fraction=0;wait(20)
+      check(findChild(gauge,"batterySegment-0").fill===0,"empty battery shows charge")
+      fakePower.fraction=1;wait(20)
+      check(findChild(gauge,"batterySegment-19").fill===1,"full battery has an empty last segment")
+      fakePower.fraction=0.78
+      fakePower.onBattery=false
+      fakePower.device={isPresent:true,percentage:0.78,state:UPowerDeviceState.Charging,changeRate:10,timeToFull:3600}
+      wait(30)
+      check(gauge.charging,"charging state was not reflected in gauge")
+      var reducedMotion=Commons.Style.reduceMotion
+      Commons.Style.reduceMotion=true;wait(20)
+      check(!gauge.animating && gauge.pulse===1,"reduced motion retained charging animation")
+      Commons.Style.reduceMotion=reducedMotion
+      row.active=false;wait(20)
+      check(!gauge.animating && gauge.pulse===1,"hidden gauge retained charging animation")
+      row.active=true
+      fakePower.device={isPresent:true,percentage:0.78,state:UPowerDeviceState.PendingCharge}
+      wait(20)
+      check(!gauge.charging && !gauge.animating,"charge threshold animates as charging")
+      fakePower.onBattery=true
       var menu=findChild(row,"batteryProfileMenu"),height=row.height
       findChild(row,"batteryProfileButton").clicked();wait(190)
       check(menu.opened,"profile menu did not open")

@@ -163,3 +163,18 @@ assert.equal(restoredDownloads[0].downloadedBytes,1048576);
 const partialDownload=Downloads.row(directory+'/file.zip.part',now,512,true);
 assert.equal(partialDownload.filename,'file.zip');
 assert.equal(Downloads.retain([partialDownload],directory,now).length,0);
+
+// Segment boundaries preserve exact percentages without lighting an extra cell.
+{
+  const gauge = require('../plugin/BatteryGaugeModel.js')
+  assert.equal(gauge.segmentFill(0, 0, 20), 0)
+  assert.equal(gauge.segmentFill(1, 19, 20), 1)
+  assert.equal(gauge.segmentFill(0.5, 10, 20), 0)
+  assert.ok(Math.abs(gauge.segmentFill(0.78, 15, 20) - 0.6) < 1e-9)
+  assert.equal(gauge.segmentFill(-1, 0, 20), 0)
+  assert.equal(gauge.segmentFill(2, 19, 20), 1)
+  assert.equal(gauge.segmentFill(NaN, 0, 20), 0)
+  assert.equal(gauge.leadingSegment(0.5, 20), 9)
+  assert.equal(gauge.leadingSegment(0, 20), 0)
+  assert.equal(gauge.leadingSegment(1, 20), 19)
+}
