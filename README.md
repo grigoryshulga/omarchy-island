@@ -1,30 +1,27 @@
 # Omarchy Island
 
-Версия [1.0.0](https://github.com/grigoryshulga/omarchy-island/releases/tag/v1.0.0). История изменений — [CHANGELOG.md](CHANGELOG.md).
+![Omarchy Island — native Quickshell plugin with braille effects, media controls, notifications, and weather](preview.png)
 
-Нативный Quickshell-плагин вместо часов в панели Omarchy. Использует `qs.Ui` и живые токены темы; системные файлы Omarchy не изменяются.
+A native Quickshell plugin that replaces the Omarchy bar clock with notifications, media controls, weather, a calendar, and system controls. It follows the live Omarchy theme and reduced-motion settings without changing system files.
 
-- Индикаторы: слева от часов — красный круг записи экрана и зелёный круг удалённого подключения с брайлевыми волнами вправо. Справа — значок доступного обновления Omarchy со светлыми волнами в обе стороны в цвете текста текущей темы и только активные состояния: выключенный микрофон, DND, ночной свет и режим без сна. Часы остаются по центру.
-- Громкость и яркость временно заменяют часы брайлевой шкалой с процентами. Чем выше значение, тем толще точки. Повторные нажатия обновляют значение и продлевают показ; после таймера возвращаются часы.
-- В покое показывает исходный формат часов. Во время музыки за часами работает та же брайлевая сетка и синхронный шиммер, что в поп-апе: только акцент темы, с овальным затуханием по левому, правому и нижнему краю.
-- При наведении открывается только Overview, без вкладок и перелистывания. В закреплённом по клику поп-апе над содержимым расположены вкладки Controls, «Обзор», «Календарь» и «Погода» одинаковой ширины и без отдельных заливок; горизонтальный скролл и свайп зациклены. Под вкладками — разделитель и увеличенный отступ; активная вкладка выделена акцентным цветом. Календарь открывается вкладкой или средней кнопкой по часам. Режимы — соседние страницы, между которыми можно свайпнуть или прокрутить горизонтально. Календарь сменяет плеер и уведомления в том же окне; стрелка возвращает обратно. Есть сетка месяца, навигация, выделение сегодня, выбор даты и кнопка «Сегодня». Начало недели и подписи следуют языку Omarchy.
-- Погода — третья страница поп-апа, со сводкой в основной панели. Вместо погодных глифов — собственные брайлевые сцены: солнце, луна, облака, туман, морось, дождь, снег и гроза. Дождь и снег движутся, облака слегка плывут, солнце и звёзды переливаются. Есть текущая температура, «ощущается», ветер, влажность и прогноз на семь следующих дней.
-- В закреплённом окне в пустом разделе уведомлений и пустой истории над подписью хлопают ладони на брайлевой сетке в акцентном цвете темы. При наведении пустой раздел скрыт. Анимация работает только на видимом Overview; при отключённых системных анимациях ладони неподвижны.
-- Счётчик уведомлений показывается только при количестве больше нуля. В Overview учитываются только активные уведомления. В закреплённой панели есть переключатель «Уведомления / История» и отдельная очистка каждого списка. Завершённые по таймеру уведомления переходят в историю; отзыв отправителем удаляет запись из обоих списков (например, после прочтения чата в Telegram). До перезапуска Island связь с отправителем сохраняется и для истории, в пределах 100 записей и 24 часов. После перезапуска сохранённые записи доступны только в истории. Временные (`transient`) уведомления в историю не попадают.
-- Всплывающее уведомление — компактная плашка с фоном темы: источник, время, заголовок и одна строка подробностей. По плашке слева направо проходят широкие медленные круглые брайлевые радиоволны; отдельной внешней рамки и вложенных фоновых карточек нет. Наведение раскрывает обычное превью с вкладками, клик — полный список уведомлений. Новый трек заменяет часы на `Now Playing` на три секунды.
-- Плеер отображается только при наличии играющего или приостановленного трека. При остановке, отсутствии трека или отключении приложения остаются уведомления. В плеере показаны трек и исполнитель, без отдельной плашки приложения-источника. Крупный заголовок трека дополняет музыкальный фон, который проходит под верхними вкладками. Фон появляется только при воспроизведении трека с метаданными; на паузе плеер остаётся, а фон плавно затухает.
-- Наведение раскрывает компактный плеер и до трёх сообщений, сгруппированных по источнику. Уведомления одного источника с одинаковым заголовком объединяются в карточку: заголовок показан один раз, тела идут от старого к новому. Одинаковые действия отправителя показываются одной кнопкой для всех сообщений карточки; команды Open/Edit относятся только к последнему уведомлению; отзыв отдельного уведомления убирает только его текст. Остальные обозначены общим счётчиком. Число сообщений внутри группы не показывается; сообщения разделены тонкими линиями, время находится в нижней служебной строке. Место под действия зарезервировано, поэтому при наведении размеры карточек не меняются. При наведении справа от общего колокольчика группы появляется крестик: он удаляет все уведомления этого источника. В группе из нескольких сообщений остаются отдельные крестики у строк.
-- Поп-апы появляются из маленькой плашки: короткий выход сверху, затем одновременный рост вниз и в стороны с мягким easing и постепенным проявлением содержимого. Закрытие занимает 200 мс: карточка немного сжимается и уходит вверх с затуханием, сохраняя содержимое до конца анимации. Повторное открытие прерывает закрытие плавно; при отключённых системных анимациях переходы мгновенные. Клик закрепляет то же окно с плавным изменением размера. Доступны перемотка, громкость, история и действия отправителя. Время трека выделено контрастнее, а кнопка play/pause имеет прозрачный знак в заливке. Скругления следуют системному радиусу: при нуле элементы прямоугольные, при положительном значении play/pause круглая, а небольшие кнопки имеют ограниченный радиус. Клик по сообщению открывает приложение; действия появляются при наведении справа. Мьют — один глиф в заголовке группы. При наведении карточка подсвечивается приглушённым брайлевым спотлайтом с мягким колышущимся краем. Такой же спотлайт и расходящаяся волна при клике есть у календаря, уведомлений и плеера. Уведомления и календарь используют акцент темы; в плеере точки окрашены по обложке с тем же радиальным затуханием и примесью акцента 18%. Если обложка недоступна, используется акцент темы. В поп-апе используется единый курсорный спотлайт без обрезания по границам карточек и вкладок. Волны запускаются на кликах и действиях кнопок, но не на перетаскивании шкал или свайпе страниц; движение волн замедлено втрое, яркость затухает быстрее.
-- Отдельная обложка в плеере отсутствует; остаётся только фон верхней части поп-апа из неподвижных точек, затухающий вниз. При уходе с Overview фон растворяется дизерингом по отдельным точкам; при возвращении собирается в обратном порядке. Переход можно плавно развернуть посреди свайпа. Фон обложки усилен по яркости на 20%. Брайлевые рисунки мягко переливаются даже при нулевом уровне анализатора; звук усиливает переливание. Примесь акцента темы — 18%; размытого изображения под точками нет.
-- Шестизначные и разделённые дефисами коды можно копировать. Кодовые уведомления редактируются перед записью на диск; буфер кода помечен sensitive и очищается через минуту, если пользователь не скопировал другое.
+[Version 1.0.0](https://github.com/grigoryshulga/omarchy-island/releases/tag/v1.0.0) · [Changelog](CHANGELOG.md) · [MIT license](LICENSE)
 
-## Установка
+## Features
 
-Нужна Omarchy с новой оболочкой на Quickshell (`qs.Commons` и `qs.Ui`). Версии с Waybar не поддерживаются. Проверено на Omarchy 4.5.0-3 / Quickshell 0.3.2.
+- **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show charge and power profiles.
+- **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
+- **Calendar and weather:** month navigation, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
+- **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
+- **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
+- **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Optional Voxtype integration shows recording and transcription status without taking focus.
 
-Зависимости: `git`, `python`, `quickshell`, `wl-clipboard`, `libpulse` (команда `parec`). Обычно они уже установлены в Omarchy. Готовые Qt-шейдеры входят в репозиторий; сборка для установки не нужна.
+## Installation
 
-Запустите из терминала в разблокированной сессии Omarchy, без `sudo`:
+Requires the **Quickshell-based Omarchy shell** with `qs.Commons` and `qs.Ui`; Waybar editions are unsupported. Tested with Omarchy 4.5.0-3 and Quickshell 0.3.2.
+
+Dependencies: `git`, `python`, `quickshell`, `wl-clipboard`, and `libpulse` (`parec`). Prebuilt Qt shaders are included; no build is needed to install.
+
+Run in an unlocked Omarchy session, without `sudo`:
 
 ```bash
 omarchy plugin add https://github.com/grigoryshulga/omarchy-island.git --yes
@@ -34,9 +31,11 @@ omarchy plugin enable gshulga.island
 omarchy restart shell
 ```
 
-Первая команда устанавливает репозиторий штатным менеджером, пока без включения. Затем отключается встроенный демон уведомлений и включается Island. Корневой `manifest.json` объявляет Island заменой `omarchy.clock`: Omarchy ставит его на место часов, сохраняя их формат и расположение. Отдельный шаг для уведомлений нужен, чтобы не запускать два D-Bus-сервера одновременно. `--yes` пропускает диалоги добавления; при интерактивной установке без этого флага не включайте Island до отключения штатных уведомлений.
+Disable the built-in notification daemon before enabling Island to avoid competing D-Bus servers. Omarchy replaces its clock with Island while preserving the clock format and position.
 
-Обновление:
+The indicator installer adds the `gshulga.island-osd` adapter and adjusts user bar configuration, with backups in `~/.local/state/omarchy/island/`. Native OSD remains the fallback when Island is unavailable; existing system actions and shortcuts are preserved.
+
+### Update
 
 ```bash
 omarchy plugin update gshulga.island
@@ -44,7 +43,7 @@ omarchy plugin update gshulga.island
 omarchy restart shell
 ```
 
-Возврат к штатным часам и уведомлениям:
+### Remove
 
 ```bash
 ~/.config/omarchy/plugins/gshulga.island/bin/enable-indicators --disable
@@ -52,228 +51,124 @@ omarchy plugin remove gshulga.island
 omarchy plugin enable omarchy.notifications
 ```
 
-Omarchy возвращает часы при удалении или отключении Island. Если штатные уведомления были отключены ещё до установки, последнюю команду выполнять не нужно. История Island при удалении сохраняется.
+Omarchy restores the clock. Skip the last command if built-in notifications were already disabled before installation. Island history is retained.
 
-### Ранее установленная копия через `bin/install`
+### Legacy installations
 
-Для таких копий остаются прежние команды `git pull --ff-only`, `./bin/install` и `./bin/uninstall` из исходного клона. Не запускайте `bin/install` поверх копии, установленной штатным менеджером: используйте `omarchy plugin update`.
+Copies installed with `bin/install` still use `git pull --ff-only`, `./bin/install`, and `./bin/uninstall` from the original clone. Use `omarchy plugin update` for copies managed by Omarchy.
 
-Чтобы перейти на штатный менеджер, сначала выполните `./bin/uninstall` из старого клона, затем переместите прежнюю папку плагина в резервную копию и выполните штатные команды установки выше:
+To migrate, run `./bin/uninstall` from the old clone, move the old plugin directory to a backup, then follow the installation steps above:
 
 ```bash
 mv ~/.config/omarchy/plugins/gshulga.island ~/.config/omarchy/plugins/.gshulga.island.before-native-$(date +%Y%m%d-%H%M%S)
 ```
 
-Старый установщик сохраняет резервную копию `shell.json`, меняет только часы верхнего уровня и сохраняет состояние демона уведомлений для последующего удаления. Встроенные виджеты часов в других панелях не изменяются.
-
-### Разработка
-
-Исходники находятся в `plugin/`. Корневой манифест с путями `plugin/BarWidget.qml` и `plugin/Service.qml` используется штатным менеджером; `plugin/manifest.json` — для старой установки с плоской структурой. Оба манифеста проверяются на согласованность.
-
-Шейдеры пересобираются через `bin/build-shaders` (Qt `qsb`); он также генерирует согласованные vertex-шейдеры для GLSL 150 / GLES 300. Шиммер использует целочисленный hash полных координат точек и независимые фазы ячеек вместо повторяемых шумовых тайлов.
-
-## Управление клавиатурой
-
-Только в закреплённом полноценном окне: **Alt+1** — Controls, **Alt+2** — Overview, **Alt+3** — Calendar, **Alt+4** — Weather. Отключённая вкладка погоды не получает горячую клавишу. **Tab / Shift+Tab** обходят доступные элементы текущей вкладки и её заголовки; **стрелки / H J K L** выбирают соседние элементы. **Enter / Space** активируют выбранное. В календаре стрелки/Vim перемещают выбранную дату; на ползунках Left/Right или H/L меняют значение. Сочетания не перехватывают обычный текст и движение каретки в редакторах.
-
-Встроенные Audio, Bluetooth, Network и Tailscale сохраняют штатную модель навигации; Tab позволяет войти в неё и выйти к элементам Island. Уведомление получает фокус как строка, Enter открывает его; действия показываются и при клавиатурном фокусе, с сохранением размеров карточки. Свёрнутые страницы исключены из обхода. Появившиеся вне экрана уведомления прокручиваются к фокусу.
-
-Команда вызова/закрытия полноценного окна — `omarchy-shell island toggle`. Глобальная клавиша пока не назначена.
-
-## Раскладка вместо часов
-
-При переключении раскладки Hyprland в строке часов на 1,2 секунды появляются полные названия «Русский» / «English» и значок клавиатуры, затем плавно возвращаются часы. Быстрое переключение обновляет надпись и таймер. Повторные события одного языка и события виртуальных клавиатур/кнопки питания не вызывают дополнительных показов; запуск shell не показывает лишний OSD. Другие раскладки используют полное название XKB.
-
-Установщик индикаторов убирает постоянный `omarchy.keyboard-layout` из верхнего уровня панели, сохраняя запись для восстановления через `bin/enable-indicators --disable`. Горячие клавиши переключения не меняются.
-
-## Батарея в Overview
-
-На устройствах с батареей между музыкой и уведомлениями показывается компактная строка: заряд, состояние питания и текущий профиль. Без музыки она становится первой строкой Overview; в уведомлениях-тостах её нет. На ПК без батареи блок скрыт и опрос профилей не запускается.
-
-Клик по профилю открывает небольшое меню доступных режимов Performance / Balanced / Power Saver. Данные батареи приходят из UPower, список профилей — из `omarchy-powerprofiles-list --active-state`, смена — через `omarchy-powerprofiles-set battery|ac PROFILE`, с обычным сохранением режима отдельно для сети и батареи. Ошибка не подменяет текущий профиль; недоступные режимы не предлагаются. Обновление списка идёт только при открытом Overview, раз в 15 секунд и при изменениях питания/профиля.
-
-## Downloads
-
-Island отслеживает новые записи в `~/downloads` и вложенных папках. Пока файлы
-записываются, в баре отображается OSD `Downloading file...`. Раздел **Downloads**
-в Overview сразу показывает текущие загрузки: имя файла, обновляемый объём в
-KiB/MiB и движущийся браильный индикатор. Файловый наблюдатель не знает полный
-размер сетевого ответа: индикатор показывает активность, а не выдуманный процент.
-Объём берётся из размера файла; предварительно выделенное загрузчиком место
-может отличаться от числа уже полученных по сети байтов.
-
-По завершении появляется отдельная компактная карточка загрузки с иконкой
-скачивания. Клик по ней или по значку папки открывает каталог и убирает карточку.
-Завершённые загрузки хранятся до открытия или 30 минут с момента завершения
-(до 30 карточек), включая перезапуски оболочки. Открытие папки активной загрузки
-не прерывает её отслеживание. В режиме DND завершение не вызывает всплывающую карточку.
-
-Отслеживание использует Linux inotify и Python без дополнительных зависимостей.
-Для обычных файлов завершением считается закрытие после записи; для временных
-файлов `.crdownload`, `.part`, `.partial`, `.download`, `.tmp` — переименование
-в окончательное имя. Копирование файлов в эту папку тоже вызывает карточку:
-файловые события не различают копирование и сетевую загрузку. Существующие файлы
-при запуске не объявляются, символьные ссылки на каталоги не обходятся.
-
 ## Controls
 
-Первая вкладка перед Overview: под основными разделами, по три в ряд — компактные быстрые переключатели выключенного микрофона, DND, ночного света и режима без сна, запуск/остановка записи и статус удалённой сессии. Обычный клик по часам по-прежнему открывает Overview; `omarchy-shell island controls` сразу открывает Controls.
+| Action | Result |
+|---|---|
+| Hover over the clock | Preview Overview |
+| Click the clock or the free upper area of the preview | Pin the popup |
+| Click the clock again, press Escape, or click outside | Close the popup |
+| Middle-click the clock | Toggle the calendar |
+| Right-click the clock | Cycle and save the clock format |
+| Scroll over the clock | Open the full popup and cycle tabs |
+| Horizontal swipe, touchpad scroll, or Shift + wheel in the popup | Switch pages |
+| Hover over the player's volume icon | Show the volume slider |
 
-Сверху — пять встроенных разделов на основе штатных панелей Omarchy: **Audio** (выходы, входы и микшер приложений), **Bluetooth** (поиск, сопряжение и подключение), **Network** (сети, пароль Wi-Fi и сведения о подключении), **Tailscale** (состояние, аккаунты, машины и exit nodes), **Monitors** (яркость, размер текста, масштаб и включение экранов). Они открываются внутри Island, со стрелкой возврата. Размер окна сохраняется от основного экрана Controls и не зависит от загрузки устройств или соединений; длинные панели прокручиваются внутри контейнера. Используют штатные сервисы и команды; работающие соединения при просмотре не переключаются. Удалённая сессия — информационный статус, как в стандартном индикаторе Omarchy.
+### Keyboard
 
-Включённые быстрые настройки и их светодиоды, а также активные переключатели внутри системных разделов подсвечиваются более яркой брайлевой сеткой; свечение курсора плавно усиливается при входе на плитку. Переключатели системных разделов уменьшены. Эффект только внутри Controls; красный цвет записи и зелёный цвет удалённой сессии сохранены.
+In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weather. A disabled Weather tab has no shortcut. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control.
 
-Содержимое штатных панелей адаптировано в `plugin/controls/`: отдельное окно заменено встроенным контейнером, исходные bar-кнопки и IPC отключены, чтобы не конфликтовать с системными панелями. Тяжёлые разделы создаются только при открытии; закрытие Controls останавливает их опросы и освобождает сканирование. Системные файлы не меняются.
+In the calendar, arrows or Vim keys move the selected date, **Page Up / Page Down** changes months, and **Home** returns to today. Sliders use **Left / Right** or **H / L**. Embedded system panels retain their native navigation.
 
-Плитка настроек плагина запланирована отдельно: кастомизация внешнего вида и управление видимостью элементов Island.
+No global shortcut is assigned. Bind `omarchy-shell island toggle` to one if desired.
 
-## Индикаторы и временные шкалы
+### IPC
 
-`bin/enable-indicators` устанавливает отдельный адаптер `gshulga.island-osd`, заменяющий штатный `omarchy.osd`. Все штатные OSD временно подменяют часы: громкость, яркость экрана и подсветка клавиатуры показываются брайлевой шкалой; микрофон, смена аудиоустройства, тачпад/сенсорный экран, медиасобытия, выход, перезагрузка и выключение — значком и исходным текстом. Поддерживаются произвольные глифы, подписи прогресса, штатная длительность и `osd close`, включая постоянный показ при `duration: 0`. Подтверждения и сами системные действия не меняются. Если Island недоступен, работает штатный OSD. На нескольких мониторах OSD появляется на активном экране.
+```text
+omarchy-shell island open|close|toggle|controls|calendar|weather|status
+omarchy-shell notifications probe|toggleDnd|dismissAll
+omarchy-shell island-update refresh|clear
+```
 
-Часы и OSD сменяют друг друга коротким кроссфейдом: текст и шкала рассыпаются в брайлевую сетку и собираются обратно. Соседние индикаторы плавно освобождают место. Текст события и его значок стоят компактной группой по центру часов; соседние индикаторы следуют ширине этой группы. Смена текстового события тоже проходит через брайлевый дизолв. Повтор того же события и обновление процентов не перезапускают анимацию; новое событие во время затухания плавно возвращает OSD. Эффект рисуется только на время перехода. С выключенными системными анимациями смена мгновенная.
+## Settings
 
-Диктовка Voxtype получает отдельную компактную всплывающую карточку прямо под островом на активном мониторе. При записи реальные уровни голоса рисуют историю на брайлевой сетке; при распознавании точки плавно собираются в бегущую волну. В карточке — состояние и длительность записи; часы острова остаются на месте. Для нижнего или вертикального бара карточка открывается с внутренней стороны экрана. OSD пропускает клики и не забирает фокус, поэтому текст вставляется в исходное приложение. После возврата Voxtype в `idle` карточка исчезает; с уменьшенными анимациями поле статично.
+Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
 
-Интеграция автоматически читает `$XDG_RUNTIME_DIR/voxtype/state` и запускает `voxtype-audio-bridge` только на время записи. Отдельный поток захвата микрофона не открывается, звук и распознанный текст не сохраняются. Без Voxtype карточка скрыта. Для единственного OSD отключите другие визуализаторы диктовки (например, Omakoe) и штатный OSD Voxtype (`voxtype config set osd.enabled false`). Настройки диктовки и горячих клавиш остаются в Voxtype.
-
-
-Адаптер и изменения стандартной группы индикаторов устанавливаются в пользовательскую конфигурацию, системные файлы не меняются. Копия конфигурации и запись для восстановления находятся в `~/.local/state/omarchy/island/`. Из стандартной группы переносятся только пять соответствующих индикаторов; sudo без пароля и напоминания остаются на прежнем месте. `bin/enable-indicators --disable` возвращает прежнюю конфигурацию. Старый `bin/install` включает адаптер автоматически, `bin/uninstall` восстанавливает его состояние.
-
-Обновления проверяются штатной командой `omarchy-update-available` при запуске и каждые шесть часов; после изменений пакетов выполняется повторная проверка. Значок справа от часов виден только при доступном обновлении. Светлые брайлевые волны расходятся от него в обе стороны, цвет берётся из `Commons.Color.foreground`. IPC `omarchy-shell island-update refresh|clear` обновляет или сбрасывает состояние без конфликта со штатным виджетом.
-
-Запись отслеживается по статусу штатного рекордера, удалённая сессия — по Gliff, микрофон — через PipeWire с поддержкой виртуальных источников. Ночной свет и режим без сна читаются через штатный IPC. На активных индикаторах есть общая подсказка часов; переключать режимы можно штатными командами и сочетаниями клавиш. ПКМ по часам перебирает форматы штатного плагина часов и сохраняет выбор; DND с ПКМ убран. Колесо над часами открывает полноценное окно и переключает вкладки по кругу. DND, ночной свет и режим без сна показывают OSD при включении и выключении, без сообщений при запуске shell.
-
-## Погода
-
-Откройте её вкладкой над плеером или горизонтальным скроллом: плеер/уведомления → календарь → погода. Рисунок погоды и температура расположены по центру; двойной клик по единице переключает °C → °F → K. Выбор сохраняется и применяется к текущей температуре, «ощущается», прогнозу и миниатюре во вкладке; единицы ветра остаются прежними. С клавиатуры единица переключается Enter или пробелом. Время обновления — в строке города. Дополнительные показатели центрированы, прогноз на семь следующих дней занимает семь равных колонок. Клик по городу заменяет его строку полем поиска. Выбор города или «Авто» подтверждается Enter; Escape и клик по панели отменяют черновик. Место хранится в штатном `~/.local/state/omarchy/settings/weather.json`: изменение города также действует на стандартный погодный плагин Omarchy.
-
-Фон Weather — браильная сетка с плавным переходом от ночного синего через тёплые рассвет и закат к дневному голубому. Цвет следует времени выбранного города и реальным часам восхода/заката из прогноза, поэтому учитывает сезонное сокращение светового дня. У всех краёв точки постепенно редеют и растворяются в прозрачность. При уменьшении анимации мерцание отключается, смена времени суток сохраняется.
-
-Первый запрос запускается при первом открытии или наведении на Island. Затем данные обновляются раз в 15 минут, как у стандартной погоды; до первого открытия сетевых запросов нет. Без заданного города используется `geo.omarchy.org`, для поиска города — геокодинг Open-Meteo, для текущей погоды и прогноза — [Open-Meteo](https://open-meteo.com/). Запросы идут по HTTPS с тайм-аутами и ограничением ответа. При ошибке остаётся последний успешный прогноз с отметкой об устаревших данных; кэш — `~/.local/state/omarchy/island/weather.json`.
-
-Параметры записи `gshulga.island` в `shell.json`:
-
-- `weatherEnabled`: `true` по умолчанию; `false` скрывает погоду и останавливает запросы.
-- `weatherUnit`: `metric`, `imperial` или пустая строка. По умолчанию используются настройки обычного погодного виджета, затем страна из данных и локаль.
-- `weatherTemperatureUnit`: `celsius`, `fahrenheit`, `kelvin` или пустая строка. Пустая строка следует `weatherUnit`; двойной клик по единице сохраняет отдельный выбор для температуры.
-- `weatherRefreshMinutes`: собственный интервал 1–120 минут; `0` использует настройку штатной погоды или 15 минут.
-
-Например:
+| Setting | Behavior |
+|---|---|
+| `format` | Clock format, inherited from the original clock |
+| `musicApps` | Allowed MPRIS players; browsers are excluded by default |
+| `notificationDuration` | Notification toast duration; default `5000` ms |
+| `radialBraille` | Adaptive spotlight dots; default `true` |
+| `calendarWeekStart` | `sunday` or `monday`; unset follows the Omarchy locale |
+| `weatherEnabled` | Show weather and allow requests; default `true` |
+| `weatherUnit` | `metric`, `imperial`, or empty to follow native weather settings, then country/locale |
+| `weatherTemperatureUnit` | `celsius`, `fahrenheit`, `kelvin`, or empty to follow `weatherUnit` |
+| `weatherRefreshMinutes` | `1`–`120`; `0` follows native weather settings or defaults to 15 minutes |
 
 ```bash
 omarchy bar set gshulga.island weatherUnit metric
 omarchy bar set gshulga.island weatherEnabled false --json
 ```
 
-Сцены строятся шейдером на той же сетке точек с постоянным шагом. С выключенными системными анимациями они статичны; вне погодной страницы большая сцена не анимируется, миниатюры прогноза всегда статичны.
+Click the weather city to search or choose automatic location; Enter confirms and Escape cancels. The location is shared with the native weather widget through `~/.local/state/omarchy/settings/weather.json`. Double-click the temperature unit, or focus it and press Enter / Space, to cycle °C → °F → K. The calendar gear selects the first day of the week.
 
-## Календарь
+For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
 
-Текущая дата крупно по центру возвращает к сегодняшнему дню по клику. Месяц, год и стрелки находятся под сеткой; сегодняшний день выделен акцентной заливкой с инверсным текстом и брайлевым свечением. Отдельная колонка номеров недель отделена вертикальным разделителем; сегодняшний день имеет усиленное брайлевое свечение. Календарь и погода используют общую высоту поп-апа. Номера недель соответствуют ISO 8601; при неделе с воскресенья номер строки определяется по четвергу этой строки.
+### Optional Hyprland blur
 
-Шестерёнка в углу открывает выбор начала недели: воскресенье или понедельник. Выбор сохраняется в `calendarWeekStart` записи `gshulga.island` в `shell.json` (`sunday` / `monday`); без настройки используется начало недели из локали Omarchy.
-
-<img src="docs/screenshots/weather-panel.png" width="440" alt="Погода в Island: брайлевый дождь, температура и прогноз">
-
-<details>
-<summary>Брайлевые погодные состояния</summary>
-
-<img src="docs/screenshots/weather-scenes.png" width="800" alt="Солнце, облака, дождь, снег, луна, туман и гроза из точек">
-
-</details>
-
-## Фон и размытие Hyprland
-
-Island использует layer-shell поверхность с namespace `omarchy-island-popup`. Размытие выполняет Hyprland; его сила следует вашим `decoration.blur.size` и `decoration.blur.passes`. Для включения только на Island можно скопировать правило из [hyprland/island.lua](hyprland/island.lua):
+Copy the included [layer rule](hyprland/island.lua):
 
 ```bash
 cp ~/.config/omarchy/plugins/gshulga.island/hyprland/island.lua ~/.config/hypr/omarchy-island.lua
 ```
 
-Добавьте в `~/.config/hypr/looknfeel.lua` вне управляемых блоков:
+Add this outside managed blocks in `~/.config/hypr/looknfeel.lua`:
 
 ```lua
 require("hypr.omarchy-island")
 ```
 
-Примените и проверьте конфигурацию:
+Apply with `hyprctl reload` and check `hyprctl configerrors`. Blur strength follows Hyprland's `decoration.blur` settings. Popup transparency follows `[popups] background-alpha` in the theme or `~/.config/omarchy/shell.toml`; at `1.0`, the background is opaque and blur is not visible.
 
-```bash
-hyprctl reload
-hyprctl configerrors
-```
+## Data and privacy
 
-Правило `ignore_alpha` исключает прозрачную область за пределами карточки: поверхность поп-апа занимает весь экран для плавной анимации, но блюр нужен только под карточкой.
+- Notification history, mute, and DND state live in `~/.local/state/omarchy/island/state.json`, limited to 100 notifications and 24 hours. Directory permissions are `0700`; file permissions are `0600`.
+- Expired notifications enter history; sender withdrawal removes them from both lists while Island retains the sender reference. After restart, saved entries are history only. Transient notifications are not saved.
+- Verification-code notifications are redacted before persistence. Copied codes use a sensitive clipboard selection and are cleared after one minute unless the clipboard has changed.
+- Playback audio is read through `parec` and processed in memory without saving PCM. Voxtype uses its existing audio bridge during recording; Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
+- Weather requests begin on first opening or hovering, with no requests beforehand. Automatic location uses `geo.omarchy.org`; search and forecasts use [Open-Meteo](https://open-meteo.com/). Requests use HTTPS, timeouts, and response limits. On failure, the last forecast remains marked stale; the cache is `~/.local/state/omarchy/island/weather.json`.
 
-У layer rules Hyprland нет `opacity`: прозрачность фона остаётся у клиента. Island следует `[popups] background-alpha` из темы или `~/.config/omarchy/shell.toml`; это общий токен поп-апов Omarchy. При альфе `1.0` фон непрозрачный и блюр за ним не виден. Цвет, прозрачность текста и музыкальный рисунок не изменяются правилом блюра.
+## Development
 
-Волна точек при клике медленно расширяется, а яркость независимо и быстро сходит к нулю. При отключённых системных анимациях волна не запускается.
+Sources live in `plugin/`. The root `manifest.json` serves the native plugin manager; `plugin/manifest.json` serves legacy flat installations. Keep shared metadata consistent and preserve their different entry point paths.
 
-## Скриншоты
+After editing fragment shaders, run `bin/build-shaders` with Qt `qsb` installed. Include the generated vertex shaders and `.qsb` files in the change.
 
-Текущая тема Omarchy, демонстрационные уведомления и трек.
-
-<img src="docs/screenshots/notifications.png" width="440" alt="Верхние вкладки, плеер и сгруппированные уведомления">
-
-Всплывающее уведомление без фоновой плашки:
-
-<img src="docs/screenshots/notification-toast.png" width="360" alt="Компактная плашка уведомления с брайлевыми радиоволнами">
-
-<details>
-<summary>Календарь: наведение и волна после клика</summary>
-
-<img src="docs/screenshots/calendar-hover.png" width="440" alt="Календарь с брайлевым спотлайтом при наведении">
-<img src="docs/screenshots/calendar-ripple.png" width="440" alt="Расходящаяся волна точек после клика по дате">
-
-</details>
-
-## Управление
-
-| Действие | Результат |
-|---|---|
-| Навести на часы | Превью |
-| Средняя кнопка по часам | Открыть / закрыть календарь |
-| Горизонтальный свайп, скролл тачпада или Shift + колёсико | Переключить страницу поп-апа |
-| Вкладка «Погода» со сводкой | Открыть погодную страницу |
-| Вкладка «Календарь» | Перейти в календарь |
-| Page Up / Page Down в календаре | Предыдущий / следующий месяц |
-| Home в календаре | Сегодня |
-| Кликнуть часы или свободную верхнюю часть превью | Закрепить поп-ап |
-| Повторный клик на часы, Escape, клик снаружи | Закрыть |
-| Space в закреплённом поп-апе | Play / pause |
-| Навести на значок громкости справа от шкалы трека | Регулятор громкости поверх шкалы |
-| Tab | Перейти между кнопками |
-| Правый клик на часы | Не беспокоить |
-
-Настройки задаются в записи `gshulga.island` в `~/.config/omarchy/shell.json`: `format` (унаследован от часов), `musicApps` (список разрешённых MPRIS-приложений), `notificationDuration` (5000 мс по умолчанию), `radialBraille` (экспериментальный профиль спотлайта, по умолчанию `true`). При этом профиле точки крупнее и плотнее в центре, меньше и реже к краям, при постоянном шаге сетки. Для возврата прежних размера и плотности задайте `"radialBraille": false`; эффекты наведения и волна останутся. Браузеры по умолчанию не включены. Громкость и перемотка доступны, когда их поддерживает приложение.
-
-`~/.local/state/omarchy/island/state.json` хранит до 100 уведомлений за последние 24 часа, mute и DND. Права директории — 0700, файла — 0600. Аудио читается только из монитора воспроизведения через `parec`; PCM обрабатывается в памяти и не записывается. Анализатор работает во время музыки, кроме режима уменьшенной анимации. При смене аудиоустройства PulseAudio переносит мониторный поток согласно своей политике; при ошибке источник явно отмечается в панели.
-
-## Проверка
+### Verification
 
 ```bash
 bin/test
-python3 tests/notification-service.py  # изолированная D-Bus-сессия
-python3 tests/live-notifications.py  # только при работающем Island
-python3 tests/popup-motion.py        # проверка анимации в Wayland
-python3 tests/battery.py             # строка батареи, меню и безопасная проверка выбора профиля
-python3 tests/controls.py            # встроенные системные разделы и быстрые действия
-python3 tests/keyboard.py            # реальные нажатия, вкладки, ввод текста и фокус
-python3 tests/indicators.py          # индикаторы и штатный OSD в Wayland
-python3 tests/dictation.py           # диктовка: запись, распознавание и уменьшенные анимации
-ISLAND_TEST_GPU=1 python3 tests/dictation.py # те же состояния с GPU-шейдером
-python3 tests/artwork-render.py      # реальные GPU-кадры брайлевого фона
 ```
 
-Проверяются детекторы кодов, редактирование секретов, URL-политика, фильтр приложений, группировка, клики на музыкальные кнопки/слайдеры, копирование и mute, открытие и закрытие громкости при наведении без изменения высоты, прямоугольную и круглую форму play/pause при смене системного радиуса, а также сохранение экземпляров карточек при раскрытии. Проверка `popup-motion.py` открывает тестовое уведомление от верхнего центра и раскрывает его в закреплённую панель: видимая Wayland-поверхность не должна менять размер, а центр карточки — смещаться. Изменяется геометрия карточки внутри постоянной поверхности; дополнительные контролы раскрываются с анимацией. Отдельная проверка D-Bus проверяет новые сообщения, `replaces_id` и закрытие отправителем. Тестовый интерфейс запускается offscreen и не меняет реальное воспроизведение.
+The suite covers JS models, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js, Python, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`; QML interaction tests use offscreen rendering.
 
-Проверка `artwork-render.py` требует OpenGL 3.3, компилятор C++ и Qt6Gui. Она сравнивает кадры при нулевом и ненулевом аудиоуровне и проверяет статичность при отключённых анимациях.
+Additional checks for the affected feature:
 
-IPC: `omarchy-shell island open|close|toggle|controls|calendar|weather|status`, `omarchy-shell notifications probe|toggleDnd|dismissAll`.
+```bash
+python3 tests/live-notifications.py        # Requires a running Island instance
+python3 tests/popup-motion.py              # Wayland popup geometry and animation
+python3 tests/keyboard.py                  # Keyboard input and focus
+python3 tests/indicators.py                # Wayland indicators and native OSD
+python3 tests/dictation.py                 # Dictation states and reduced motion
+ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
+python3 tests/artwork-render.py            # GPU artwork frames and reduced motion
+```
 
-Разбор уведомлений адаптирован из Omarchy / [Omapager](https://github.com/omacom/omapager). Лицензии и авторство: [THIRD_PARTY.md](plugin/THIRD_PARTY.md).
+Read scripts before running them: live checks may interact with the current session. Artwork rendering requires OpenGL 3.3, a C++ compiler, and Qt6Gui.
 
-## Лицензия
+## License
 
-[MIT](LICENSE). Атрибуция заимствованных компонентов сохранена в [THIRD_PARTY.md](plugin/THIRD_PARTY.md).
+[MIT](LICENSE). Notification handling is adapted from Omarchy / [Omapager](https://github.com/omacom/omapager). See [THIRD_PARTY.md](plugin/THIRD_PARTY.md) for attribution and component licenses.
