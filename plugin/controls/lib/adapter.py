@@ -1,0 +1,1226 @@
+# Adapted from gshulga.dashboard (MIT); see ../ADAPTER-LICENSE.
+"""Build safe, disposable Island adaptations of compatible Omarchy panels."""
+
+from __future__ import annotations
+
+import argparse
+import errno
+import fcntl
+import hashlib
+import json
+import os
+import re
+import stat
+import sys
+import tempfile
+import time
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterator
+
+
+class AdaptationError(Exception):
+    """The source does not satisfy Island's deliberately narrow contract."""
+
+
+ADAPTER_VERSION = "island-controls-adapter-v4"
+PADDED_LAYOUT = "padded"
+EDGE_TO_EDGE_LAYOUT = "edge-to-edge"
+CONTENT_LAYOUTS = frozenset((PADDED_LAYOUT, EDGE_TO_EDGE_LAYOUT))
+MARKER_KEYS = frozenset((
+    "version", "fingerprint", "entryPoint", "entryPoints", "sourceDir",
+    "sourceDigest", "adapterDigest", "artifactDigest", "layout",
+))
+MAX_ENTRY_POINT_BYTES = 1024 * 1024
+MAX_SOURCE_ENTRIES = 1024
+MAX_SOURCE_FILES = 1024
+MAX_SOURCE_FILE_BYTES = 8 * 1024 * 1024
+MAX_SOURCE_TREE_BYTES = 16 * 1024 * 1024
+MAX_SOURCE_DEPTH = 128
+MAX_MARKER_BYTES = 256 * 1024
+COPY_CHUNK_BYTES = 64 * 1024
+MAX_CACHED_ARTIFACTS = 8
+STALE_STAGING_SECONDS = 24 * 60 * 60
+MARKER_NAME = ".omarchy-island-adapted"
+HELPER_NAMES = ("IslandHost.qml", "IslandDisabledIpc.qml", "IslandHiddenBarButton.qml", "ControlKeyCatcher.qml", "ControlSwitch.qml")
+# The compatibility shims ship with the plugin's QML; this module lives in lib/.
+DEFAULT_ADAPTER_DIR = Path(__file__).resolve().parents[1]
+VCS_ROOT_NAMES = frozenset((".git", ".hg", ".svn"))
+
+
+@dataclass(frozen=True)
+class Token:
+    value: str
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class ObjectNode:
+    type_name: str
+    type_token: Token
+    open_token: Token
+    close_token: Token
+
+
+@dataclass
+class TreeBudget:
+    entries: int = 0
+    files: int = 0
+    bytes: int = 0
+
+
+def tokens(source: str) -> list[Token]:
+    """Return QML syntax tokens while deliberately ignoring comments and strings."""
+    result: list[Token] = []
+    index = 0
+    size = len(source)
+    while index < size:
+        current = source[index]
+        if current.isspace():
+            index += 1
+        elif source.startswith("//", index):
+            newline = source.find("\n", index + 2)
+            index = size if newline < 0 else newline + 1
+        elif source.startswith("/*", index):
+            end = source.find("*/", index + 2)
+            if end < 0:
+                raise AdaptationError("unterminated block comment")
+            index = end + 2
+        elif current == "/" and (not result or result[-1].value in (
+            "(", "[", "{", "=", ":", ",", ";", "!", "?", "&", "|",
+            "return", "case", "throw",
+        )):
+            # Regex literals may contain quotes, braces and comment markers.
+            # Consume the whole literal so none can become QML syntax.
+            start = index
+            index += 1
+            character_class = False
+            while index < size:
+                if source[index] in "\r\n":
+                    raise AdaptationError("unterminated regular expression")
+                if source[index] == "\\":
+                    index += 2
+                    continue
+                if source[index] == "[":
+                    character_class = True
+                elif source[index] == "]":
+                    character_class = False
+                elif source[index] == "/" and not character_class:
+                    index += 1
+                    while index < size and source[index].isalpha():
+                        index += 1
+                    break
+                index += 1
+            else:
+                raise AdaptationError("unterminated regular expression")
+            result.append(Token(source[start:index], start, index))
+        elif current in "\"'`":
+            start = index
+            quote = current
+            index += 1
+            while index < size:
+                if source[index] == "\\":
+                    index += 2
+                elif source[index] == quote:
+                    index += 1
+                    break
+                else:
+                    index += 1
+            else:
+                raise AdaptationError("unterminated string")
+            result.append(Token(source[start:index], start, index))
+        elif current.isalpha() or current == "_":
+            start = index
+            index += 1
+            while index < size and (source[index].isalnum() or source[index] == "_"):
+                index += 1
+            result.append(Token(source[start:index], start, index))
+        else:
+            result.append(Token(current, index, index + 1))
+            index += 1
+    return result
+
+
+def object_nodes(token_list: list[Token]) -> list[ObjectNode]:
+    """Recognize QML object blocks; JavaScript blocks do not have a type token."""
+    stack: list[tuple[Token, Token]] = []
+    nodes: list[ObjectNode] = []
+    for index, token in enumerate(token_list):
+        if token.value == "{" and index > 0:
+            previous = token_list[index - 1]
+            if previous.value and (previous.value[0].isalpha() or previous.value[0] == "_"):
+                stack.append((previous, token))
+            else:
+                stack.append((Token("", token.start, token.start), token))
+        elif token.value == "{":
+            stack.append((Token("", token.start, token.start), token))
+        elif token.value == "}":
+            if not stack:
+                raise AdaptationError("unmatched closing brace")
+            type_token, open_token = stack.pop()
+            if type_token.value:
+                nodes.append(ObjectNode(type_token.value, type_token, open_token, token))
+    if stack:
+        raise AdaptationError("unmatched opening brace")
+    return sorted(nodes, key=lambda node: node.open_token.start)
+
+
+def direct_property(token_list: list[Token], node: ObjectNode, name: str) -> tuple[Token, Token] | None:
+    """Find a direct `name: value` binding in an object, not a nested object."""
+    depth = 0
+    for index, token in enumerate(token_list):
+        if token.start <= node.open_token.start or token.end >= node.close_token.end:
+            continue
+        if token.value == "{":
+            depth += 1
+        elif token.value == "}":
+            depth -= 1
+        elif depth == 0 and token.value == name and index + 1 < len(token_list):
+            colon = token_list[index + 1]
+            if colon.value == ":":
+                return token, colon
+    return None
+
+
+def direct_attached_property(
+    token_list: list[Token], node: ObjectNode, owner: str, name: str
+) -> tuple[Token, Token] | None:
+    """Find a direct `Owner.name: value` binding in an object."""
+    depth = 0
+    for index, token in enumerate(token_list):
+        if token.start <= node.open_token.start or token.end >= node.close_token.end:
+            continue
+        if token.value == "{":
+            depth += 1
+        elif token.value == "}":
+            depth -= 1
+        elif depth == 0 and token.value == owner and index + 3 < len(token_list):
+            if (token_list[index + 1].value == "." and token_list[index + 2].value == name
+                    and token_list[index + 3].value == ":"):
+                return token, token_list[index + 3]
+    return None
+
+
+# Members every QML Item already has, so a shim never has to declare them.
+SHIM_ASSIGNMENT_BUILTINS = frozenset((
+    "id", "objectName", "parent", "data", "children", "resources",
+    "x", "y", "z", "width", "height", "implicitWidth", "implicitHeight",
+    "rotation", "scale", "transformOrigin", "opacity", "visible", "enabled",
+    "clip", "focus", "activeFocusOnTab", "antialiasing", "smooth", "cache",
+    "state", "states", "transitions", "baselineOffset",
+))
+
+SHIM_MEMBERS: dict[Path, frozenset[str]] = {}
+
+
+def shim_members(path: Path) -> frozenset[str] | None:
+    """Member names a compatibility shim declares, or None when it is unreadable.
+
+    Extraction is deliberately generous: calling a declared member missing would
+    reject a panel that works today.
+    """
+    cached = SHIM_MEMBERS.get(path)
+    if cached is not None:
+        return cached
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    found: set[str] = set()
+    token_list = tokens(source)
+    for index, token in enumerate(token_list):
+        if token.value not in ("property", "signal", "function"):
+            continue
+        for candidate in token_list[index + 1:index + 4]:
+            if candidate.value in (":", "(", "{", "}"):
+                break
+            if candidate.value and (candidate.value[0].isalpha() or candidate.value[0] == "_"):
+                found.add(candidate.value)
+    SHIM_MEMBERS[path] = frozenset(found)
+    return SHIM_MEMBERS[path]
+
+
+def assigned_members(token_list: list[Token], node: ObjectNode) -> set[str]:
+    """Direct `name: value` bindings inside a block, excluding declarations."""
+    names: set[str] = set()
+    depth = 0
+    parentheses = 0
+    for index, token in enumerate(token_list):
+        if token.start <= node.open_token.start or token.end >= node.close_token.end:
+            continue
+        if token.value == "{":
+            depth += 1
+            continue
+        if token.value == "}":
+            depth -= 1
+            continue
+        if token.value == "(":
+            parentheses += 1
+            continue
+        if token.value == ")":
+            parentheses -= 1
+            continue
+        # Only top-level bindings count: a nested object owns its own members,
+        # and a parameter list holds `name: type` annotations, not assignments.
+        if depth != 0 or parentheses != 0:
+            continue
+        if index + 1 >= len(token_list) or token_list[index + 1].value != ":":
+            continue
+        value = token.value
+        if not value or not (value[0].isalpha() or value[0] == "_"):
+            continue
+        # A dotted path (`anchors.fill`) is not an assignment to this object, and
+        # `property bool enabled:` declares a member rather than setting one.
+        previous = token_list[index - 1].value if index else ""
+        before_previous = token_list[index - 2].value if index > 1 else ""
+        if previous in (".", "?") or previous in (
+            "property", "alias", "readonly", "default", "signal"
+        ) or before_previous in ("property", "alias", "readonly", "default"):
+            continue
+        names.add(value)
+    return names - SHIM_ASSIGNMENT_BUILTINS
+
+
+def signal_for_handler(name: str) -> str:
+    """`onPressed` binds the `pressed` signal."""
+    if len(name) > 2 and name.startswith("on") and name[2].isupper():
+        return name[2].lower() + name[3:]
+    return name
+
+
+def verify_shim_contract(
+    node: ObjectNode, token_list: list[Token], shim: str, adapter_dir: Path
+) -> None:
+    """Reject a block that sets a member its Island shim does not implement.
+
+    Omarchy's UI kit gains members between releases: KeyboardPanel.content and
+    BarIconButton.labelText both arrived in one week. An adapted panel that sets
+    one of them cannot instantiate inside Island, which the user sees as an
+    empty tile; naming the gap here reports the failure instead.
+    """
+    members = shim_members(Path(adapter_dir) / shim)
+    if members is None:
+        return
+    missing = sorted(
+        name for name in assigned_members(token_list, node)
+        if signal_for_handler(name) not in members
+    )
+    if missing:
+        raise AdaptationError(
+            f"{node.type_name} sets {', '.join(missing)}, "
+            f"which the {shim} compatibility shim does not implement"
+        )
+
+
+def binding_line(
+    source: str, binding: tuple[Token, Token] | None
+) -> tuple[int, int, str] | None:
+    """Return an isolated one-line binding and its indentation."""
+    if binding is None:
+        return None
+    property_token, colon = binding
+    line_start = source.rfind("\n", 0, property_token.start) + 1
+    line_end = source.find("\n", colon.end)
+    if line_end < 0:
+        line_end = len(source)
+        suffix = ""
+    else:
+        line_end += 1
+        suffix = "\n"
+    indentation = source[line_start:property_token.start]
+    value = source[colon.end:line_end - len(suffix)].strip()
+    if indentation.strip() or not value:
+        return None
+    delimiters = {"(": ")", "[": "]", "{": "}"}
+    stack: list[str] = []
+    for token in tokens(value):
+        if token.value in delimiters:
+            stack.append(delimiters[token.value])
+        elif token.value in delimiters.values():
+            if not stack or stack.pop() != token.value:
+                return None
+    if stack:
+        return None
+    return line_start, line_end, indentation
+
+
+def direct_id(token_list: list[Token], node: ObjectNode) -> str:
+    binding = direct_property(token_list, node, "id")
+    if binding is None:
+        raise AdaptationError("root Panel must declare an id")
+    _, colon = binding
+    try:
+        value = token_list[token_list.index(colon) + 1]
+    except IndexError as error:
+        raise AdaptationError("root Panel has an incomplete id") from error
+    if not value.value or not (value.value[0].isalpha() or value.value[0] == "_"):
+        raise AdaptationError("root Panel id must be an identifier")
+    return value.value
+
+
+def contains(node: ObjectNode, child: ObjectNode) -> bool:
+    return node.open_token.start < child.open_token.start < node.close_token.end
+
+
+def direct_child(parent: ObjectNode, child: ObjectNode, nodes: list[ObjectNode]) -> bool:
+    if not contains(parent, child):
+        return False
+    return not any(
+        candidate is not parent and candidate is not child
+        and contains(parent, candidate) and contains(candidate, child)
+        for candidate in nodes
+    )
+
+
+def replace_ranges(source: str, replacements: list[tuple[int, int, str]]) -> str:
+    chunks: list[str] = []
+    cursor = 0
+    for start, end, value in sorted(replacements):
+        if start < cursor or end < start or end > len(source):
+            raise AdaptationError("overlapping or invalid source transformation")
+        chunks.extend((source[cursor:start], value))
+        cursor = end
+    chunks.append(source[cursor:])
+    return "".join(chunks)
+
+
+def island_replacements(
+    source: str,
+    token_list: list[Token],
+    nodes: list[ObjectNode],
+    root: ObjectNode,
+    root_id: str,
+    adapter_dir: Path | None = None,
+) -> list[tuple[int, int, str]]:
+    """Disable process-global hooks that an in-process copy must not own."""
+    shims = Path(adapter_dir) if adapter_dir is not None else DEFAULT_ADAPTER_DIR
+    replacements: list[tuple[int, int, str]] = []
+    for node in nodes:
+        if not contains(root, node):
+            continue
+        if node.type_name in ("IpcHandler", "ShellIpc"):
+            verify_shim_contract(node, token_list, "IslandDisabledIpc.qml", shims)
+            replacements.append((node.type_token.start, node.type_token.end, "IslandDisabledIpc"))
+        elif node.type_name in ("BarIconButton", "WidgetButton"):
+            verify_shim_contract(node, token_list, "IslandHiddenBarButton.qml", shims)
+            replacements.append((node.type_token.start, node.type_token.end, "IslandHiddenBarButton"))
+        elif node.type_name == "ToggleSwitch":
+            replacements.append((node.type_token.start, node.type_token.end, "ControlSwitch"))
+        elif node.type_name == "PanelKeyCatcher":
+            verify_shim_contract(node, token_list, "ControlKeyCatcher.qml", shims)
+            replacements.append((node.type_token.start, node.type_token.end, "ControlKeyCatcher"))
+        elif node.type_name in ("PanelSectionHeader", "Text"):
+            # Text implicitHeight can depend on explicit height during reflow.
+            # Hidden Text in Columns already collapses out of the layout.
+            binding = binding_line(source, direct_property(token_list, node, "height"))
+            if binding:
+                start, end, _ = binding
+                if source[start:end].strip() == "height: visible ? implicitHeight : 0":
+                    replacements.append((start, end, ""))
+        elif node.type_name == "Shortcut":
+            sequence = direct_property(token_list, node, "sequence")
+            if sequence is None:
+                continue
+            _, colon = sequence
+            value_index = token_list.index(colon) + 1
+            if value_index >= len(token_list):
+                continue
+            value = token_list[value_index]
+            if value.value in ('"Escape"', "'Escape'"):
+                replacements.append((value.start, value.end, f'{root_id}.islandHost ? "" : {value.value}'))
+    return replacements
+
+
+def transform_standard_panel(
+    source: str,
+    token_list: list[Token],
+    nodes: list[ObjectNode],
+    root: ObjectNode,
+    adapter_dir: Path | None = None,
+) -> str:
+    """Adapt one constrained standard KeyboardPanel without rewriting its lifecycle."""
+    if not nodes or nodes[0].type_name != "Panel":
+        raise AdaptationError("the root object must be a standard Panel")
+    root_id = direct_id(token_list, root)
+
+    for unsupported in ("PanelWindow", "PopupWindow", "FloatingWindow"):
+        if any(node.type_name == unsupported and contains(root, node) for node in nodes):
+            raise AdaptationError(f"unsupported mapped surface: {unsupported}")
+
+    hosts = [node for node in nodes if node.type_name == "KeyboardPanel" and contains(root, node)]
+    if len(hosts) != 1:
+        raise AdaptationError("expected exactly one standard KeyboardPanel")
+    host = hosts[0]
+    verify_shim_contract(
+        host, token_list, "IslandHost.qml",
+        Path(adapter_dir) if adapter_dir is not None else DEFAULT_ADAPTER_DIR,
+    )
+
+    if direct_property(token_list, root, "islandHost"):
+        raise AdaptationError("root Panel already declares islandHost")
+    if direct_property(token_list, host, "islandHost") or direct_property(token_list, host, "page"):
+        raise AdaptationError("KeyboardPanel uses reserved Island host properties")
+
+    replacements: list[tuple[int, int, str]] = [
+        (
+            root.open_token.end,
+            root.open_token.end,
+            "\n  property var islandHost: null"
+            "\n  property var islandFocusTarget: null"
+            "\n  readonly property Item keyboardTarget: islandFocusTarget"
+            "\n  property real inlineContentHeight: 0"
+            "\n  function focusContent() { islandFocus() }"
+            "\n  function islandFocus() { if (islandFocusTarget) islandFocusTarget.forceActiveFocus() }",
+        ),
+        (host.type_token.start, host.type_token.end, "IslandHost"),
+        (
+            host.open_token.end,
+            host.open_token.end,
+            f"\n    anchors.fill: parent\n    islandHost: {root_id}.islandHost\n    page: {root_id}"
+            f"\n    islandContentWidthHint: {str(direct_property(token_list, host, 'contentWidth') is not None).lower()}"
+            f"\n    islandContentHeightHint: {str(direct_property(token_list, host, 'contentHeight') is not None).lower()}"
+            f"\n    onFocusTargetChanged: {root_id}.islandFocusTarget = focusTarget"
+            f"\n    Component.onCompleted: {root_id}.islandFocusTarget = focusTarget",
+        ),
+    ]
+
+    manage_ipc = direct_property(token_list, root, "manageIpc")
+    if manage_ipc is None:
+        replacements.append((root.open_token.end, root.open_token.end, "\n  manageIpc: false"))
+    else:
+        _, colon = manage_ipc
+        value_index = token_list.index(colon) + 1
+        if value_index >= len(token_list) or token_list[value_index].value not in ("true", "false"):
+            raise AdaptationError("manageIpc must be a literal boolean")
+        value = token_list[value_index]
+        replacements.append((value.start, value.end, "false"))
+
+    replacements.extend(island_replacements(source, token_list, nodes, root, root_id, adapter_dir))
+
+    return replace_ranges(source, replacements)
+
+
+def adapt_qml(source: str, adapter_dir: Path | None = None) -> tuple[str, str]:
+    """Return transformed QML and the layout its Island host should use."""
+    token_list = tokens(source)
+    nodes = object_nodes(token_list)
+    if not nodes:
+        raise AdaptationError("the entry point has no root object")
+    root = nodes[0]
+    if root.type_name == "Panel":
+        return transform_standard_panel(source, token_list, nodes, root, adapter_dir), PADDED_LAYOUT
+    raise AdaptationError("the root object must be a standard Panel")
+
+
+def transform_qml(source: str, adapter_dir: Path | None = None) -> str:
+    """Adapt a standard panel or one conservative nested-window panel shape."""
+    return adapt_qml(source, adapter_dir)[0]
+
+
+def adaptation_layout(source: str, adapter_dir: Path | None = None) -> str:
+    """Describe the host layout selected by the same validation used to adapt QML."""
+    return adapt_qml(source, adapter_dir)[1]
+
+
+def digest_field(digest: "hashlib._Hash", value: bytes) -> None:
+    digest.update(len(value).to_bytes(8, "big"))
+    digest.update(value)
+
+
+def digest_entry(
+    digest: "hashlib._Hash", kind: bytes, relative: Path, mode: int, size: int, content_digest: bytes = b""
+) -> None:
+    digest_field(digest, kind)
+    digest_field(digest, relative.as_posix().encode("utf-8", "surrogateescape"))
+    digest_field(digest, stat.S_IMODE(mode).to_bytes(4, "big"))
+    digest_field(digest, size.to_bytes(8, "big"))
+    digest_field(digest, content_digest)
+
+
+def open_tree_entry(parent_descriptor: int, name: str, relative: Path) -> int:
+    flags = os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise AdaptationError("O_NOFOLLOW is unavailable")
+    try:
+        return os.open(name, flags | os.O_NOFOLLOW, dir_fd=parent_descriptor)
+    except OSError as error:
+        if error.errno in (errno.ELOOP, errno.EMLINK):
+            raise AdaptationError(f"source contains a symlink: {relative}") from error
+        raise
+
+
+def walk_tree(
+    source_descriptor: int,
+    relative_dir: Path,
+    digest: "hashlib._Hash",
+    budget: TreeBudget,
+    target_dir: Path | None,
+    skipped_root_names: frozenset[str],
+    depth: int = 0,
+) -> None:
+    names: list[str] = []
+    with os.scandir(source_descriptor) as iterator:
+        for entry in iterator:
+            if relative_dir == Path() and entry.name in skipped_root_names:
+                continue
+            names.append(entry.name)
+            if budget.entries + len(names) > MAX_SOURCE_ENTRIES:
+                raise AdaptationError("source contains too many entries")
+
+    for name in sorted(names):
+        if budget.entries >= MAX_SOURCE_ENTRIES:
+            raise AdaptationError("source contains too many entries")
+        relative = relative_dir / name
+        descriptor = open_tree_entry(source_descriptor, name, relative)
+        try:
+            metadata = os.fstat(descriptor)
+            budget.entries += 1
+            if stat.S_ISDIR(metadata.st_mode):
+                if depth >= MAX_SOURCE_DEPTH:
+                    raise AdaptationError("source tree is too deeply nested")
+                digest_entry(digest, b"directory", relative, metadata.st_mode, 0)
+                child_target = target_dir / name if target_dir is not None else None
+                if child_target is not None:
+                    child_target.mkdir(mode=0o700)
+                walk_tree(descriptor, relative, digest, budget, child_target, skipped_root_names, depth + 1)
+                continue
+            if not stat.S_ISREG(metadata.st_mode):
+                raise AdaptationError(f"source contains an unsupported file: {relative}")
+
+            budget.files += 1
+            if budget.files > MAX_SOURCE_FILES:
+                raise AdaptationError("source contains too many files")
+            if metadata.st_size > MAX_SOURCE_FILE_BYTES:
+                raise AdaptationError(f"source file exceeds maximum size: {relative}")
+
+            output_descriptor = -1
+            if target_dir is not None:
+                output_descriptor = os.open(
+                    target_dir / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o600
+                )
+            file_digest = hashlib.sha256()
+            file_bytes = 0
+            try:
+                while chunk := os.read(descriptor, COPY_CHUNK_BYTES):
+                    file_bytes += len(chunk)
+                    budget.bytes += len(chunk)
+                    if file_bytes > MAX_SOURCE_FILE_BYTES or budget.bytes > MAX_SOURCE_TREE_BYTES:
+                        raise AdaptationError("source tree exceeds maximum size while copying")
+                    file_digest.update(chunk)
+                    if output_descriptor >= 0:
+                        view = memoryview(chunk)
+                        while view:
+                            written = os.write(output_descriptor, view)
+                            view = view[written:]
+            finally:
+                if output_descriptor >= 0:
+                    os.close(output_descriptor)
+
+            if target_dir is not None:
+                (target_dir / name).chmod(0o600 | (stat.S_IMODE(metadata.st_mode) & 0o111))
+            digest_entry(digest, b"file", relative, metadata.st_mode, file_bytes, file_digest.digest())
+        finally:
+            os.close(descriptor)
+
+
+def tree_digest(
+    source_dir: Path,
+    target_dir: Path | None = None,
+    skip_marker: bool = False,
+    skip_vcs: bool = False,
+) -> str:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(source_dir, flags)
+    except OSError as error:
+        raise AdaptationError(f"cannot safely open source directory: {source_dir}") from error
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise AdaptationError("source directory does not exist")
+        if target_dir is not None:
+            target_dir.mkdir(mode=0o700)
+        digest = hashlib.sha256()
+        skipped_root_names = set(VCS_ROOT_NAMES if skip_vcs else ())
+        if skip_marker:
+            skipped_root_names.add(MARKER_NAME)
+        walk_tree(
+            descriptor,
+            Path(),
+            digest,
+            TreeBudget(),
+            target_dir,
+            frozenset(skipped_root_names),
+        )
+        return digest.hexdigest()
+    finally:
+        os.close(descriptor)
+
+
+def source_tree_digest(source_dir: Path, entries: object | None = None) -> str:
+    """Hash the bytes and modes actually read from a bounded, symlink-free tree."""
+    del entries
+    return tree_digest(source_dir)
+
+
+def read_entry_point(source: Path) -> str:
+    """Read one QML entry point without allocating more than its fixed limit."""
+    content = read_regular_file(source, MAX_ENTRY_POINT_BYTES, "entry point")
+    if len(content) > MAX_ENTRY_POINT_BYTES:
+        raise AdaptationError("entry point exceeds maximum size")
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise AdaptationError("entry point is not valid UTF-8") from error
+
+
+def choose_source(
+    source_dir: Path,
+    entry_point: str,
+    transforms: dict[Path, tuple[str, str]] | None = None,
+    adapter_dir: Path | None = None,
+) -> Path:
+    entry = Path(entry_point)
+    if entry.is_absolute() or ".." in entry.parts:
+        raise AdaptationError("entry point is outside its plugin directory")
+    candidate = (source_dir / entry).resolve()
+    if not candidate.is_file() or source_dir not in candidate.parents:
+        raise AdaptationError("entry point is outside its plugin directory")
+    # Respect a usable declared entry point before looking for bar siblings.
+    if can_adapt_source(candidate, transforms, adapter_dir):
+        return candidate
+    sibling = (candidate.parent / "Panel.qml").resolve()
+    if sibling != candidate and sibling.is_file() and source_dir in sibling.parents \
+            and can_adapt_source(sibling, transforms, adapter_dir):
+        return sibling
+    return discover_sibling_panel(candidate, source_dir, transforms, adapter_dir) or candidate
+
+
+def can_adapt_source(
+    path: Path,
+    transforms: dict[Path, tuple[str, str]] | None = None,
+    adapter_dir: Path | None = None,
+) -> bool:
+    if transforms is not None and path in transforms:
+        return True
+    try:
+        result = adapt_qml(read_entry_point(path), adapter_dir)
+        if transforms is not None:
+            transforms[path] = result
+        return True
+    except AdaptationError:
+        return False
+
+
+def has_standard_host(source: str) -> bool:
+    return any(node.type_name == "KeyboardPanel" for node in object_nodes(tokens(source)))
+
+
+def discover_sibling_panel(
+    entry_source: Path,
+    source_dir: Path,
+    transforms: dict[Path, tuple[str, str]] | None = None,
+    adapter_dir: Path | None = None,
+) -> Path | None:
+    """Find one unambiguous compatible panel beside a bar-widget entry point."""
+    candidates: list[Path] = []
+    for sibling in sorted(entry_source.parent.glob("*Panel.qml")):
+        candidate = sibling.resolve()
+        if candidate == entry_source or not candidate.is_file() or source_dir not in candidate.parents:
+            continue
+        if can_adapt_source(candidate, transforms, adapter_dir):
+            candidates.append(candidate)
+    if len(candidates) > 1:
+        raise AdaptationError("plugin has ambiguous sibling panel candidates")
+    return candidates[0] if candidates else None
+
+
+def copy_tree(source_dir: Path, target_dir: Path) -> str:
+    """Copy and hash one descriptor-based snapshot of a plugin source tree."""
+    return tree_digest(source_dir, target_dir, skip_vcs=True)
+
+
+def is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+RELATIVE_IMPORT = re.compile(
+    r'(?m)^(?P<prefix>\s*import\s+)(?P<quote>["\'])(?P<path>[^"\']+)(?P=quote)(?P<suffix>\s+as\s+\w+)?\s*$'
+)
+
+
+def rebase_external_relative_imports(source: str, source_dir: Path, entry_source: Path) -> str:
+    """Keep QML imports outside a copied plugin pointed at their original directory."""
+
+    def replace(match: re.Match[str]) -> str:
+        relative = match.group("path")
+        if not relative.startswith("."):
+            return match.group(0)
+        target = (entry_source.parent / relative).resolve()
+        if not target.is_dir() or is_within(target, source_dir):
+            return match.group(0)
+        return f'{match.group("prefix")}{match.group("quote")}{target.as_uri()}{match.group("quote")}{match.group("suffix") or ""}'
+
+    return RELATIVE_IMPORT.sub(replace, source)
+
+
+def read_regular_file(path: Path, maximum: int, label: str) -> bytes:
+    flags = os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise AdaptationError(f"cannot safely open {label}: {path}") from error
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise AdaptationError(f"{label} is not a regular file")
+        if metadata.st_size > maximum:
+            raise AdaptationError(f"{label} exceeds maximum size")
+        chunks: list[bytes] = []
+        remaining = maximum + 1
+        while remaining > 0:
+            chunk = os.read(descriptor, min(COPY_CHUNK_BYTES, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        content = b"".join(chunks)
+        if len(content) > maximum:
+            raise AdaptationError(f"{label} exceeds maximum size")
+        return content
+    finally:
+        os.close(descriptor)
+
+
+def safe_directory(path: Path) -> None:
+    if not path.is_absolute() or path != Path(os.path.abspath(path)):
+        raise AdaptationError(f"cache path must be absolute and normalized: {path}")
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if path.resolve() != path:
+        raise AdaptationError(f"refusing a cache path with symlinked ancestors: {path}")
+    metadata = path.lstat()
+    if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+        raise AdaptationError(f"cache path is not a directory: {path}")
+    if metadata.st_uid != os.getuid():
+        raise AdaptationError(f"cache path is not owned by the current user: {path}")
+    path.chmod(0o700)
+
+    ancestor = path.parent
+    while True:
+        metadata = ancestor.lstat()
+        if stat.S_ISLNK(metadata.st_mode):
+            raise AdaptationError(f"refusing a symlinked cache ancestor: {ancestor}")
+        if metadata.st_uid not in (0, os.getuid()):
+            raise AdaptationError(f"refusing an untrusted cache ancestor: {ancestor}")
+        writable_by_others = stat.S_IMODE(metadata.st_mode) & (stat.S_IWGRP | stat.S_IWOTH)
+        if writable_by_others and not metadata.st_mode & stat.S_ISVTX:
+            raise AdaptationError(f"refusing an insecure cache ancestor: {ancestor}")
+        if ancestor == ancestor.parent:
+            break
+        ancestor = ancestor.parent
+
+
+@contextmanager
+def cache_lock(namespace_root: Path) -> Iterator[None]:
+    lock_path = namespace_root / ".lock"
+    flags = os.O_RDWR | os.O_CREAT | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(lock_path, flags, 0o600)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid():
+            raise AdaptationError("cache lock is unsafe")
+        os.fchmod(descriptor, 0o600)
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(descriptor)
+
+
+def remove_tree_entry(parent_descriptor: int, name: str) -> None:
+    try:
+        metadata = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
+    except FileNotFoundError:
+        return
+    if not stat.S_ISDIR(metadata.st_mode):
+        os.unlink(name, dir_fd=parent_descriptor)
+        return
+
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(name, flags, dir_fd=parent_descriptor)
+    try:
+        os.fchmod(descriptor, 0o700)
+        for child in os.listdir(descriptor):
+            remove_tree_entry(descriptor, child)
+    finally:
+        os.close(descriptor)
+    os.rmdir(name, dir_fd=parent_descriptor)
+
+
+def remove_tree(path: Path) -> None:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    parent_descriptor = os.open(path.parent, flags)
+    try:
+        remove_tree_entry(parent_descriptor, path.name)
+    finally:
+        os.close(parent_descriptor)
+
+
+def seal_tree(path: Path) -> None:
+    for directory, _, files in os.walk(path, topdown=False, followlinks=False):
+        directory_path = Path(directory)
+        for name in files:
+            file_path = directory_path / name
+            metadata = file_path.lstat()
+            if not stat.S_ISREG(metadata.st_mode):
+                raise AdaptationError(f"generated artifact contains an unsafe file: {file_path}")
+            file_path.chmod(0o400 | (stat.S_IMODE(metadata.st_mode) & 0o111))
+        directory_path.chmod(0o700)
+
+
+def clean_stale_staging(staging_parent: Path) -> None:
+    cutoff = time.time() - STALE_STAGING_SECONDS
+    for child in staging_parent.iterdir():
+        try:
+            metadata = child.lstat()
+            if metadata.st_mtime >= cutoff:
+                continue
+            if stat.S_ISDIR(metadata.st_mode):
+                active_lock = child / ".active"
+                lock_descriptor = -1
+                try:
+                    flags = os.O_RDWR | os.O_CLOEXEC
+                    if hasattr(os, "O_NOFOLLOW"):
+                        flags |= os.O_NOFOLLOW
+                    lock_descriptor = os.open(active_lock, flags)
+                    fcntl.flock(lock_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except FileNotFoundError:
+                    pass
+                except BlockingIOError:
+                    continue
+                try:
+                    remove_tree(child)
+                finally:
+                    if lock_descriptor >= 0:
+                        os.close(lock_descriptor)
+            else:
+                remove_tree(child)
+        except OSError:
+            continue
+
+
+def prune_namespace(namespace_root: Path, current: Path) -> None:
+    artifacts: list[tuple[float, Path]] = []
+    for child in namespace_root.iterdir():
+        if child == current or child.name == ".lock":
+            continue
+        try:
+            metadata = child.lstat()
+        except OSError:
+            continue
+        if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
+            artifacts.append((metadata.st_mtime, child))
+        elif stat.S_ISLNK(metadata.st_mode):
+            remove_tree(child)
+    artifacts.sort(reverse=True)
+    for _, artifact in artifacts[MAX_CACHED_ARTIFACTS - 1 :]:
+        try:
+            remove_tree(artifact)
+        except OSError:
+            continue
+
+
+def completed_artifact(
+    destination: Path, generated_source: Path, fingerprint: str, source_digest: str
+) -> bool:
+    marker = destination / MARKER_NAME
+    try:
+        if destination.is_symlink() or not destination.is_dir() or not is_within(generated_source, destination):
+            return False
+        document = json.loads(read_regular_file(marker, MAX_MARKER_BYTES, "artifact marker").decode("utf-8"))
+        if not isinstance(document, dict):
+            return False
+        relative_source = generated_source.relative_to(destination).as_posix()
+        if set(document) != MARKER_KEYS:
+            return False
+        if document["version"] != ADAPTER_VERSION or document["fingerprint"] != fingerprint:
+            return False
+        if document["sourceDigest"] != source_digest:
+            return False
+        if document["entryPoint"] != relative_source:
+            return False
+        if document["layout"] not in CONTENT_LAYOUTS:
+            return False
+        if not re.fullmatch(r"[0-9a-f]{64}", str(document["artifactDigest"])):
+            return False
+        return tree_digest(destination, skip_marker=True) == document["artifactDigest"]
+    except (
+        AdaptationError, KeyError, OSError, UnicodeError, ValueError,
+        json.JSONDecodeError, RecursionError,
+    ):
+        return False
+
+
+def adaptation_identity(adapter_dir: Path) -> str:
+    """Hash the transform version and the helper sources copied into artifacts.
+
+    A helper edit must produce a new artifact, so its bytes belong in the key
+    that decides whether a cached artifact is reusable.
+    """
+    digest = hashlib.sha256()
+    digest_field(digest, ADAPTER_VERSION.encode("utf-8"))
+    digest_field(digest, str(adapter_dir.resolve()).encode("utf-8"))
+    digest_field(digest, read_regular_file(Path(__file__).resolve(), MAX_ENTRY_POINT_BYTES, "adapter source"))
+    for name in HELPER_NAMES:
+        digest_field(digest, name.encode("utf-8"))
+        digest_field(
+            digest,
+            read_regular_file(adapter_dir / name, MAX_ENTRY_POINT_BYTES, f"adapter helper {name}"),
+        )
+    return digest.hexdigest()
+
+
+def marker_is_reusable(
+    document: object,
+    source_dir: Path,
+    entry_points: list[str],
+    source_digest: str,
+    adapter_digest: str,
+) -> bool:
+    if not isinstance(document, dict) or set(document) != MARKER_KEYS:
+        return False
+    if document["version"] != ADAPTER_VERSION:
+        return False
+    if document["sourceDir"] != str(source_dir):
+        return False
+    if document["sourceDigest"] != source_digest or document["adapterDigest"] != adapter_digest:
+        return False
+    stored = document["entryPoints"]
+    return isinstance(stored, list) and stored == entry_points
+
+
+def cached_artifact(
+    namespace_root: Path,
+    source_dir: Path,
+    entry_points: list[str],
+    source_digest: str,
+    adapter_digest: str,
+) -> Path | None:
+    """Reuse a verified artifact built from this exact source without copying.
+
+    The complete build below is only needed when the source, its entry points or
+    the adapter helpers changed, so unchanged plugins skip copy, transform and
+    seal while still passing the same artifact integrity check.
+    """
+    for child in sorted(namespace_root.iterdir()):
+        if child.name == ".lock":
+            continue
+        try:
+            metadata = child.lstat()
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+                continue
+            document = json.loads(
+                read_regular_file(child / MARKER_NAME, MAX_MARKER_BYTES, "artifact marker").decode("utf-8")
+            )
+        except (
+            AdaptationError, OSError, UnicodeError, json.JSONDecodeError, RecursionError,
+        ):
+            continue
+        if not marker_is_reusable(document, source_dir, entry_points, source_digest, adapter_digest):
+            continue
+        generated_source = child / str(document["entryPoint"])
+        if completed_artifact(child, generated_source, str(document["fingerprint"]), source_digest):
+            return generated_source
+    return None
+
+
+def build(source_dir: Path, entry_point: str | list[str], cache_root: Path, plugin_id: str, adapter_dir: Path) -> Path:
+    source_dir = source_dir.resolve()
+    adapter_dir = adapter_dir.resolve()
+    cache_root = Path(cache_root)
+    if not source_dir.is_dir():
+        raise AdaptationError("source directory does not exist")
+    if not adapter_dir.is_dir():
+        raise AdaptationError("adapter directory does not exist")
+    if not plugin_id or len(plugin_id) > 160 or plugin_id in (".", "..") or "/" in plugin_id:
+        raise AdaptationError("plugin id is unsafe")
+    if any(ord(character) < 32 for character in plugin_id):
+        raise AdaptationError("plugin id is unsafe")
+    if not cache_root.is_absolute() or cache_root != Path(os.path.abspath(cache_root)):
+        raise AdaptationError("cache root must be an absolute normalized path")
+    if is_within(cache_root, source_dir) or is_within(source_dir, cache_root):
+        raise AdaptationError("cache root must not overlap the source plugin")
+
+    safe_directory(cache_root)
+    namespace = hashlib.sha256(plugin_id.encode("utf-8")).hexdigest()
+    namespace_root = cache_root / namespace
+    safe_directory(namespace_root)
+
+    entry_points = [entry_point] if isinstance(entry_point, str) else list(entry_point)
+    if not entry_points or len(entry_points) > 4:
+        raise AdaptationError("expected between one and four entry points")
+    wanted_entry_points = list(dict.fromkeys(entry_points))
+    source_digest = tree_digest(source_dir, skip_vcs=True)
+    adapter_digest = adaptation_identity(adapter_dir)
+    cached = cached_artifact(
+        namespace_root, source_dir, wanted_entry_points, source_digest, adapter_digest)
+    if cached is not None:
+        return cached
+
+    staging_parent = cache_root / ".staging"
+    safe_directory(staging_parent)
+    clean_stale_staging(staging_parent)
+    staging = Path(tempfile.mkdtemp(prefix="adapter-", dir=staging_parent))
+    staging.chmod(0o700)
+    staging_lock = os.open(staging / ".active", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o600)
+    fcntl.flock(staging_lock, fcntl.LOCK_EX)
+    try:
+        output = staging / "output"
+        copy_tree(source_dir, output)
+        failures = []
+        transforms: dict[Path, tuple[str, str]] = {}
+        for candidate in wanted_entry_points:
+            try:
+                entry_source = choose_source(output, candidate, transforms, adapter_dir)
+                if entry_source not in transforms:
+                    transforms[entry_source] = adapt_qml(read_entry_point(entry_source), adapter_dir)
+                break
+            except AdaptationError as error:
+                failures.append(f"{candidate}: {error}")
+        else:
+            raise AdaptationError("; ".join(failures))
+        entry_relative = entry_source.relative_to(output)
+        original_entry_source = source_dir / entry_relative
+        transformed_source, layout = transforms[entry_source]
+        transformed_source = rebase_external_relative_imports(transformed_source, source_dir, original_entry_source)
+        transformed = transformed_source.encode("utf-8")
+        entry_source.chmod(0o600 | (entry_source.stat().st_mode & 0o111))
+        entry_source.write_bytes(transformed)
+
+        for helper in HELPER_NAMES:
+            source_helper = adapter_dir / helper
+            helper_target = entry_source.parent / helper
+            if helper_target.exists() or helper_target.is_symlink():
+                raise AdaptationError(f"plugin source collides with adapter helper: {helper}")
+            helper_source = read_regular_file(source_helper, MAX_ENTRY_POINT_BYTES, f"adapter helper {helper}").decode("utf-8")
+            helper_source = rebase_external_relative_imports(helper_source, adapter_dir, source_helper)
+            helper_target.write_text(helper_source)
+            helper_target.chmod(0o600)
+
+        seal_tree(output)
+        artifact_digest = tree_digest(output)
+        identity = "\0".join((ADAPTER_VERSION, str(source_dir), entry_relative.as_posix(), artifact_digest))
+        fingerprint = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        destination = namespace_root / fingerprint
+        generated_source = destination / entry_relative
+        marker = {
+            "version": ADAPTER_VERSION,
+            "fingerprint": fingerprint,
+            "entryPoint": entry_relative.as_posix(),
+            "entryPoints": wanted_entry_points,
+            "sourceDir": str(source_dir),
+            "sourceDigest": source_digest,
+            "adapterDigest": adapter_digest,
+            "artifactDigest": artifact_digest,
+            "layout": layout,
+        }
+        output.chmod(0o700)
+        marker_path = output / MARKER_NAME
+        marker_path.write_text(json.dumps(marker, sort_keys=True, separators=(",", ":")) + "\n")
+        marker_path.chmod(0o400)
+
+        with cache_lock(namespace_root):
+            if destination.exists() or destination.is_symlink():
+                if completed_artifact(destination, generated_source, fingerprint, source_digest):
+                    return generated_source
+                remove_tree(destination)
+            os.rename(output, destination)
+            destination.chmod(0o700)
+            if not completed_artifact(destination, generated_source, fingerprint, source_digest):
+                remove_tree(destination)
+                raise AdaptationError("adapter publication failed integrity verification")
+            prune_namespace(namespace_root, destination)
+    finally:
+        os.close(staging_lock)
+        try:
+            remove_tree(staging)
+        except OSError:
+            pass
+    return generated_source
+
+
+def artifact_layout(generated_source: Path, cache_root: Path) -> str:
+    """Read the layout metadata published beside a generated entry point."""
+    current = generated_source.parent
+    while current != cache_root and is_within(current, cache_root):
+        marker = current / MARKER_NAME
+        if marker.is_file():
+            try:
+                document = json.loads(
+                    read_regular_file(marker, MAX_MARKER_BYTES, "artifact marker").decode("utf-8")
+                )
+            except (UnicodeError, json.JSONDecodeError, RecursionError) as error:
+                raise AdaptationError("generated artifact has invalid layout metadata") from error
+            layout = document.get("layout") if isinstance(document, dict) else None
+            if layout in CONTENT_LAYOUTS:
+                return layout
+            break
+        current = current.parent
+    raise AdaptationError("generated artifact has no valid layout metadata")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--json-output", action="store_true")
+    parser.add_argument("--fallback-entry-point", action="append", default=[])
+    parser.add_argument("source_dir")
+    parser.add_argument("entry_point")
+    parser.add_argument("cache_root")
+    parser.add_argument("plugin_id")
+    parser.add_argument("adapter_dir")
+    arguments = parser.parse_args()
+    try:
+        output = build(
+            Path(arguments.source_dir),
+            [arguments.entry_point, *arguments.fallback_entry_point],
+            Path(arguments.cache_root),
+            arguments.plugin_id,
+            Path(arguments.adapter_dir),
+        )
+    except AdaptationError as error:
+        print(f"omarchy-island-adapt: {error}", file=sys.stderr)
+        return 1
+    except OSError as error:
+        print(f"omarchy-island-adapt: filesystem error: {error}", file=sys.stderr)
+        return 1
+    if arguments.json_output:
+        layout = artifact_layout(output, Path(arguments.cache_root))
+        print(json.dumps({"url": output.as_uri(), "layout": layout}, separators=(",", ":")))
+    else:
+        print(output.as_uri())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -65,6 +65,8 @@ mv ~/.config/omarchy/plugins/gshulga.island ~/.config/omarchy/plugins/.gshulga.i
 
 ## Controls
 
+System panels are adapted from the installed Omarchy sources when opened, preserving native device and connection logic. Generated copies live in `$XDG_CACHE_HOME/omarchy-island/controls/` (default `~/.cache/omarchy-island/controls/`) and rebuild when the sources or adapter change. Custom installations can set `OMARCHY_PATH`. Panels close and release resources when leaving their section. An incompatible panel shows an error with details in the Quickshell log; system files remain unchanged. No separate Dashboard or Side Panel installation is required.
+
 | Action | Result |
 |---|---|
 | Hover over the clock | Preview Overview |
@@ -160,7 +162,9 @@ Additional checks for the affected feature:
 ```bash
 python3 tests/live-notifications.py        # Requires a running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
+python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/keyboard.py                  # Keyboard input and focus
+QT_QPA_PLATFORM=offscreen python3 tests/keyboard.py # Keyboard checks without Wayland focus
 python3 tests/indicators.py                # Wayland indicators and native OSD
 python3 tests/dictation.py                 # Dictation states and reduced motion
 ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders

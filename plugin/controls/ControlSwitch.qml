@@ -5,6 +5,7 @@ import ".."
 
 ToggleSwitch {
   id:root
+  objectName:"controlPowerSwitch"
   trackHeight:Style.space(16)
   cursorPad:Style.space(4)
   IndicatorGlow {

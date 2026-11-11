@@ -9,7 +9,7 @@ Read the relevant section of `README.md` for installation, settings, UI behavior
 ## Code boundaries
 
 - `plugin/BarWidget.qml` manages the clock and popup opening; `plugin/Service.qml` manages shared state, notifications, MPRIS, and IPC.
-- UI components live in `plugin/`; system panels live in `plugin/controls/`. Reuse existing buttons, sliders, and effects for new elements.
+- UI components live in `plugin/`; the system-panel adapter lives in `plugin/controls/` and generates cached panels from the installed Omarchy sources. Reuse existing buttons, sliders, and effects for new elements.
 - Put calculations and data transformations in adjacent JS models, keeping them compatible with QML JS. Node.js runs tests; it is not the plugin runtime.
 - External processes and data retrieval also live in `plugin/bin/`; installation and build commands live in the root `bin/` directory.
 - When modifying borrowed components, preserve the attribution and licenses in `plugin/THIRD_PARTY.md` and nested `LICENSE` files.

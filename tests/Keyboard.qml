@@ -126,7 +126,7 @@ ShellRoot {
         check(service.doNotDisturb,"Enter did not activate focused control")
         keyClick(Qt.Key_Tab);check(findChild(pages,"controlNightLight").activeFocus,"Tab did not advance through current page controls")
         keyClick(Qt.Key_Backtab,Qt.ShiftModifier);check(dnd.activeFocus,"Shift+Tab did not reverse focus")
-        audio.forceActiveFocus();keyClick(Qt.Key_Return);wait(500)
+        audio.forceActiveFocus();keyClick(Qt.Key_Return);tryVerify(function(){var control=findChild(pages,"islandNativeControl");return control.item && control.item.opened && control.item.keyboardTarget && control.item.keyboardTarget.activeFocus},4000)
         var loader=findChild(pages,"islandNativeControl")
         check(loader.item && loader.item.opened,"keyboard did not open native audio detail")
         keyClick(Qt.Key_J);check(loader.item.cursorActive,"native Vim cursor navigation stopped working")
