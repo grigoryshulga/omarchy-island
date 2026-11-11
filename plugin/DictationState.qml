@@ -19,7 +19,9 @@ Item {
   property var history: Model.empty()
   onModeChanged: {
     peak=0;lastFrame=0
-    if(recording) {history=Model.empty();startedAt=Date.now();elapsed=0}
+    // Derived bindings can still hold the previous value inside this signal.
+    // Use mode itself so every recording gets a start time before its timer runs.
+    if(mode==="recording") {history=Model.empty();startedAt=Date.now();elapsed=0}
     if(mode!=="idle" && screenName==="") screenName=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
     if(mode==="idle") screenName=""
   }
