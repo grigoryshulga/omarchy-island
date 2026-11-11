@@ -78,7 +78,7 @@ System panels are adapted from the installed Omarchy sources when opened, preser
 | Horizontal swipe, touchpad scroll, or Shift + wheel in the popup | Switch pages |
 | Hover over the player's volume icon | Show the volume slider |
 
-The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, and buttons. A soft inner-edge bloom and a short fading trail stay clipped to the hovered surface, including its corners. Reduced motion disables the trail.
+The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, and buttons. A soft brightness falloff, inner-edge bloom, and a path trail that fades over 720 ms stay clipped to the hovered surface, including its corners. Approaching an edge scatters a few pixels along its inner rim. Reduced motion disables the trail and edge scatter.
 
 ### Keyboard
 

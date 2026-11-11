@@ -20,8 +20,21 @@ layout(std140, binding = 0) uniform buf {
   vec4 focusRect;
   float focusRadius;
   float focused;
-  vec2 trailCenter;
-  float trailEnabled;
+  vec4 trail0;
+  vec4 trail1;
+  vec4 trail2;
+  vec4 trail3;
+  vec4 trail4;
+  vec4 trail5;
+  vec4 trail6;
+  vec4 trail7;
+  vec4 trail8;
+  vec4 trail9;
+  vec4 trail10;
+  vec4 trail11;
+  vec4 edgeImpact;
+  float edgeProgress;
+  float edgeEnabled;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

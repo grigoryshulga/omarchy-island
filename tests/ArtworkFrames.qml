@@ -139,18 +139,50 @@ ShellRoot {
       spot.pointer=Qt.point(170,80);wait(60)
       check(spot.hoveredSurface===spotButton,"nested qs.Ui button did not override the card")
       check(spot.focusRect.x===140 && spot.focusRect.y===55 && spot.focusRect.z===70,"nested button bounds were mapped incorrectly")
+      var buttonFrame=grabImage(spot),peak=0
+      for(var y=0;y<buttonFrame.height;y++) for(var x=0;x<buttonFrame.width;x++) {
+        var light=buttonFrame.red(x,y)
+        if(x<140 || x>=210 || y<55 || y>=95) check(light===0,"intense spotlight leaked outside the button")
+        if(Math.abs(x-170)<10 && Math.abs(y-80)<10) peak=Math.max(peak,light)
+      }
+      check(peak>180,"focused button spotlight is too faint: "+peak)
       spotButton.visible=false
       spot.pointer=Qt.point(44,80)
       spotCard.radius=0;wait(60)
       check(spot.focusRadius===0,"square corners were not respected")
       Commons.Style.reduceMotion=false
-      spot.pointer=Qt.point(180,80);wait(30)
-      check(spot.trailX<175,"trail did not lag behind the pointer")
+      spot.pointer=Qt.point(180,80);wait(80)
+      check(spot.trailSamples.length>0,"trail did not retain pointer positions")
       wait(240)
-      check(Math.abs(spot.trailX-180)<0.1,"trail did not settle")
+      var wakeFrame=grabImage(spot),wakeLight=0
+      // This patch is behind the pointer and outside the main spotlight.
+      for(var y=65;y<95;y++) for(var x=45;x<95;x++) wakeLight+=wakeFrame.red(x,y)
+      check(wakeLight>1200,"cursor left no visible fading trail: "+wakeLight)
+      wait(550)
+      var fadedWake=grabImage(spot),fadedLight=0
+      for(var y=65;y<95;y++) for(var x=45;x<95;x++) fadedLight+=fadedWake.red(x,y)
+      check(fadedLight<wakeLight*0.15,"cursor trail did not fade away")
+      check(!findChild(spot,"spotlightTrailClock").running,"settled cursor kept the path timer running")
+      // The real pointer path triggers a two-sided split at the right rim.
+      spot.pointer=Qt.point(254,80);wait(200)
+      check(spot.edgeProgress<0.8,"approaching the rim did not scatter pixels")
+      var burstFrame=grabImage(spot)
+      spot.clearEdge();wait(20)
+      var plainEdge=grabImage(spot),upperScatter=0,lowerScatter=0
+      for(var y=40;y<125;y++) for(var x=250;x<260;x++) {
+        var added=burstFrame.red(x,y)-plainEdge.red(x,y)
+        if(added>60) {if(y<80) upperScatter++;else lowerScatter++}
+      }
+      check(upperScatter>2 && lowerScatter>2,"edge pixels did not split in both directions")
+      for(var y=0;y<burstFrame.height;y++) for(var x=260;x<burstFrame.width;x++)
+        check(burstFrame.red(x,y)===0,"scattered pixels escaped the card")
+      spot.pointer=Qt.point(180,80);wait(65)
+      spot.pointer=Qt.point(254,80);wait(70)
+      check(spot.edgeProgress<1,"second collision did not restart the burst")
       Commons.Style.reduceMotion=true
+      check(spot.edgeProgress===1 && spot.edgeEnabled===0,"reduced motion kept the edge scatter")
       spot.pointer=Qt.point(100,80);wait(30)
-      check(spot.trailX===100 && spot.trailEnabled===0,"reduced motion kept the trail")
+      check(spot.trailSamples.length===0,"reduced motion kept the trail")
       var staticSpot=grabImage(spotScene);wait(100)
       check(staticSpot.equals(grabImage(spotScene)),"reduced-motion spotlight kept moving")
       spotScene.visible=false;wait(30)

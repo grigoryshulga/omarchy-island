@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Commons as Commons
 import "SpotlightModel.js" as Spotlight
+import "SpotlightTrail.js" as Trail
 
 ShaderEffect {
   id: root
@@ -16,12 +17,59 @@ ShaderEffect {
     return Qt.vector4d(at.x,at.y,hoveredSurface.width,hoveredSurface.height)
   }
   readonly property real focusRadius: hoveredSurface ? Spotlight.radius(hoveredSurface) : cornerRadius
-  property real trailX: pointer.x
-  property real trailY: pointer.y
-  readonly property vector2d trailCenter: Qt.vector2d(trailX,trailY)
-  readonly property real trailEnabled: active && !Style.reduceMotion ? 1 : 0
-  Behavior on trailX { enabled: root.active && !Style.reduceMotion; NumberAnimation {duration:Style.duration(180);easing.type:Easing.OutCubic} }
-  Behavior on trailY { enabled: root.active && !Style.reduceMotion; NumberAnimation {duration:Style.duration(180);easing.type:Easing.OutCubic} }
+  property var trailSamples: []
+  property point lastTrailPoint: Qt.point(0,0)
+  property real trailTime: 0
+  readonly property bool trailPending: trailSamples.length>0 || Math.abs(pointer.x-lastTrailPoint.x)>=1 || Math.abs(pointer.y-lastTrailPoint.y)>=1
+  function clearTrail() { trailSamples=[];lastTrailPoint=pointer }
+  function trailSample(index) {
+    if(index>=trailSamples.length || Style.reduceMotion) return Qt.vector4d(0,0,0,0)
+    var sample=trailSamples[index]
+    return Qt.vector4d(sample.x,sample.y,Trail.weight(trailTime-sample.time),0)
+  }
+  readonly property vector4d trail0: trailSample(0)
+  readonly property vector4d trail1: trailSample(1)
+  readonly property vector4d trail2: trailSample(2)
+  readonly property vector4d trail3: trailSample(3)
+  readonly property vector4d trail4: trailSample(4)
+  readonly property vector4d trail5: trailSample(5)
+  readonly property vector4d trail6: trailSample(6)
+  readonly property vector4d trail7: trailSample(7)
+  readonly property vector4d trail8: trailSample(8)
+  readonly property vector4d trail9: trailSample(9)
+  readonly property vector4d trail10: trailSample(10)
+  readonly property vector4d trail11: trailSample(11)
+  property vector4d edgeImpact: Qt.vector4d(0,0,0,0)
+  property real edgeProgress: 1
+  readonly property real edgeEnabled: focused && active && !Style.reduceMotion ? 1 : 0
+  function clearEdge() {edgeBurst.stop();edgeProgress=1}
+  function collide(previous, point) {
+    if(!hoveredSurface || Style.reduceMotion) return
+    var rect={x:focusRect.x,y:focusRect.y,width:focusRect.z,height:focusRect.w}
+    var hit=Spotlight.collision(previous,point,rect,focusRadius,spotRadius*0.32)
+    if(!hit) return
+    edgeImpact=Qt.vector4d(hit.x,hit.y,hit.nx,hit.ny)
+    edgeBurst.restart()
+  }
+  NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Style.duration(800);easing.type:Easing.Linear}
+  onActiveChanged: {clearTrail();clearEdge()}
+  onHoveredSurfaceChanged: {clearTrail();clearEdge()}
+  Connections {
+    target: Style
+    function onReduceMotionChanged() {root.clearTrail();root.clearEdge()}
+  }
+  Timer {
+    objectName:"spotlightTrailClock"
+    interval:32;repeat:true
+    running:root.active && root.visible && !Style.reduceMotion && root.trailPending
+    onTriggered: {
+      var now=Date.now()
+      root.collide(root.lastTrailPoint,root.pointer)
+      root.trailTime=now
+      root.trailSamples=Trail.advance(root.trailSamples,root.lastTrailPoint,root.pointer,now)
+      root.lastTrailPoint=root.pointer
+    }
+  }
   property url artworkUrl: ""
   property var source: cover
   property real artworkStrength: 1
