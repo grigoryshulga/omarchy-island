@@ -25,7 +25,7 @@ Item {
     vertexShader: Qt.resolvedUrl("shaders/fade.vert.qsb")
     fragmentShader: Qt.resolvedUrl("shaders/fade.frag.qsb")
   }
-  opacity: active ? 1 : 0
+  opacity: active ? 0.7 : 0
   Behavior on opacity { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   Image {
     id: artwork
