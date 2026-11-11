@@ -4,6 +4,7 @@ import QtTest
 import Quickshell
 import Quickshell.Services.Mpris
 import "Island/Model.js" as Model
+import "Island/SpotlightModel.js" as Spotlight
 import qs.Commons as Commons
 import "Island" as Island
 ShellRoot {
@@ -143,6 +144,7 @@ ShellRoot {
       check(findChild(media,"mediaTitle").font.pixelSize===Math.round(Commons.Style.font.title*1.25),"track title did not use its larger size")
       mouseClick(toggle)
       check(service.mediaCalls===1,"toggle click did not reach player: " + service.mediaCalls)
+      check(Spotlight.pick(media,media,Qt.point(media.width/2,1))===null,"transparent media wrapper captured the spotlight")
       var musicGlow=findChild(media,"mediaSpotlight")
       if(!Commons.Style.reduceMotion) check(musicGlow.rippling,"play button did not start a music ripple")
       check(p.isPlaying,"player did not play")
@@ -208,6 +210,10 @@ ShellRoot {
       check(findChild(group,"muteSource").visible===false,"duplicate per-notification mute")
       var first = findChild(composed,"notification-n1")
       check(first !== null,"first grouped notification missing")
+      check(group.border.width===0,"group retained a permanent outline")
+      check(Spotlight.pick(group,first,Qt.point(first.width/2,2))===group,"transparent notification row split the group spotlight")
+      check(Spotlight.pick(group,groupMute,Qt.point(groupMute.width/2,groupMute.height/2))===groupMute,"nested action lost its spotlight")
+      check(groupMute.background.a===0 && !groupMute.bordered,"nested action retained an idle container")
       composed.expanded = true
       wait(20)
       check(first === findChild(composed,"notification-n1"),"expansion rebuilt notification delegates")

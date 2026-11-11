@@ -69,3 +69,34 @@ hit = model.collision({x: 140, y: 95}, {x: 140, y: 32}, box, 0, 25);
 assert.ok(hit && hit.ny === -1 && hit.nx === 0, 'square corners retain correct normals');
 assert.equal(model.collision({x: 0, y: 0}, {x: 1, y: 1}, {...box, width: 0}, 0, 25), null);
 console.log('PASS: rim collisions, outward approach, curved/square corners and no repeated bursts.');
+
+function surface(x, y, props = {}) {
+  return item({islandSpotlightSurface: true, mapToItem: () => ({x, y}), ...props});
+}
+const current = surface(0, 0);
+const adjacent = surface(110, 0, {radius: 0});
+const hidden = surface(105, 0, {visible: false});
+const disabled = surface(106, 0, {enabled: false});
+const wrapper = surface(103, 0, {islandSpotlightSurface: false});
+const distant = surface(300, 0);
+const scene = surface(0, 0, {islandSpotlightSurface: false, width: 500,
+  children: [current, adjacent, hidden, disabled, wrapper, distant]});
+let rims = model.neighbors(scene, null, {x: 95, y: 30}, 60);
+assert.equal(rims.length, 1, 'only the nearby visible enabled surface receives light');
+assert.equal(rims[0].rect.x, 110);
+assert.equal(rims[0].radius, 0, 'square theme corners are preserved');
+assert.equal(model.neighbors(scene, null, {x: 105, y: 30}, 60).length, 2,
+  'a cursor in the gap lights both adjacent rims');
+scene.children.push(surface(0, 0, {width: 250, height: 100}));
+assert.equal(model.neighbors(scene, null, {x: 95, y: 30}, 60).length, 1,
+  'enclosing containers do not add another rim');
+scene.clip = true; scene.width = 150;
+assert.equal(model.neighbors(scene, null, {x: 95, y: 30}, 60).length, 0,
+  'partially clipped neighbors do not paint across a viewport boundary');
+scene.clip = false;
+scene.children = Array.from({length: 8}, (_, i) => surface(110 + i * 5, 0));
+rims = model.neighbors(scene, null, {x: 95, y: 30}, 60);
+assert.equal(rims.length, 4, 'neighbor shader work is bounded');
+assert.equal(rims[0].rect.x, 110, 'nearest rims take priority');
+assert.equal(rims[3].rect.x, 125);
+console.log('PASS: adjacent rims, invisible wrappers, clipping, square corners and bounded proximity selection.');

@@ -15,7 +15,6 @@ FeedbackButton {
   implicitWidth:Style.space(compact ? 120 : 190)
   implicitHeight:Style.space(compact ? 60 : 72)
   focusable:true
-  bordered:true
   background:Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
   Rectangle {
     visible:root.showLed

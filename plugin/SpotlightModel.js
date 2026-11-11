@@ -50,3 +50,34 @@ function collision(previous, point, rect, corner, reach) {
   return {x: point.x - now.nx * (now.distance + 2),
           y: point.y - now.ny * (now.distance + 2), nx: now.nx, ny: now.ny}
 }
+
+// Nearby rims share the cursor light without making layout wrappers surfaces.
+// Fully clipped/partly clipped cards are omitted rather than inventing a rim
+// along the viewport cut. Four uniforms bound the per-pixel shader work.
+function neighbors(root, source, point, reach) {
+  var found = []
+  function visit(item, clip) {
+    if (!item || !item.visible || !item.enabled || item.opacity <= 0) return
+    var at = item.mapToItem(source, 0, 0)
+    var rect = {x: at.x, y: at.y, width: item.width, height: item.height}
+    var right = at.x + item.width, bottom = at.y + item.height
+    if (clip && (right <= clip.x || bottom <= clip.y || at.x >= clip.right || at.y >= clip.bottom)) return
+    if (item.clip) {
+      clip = {x: Math.max(at.x, clip ? clip.x : at.x), y: Math.max(at.y, clip ? clip.y : at.y),
+              right: Math.min(right, clip ? clip.right : right), bottom: Math.min(bottom, clip ? clip.bottom : bottom)}
+    }
+    var surface = item.islandSpotlightSurface === true ||
+                  (typeof item.clicked === "function" && typeof item.radius === "number")
+    if (surface && item.width > 0 && item.height > 0 &&
+        (!clip || (at.x >= clip.x && at.y >= clip.y && right <= clip.right && bottom <= clip.bottom))) {
+      var r = radius(item), distance = edgeAt(point, rect, r).distance
+      // Excludes the hovered surface and enclosing cards, avoiding stacked rims.
+      if (distance > 0 && distance < reach) found.push({rect: rect, radius: r, distance: distance})
+    }
+    var children = item.children || []
+    for (var i = 0; i < children.length; ++i) visit(children[i], clip)
+  }
+  visit(root, null)
+  found.sort(function(a, b) { return a.distance - b.distance })
+  return found.slice(0, 4)
+}

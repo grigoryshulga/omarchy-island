@@ -8,7 +8,7 @@ import "Model.js" as Model
 
 Rectangle {
   id: root
-  readonly property bool islandSpotlightSurface: true
+  readonly property bool islandSpotlightSurface: !compact
   required property var group
   required property var strings
   required property var service
@@ -30,8 +30,7 @@ Rectangle {
   }
   objectName: "notificationGroup-" + group.source
   color: compact ? "transparent" : Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
-  border.width: compact ? 0 : Math.max(1,Style.space(1))
-  border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
+  border.width: 0
   radius: Style.cornerRadius
   implicitHeight: content.implicitHeight + Style.space(compact ? 4 : 16)
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }

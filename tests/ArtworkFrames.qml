@@ -29,7 +29,8 @@ ShellRoot {
       Rectangle {id:spotCard;x:40;y:30;width:220;height:130;radius:18;color:"black";property bool islandSpotlightSurface:true
         Island.ActionButton {id:spotButton;x:100;y:25;width:70;height:40;visible:false}
       }
-      Island.BrailleSpotlight {id:spot;anchors.fill:parent;surfaceRoot:spotCard;active:spotScene.visible;pointer:Qt.point(90,80);accent:"white"}
+      Rectangle {id:neighborCard;x:270;y:30;width:45;height:130;radius:12;color:"black";visible:false;property bool islandSpotlightSurface:true}
+      Island.BrailleSpotlight {id:spot;anchors.fill:parent;surfaceRoot:spotScene;active:spotScene.visible;pointer:Qt.point(90,80);accent:"white"}
     }
     Item {
       id:dissolveProbe
@@ -185,6 +186,23 @@ ShellRoot {
       check(spot.trailSamples.length===0,"reduced motion kept the trail")
       var staticSpot=grabImage(spotScene);wait(100)
       check(staticSpot.equals(grabImage(spotScene)),"reduced-motion spotlight kept moving")
+      neighborCard.visible=true
+      spot.pointer=Qt.point(254,80);wait(60)
+      check(spot.nearbySurfaces.length===1,"adjacent card was not selected for rim glow")
+      var neighborFrame=grabImage(spot),nearLight=0,farLight=0
+      for(var y=65;y<95;y++) {
+        for(var x=271;x<278;x++) nearLight+=neighborFrame.red(x,y)
+        for(var x=305;x<312;x++) farLight+=neighborFrame.red(x,y)
+        for(var x=260;x<270;x++) check(neighborFrame.red(x,y)===0,"neighbor glow filled the gap")
+      }
+      check(nearLight>800 && nearLight>farLight*3,"adjacent facing rim did not catch the cursor light")
+      check(neighborFrame.red(270,30)===0,"neighbor glow leaked through rounded corners")
+      wait(60)
+      check(neighborFrame.equals(grabImage(spot)),"neighbor glow moved under reduced motion")
+      neighborCard.radius=0;wait(30)
+      check(spot.neighborRadii.x===0,"neighbor ignored square theme corners")
+      neighborCard.visible=false;wait(30)
+      check(spot.nearbySurfaces.length===0,"hidden neighbor retained glow")
       spotScene.visible=false;wait(30)
       var stoppedPhase=spot.phase;wait(60)
       check(spot.phase===stoppedPhase,"hidden spotlight kept animating")

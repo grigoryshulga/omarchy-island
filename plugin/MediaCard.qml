@@ -7,7 +7,6 @@ import "Model.js" as Model
 
 Item {
   id: root
-  readonly property bool islandSpotlightSurface: true
   required property var service
   required property var strings
   property var bar: null

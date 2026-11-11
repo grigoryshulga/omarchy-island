@@ -9,7 +9,7 @@ import "Security.js" as Security
 
 Rectangle {
   id: root
-  readonly property bool islandSpotlightSurface: true
+  readonly property bool islandSpotlightSurface: !grouped
   objectName: "notification-" + row.key
   required property var row
   required property var service
@@ -69,8 +69,7 @@ Rectangle {
   Component.onCompleted: opacity = 1
   Behavior on opacity { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   color: grouped ? "transparent" : Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
-  border.width: grouped ? 0 : Math.max(1,Style.space(1))
-  border.color: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
+  border.width: 0
   radius: Style.cornerRadius
   implicitHeight: content.implicitHeight + (grouped ? 0 : Style.space(20)) + (separated ? Style.space(12) : 0)
   BorderSurface {anchors.fill:parent;color:"transparent";radius:Style.cornerRadius;borderSpec:Border.controlSpec("focus",Commons.Color.foreground,Commons.Color.accent);visible:root.keyboardFocused}

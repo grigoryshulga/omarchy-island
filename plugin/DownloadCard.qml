@@ -15,8 +15,7 @@ Rectangle {
   activeFocusOnTab:expanded
   objectName:"download-"+row.key
   color:Style.normalFillFor(Commons.Color.foreground,Commons.Color.accent)
-  border.width:Math.max(1,Style.space(1))
-  border.color:Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
+  border.width: 0
   radius:Style.cornerRadius
   implicitHeight:content.implicitHeight+Style.space(16)
   Keys.onReturnPressed:service.openDownload(row)

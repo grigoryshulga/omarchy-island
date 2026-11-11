@@ -8,7 +8,6 @@ import "WeatherModel.js" as Model
 
 Item {
   id: root
-  readonly property bool islandSpotlightSurface: true
   required property var strings
   property var weather: null
   property bool active: true

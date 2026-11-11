@@ -7,7 +7,5 @@ FeedbackButton {
   horizontalPadding: Style.space(9)
   verticalPadding: Style.space(4)
   fontSize: Style.font.bodySmall
-  background: Style.hoverFillFor(Commons.Color.foreground,Commons.Color.accent)
-  bordered: true
   focusable: true
 }

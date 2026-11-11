@@ -10,6 +10,21 @@ ShaderEffect {
   property bool adaptive: true
   property Item surfaceRoot: null
   readonly property var hoveredSurface: active && surfaceRoot ? Spotlight.pick(surfaceRoot,root,pointer) : null
+  readonly property var nearbySurfaces: active && surfaceRoot ? Spotlight.neighbors(surfaceRoot,root,pointer,spotRadius*0.75) : []
+  function neighborRect(index) {
+    if (index >= nearbySurfaces.length) return Qt.vector4d(0,0,0,0)
+    var rect = nearbySurfaces[index].rect
+    return Qt.vector4d(rect.x,rect.y,rect.width,rect.height)
+  }
+  readonly property vector4d neighbor0: neighborRect(0)
+  readonly property vector4d neighbor1: neighborRect(1)
+  readonly property vector4d neighbor2: neighborRect(2)
+  readonly property vector4d neighbor3: neighborRect(3)
+  readonly property vector4d neighborRadii: Qt.vector4d(
+    nearbySurfaces.length>0 ? nearbySurfaces[0].radius : 0,
+    nearbySurfaces.length>1 ? nearbySurfaces[1].radius : 0,
+    nearbySurfaces.length>2 ? nearbySurfaces[2].radius : 0,
+    nearbySurfaces.length>3 ? nearbySurfaces[3].radius : 0)
   readonly property real focused: hoveredSurface ? 1 : 0
   readonly property vector4d focusRect: {
     if (!hoveredSurface) return Qt.vector4d(0,0,width,height)

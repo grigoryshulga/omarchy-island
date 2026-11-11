@@ -33,6 +33,11 @@ layout(std140, binding = 0) uniform buf {
   vec4 edgeImpact;
   float edgeProgress;
   float edgeEnabled;
+  vec4 neighbor0;
+  vec4 neighbor1;
+  vec4 neighbor2;
+  vec4 neighbor3;
+  vec4 neighborRadii;
 };
 layout(binding = 1) uniform sampler2D source;
 uint mixBits(uint v) {
@@ -133,6 +138,21 @@ void main() {
   // The antialias band is entirely inside the surface, including square corners.
   mask*=mix(1.0,1.0-smoothstep(-1.0,0.0,boundary),focused);
   alpha=clamp(alpha,0.0,1.0)*mask;
+  // Neighbor rims catch the same light, independently of the focused mask.
+  // Only a narrow inner bloom is drawn: gaps and nested containers stay clear.
+  vec4 neighbors[4]=vec4[4](neighbor0,neighbor1,neighbor2,neighbor3);
+  float sharedGlow=0.0;
+  float neighborReach=max(1.0,spotRadius*0.75);
+  float proximity=1.0-smoothstep(0.0,neighborReach,length(delta));
+  for(int i=0;i<4;i++) {
+    if(neighbors[i].z<=0.0 || neighbors[i].w<=0.0) continue;
+    float d=roundedDistance(pixel,neighbors[i],neighborRadii[i]);
+    float innerMask=1.0-smoothstep(-1.0,0.0,d);
+    float bloom=exp(-d*d/18.0)*innerMask;
+    sharedGlow=max(sharedGlow,bloom*proximity*(0.28+ink*0.35));
+  }
+  float outerMask=1.0-smoothstep(-1.0,0.0,distanceToEdge);
+  alpha=clamp(alpha+sharedGlow*hoverOpacity*outerMask,0.0,1.0);
   // Keep music feedback in the cover's colors, with the same 18% theme tint
   // as the music backdrop. Other surfaces retain the pure theme accent.
   vec4 cover=texture(source,(vec2(site)*3.0+vec2(1.5))/size);

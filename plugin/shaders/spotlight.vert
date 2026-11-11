@@ -35,6 +35,11 @@ layout(std140, binding = 0) uniform buf {
   vec4 edgeImpact;
   float edgeProgress;
   float edgeEnabled;
+  vec4 neighbor0;
+  vec4 neighbor1;
+  vec4 neighbor2;
+  vec4 neighbor3;
+  vec4 neighborRadii;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;
