@@ -184,7 +184,7 @@ BarWidget {
       anchors.verticalCenter:parent.verticalCenter
       z:1
       spacing:Style.space(5)
-      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")};Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
+      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.recording;tint:"#f7768e";waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
       StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:root.indicators && root.indicators.remoteActive;tint:"#9ece6a";waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
     }
     Item {
@@ -253,10 +253,10 @@ BarWidget {
         waveWidth:trigger.width
         waveOffset:-rightIndicators.x-updateBeacon.x
       }
-      PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")};visible:root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("dnd")};visible:root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("nightLight")};visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("stayAwake")};visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")} visible:root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("dnd")} visible:root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("nightLight")} visible:root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("stayAwake")} visible:root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
     }
   }
   Loader {

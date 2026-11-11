@@ -130,6 +130,12 @@ ShellRoot {
     name: "IslandInteraction"
     when: false
     function check(ok,message) { if (!ok) { console.log("ISLAND_FAIL:",message); throw new Error(message) } }
+    function test_barWidgetLoads() {
+      var component=Qt.createComponent("Island/BarWidget.qml")
+      // Offscreen has no PanelWindow backend, but parsing must still succeed.
+      var error=component.errorString()
+      check(component.status===Component.Ready || (error.indexOf("No PanelWindow backend loaded.")>=0 && error.indexOf("Unexpected token")<0),error)
+    }
     function test_controls() {
       wait(200)
       var toggle=findChild(media,"mediaToggle")
@@ -485,6 +491,6 @@ ShellRoot {
       } else Qt.quit()
     }
   }
-  Timer { interval: 300; running: true; onTriggered: {try {test.test_controls()} catch(error) {console.log("ISLAND_INTERACTION_FAIL",error.stack);Qt.quit()}} }
+  Timer { interval: 300; running: true; onTriggered: {try {test.test_barWidgetLoads();test.test_controls()} catch(error) {console.log("ISLAND_INTERACTION_FAIL",error.stack);Qt.quit()}} }
   Timer { interval: 17000; running: true; onTriggered: { console.log("ISLAND_INTERACTION_TIMEOUT"); Qt.quit() } }
 }
