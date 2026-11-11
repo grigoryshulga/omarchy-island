@@ -32,7 +32,7 @@ PanelWindow {
   readonly property real thickness: bar ? bar.barSize : Style.bar.sizeHorizontal
   readonly property real availableWidth: Math.max(120,(screen ? screen.width : 1920)-2*margin)
   readonly property real availableHeight: Math.max(120,(screen ? screen.height : 1080)-thickness-2*margin)
-  readonly property var borderSpec: bareCardShown ? Border.none() : Border.surfaceSpec(frameSuppressed ? "notifications" : "popups","border",frameSuppressed ? Commons.Color.notifications.border : Commons.Color.popups.border,Math.max(1,Style.space(2)))
+  readonly property var borderSpec: Design.popupBorder
   readonly property real insetTop: padding+Border.top(borderSpec)
   readonly property real insetBottom: padding+Border.bottom(borderSpec)
   readonly property real insetLeft: padding+Border.left(borderSpec)
@@ -154,7 +154,7 @@ PanelWindow {
       y: root.cardOrigin.y + (root.position === "bottom" ? -1 : 1)*reveal.offsetY
       width: root.drawnWidth
       height: root.drawnHeight
-      color: root.bareCardShown ? Design.surface : Design.canvas
+      color: Design.canvas
       Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Preferences.duration(120)} }
       borderSpec: root.borderSpec
       radius: Math.min(Style.cornerRadius,width/2,height/2)

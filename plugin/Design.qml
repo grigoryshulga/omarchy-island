@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.Ui
 import qs.Commons
 import qs.Commons as Commons
 import "DesignTokens.js" as Tokens
@@ -60,6 +61,7 @@ QtObject {
 
   // Color owns parsing colors.toml, shell.toml, user overrides and live updates.
   // Island reads it; it never writes the system palette or a private theme file.
+  readonly property var popupBorder: Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)))
   readonly property color canvas: Commons.Color.popups.background
   readonly property color opaqueCanvas: color(Tokens.opaque(canvas,Commons.Color.background))
   readonly property color surface: color(Tokens.mix(opaqueCanvas,Commons.Color.popups.text,0.045))

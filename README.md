@@ -148,7 +148,7 @@ For a single dictation OSD, disable other dictation visualizers and the native V
 
 Requires a running **local T3 Code server**, its `t3` CLI on the shell's `PATH`, and orchestration protocol **2**. Tested against `0.1.9-nightly.20261111.4515`. The bridge uses Python's standard library; Node.js and extra Python packages are not required.
 
-Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions appear in a dedicated **T3 Code** section in **Overview**, above Notifications and History. Switching notification tabs does not hide T3 sessions. Working sessions use compact rows with a spinner, title, project, status, and elapsed time. The bar shows the number of pending requests, or a spinner and working-session count when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. Status changes show a single thread card for four seconds on the focused monitor without taking keyboard focus. The toast has no outer container or section heading; radial waves originate at its status icon. Preparatory run states are grouped; metadata updates and initial/reconnection snapshots stay quiet. DND, an open Island panel, and notification toasts suppress these popups. Simultaneous changes prioritize input requests and failures.
+Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions appear in a dedicated **T3 Code** section in **Overview**, above Notifications and History. Switching notification tabs does not hide T3 sessions. Working sessions use compact rows with a spinner, title, project, status, and elapsed time. The bar shows the number of pending requests, or a spinner and working-session count when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. Status changes show a single thread card for four seconds on the focused monitor without taking keyboard focus. The toast has no extra outer container or section heading; its own border and translucent background follow the system popup theme, and radial waves originate at its status icon. Preparatory run states are grouped; metadata updates and initial/reconnection snapshots stay quiet. DND, an open Island panel, and notification toasts suppress these popups. Simultaneous changes prioritize input requests and failures.
 
 - Options use equal-width columns with complete, wrapping labels and descriptions; narrow cards use one column. Choose a single option, select several when permitted, or expand **Custom answer**. The send button shares the custom-answer row instead of taking its own row. Complete required questions, then choose **Send answer**. Tab / Shift+Tab navigates the form; typing and caret keys stay in the text field.
 - Session updates preserve existing card order, drafts, and focus. A replacement question resets its draft. Questions answered in another T3 client disappear after synchronization.
@@ -178,7 +178,7 @@ Add this outside managed blocks in `~/.config/hypr/looknfeel.lua`:
 require("hypr.omarchy-island")
 ```
 
-Apply with `hyprctl reload` and check `hyprctl configerrors`. Blur strength follows Hyprland's `decoration.blur` settings. Popup transparency follows `[popups] background-alpha` in the theme or `~/.config/omarchy/shell.toml`; at `1.0`, the background is opaque and blur is not visible.
+Apply with `hyprctl reload` and check `hyprctl configerrors`. All detached Island popups, including T3 activity, notifications, Now Playing and dictation, share this layer namespace. Blur strength follows Hyprland's `decoration.blur` settings. Popup transparency follows `[popups] background-alpha` in the theme or `~/.config/omarchy/shell.toml`; at `1.0`, the background is opaque and blur is not visible.
 
 ## Data and privacy
 
@@ -229,6 +229,7 @@ Additional checks for the affected feature:
 ```bash
 python3 tests/live-notifications.py        # Requires a running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
+python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
 python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state

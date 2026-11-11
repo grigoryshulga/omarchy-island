@@ -56,7 +56,7 @@ Item {
     y: reveal.offsetY
     color: Design.canvas
     radius: Math.min(Style.cornerRadius,Style.space(6),height/2)
-    borderSpec: Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(1)))
+    borderSpec: Design.popupBorder
     opacity: shown
     visible: shown > 0
     clip: true

@@ -32,7 +32,7 @@ Item {
     anchors {top:true;bottom:true;left:true;right:true}
     color:"transparent"
     exclusionMode:ExclusionMode.Ignore
-    WlrLayershell.namespace:"island-dictation"
+    WlrLayershell.namespace:"omarchy-island-popup"
     WlrLayershell.layer:WlrLayer.Overlay
     WlrLayershell.keyboardFocus:WlrKeyboardFocus.None
     mask:Region {}
@@ -46,8 +46,8 @@ Item {
       width:Math.min(Style.space(320),parent.width-Style.space(24))
       height:Style.space(88)
       radius:Design.cardRadius
-      color:Util.alpha(Design.opaqueCanvas,0.97)
-      borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(1)))
+      color:Design.canvas
+      borderSpec:Design.popupBorder
       opacity:panel.screen && panel.width===panel.screen.width && panel.height===panel.screen.height ? root.shown : 0
       ColumnLayout {
         anchors.fill:parent
