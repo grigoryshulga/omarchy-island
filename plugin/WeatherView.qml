@@ -23,10 +23,20 @@ Item {
   readonly property bool imperial: weather ? weather.useImperial : false
   readonly property string temperatureUnit: weather ? weather.temperatureUnit : "celsius"
   readonly property int condition: current ? Model.kind(current.code) : -1
+  readonly property var forecast: Model.temperatureRanges(report ? report.days.slice(1,8) : [])
+  readonly property var solar: Model.solarEvents(clockNow,report)
+  LayoutMirroring.enabled: Commons.I18n.rightToLeft
+  LayoutMirroring.childrenInherit: true
+  TextMetrics {
+    id: forecastMetrics
+    font.family: Design.fontFamily
+    font.pixelSize: Design.type.caption
+    text: root.temp(-100)
+  }
   signal backRequested()
   signal temperatureUnitRequested(string value)
   implicitHeight: body.implicitHeight
-  onActiveChanged: { if(!active) cancelEditing(); else skyNow=Date.now() }
+  onActiveChanged: { if(!active) cancelEditing(); else clockNow=Date.now() }
   function cancelEditing() {
     editing=false;searchDelay.stop();draftPlace=null;draftAuto=false
     if(weather) weather.cancelSearch()
@@ -57,23 +67,16 @@ Item {
   function temp(value) { var n=Model.temperature(value,temperatureUnit); return n===null ? "—" : Commons.I18n.formatNumber(n)+(temperatureUnit==="kelvin" ? " K" : "°") }
   function cycleTemperatureUnit() {temperatureUnitRequested(Model.nextTemperatureUnit(temperatureUnit))}
   function stat(value,suffix) { return value===null || value===undefined ? "—" : Commons.I18n.formatNumber(Math.round(value))+suffix }
-  property double skyNow: Date.now()
+  function solarLabel(key,value) { return strings.t(key).arg(value ? value.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),Locale.ShortFormat) : "—") }
+  property double clockNow: Date.now()
   Timer {
     interval: 30000
     running: root.active && root.visible
     repeat: true
-    onTriggered: root.skyNow=Date.now()
+    onTriggered: root.clockNow=Date.now()
   }
-  onReportChanged: skyNow=Date.now()
-  onVisibleChanged: if(visible) skyNow=Date.now()
-  WeatherBackdrop {
-    objectName: "weatherBackdrop"
-    anchors.fill: parent
-    solarHour: Model.skyHour(root.skyNow,root.report)
-    animated: root.active
-    opacity: root.current ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: Preferences.duration(300) } }
-  }
+  onReportChanged: clockNow=Date.now()
+  onVisibleChanged: if(visible) clockNow=Date.now()
   HoverHandler { id: hover }
   BrailleFeedback { id: weatherFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight { id: glow; surfaceRoot: root; objectName: "weatherSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
@@ -81,7 +84,7 @@ Item {
     id: body
     width: parent.width
     height:Math.max(implicitHeight,root.height)
-    spacing:Design.gap.medium
+    spacing:Design.gap.section
     RowLayout {
       Layout.fillWidth: true
       spacing:Design.gap.tight
@@ -158,80 +161,101 @@ Item {
       PlainText { visible: root.weather!==null && root.weather.searching; text: root.strings.t("weather.searching"); color: Design.secondaryText; typeRole:"caption" }
     }
     Item {
+      id: hero
+      objectName: "weatherHero"
       Layout.fillWidth: true
-      Layout.fillHeight:true
-      implicitHeight: Style.space(184)
+      Layout.fillHeight: true
+      implicitHeight: Math.max(Style.space(152),summary.implicitHeight)
+      ColumnLayout {
+        id: summary
+        objectName: "weatherSummary"
+        width: Math.max(temperatureRow.implicitWidth,(hero.width-Design.gap.large)/2)
+        height: implicitHeight
+        x: Commons.I18n.rightToLeft ? hero.width-width : 0
+        y: (hero.height-height)/2
+        spacing: Design.gap.small
+        PlainText {
+          Layout.fillWidth: true
+          text: root.strings.t("weather.now")
+          typeRole: "caption"
+          color: Design.secondaryText
+          horizontalAlignment: Text.AlignLeft
+          visible: root.current!==null
+        }
+        RowLayout {
+          id: temperatureRow
+          visible: root.current!==null
+          spacing: 0
+          // Keep the number and its unit together in both text directions.
+          LayoutMirroring.enabled: false
+          LayoutMirroring.childrenInherit: true
+          PlainText {
+            objectName: "weatherTemperature"
+            text: Commons.I18n.formatNumber(Model.temperature(root.current ? root.current.temperature : null,root.temperatureUnit))
+            typeRole: "hero"
+          }
+          BorderSurface {
+            id: unitButton
+            objectName: "weatherUnit"
+            readonly property string text: Model.unitSymbol(root.temperatureUnit)
+            readonly property bool hot: unitMouse.containsMouse
+            implicitWidth: unitLabel.implicitWidth+Style.space(4)
+            implicitHeight: unitLabel.implicitHeight
+            color: "transparent"
+            borderSpec: activeFocus ? Border.controlSpec("focus",Design.text,Design.accent) : Border.none()
+            radius: Design.controlRadius
+            activeFocusOnTab: true
+            Layout.alignment: Qt.AlignTop
+            function activate() {root.feedback.pulseFrom(unitButton);root.cycleTemperatureUnit()}
+            PlainText {
+              id: unitLabel
+              anchors.centerIn: parent
+              text: unitButton.text
+              typeRole: "page"
+              color: unitButton.hot || unitButton.activeFocus ? Design.accent : Design.text
+            }
+            MouseArea {
+              id: unitMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {unitButton.forceActiveFocus();root.feedback.pulseFrom(unitButton)}
+              onDoubleClicked: unitButton.activate()
+            }
+            Controls.ToolTip {
+              visible: unitMouse.containsMouse
+              delay: 400
+              text: root.strings.t("weather.changeUnit")
+              padding:Design.gap.small
+              background: BorderSurface {color:Commons.Color.tooltip.background;borderSpec:Border.surfaceSpec("tooltip","border",Commons.Color.tooltip.border,Math.max(1,Style.normalBorderWidth));radius:0}
+              contentItem: PlainText {text:root.strings.t("weather.changeUnit");color:Commons.Color.tooltip.text;typeRole:"caption"}
+            }
+            Keys.onReturnPressed: activate()
+            Keys.onEnterPressed: activate()
+            Keys.onSpacePressed: activate()
+          }
+        }
+        PlainText {
+          objectName: "weatherCondition"
+          Layout.fillWidth: true
+          text: root.current ? root.strings.t(root.condition<0 ? "weather.unknown" : "weather.condition."+root.condition)
+            : root.strings.t(root.weather && root.weather.loading ? "weather.loading" : "weather.noData")
+          typeRole: root.current ? "body" : "caption"
+          color: root.current ? Design.text : Design.secondaryText
+          wrapMode: Text.Wrap
+          horizontalAlignment: Text.AlignLeft
+        }
+      }
       WeatherScene {
         objectName: "weatherHeroScene"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        width: Math.min(parent.width,Style.space(240))
-        height:Math.max(Style.space(168),parent.height-Style.space(16))
+        width: Math.max(0,hero.width-summary.width-Design.gap.large)
+        height: Style.space(152)
+        x: Commons.I18n.rightToLeft ? 0 : summary.width+Design.gap.large
+        y: (hero.height-height)/2
         condition: root.condition<0 ? 2 : root.condition
         isDay: root.current ? root.current.isDay : true
-        animated: root.active && root.current!==null
+        animated: root.active && root.visible && root.current!==null
         opacity: root.current ? 1 : 0.25
-      }
-      RowLayout {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        visible: root.current!==null
-        spacing: 0
-        PlainText {
-          objectName: "weatherTemperature"
-          text: Commons.I18n.formatNumber(Model.temperature(root.current ? root.current.temperature : null,root.temperatureUnit))
-          typeRole: "hero"
-          font.bold: true
-        }
-        BorderSurface {
-          id: unitButton
-          objectName: "weatherUnit"
-          readonly property string text: Model.unitSymbol(root.temperatureUnit)
-          readonly property bool hot: unitMouse.containsMouse
-          implicitWidth: unitLabel.implicitWidth+Style.space(4)
-          implicitHeight: unitLabel.implicitHeight
-          color: "transparent"
-          borderSpec: activeFocus ? Border.controlSpec("focus",Design.text,Design.accent) : Border.none()
-          radius: Design.controlRadius
-          activeFocusOnTab: true
-          function activate() {root.feedback.pulseFrom(unitButton);root.cycleTemperatureUnit()}
-          PlainText {
-            id: unitLabel
-            anchors.centerIn: parent
-            text: unitButton.text
-            typeRole: "hero"
-            color: unitButton.hot || unitButton.activeFocus ? Design.accent : Design.text
-          }
-          MouseArea {
-            id: unitMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {unitButton.forceActiveFocus();root.feedback.pulseFrom(unitButton)}
-            onDoubleClicked: unitButton.activate()
-          }
-          Controls.ToolTip {
-            visible: unitMouse.containsMouse
-            delay: 400
-            text: root.strings.t("weather.changeUnit")
-            padding:Design.gap.small
-            background: BorderSurface {color:Commons.Color.tooltip.background;borderSpec:Border.surfaceSpec("tooltip","border",Commons.Color.tooltip.border,Math.max(1,Style.normalBorderWidth));radius:0}
-            contentItem: PlainText {text:root.strings.t("weather.changeUnit");color:Commons.Color.tooltip.text;typeRole:"caption"}
-          }
-          Keys.onReturnPressed: activate()
-          Keys.onEnterPressed: activate()
-          Keys.onSpacePressed: activate()
-        }
-      }
-      PlainText {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        width: parent.width
-        visible: root.current===null
-        horizontalAlignment: Text.AlignHCenter
-        text: root.strings.t(root.weather && root.weather.loading ? "weather.loading" : "weather.noData")
-        typeRole:"caption"
-        color: Design.secondaryText
       }
     }
     RowLayout {
@@ -257,40 +281,97 @@ Item {
             id: statColumn
             width: parent.width
             spacing:Design.gap.tight
-            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.label; color: Design.secondaryText; typeRole:"caption" }
-            PlainText { objectName: "weatherStat-"+statItem.index; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: modelData.value; typeRole:"body" }
+            PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignLeft; wrapMode: Text.Wrap; text: modelData.label; color: Design.secondaryText; typeRole:"caption" }
+            PlainText { objectName: "weatherStat-"+statItem.index; Layout.fillWidth: true; horizontalAlignment: Text.AlignLeft; wrapMode: Text.Wrap; text: modelData.value; typeRole:"body" }
           }
         }
       }
     }
 
-    RowLayout {
+    ColumnLayout {
       Layout.fillWidth: true
-      spacing:Design.gap.tight
-      uniformCellSizes: true
-      visible: root.report!==null
-      Repeater {
-        objectName: "weatherForecast"
-        model: root.report ? root.report.days.slice(1,8) : []
-        Item {
-          id: forecastDay
-          required property var modelData
-          required property int index
-          objectName: "weatherDay-"+index
-          Layout.fillWidth: true
-          Layout.preferredWidth: 1
-          Layout.minimumWidth: 0
-          implicitHeight: dayColumn.implicitHeight
-          ColumnLayout {
-            id: dayColumn
-            width: parent.width
-            spacing:Design.gap.tight
-            PlainText { Layout.alignment: Qt.AlignHCenter; text: new Date(modelData.date+"T12:00:00").toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd"); color: Design.secondaryText; typeRole:"caption" }
-            WeatherScene { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: Math.min(forecastDay.width,Style.space(56)); Layout.preferredHeight: Style.space(44); condition: Model.kind(modelData.code)<0 ? 2 : Model.kind(modelData.code); animated: false }
-            PlainText { objectName: "weatherDayHigh"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.max); typeRole:"caption" }
-            PlainText { objectName: "weatherDayLow"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.min); color: Design.secondaryText; typeRole:"caption" }
+      visible: root.forecast.length>0
+      spacing: Design.gap.medium
+      PlainText {
+        Layout.fillWidth: true
+        text: root.strings.t("weather.forecast")
+        typeRole: "caption"
+        color: Design.secondaryText
+        horizontalAlignment: Text.AlignLeft
+      }
+      GridLayout {
+        objectName: "weatherForecastGrid"
+        Layout.fillWidth: true
+        columns: Math.min(7,Math.max(1,Math.floor((width+columnSpacing)/(forecastMetrics.advanceWidth+columnSpacing))))
+        columnSpacing: Design.gap.tight
+        rowSpacing: Design.gap.medium
+        uniformCellWidths: true
+        Repeater {
+          objectName: "weatherForecast"
+          model: root.forecast
+          Item {
+            id: forecastDay
+            required property var modelData
+            required property int index
+            objectName: "weatherDay-"+index
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            Layout.minimumWidth: 0
+            implicitHeight: dayColumn.implicitHeight
+            ColumnLayout {
+              id: dayColumn
+              width: parent.width
+              spacing: Design.gap.tight
+              PlainText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: new Date(modelData.date+"T12:00:00").toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd"); color: Design.secondaryText; typeRole: "caption" }
+              WeatherScene { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: Math.min(forecastDay.width,Style.space(48)); Layout.preferredHeight: Style.space(32); condition: Model.kind(modelData.code)<0 ? 2 : Model.kind(modelData.code); animated: false }
+              PlainText { objectName: "weatherDayHigh"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.max); typeRole: "caption" }
+              Rectangle {
+                id: rangeTrack
+                objectName: "weatherRangeTrack"
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: Style.space(4)
+                Layout.preferredHeight: Style.space(40)
+                color: Design.raised
+                radius: Math.min(Design.controlRadius,width/2)
+                Rectangle {
+                  objectName: "weatherRange"
+                  readonly property real markerHeight: Math.min(parent.height,Style.space(2))
+                  width: parent.width
+                  y: modelData.rangeTop*(parent.height-markerHeight)
+                  height: markerHeight+modelData.rangeHeight*(parent.height-markerHeight)
+                  radius: parent.radius
+                  color: Design.accent
+                }
+              }
+              PlainText { objectName: "weatherDayLow"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.temp(modelData.min); color: Design.secondaryText; typeRole: "caption" }
+            }
           }
         }
+      }
+    }
+    RowLayout {
+      Layout.fillWidth: true
+      visible: root.current!==null
+      spacing: Design.gap.medium
+      PlainText {
+        objectName: "weatherSunrise"
+        Layout.fillWidth: true
+        Layout.preferredWidth: 1
+        text: root.solarLabel("weather.sunrise",root.solar.sunrise)
+        typeRole: "caption"
+        color: Design.secondaryText
+        wrapMode: Text.Wrap
+        horizontalAlignment: Text.AlignLeft
+      }
+      PlainText {
+        objectName: "weatherSunset"
+        Layout.fillWidth: true
+        Layout.preferredWidth: 1
+        text: root.solarLabel("weather.sunset",root.solar.sunset)
+        typeRole: "caption"
+        color: Design.secondaryText
+        wrapMode: Text.Wrap
+        horizontalAlignment: Text.AlignRight
       }
     }
     PlainText {

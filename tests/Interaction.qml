@@ -51,6 +51,8 @@ ShellRoot {
   }
   QtObject {
     id: service
+    // The real service always provides a bridge, even when T3 is disabled.
+    property var t3: ({allowed:false,connected:false,canRespond:false,responsesEnabled:false,rows:[]})
     property var weather: fakeWeather
     readonly property var activeEntries: allEntries
     property var historyEntries: []

@@ -100,8 +100,8 @@ ShellRoot {
   }
   FloatingWindow {
     visible:true
-    implicitWidth:620;implicitHeight:80
-    Island.BarWidget {id:widget;anchors.centerIn:parent;width:implicitWidth;height:implicitHeight;bar:bar}
+    implicitWidth:620;implicitHeight:bar.vertical ? 620 : 80
+    Island.BarWidget {id:widget;x:fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.width-width : (parent.width-width)/2;y:bar.vertical ? (fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.height-height : (parent.height-height)/2) : (parent.height-height)/2;width:implicitWidth;height:implicitHeight;bar:bar}
   }
   TestCase {
     id:test
@@ -114,6 +114,46 @@ ShellRoot {
       check(Math.abs(at.x+row.width/2-clock.width/2)<1,"event icon and text are not centered on the clock")
       check(at.x>=0 && at.x+row.width<=clock.width,"event message overflowed the widget")
       if(message.visible) check(Math.abs(icon.y+icon.height/2-message.y-message.height/2)<1,"event icon and text are vertically misaligned")
+    }
+    function test_panelLayout() {
+      Commons.Style.reduceMotion=true
+      states.recording=true;states.remoteActive=true;states.updateAvailable=true
+      states.microphoneMuted=true;service.doNotDisturb=true
+      scene.mockNightLight=true;scene.mockStayAwake=true
+      t3State.allowed=true;t3State.waitingCount=3
+      widget.hoverSuppressed=true
+      var popup=findChild(widget,"islandPopup"),clock=findChild(widget,"islandClock")
+      for (var edge of ["top","bottom","left","right"]) {
+        bar.position=edge;bar.vertical=edge==="left" || edge==="right"
+        for (var fixed of ["start","center","end"]) {
+          widget.fixedEdge=fixed
+          widget.open();wait(120)
+          var card=findChild(popup,"islandPopupCard")
+          check(card.x>=popup.margin-1 && card.x+card.width<=popup.width-popup.margin+1,"card escaped screen on "+edge)
+          check(card.y>=popup.margin-1 && card.y+card.height<=popup.height-popup.margin+1,"card escaped screen vertically on "+edge)
+          var label=findChild(widget,"islandClockText")
+          for (var name of ["islandLeftIndicators","islandRightIndicators"]) {
+            var indicators=findChild(widget,name)
+            indicators.ensurePolished()
+            check(indicators.x>=-1 && indicators.x+indicators.width<=clock.width+1,"indicators escaped clock width on "+edge)
+            check(indicators.y>=-1 && indicators.y+indicators.height<=clock.height+1,"indicators escaped clock height on "+edge)
+            if (bar.vertical) {
+              var at=label.mapToItem(clock,0,0)
+              check(indicators.y+indicators.height<=at.y+1 || indicators.y>=at.y+label.height-1,"indicators overlapped clock on "+edge)
+            }
+          }
+          if (bar.vertical) {
+            backend.showOsd(JSON.stringify({icon:"audio-volume-high",value:50,max:100,duration:2000}))
+            wait(30)
+            check(findChild(widget,"islandVerticalOsd").visible,"vertical OSD missing")
+            check(!findChild(widget,"islandOsdGauge").visible,"horizontal gauge visible in side panel")
+            backend.hideOsd()
+          }
+          widget.close();wait(20)
+        }
+      }
+      console.log("PANEL_LAYOUT_PASS")
+      Qt.quit()
     }
     function test_indicators(){
       wait(100)
@@ -152,6 +192,7 @@ ShellRoot {
       var count=findChild(widget,"islandT3Count")
       check(Math.abs(count.mapToItem(clock,0,count.baselineOffset).y-label.mapToItem(clock,0,label.baselineOffset).y)<1,"T3 count and clock baselines differ")
       var spinner=findChild(widget,"islandT3Spinner"),glyph=findChild(spinner,"t3SpinnerGlyph")
+      check(Math.abs(spinner.width-count.font.pixelSize*0.75)<1,"T3 spinner must scale with the count font")
       check(spinner.animating,"T3 bar spinner is not running")
       check(spinner.tint===label.color && count.color===label.color,"T3 indicator must follow the clock color")
       var frame=glyph.text;wait(120)
@@ -335,5 +376,5 @@ ShellRoot {
       } else Qt.quit()
     }
   }
-  Timer {interval:300;running:true;onTriggered:test.test_indicators()}
+  Timer {interval:300;running:true;onTriggered:Quickshell.env("ISLAND_PANEL_LAYOUT") ? test.test_panelLayout() : test.test_indicators()}
 }

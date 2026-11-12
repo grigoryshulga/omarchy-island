@@ -19,7 +19,7 @@ BarWidget {
   property real osdShown:showOsd ? 1 : 0
   readonly property bool osdTransitioning: osdShown>0 && osdShown<1 && !Preferences.reduceMotion && Preferences.get("panelAnimation")
   Behavior on osdShown {NumberAnimation {duration:Preferences.panelDuration(root.showOsd ? 240 : 200);easing.type:Easing.OutCubic}}
-  readonly property real indicatorGutter: Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
+  readonly property real indicatorGutter: vertical ? 0 : Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
   function activateIndicator(mode) {
     if(mode==="dnd") {if(service) service.setDoNotDisturb(false);return}
     if(mode==="nightLight" || mode==="stayAwake") {
@@ -45,7 +45,7 @@ BarWidget {
   Component.onDestruction: if(registeredIndicators) registeredIndicators.detach(root)
   property bool pinned: false
   property int lastOpenedPage:1
-  readonly property bool stripNotification: notificationToast && Settings.get(settings,"notificationStyle")==="bar"
+  readonly property bool stripNotification: !vertical && notificationToast && Settings.get(settings,"notificationStyle")==="bar"
   property bool contentExpanded: false
   property bool controlsMode: false
   property bool calendarMode: false
@@ -164,8 +164,8 @@ BarWidget {
     if (isHovered) { leaveGrace.stop(); if (!pinned && !hoverSuppressed && Settings.get(settings,"hoverPreview") && Settings.get(settings,"overviewEnabled")) hoverDelay.restart() }
     else { hoverSuppressed = false; hoverDelay.stop(); leaveGrace.restart() }
   }
-  implicitWidth: vertical ? barSize : Math.min(Style.space(600),Math.max(Style.space(360), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(120), showAlert ? Style.space(420) : 0, showOsd ? osdMeasure.implicitWidth+2*indicatorGutter+Style.space(50) : 0))
-  implicitHeight: vertical ? Style.space(80) : barSize
+  implicitWidth: vertical ? barSize : Math.min(Style.space(600),Math.max(Style.space(fixedEdge === "center" ? 360 : 0), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(fixedEdge === "center" ? 120 : 32), showAlert ? Style.space(420) : 0, showOsd ? osdMeasure.implicitWidth+2*indicatorGutter+Style.space(50) : 0))
+  implicitHeight: vertical ? Math.max(Style.space(80),clockMeasure.implicitHeight+leftIndicators.implicitHeight+rightIndicators.implicitHeight+Style.space(24)) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
   Connections { target: root.service; ignoreUnknownSignals:true; function onT3Arrival() {root.showT3Activity()} function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
@@ -190,13 +190,18 @@ BarWidget {
     onWheelMoved: delta => {if(delta) root.cyclePage(delta<0 ? 1 : -1)}
     ArtworkBackground {
       objectName: "islandClockArtwork"
-      anchors.fill: parent
+      width: root.vertical ? parent.height : parent.width
+      height: root.vertical ? parent.width : parent.height
+      anchors.centerIn: parent
+      rotation: root.vertical ? 90 : 0
       visible: !root.showAlert
       service: root.service
       monochrome: true
       horizontalFade: true
     }
-    RowLayout {
+    GridLayout {
+      columns: root.vertical ? 1 : -1
+      rows: root.vertical ? -1 : 1
       id:leftIndicators
       Item {
         id:t3Indicator
@@ -205,32 +210,36 @@ BarWidget {
         readonly property bool waiting:!!root.t3 && root.t3.waitingCount>0
         readonly property string text:Commons.I18n.formatNumber(root.t3 ? root.t3.waitingCount || root.t3.workingCount : 0)
         readonly property color color:root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
-        implicitWidth:t3IndicatorBody.implicitWidth;implicitHeight:t3IndicatorBody.implicitHeight
-        RowLayout {
+        implicitWidth:root.vertical ? Math.min(root.barSize-Style.space(4),t3IndicatorBody.implicitWidth) : t3IndicatorBody.implicitWidth;implicitHeight:t3IndicatorBody.implicitHeight
+        GridLayout {
+          columns:root.vertical ? 1 : -1
+          rows:root.vertical ? -1 : 1
           id:t3IndicatorBody
-          anchors.centerIn:parent;spacing:Style.space(4)
-          T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:Style.space(14)}
+          anchors.centerIn:parent
+          width:parent.width
+          columnSpacing:Style.space(4);rowSpacing:Style.space(4)
+          T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:t3Count.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter}
           PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
-          PlainText {objectName:"islandT3Count";text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:trigger.height;verticalAlignment:Text.AlignVCenter}
+          PlainText {id:t3Count;objectName:"islandT3Count";Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;verticalAlignment:Text.AlignVCenter}
         }
         MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
       }
       objectName:"islandLeftIndicators"
-      anchors.right:centerContent.horizontalCenter
-      anchors.rightMargin:centerContent.indicatorSpan/2+Style.space(11)
-      anchors.verticalCenter:parent.verticalCenter
+      x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2-centerContent.indicatorSpan/2-Style.space(11-5*root.osdShown)-width
+      y: root.vertical ? Style.space(6) : (parent.height-height)/2
       z:1
-      spacing:Style.space(5)
-      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
-      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:trigger.height;visible:Preferences.get("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:Design.barAccent;waveWidth:Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
+      columnSpacing:Style.space(5)
+      rowSpacing:Style.space(5)
+      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;visible:Preferences.get("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
+      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;visible:Preferences.get("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:Design.barAccent;waveWidth:root.vertical ? 0 : Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
     }
     Item {
       id:centerContent
       objectName:"islandClockDisplay"
-      width:Math.floor(Math.max(1,parent.width-2*root.indicatorGutter-Style.space(18))*root.displayScale)/root.displayScale
-      height:Math.floor(parent.height*root.displayScale)/root.displayScale
+      width:Math.floor(Math.max(1,parent.width-(root.vertical ? Style.space(4) : 2*root.indicatorGutter+Style.space(18)))*root.displayScale)/root.displayScale
+      height:root.vertical ? Math.max(clockMeasure.implicitHeight,Style.space(40)) : Math.floor(parent.height*root.displayScale)/root.displayScale
       x:Math.round((parent.width-width)*root.displayScale/2)/root.displayScale
-      y:Math.round((parent.height-height)*root.displayScale/2)/root.displayScale
+      y:root.vertical ? leftIndicators.implicitHeight+Style.space(12)+(parent.height-leftIndicators.implicitHeight-rightIndicators.implicitHeight-Style.space(24)-height)/2 : Math.round((parent.height-height)*root.displayScale/2)/root.displayScale
       z:1
       readonly property real indicatorSpan: Math.min(width,clockLabel.contentWidth)*(1-root.osdShown)+osdGauge.contentWidth*root.osdShown
       // Keep a small cached surface so text antialiasing stays consistent
@@ -251,17 +260,29 @@ BarWidget {
         typeRole:"bar"
         width:Math.min(parent.width,Math.ceil(implicitWidth*root.displayScale)/root.displayScale)
         height:parent.height
-        x:Math.round((centerContent.parent.width-width)*root.displayScale/2)/root.displayScale-centerContent.x
+        x:Math.round((parent.width-width)*root.displayScale/2)/root.displayScale
         horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter
         opacity:1-root.osdShown
         visible:opacity>0
-        text: root.barText
+        text: root.vertical ? root.clockText : root.barText
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         color: root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
       }
+      PlainText {
+        objectName:"islandVerticalOsd"
+        anchors.fill:parent
+        visible:root.vertical && root.osdShown>0
+        opacity:root.osdShown
+        text:osdGauge.displayGlyph+"\n"+(osdGauge.hasProgress ? (osdGauge.valueText || Commons.I18n.formatNumber(Math.round(osdGauge.value*100))+"%") : osdGauge.message)
+        typeRole:"caption"
+        horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter
+        wrapMode:Text.WrapAnywhere
+        maximumLineCount:3
+        elide:Text.ElideRight
+      }
       BrailleGauge {
         id:osdGauge
-        objectName:"islandOsdGauge";anchors.fill:parent;opacity:root.osdShown;visible:opacity>0
+        objectName:"islandOsdGauge";anchors.fill:parent;opacity:root.osdShown;visible:opacity>0 && !root.vertical
         animateEvents:Preferences.get("panelAnimation") && root.showOsd && root.osdShown===1
         kind:root.indicators ? root.indicators.osdKind : "volume"
         value:root.indicators ? root.indicators.osdValue : 0
@@ -272,7 +293,9 @@ BarWidget {
         valueText:root.indicators && ("osdProgressText" in root.indicators) ? root.indicators.osdProgressText : ""
       }
     }
-    RowLayout {
+    GridLayout {
+      columns: root.vertical ? 1 : -1
+      rows: root.vertical ? -1 : 1
       id:rightIndicators
       FeedbackButton {
         objectName:"islandReminderIndicator"
@@ -285,20 +308,20 @@ BarWidget {
         onClicked:root.openCalendar()
       }
       objectName:"islandRightIndicators"
-      anchors.left:centerContent.horizontalCenter
-      anchors.leftMargin:centerContent.indicatorSpan/2+Style.space(11)
-      anchors.verticalCenter:parent.verticalCenter
-      spacing:Style.space(5)
+      x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2+centerContent.indicatorSpan/2+Style.space(11-5*root.osdShown)
+      y: root.vertical ? parent.height-height-Style.space(6) : (parent.height-height)/2
+      columnSpacing:Style.space(5)
+      rowSpacing:Style.space(5)
       z:1
       StatusBeacon {
         id:updateBeacon
         objectName:"islandUpdateIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("update")}
-        Layout.preferredHeight:trigger.height
+        Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height
         visible:Preferences.get("indicatorUpdate") && !!root.indicators && !!root.indicators.updateAvailable
         tint:Commons.Color.foreground
         glyph:""
         bidirectional:true
-        waveWidth:trigger.width
+        waveWidth:root.vertical ? 0 : trigger.width
         waveOffset:-rightIndicators.x-updateBeacon.x
       }
       PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")} visible:Preferences.get("indicatorMicrophone") && root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
@@ -329,7 +352,8 @@ BarWidget {
     bar: root.bar
     owner: root
     triggerMode: root.pinned ? "click" : "hover"
-    centerOnBar: true
+    centerOnBar: false
+    alignmentItem: clockLabel
     open: root.pinned || (root.hoverOpen && root.hoverContentAvailable) || (root.showAlert && !root.stripNotification)
     frameless: root.notificationToast || bareCard
     bareCard: root.alertKind==="t3" && !root.pinned && !root.hoverOpen

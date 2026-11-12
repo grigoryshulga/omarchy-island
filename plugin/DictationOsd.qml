@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "PanelGeometry.js" as Geometry
 
 Item {
   id: root
@@ -41,10 +42,13 @@ Item {
       objectName:"islandDictationOsd"
       readonly property bool vertical:root.position==="left" || root.position==="right"
       readonly property real gap:Style.gapsOut
-      x:Math.round(Math.max(gap,Math.min(parent.width-width-gap,vertical ? (root.position==="right" ? parent.width-root.thickness-gap-width : root.thickness+gap) : root.anchorPosition.x+root.anchorItem.width/2-width/2)))
-      y:Math.round(Math.max(gap,Math.min(parent.height-height-gap,vertical ? root.anchorPosition.y+root.anchorItem.height/2-height/2 : (root.position==="bottom" ? parent.height-root.thickness-gap-height : root.thickness+gap))))-Style.space(6)*(1-root.shown)
-      width:Math.min(Style.space(320),parent.width-Style.space(24))
-      height:Style.space(88)
+      readonly property var available:Geometry.available(root.position,parent.width,parent.height,root.thickness,gap)
+      readonly property var targetOrigin:Geometry.origin(root.position,parent.width,parent.height,root.thickness,gap,width,height,root.anchorPosition.x+root.anchorItem.width/2,root.anchorPosition.y+root.anchorItem.height/2)
+      readonly property real offset:Style.space(6)*(1-root.shown)
+      x:Math.round(targetOrigin.x)+(vertical ? (root.position==="right" ? 1 : -1)*offset : 0)
+      y:Math.round(targetOrigin.y)+(vertical ? 0 : (root.position==="bottom" ? 1 : -1)*offset)
+      width:Math.min(Style.space(320),available.width)
+      height:Math.min(Style.space(88),available.height)
       radius:Design.cardRadius
       color:Design.canvas
       borderSpec:Design.popupBorder

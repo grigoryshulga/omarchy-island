@@ -83,6 +83,8 @@ Cards and control tiles use a subtle fill without permanent outlines; nested act
 
 The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, and buttons. A soft brightness falloff, inner-edge bloom, and a path trail that fades over 720 ms stay clipped to the hovered surface, including its corners. Nearby elements catch a soft inner-edge glow on the side facing the cursor, including across gaps; transparent wrappers do not gain outlines. This proximity glow remains static with reduced motion. Approaching an edge scatters a few pixels along its inner rim. Reduced motion disables the trail and edge scatter.
 
+The popup follows the clock on top, bottom, left, and right panels, staying inside the current monitor. It opens inward from the panel and keeps its cross-axis center stable during expansion, including near screen corners. Side panels stack clock indicators above and below the time and show a compact OSD; notification summaries use a popup card even when the horizontal bar style is selected. Horizontal clock slots at the start or end of the bar use a compact width.
+
 ### Keyboard
 
 In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weather. Disabled sections have no shortcut and are skipped by wheel and swipe navigation; the remaining shortcuts keep their numbers. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control. Escape returns from Island settings to Controls before closing the popup. Dropdowns handle their own selection keys and Escape.
@@ -151,6 +153,8 @@ omarchy bar set gshulga.island weatherEnabled false --json
 ```
 
 Click the weather city to search or choose automatic location; Enter confirms and Escape cancels. The location is shared with the native weather widget through `~/.local/state/omarchy/settings/weather.json`. Double-click the temperature unit, or focus it and press Enter / Space, to cycle °C → °F → K. The calendar gear selects the first day of the week.
+
+Weather uses a summary layout: current temperature and conditions beside a theme-colored braille illustration, followed by feels-like temperature, wind, and humidity. The next seven days share one temperature-range scale, with highs above and lows below each bar. Sunrise and sunset use the selected city's local time; unavailable solar times show a dash. Only the current-condition illustration animates; forecast illustrations remain still, and reduced motion stops animation.
 
 For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
 
@@ -239,6 +243,7 @@ Additional checks for the affected feature:
 ```bash
 python3 tests/live-notifications.py        # Requires a running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
+python3 tests/panel-layout.py              # Wayland panel orientation, edge slots, indicators and compact OSD
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
 python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
@@ -252,6 +257,7 @@ ISLAND_T3_ONLY=1 python3 tests/indicators.py # T3 count, spinner, reduced motion
 python3 tests/dictation.py                 # Dictation states and reduced motion
 ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
 python3 tests/artwork-render.py            # GPU artwork frames and reduced motion
+ISLAND_TEST_GPU=1 python3 tests/weather-summary.py # Weather GPU, themes, layout and reduced motion
 ```
 
 Read scripts before running them: live checks may interact with the current session. Artwork rendering requires OpenGL 3.3, a C++ compiler, and Qt6Gui.

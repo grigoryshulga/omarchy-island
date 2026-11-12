@@ -30,8 +30,8 @@ void main() {
   vec2 p=(site*3.0+vec2(1.5)-size*0.5)/max(1.0,min(size.x,size.y));
   uvec2 id=uvec2(site);
   float t=phase;
-  vec3 warm=mix(vec3(1.0,0.76,0.34),accent.rgb,0.26);
-  vec3 cool=mix(vec3(0.40,0.67,0.96),accent.rgb,0.30);
+  vec3 warm=accent.rgb;
+  vec3 cool=mix(accent.rgb,foreground.rgb,0.25);
   vec3 cloudColor=mix(foreground.rgb,accent.rgb,0.25);
   vec3 color=cloudColor;
   float shape=0.0;
