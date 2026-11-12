@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 project=$(cd -- "$(dirname -- "$0")/.." && pwd)
+node "$project/tests/agent-limits.test.cjs"
+python3 "$project/tests/agent-limits-collector.py"
+python3 "$project/tests/agent-limits-qml.py"
 node "$project/tests/model.test.cjs"
 node "$project/tests/reminders.test.cjs"
 "$project/bin/vendor-calendars"

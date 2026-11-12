@@ -69,6 +69,7 @@ Item {
           required property var modelData
           property alias editor:choice
           readonly property string key:modelData.key
+          readonly property bool percent:modelData.type==="percent"
           readonly property bool delay:key==="hoverDelay"
           width:body.width
           implicitHeight:layout.implicitHeight+Design.gap.section
@@ -103,8 +104,8 @@ Item {
                 Keys.onSpacePressed:toggled()
               }
               PlainText {
-                visible:row.delay
-                text:root.strings.t("settings.milliseconds").arg(Commons.I18n.formatNumber(Settings.get(root.settings,"hoverDelay")))
+                visible:row.delay || row.percent
+                text:row.percent ? Commons.I18n.formatNumber(Settings.get(root.settings,row.key))+"%" :root.strings.t("settings.milliseconds").arg(Commons.I18n.formatNumber(Settings.get(root.settings,"hoverDelay")))
                 color:Design.secondaryText;typeRole:"caption"
               }
             }
@@ -122,10 +123,10 @@ Item {
             IslandSlider {
               objectName:row.delay ? "setting-hoverDelay" : ""
               Layout.fillWidth:true
-              visible:row.delay
-              value:Settings.get(root.settings,"hoverDelay")
-              minimum:0;maximum:1000;step:20;integer:true
-              onMoved:value=>root.settingRequested("hoverDelay",Math.round(value))
+              visible:row.delay || row.percent
+              value:row.delay || row.percent ? Settings.get(root.settings,row.key) : 0
+              minimum:0;maximum:row.percent ? 100 : 1000;step:row.percent ? 5 : 20;integer:true
+              onMoved:value=>root.settingRequested(row.key,Math.round(value))
             }
           }
 

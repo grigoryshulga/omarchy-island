@@ -56,7 +56,7 @@ Item {
   readonly property real calendarWeatherHeight:Math.max(root.calendar ? calendarPage.implicitHeight : calendarPage.monthImplicitHeight,weatherPage.implicitHeight,controlsPage.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
-  function back() {if(controls && controlsPage.section==="settings") {controlsPage.back();return true}return false}
+  function back() {if(!controls && !calendar && !weather && inbox.closeLimits()) return true;if(controls && controlsPage.section==="settings") {controlsPage.back();return true}return false}
   function pageHolder(index) {return [controlsHolder,inboxHolder,calendarHolder,weatherHolder][index]}
   function updatePages() {
     if(!ready) return
@@ -290,6 +290,7 @@ Item {
   }
   IslandContent {
     id: inbox
+    onSettingRequested:(key,value)=>root.settingRequested(key,value)
     parent:root.pageHolder(1)
     anchors.fill:parent
     overviewActive:!root.controls && !root.calendar && !root.weather

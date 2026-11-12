@@ -66,3 +66,9 @@ CalendarAgenda 1.0 CalendarAgenda.qml
 CalendarSources 1.0 CalendarSources.qml
 ProjectIcon 1.0 ProjectIcon.qml
 singleton ThemePalette 1.0 ThemePalette.qml
+
+AgentLimitsState 1.0 AgentLimitsState.qml
+AgentLimitsOverview 1.0 AgentLimitsOverview.qml
+AgentLimitRow 1.0 AgentLimitRow.qml
+AgentLimitsCenter 1.0 AgentLimitsCenter.qml
+AgentLimitsProviders 1.0 AgentLimitsProviders.qml

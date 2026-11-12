@@ -13,6 +13,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 - **Calendar and weather:** month/year navigation, read-only ICS subscriptions, native Omarchy reminders, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
+- **Agent limits (optional):** pinned quota windows, automatic low-quota cards, an optional clock indicator, and an expandable Limits / Usage / Cost center with provider connections. Shares configuration and aggregate caches with Agent Limits; no separate plugin is required.
 - **T3 Code (optional):** live session cards in Overview, a bar indicator for running sessions and pending requests, and inline answers to questions. Cards preserve drafts and focus while sessions update. Permission and authentication requests open in T3.
 - **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Optional Voxtype integration shows recording and transcription status without taking focus.
 
@@ -173,6 +174,22 @@ Weather uses a summary layout: current temperature and conditions beside a theme
 
 For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
 
+### Agent limits
+
+Enable **Controls → Settings → Agent limits → Agent limits integration**. The integration is off by default and stops its collector when disabled or when Overview is disabled. It bundles the collector from [Agent Limits](https://github.com/grigoryshulga/omarchy-agent-limits); the standalone widget does not need to be installed.
+
+Overview shows **Automatic + pinned** windows by default. A window appears automatically at 20% remaining or less and stays until it exceeds 25% (five points of hysteresis). The warning threshold is configurable. The critical threshold defaults to 5%; its effective value cannot exceed the warning threshold. You can also choose automatic-only or pinned-only mode.
+
+Choose **All limits** in the pinned popup to expand the center in place of the other Overview blocks; collapsing it restores them. Escape returns to the summary before closing the popup. The pin button saves a specific provider/window pair; arrows in the full list change pin order. Pins survive restarts and provider disable/re-enable. Hidden or unavailable windows retain their saved identity. Surviving summary rows keep their order and keyboard focus during measurements; an explicitly changed pin order applies when returning from the center. Hover previews show the summary without editing controls. The optional clock indicator is off by default; choose low-quota-only or always show the tightest known window. A dot after its percentage marks last-known data. Click it to open Overview.
+
+The center includes **Limits**, **Usage**, **Cost**, and **Providers**. Usage and cost show hourly trends for today, daily trends for longer ranges, and totals for today, seven days, or thirty days. Model breakdowns are explicitly all-time because the collector does not publish per-model time buckets. Cost is an API-equivalent estimate, not subscription charges or an account-wide bill; mixed unpriced traffic is marked. Balance-only accounts retain currency amounts, and local-only providers do not gain invented quota percentages.
+
+The Providers tab enables/disables all eleven catalog providers, reorders them, and connects existing credentials through Bitwarden secret **names** and regional endpoints. Claude and Codex use their existing CLI login; OpenAI API and Gemini use local usage logs. The existing Agent Limits connection precedence and custom pricing remain intact.
+
+Configuration is shared at `$XDG_CONFIG_HOME/omarchy/agent-limits.json`; only Island presentation settings and pins belong to the `gshulga.island` shell entry. Aggregate data is shared at `$XDG_STATE_HOME/omarchy/agent-limits/data.json`, with a private directory (`0700`) and file (`0600`). The collector reuses Agent Limits' runtime probe cache and sync lock. Refresh runs every five minutes; manual refresh still respects provider cache TTLs and rate-limit backoff. A failed provider retains its last-known values, explicitly marked; missing data is not zero. An elapsed or provisionally rolled quota window shows **Awaiting confirmed reset** instead of asserting a full allowance. Credentials, prompts, and session text are never written to the aggregate cache or Island notification history.
+
+Presentation keys: `agentLimitsEnabled: false`, `agentLimitsMode: "combined"` (`auto` / `pinned`), `agentLimitsPins: []`, `agentLimitsIndicator: "off"` (`warning` / `always`), `agentLimitsWarning: 20`, and `agentLimitsCritical: 5`. Thresholds describe **remaining**, rather than consumed, percentages.
+
 ### T3 Code session cards
 
 Requires a running **local T3 Code server**, its `t3` CLI on the shell's `PATH`, and orchestration protocol **2**. Tested against `0.1.9-nightly.20261111.4515`. The bridge uses Python's standard library; Node.js and extra Python packages are not required.
@@ -263,6 +280,7 @@ python3 tests/popup-motion.py              # Wayland popup geometry and animatio
 python3 tests/panel-layout.py              # Wayland panel orientation, edge slots, indicators and compact OSD
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
+python3 tests/agent-limits-qml.py          # Isolated limits collector, pins, focus, center and failure policy
 python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
