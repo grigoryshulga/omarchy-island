@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "PanelGeometry.js" as Geometry
 
 // Keep the Wayland surface fixed. Only the card changes geometry, so the
 // compositor never has to negotiate buffers during a preview expansion.
@@ -19,7 +20,13 @@ PanelWindow {
   property bool bareCardShown:false
   property bool frameSuppressed: false
   property string triggerMode: "hover"
-  property bool centerOnBar: true
+  property bool centerOnBar: false
+  property Item alignmentItem: anchorItem
+  readonly property point anchorCenter: {
+    anchorWatcher.transform
+    return anchorWindow && alignmentItem ? alignmentItem.mapToItem(anchorWindow.contentItem,alignmentItem.width/2,alignmentItem.height/2) : Qt.point(width/2,height/2)
+  }
+  TransformWatcher { id: anchorWatcher; a: root.anchorWindow ? root.anchorWindow.contentItem : null; b: root.alignmentItem }
   property int padding: bareCardShown ? 0 : frameSuppressed ? Design.gap.small : Design.panelPadding
   property int margin: Style.gapsOut
   property int contentWidth: Style.space(420)
@@ -30,8 +37,8 @@ PanelWindow {
   signal backgroundClicked(point position)
   readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
   readonly property real thickness: bar ? bar.barSize : Style.bar.sizeHorizontal
-  readonly property real availableWidth: Math.max(120,(screen ? screen.width : 1920)-2*margin)
-  readonly property real availableHeight: Math.max(120,(screen ? screen.height : 1080)-thickness-2*margin)
+  readonly property real availableWidth: Geometry.available(position,screen ? screen.width : 1920,screen ? screen.height : 1080,thickness,margin).width
+  readonly property real availableHeight: Geometry.available(position,screen ? screen.width : 1920,screen ? screen.height : 1080,thickness,margin).height
   readonly property var borderSpec: Design.popupBorder
   readonly property real insetTop: padding+Border.top(borderSpec)
   readonly property real insetBottom: padding+Border.bottom(borderSpec)
@@ -124,11 +131,15 @@ PanelWindow {
   readonly property string position: bar ? bar.position : "top"
   readonly property point cardOrigin: {
     var sw = screen ? screen.width : root.width, sh = screen ? screen.height : root.height
-    var x = (sw-drawnWidth)/2, y = thickness+margin
-    if (position === "bottom") y = sh-thickness-margin-drawnHeight
-    if (position === "left") { x = thickness+margin; y = (sh-drawnHeight)/2 }
-    if (position === "right") { x = sw-thickness-margin-drawnWidth; y = (sh-drawnHeight)/2 }
-    return Qt.point(Math.round(Math.max(margin,Math.min(x,sw-drawnWidth-margin))),Math.round(Math.max(margin,Math.min(y,sh-drawnHeight-margin))))
+    var destination = Geometry.origin(position,sw,sh,thickness,margin,layoutWidth,layoutHeight,
+      centerOnBar ? sw/2 : anchorCenter.x,centerOnBar ? sh/2 : anchorCenter.y)
+    var x = destination.x + (layoutWidth-drawnWidth)/2
+    var y = destination.y
+    if (Geometry.vertical(position)) {
+      x = position === "right" ? destination.x+layoutWidth-drawnWidth : destination.x
+      y += (layoutHeight-drawnHeight)/2
+    } else if (position === "bottom") y += layoutHeight-drawnHeight
+    return Qt.point(Math.round(x),Math.round(y))
   }
   Item {
     id: canvas
@@ -150,8 +161,8 @@ PanelWindow {
     BorderSurface {
       id: card
       objectName: "islandPopupCard"
-      x: root.cardOrigin.x
-      y: root.cardOrigin.y + (root.position === "bottom" ? -1 : 1)*reveal.offsetY
+      x: root.cardOrigin.x + (Geometry.vertical(root.position) ? (root.position === "right" ? -1 : 1)*reveal.offsetY : 0)
+      y: root.cardOrigin.y + (Geometry.vertical(root.position) ? 0 : (root.position === "bottom" ? -1 : 1)*reveal.offsetY)
       width: root.drawnWidth
       height: root.drawnHeight
       color: Design.canvas

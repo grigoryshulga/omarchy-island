@@ -14,7 +14,7 @@ Item {
     x:root.bidirectional ? root.waveOffset : 0
     anchors.verticalCenter:parent.verticalCenter
     width:root.waveWidth;height:root.height
-    active:root.visible && Preferences.get("panelAnimation")
+    active:root.visible && root.waveWidth>0 && Preferences.get("panelAnimation")
     accent:root.tint
     intensity:root.bidirectional ? Qt.vector2d(0.85,0.85) : Qt.vector2d(1.45,0.08)
     origin:Qt.vector2d(root.width/2-x,height/2)
