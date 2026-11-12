@@ -5,6 +5,7 @@ import Quickshell
 import qs.Commons as Commons
 import "Island" as Island
 import "Island/DesignTokens.js" as Tokens
+import "Island/ThemePaletteModel.js" as Palette
 
 ShellRoot {
   FloatingWindow {
@@ -36,6 +37,12 @@ ShellRoot {
           Commons.Color.popups.background=palette.bg;Commons.Color.popups.text=palette.fg
           Commons.Color.accent=palette.accent;Commons.Color.muted=palette.muted
           wait(30)
+          Island.ThemePalette.values=Palette.parse('blue = "#4488ff"\ngreen = "#44dd88"\nyellow = "#ffdd44"')
+          for(var role of ["info","success","warning"]) {
+            var tint=Island.Design[role],contrast=Tokens.contrast(tint,Island.Design.raised)
+            if(!(contrast>=4.5)) console.log("DESIGN_FAIL: status contrast",role,tint.toString(),contrast)
+            verify(contrast>=4.5,"Theme file status colors must stay readable: "+role)
+          }
           verify(Tokens.contrast(Island.Design.text,Island.Design.surface)>=4.5)
           verify(Tokens.contrast(Island.Design.secondaryText,Island.Design.raised)>=4.5,"Secondary contrast: "+Tokens.contrast(Island.Design.secondaryText,Island.Design.raised))
           verify(Tokens.contrast(selectedButton._selectedColor,Island.Design.selection)>=4.5,"Selected label lost contrast")

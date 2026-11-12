@@ -7,6 +7,11 @@ import "ThemePaletteModel.js" as Model
 QtObject {
   id:root
   property var values:({})
+  // The parser returns strings; typed properties convert them to QColor before
+  // DesignTokens reads .r/.g/.b/.a to calculate contrast.
+  readonly property color blue:values.blue || Commons.Color.accent
+  readonly property color green:values.green || Commons.Color.accent
+  readonly property color yellow:values.yellow || Commons.Color.accent
   property FileView file:FileView {
     path:Commons.Color.currentThemePath+"/colors.toml"
     watchChanges:true

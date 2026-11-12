@@ -3,6 +3,7 @@ import QtTest
 import Quickshell
 import qs.Commons as Commons
 import "Island" as Island
+import "Island/DesignTokens.js" as Tokens
 
 ShellRoot {
   Island.Service {id:service}
@@ -62,6 +63,8 @@ ShellRoot {
         wait(120);verify(glyph.text!==frame,"Braille spinner did not advance")
         var title=findChild(workingCard,"t3SessionTitle"),projectIcon=findChild(workingCard,"t3ProjectIcon")
         var titleX=title.mapToItem(workingCard,0,0).x,projectX=projectIcon.mapToItem(workingCard,0,0).x
+        var palette=Island.ThemePalette.values
+        Island.ThemePalette.values={blue:"#4488ff",green:"#44dd88",yellow:"#ffdd44"};wait(30)
         for(var variant of [Object.assign({},second,{status:"completed"}),Object.assign({},second,{status:"failed"}),Object.assign({},second,{requestId:"pending"}),second]) {
           snapshot([row,variant]);wait(180)
           compare(title.mapToItem(workingCard,0,0).x,titleX,"Status moved the title")
@@ -69,10 +72,10 @@ ShellRoot {
           var icon=workingCard.statusIcon
           verify(Math.abs(icon.mapToItem(workingCard,icon.width/2,icon.height/2).y-title.mapToItem(workingCard,0,title.height/2).y)<1,"Status icon is not aligned with the title")
           compare(findChild(workingCard,"t3StatusLabel").color.toString(),workingCard.statusColor.toString(),"Status label missed its semantic color")
+          verify(Tokens.contrast(findChild(workingCard,"t3StatusLabel").color,workingCard.color)>=4.5,"Status text became unreadable with theme-file colors")
           compare(workingCard.statusColor.toString(),(variant.requestId ? Island.Design.warning : variant.status==="completed" ? Island.Design.success : variant.status==="failed" ? Island.Design.danger : Island.Design.info).toString())
         }
-        var palette=Island.ThemePalette.values
-        Island.ThemePalette.values={blue:"#4488ff",green:"#44dd88",yellow:"#ffdd44"};wait(30)
+        Island.ThemePalette.values={blue:"#6699ff",green:"#55cc88",yellow:"#ddcc55"};wait(30)
         compare(workingCard.statusColor.toString(),Island.Design.info.toString(),"Live theme change did not update status")
         Island.ThemePalette.values=palette
         var section=findChild(pages,"t3Section"),many=[row,second]
