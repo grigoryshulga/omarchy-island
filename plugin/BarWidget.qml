@@ -218,9 +218,9 @@ BarWidget {
           anchors.centerIn:parent
           width:parent.width
           columnSpacing:Style.space(4);rowSpacing:Style.space(4)
-          T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:Style.space(14)}
+          T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:t3Count.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter}
           PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
-          PlainText {objectName:"islandT3Count";Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;verticalAlignment:Text.AlignVCenter}
+          PlainText {id:t3Count;objectName:"islandT3Count";Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;verticalAlignment:Text.AlignVCenter}
         }
         MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
       }
