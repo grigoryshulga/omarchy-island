@@ -52,12 +52,15 @@ Column {
     visible:!root.allSessions
     width:parent.width
     implicitHeight:Math.max(headingContent.implicitHeight,openDetails.implicitHeight)
+    SectionHeading {id:sectionTitle;anchors.left:parent.left;width:root.summaryMode ? implicitWidth : parent.width;title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length);height:Design.compactControlHeight}
     Flow {
       id:headingContent
       objectName:"t3SummaryHeading"
-      width:parent.width-(root.summaryMode ? openDetails.width+Design.gap.small : 0)
+      anchors.right:openDetails.left
+      anchors.rightMargin:Design.gap.small
+      width:Math.max(0,parent.width-sectionTitle.width-openDetails.width-2*Design.gap.small)
+      layoutDirection:Qt.RightToLeft
       spacing:Design.gap.small
-      SectionHeading {width:root.summaryMode ? implicitWidth : parent.width;title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length);height:Design.compactControlHeight}
       Repeater {
         model:[{key:"attention",icon:"󰋗",role:"warning"},{key:"working",icon:"",role:"info"},{key:"finished",icon:"✓",role:"success"},{key:"failed",icon:"󰅙",role:"danger"},{key:"other",icon:"·",role:"secondaryText"}]
         FeedbackButton {

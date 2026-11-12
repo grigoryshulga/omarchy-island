@@ -28,11 +28,16 @@ Surface {
     RowLayout {
       Layout.fillWidth:true
       PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;typeRole:root.compact ? "body" : "title";text:root.row.name+" · "+root.row.label;elide:Text.ElideRight}
-      BatteryGauge {
+      ShaderEffect {
+        objectName:"limitBrailleProgress"
         visible:root.compact && root.row.remaining!==null
         Layout.preferredWidth:Style.space(104)
-        fraction:root.row.remaining===null ? 0 : root.row.remaining/100
-        warningThreshold:(Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical"))+0.001)/100
+        Layout.preferredHeight:Style.space(24)
+        property vector2d size:Qt.vector2d(width,height)
+        property real amount:root.row.remaining===null ? 0 : Math.max(0,Math.min(1,root.row.remaining/100))
+        property color accent:root.row.remaining!==null && root.row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : Design.accent
+        vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
+        fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
       }
       PlainText {
         objectName:"limitRemaining"
@@ -49,11 +54,16 @@ Surface {
         onClicked:root.pinRequested(root.row.id)
       }
     }
-    BatteryGauge {
+    ShaderEffect {
+      objectName:"limitBrailleProgressFull"
       Layout.fillWidth:true
+      Layout.preferredHeight:Style.space(24)
       visible:!root.compact && root.row.remaining!==null
-      fraction:root.row.remaining===null ? 0 : root.row.remaining/100
-      warningThreshold:(Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical"))+0.001)/100
+      property vector2d size:Qt.vector2d(width,height)
+      property real amount:root.row.remaining===null ? 0 : Math.max(0,Math.min(1,root.row.remaining/100))
+      property color accent:root.row.remaining!==null && root.row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : Design.accent
+      vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
+      fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
     }
     PlainText {
       Layout.fillWidth:true;typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap

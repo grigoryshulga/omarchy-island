@@ -53,7 +53,7 @@ Item {
     restoreSummary()
     return true
   }
-  readonly property bool showPlayer:(!detailOpen || detailPage==="media") && service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
+  readonly property bool showPlayer:!detailOpen && service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
   readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
   property bool historyOpen: false
   onExpandedChanged: if (!expanded) {historyOpen=false;detailPage=""}
@@ -94,8 +94,8 @@ Item {
   RowLayout {
     visible:root.detailPage!==""
     Layout.fillWidth:true
-    FeedbackButton {objectName:"overviewBack";iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
-    SectionHeading {Layout.fillWidth:true;title:root.detailPage==="t3" ? "T3 Code" : root.strings.t(root.detailPage==="media" ? "media.title" : "notifications.active")}
+    SectionHeading {Layout.fillWidth:true;title:root.detailPage==="t3" ? "T3 Code" : root.strings.t("notifications.active")}
+    FeedbackButton {objectName:"overviewBack";implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
   }
   T3SessionCard {
     id:t3Toast
@@ -115,7 +115,7 @@ Item {
     spacing:Design.gap.small
     SectionHeading {
       objectName:"mediaSectionHeading"
-      visible:!root.mediaToast && !mediaPlayer.compactOverview && root.detailPage!=="media"
+      visible:!root.mediaToast && !mediaPlayer.compactOverview
       Layout.fillWidth:true
       title:root.service && root.service.player && /spotify/i.test(root.service.player.identity || "") ? "Spotify" : root.strings.t("media.title")
     }
@@ -129,8 +129,7 @@ Item {
       strings: root.strings
       bar: root.bar
       expanded: root.expanded
-      compactOverview:!root.mediaToast && root.detailPage!=="media"
-      onDetailsRequested:root.openDetails("media")
+      compactOverview:!root.mediaToast
       active: root.overviewActive
       radialBraille: root.radialBraille
       onExpandRequested: root.expandRequested()
@@ -182,14 +181,18 @@ Item {
   RowLayout {
     Layout.fillWidth:true
     visible:root.expanded && !root.detailOpen
+    SectionHeading {Layout.fillWidth:true;title:root.strings.t("notifications.active");detail:Commons.I18n.formatNumber(root.rows.length)}
+    FeedbackButton {objectName:"overviewDnd";iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
     FeedbackButton {
       objectName:"notificationsOpenDetails"
-      text:root.strings.t("notifications.active")+" · "+Commons.I18n.formatNumber(root.rows.length)
       iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔"
-      Layout.fillWidth:true;leftAlign:true;focusable:true;feedback:root.externalFeedback
+      iconSize:Style.font.iconLarge
+      implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight
+      horizontalPadding:0;verticalPadding:0
+      tooltipText:root.strings.t("notifications.active")
+      compact:true;focusable:true;feedback:root.externalFeedback
       onClicked:root.openDetails("notifications")
     }
-    FeedbackButton {objectName:"overviewDnd";iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
   }
   RowLayout {
     Layout.fillWidth: true
