@@ -147,3 +147,14 @@ function reminderArgs(minutes,message) {
   if(!/^[0-9]+$/.test(value) || Number(value)<1 || Number(value)>2147483647 || typeof message!=="string" || message.length>4096 || /[\x00]/.test(message)) return []
   return [String(Number(value))].concat(message ? [message] : [])
 }
+
+// ICS subscriptions allow HTTPS only; webcal is its common subscription alias.
+// The downloader repeats this check for redirects and validates resolved IPs.
+function calendarUrl(raw) {
+  if(typeof raw!=="string") return ""
+  var safe=safeHttpUrl(raw.replace(/^webcal:\/\//i,"https://"))
+  if(!safe || !/^https:\/\//.test(safe) || safe.indexOf("#")>=0) return ""
+  var authority=safe.match(/^https:\/\/([^/]+)/)[1]
+  if(authority.indexOf(":")>=0 && !/:443$/.test(authority)) return ""
+  return safe.replace(/^(https:\/\/[^/:]+):443/,"$1")
+}

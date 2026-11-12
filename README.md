@@ -10,7 +10,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 
 - **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show a 20-segment charge gauge and power profiles. The gauge shows partial segments, uses the theme danger role below 20%, and gently pulses the leading segment while charging (unless reduced motion is enabled).
 - **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
-- **Calendar and weather:** month/year navigation, native Omarchy reminders, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
+- **Calendar and weather:** month/year navigation, read-only ICS subscriptions, native Omarchy reminders, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
 - **T3 Code (optional):** live session cards in Overview, a bar indicator for running sessions and pending requests, and inline answers to questions. Cards preserve drafts and focus while sessions update. Permission and authentication requests open in T3.
@@ -101,7 +101,19 @@ The calendar includes the full native reminder flow: enter a positive number of 
 
 A compact reminder badge appears to the right of the clock while reminders are active. It shows their count, offers the nearest reminder and time in its tooltip, and opens Calendar on click. Island reads `omarchy-reminder show --json` every ten seconds and after its own changes. Existing reminders and native CLI commands remain compatible. The installed `omarchy-reminder` command owns systemd timers, messages and notification delivery; Island creates no second reminder store. Reminders survive an Island restart, with the native backend's existing runtime lifetime rather than guaranteed persistence across a reboot. The stock reminder overlay can remain installed.
 
-External Google Calendar/ICS subscriptions are **not connected yet**. [Integration research](docs/calendar-integrations.md) compares public ICS, secret Google iCal links and OAuth, with a proposed implementation sequence.
+#### ICS subscriptions
+
+Open **Calendar → gear → Calendar subscriptions**, enter a name and an HTTPS or `webcal://` ICS address, then select **Subscribe**. Up to six sources can be enabled, disabled, removed or refreshed manually. This works with public calendars and secret Google iCal URLs that are available without an interactive login. Use the calendar’s iCal export address, not its browser/embed link. `webcal://` is converted to HTTPS.
+
+Events mark dates in the month and year grids. Selecting a date shows all-day and timed events with their source and location. Recurrences, exclusions, moved/cancelled occurrences, time zones and multi-day events are supported. Timed events use the machine’s local time zone; all-day dates stay on their calendar dates. ICS alarms are not scheduled and remote events cannot be edited.
+
+After Calendar is first opened, enabled sources refresh every 15 minutes, including while the popup is closed. Opening it also checks the cache. Disabling the Calendar section stops this integration; disabling a source stops its requests and hides its events. HTTP conditional requests reuse unchanged feeds. A failed update keeps the last successful feed and shows its stale status; retry manually or wait for the next interval.
+
+URLs and feed caches live in `$XDG_STATE_HOME/omarchy/island/calendars/` (default `~/.local/state/omarchy/island/calendars/`), separate from `shell.json`. The directory is private (`0700`), files are `0600`, and URLs are passed over stdin rather than command arguments. The UI never displays a saved URL. This is local file protection, not encryption; treat backups of this directory as private. Removing a source also removes its cache.
+
+The downloader accepts public-network HTTPS endpoints on port 443, validates redirects and TLS certificates, and rejects local/private addresses and embedded login credentials. Each source is limited to 2 MiB and 2,000 occurrences for the viewed year plus adjacent week cells, with bounded worker time and memory. The day list displays up to 100 occurrences and indicates additional ones. Very large or excessively dense calendars show a limit error. Python 3.11+ is required; the pinned pure-Python parser libraries are bundled with the plugin, so there is no extra package installation.
+
+Google OAuth/account selection and event editing are not included. [Integration notes](docs/calendar-integrations.md) describe the remaining options.
 
 ### IPC
 
@@ -250,6 +262,9 @@ python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/W
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/calendar-reminders.py        # Native reminder CLI fixture, calendar forms and year navigation
+python3 tests/calendar-ics.py              # ICS recurrence, DST, network policy, private cache and failures
+python3 tests/calendar-subscriptions.py    # QML subscription form → helper → real parser/storage (HTTP fixture)
+bin/vendor-calendars                      # Verify bundled calendar dependency hashes and licenses
 python3 tests/keyboard.py                  # Keyboard input and focus
 QT_QPA_PLATFORM=offscreen python3 tests/keyboard.py # Keyboard checks without Wayland focus
 python3 tests/indicators.py                # Wayland indicators and native OSD

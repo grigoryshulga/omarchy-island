@@ -43,3 +43,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## ICS calendar dependencies
+
+`vendor/calendar/` bundles unmodified source wheels for icalendar, recurring-ical-events, x-wr-timezone and their Python dependencies. They retain their own BSD, MIT, Apache, PSF and LGPL licenses, independent of Island's license. See [the dependency manifest](vendor/calendar/README.md), [pinned versions and hashes](vendor/calendar/lock.json), and [license copies](vendor/calendar/licenses/). Libraries can be replaced or modified without a runtime integrity restriction; the manifest documents how.

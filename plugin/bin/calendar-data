@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""Private ICS subscriptions; JSON stdin/stdout keeps secret URLs out of argv."""
+import base64
+import ctypes
+import signal
+import concurrent.futures
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import resource
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
+from calendar_ics import CalendarError, deadline, expand, fetch, safe_url
+
+MAX_SOURCES = 6
+REFRESH_SECONDS = 900
+ROOT = Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local/state') / 'omarchy/island/calendars'
+
+
+def read_json(path, maximum):
+    if not path.exists():
+        return None
+    with path.open('rb') as stream:
+        raw = stream.read(maximum + 1)
+    if len(raw) > maximum:
+        raise CalendarError('storage')
+    try:
+        return json.loads(raw)
+    except ValueError:
+        raise CalendarError('storage') from None
+
+
+def write_json(path, value):
+    fd, temporary = tempfile.mkstemp(prefix='.calendar-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump(value, stream, ensure_ascii=False)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def cache_path(source):
+    if not re.fullmatch('[a-f0-9]{32}', source['id']):
+        raise CalendarError('storage')
+    return ROOT / (source['id'] + '.json')
+
+
+def worker(request):
+    source, year = request['source'], request['year']
+    path = cache_path(source)
+    try:
+        cache = read_json(path, 4 * 1024 * 1024) or {}
+        if not isinstance(cache, dict):
+            cache = {}
+    except CalendarError:
+        cache = {}
+    error, events = cache.get('error', ''), []
+    if error not in ('url', 'network', 'invalid', 'limit', 'storage'):
+        error = ''
+    now = int(time.time())
+    fetched_at = cache.get('fetchedAt', 0)
+    if not isinstance(fetched_at, (int, float)) or fetched_at > now + 60:
+        fetched_at = 0
+    attempted_at = cache.get('attemptedAt', fetched_at)
+    if not isinstance(attempted_at, (int, float)) or attempted_at > now + 60:
+        attempted_at = 0
+    due = request['refresh'] or now - attempted_at >= REFRESH_SECONDS
+    if due:
+        try:
+            raw, etag, modified = deadline(12, lambda: fetch(source['url'], cache))
+            if raw is None:
+                raw = base64.b64decode(cache['raw'], validate=True)
+            events = deadline(5, lambda: expand(raw, year))
+            cache = {'raw': base64.b64encode(raw).decode('ascii'), 'etag': etag, 'modified': modified, 'fetchedAt': now, 'attemptedAt': now, 'error': ''}
+            error = ''
+            write_json(path, cache)
+            fetched_at = now
+        except CalendarError as failure:
+            error = failure.code
+        except Exception:
+            error = 'network'
+        if error:
+            cache.update(attemptedAt=now, error=error)
+            write_json(path, cache)
+    if not due or error:
+        try:
+            events = deadline(5, lambda: expand(base64.b64decode(cache.get('raw', ''), validate=True), year)) if cache.get('raw') else []
+        except CalendarError as failure:
+            events, error = [], error or failure.code
+        except Exception:
+            events, error = [], error or 'invalid'
+    return {'id': source['id'], 'events': events, 'error': error, 'fetchedAt': fetched_at,
+            'stale': bool(error) or now - fetched_at >= REFRESH_SECONDS}
+
+
+def run_worker(source, year, refresh):
+    request = {'source': source, 'year': year, 'refresh': refresh}
+    try:
+        result = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--worker'], input=json.dumps(request),
+                                text=True, capture_output=True, timeout=25)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, ValueError):
+        pass
+    return {'id': source['id'], 'events': [], 'error': 'limit', 'fetchedAt': 0, 'stale': True}
+
+
+def operate(request):
+    ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
+    ROOT.chmod(0o700)
+    fd = os.open(ROOT / '.lock', os.O_RDWR | os.O_CREAT, 0o600)
+    with os.fdopen(fd, 'w') as lock:
+        os.fchmod(lock.fileno(), 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        path = ROOT / 'sources.json'
+        sources = read_json(path, 65536) or []
+        if not isinstance(sources, list) or len(sources) > MAX_SOURCES:
+            raise CalendarError('storage')
+        for source in sources:
+            cache_path(source)
+            safe_url(source['url'])
+            if not isinstance(source.get('name'), str) or len(source['name']) > 128 or not isinstance(source.get('enabled'), bool):
+                raise CalendarError('storage')
+        command = request.get('command', 'snapshot')
+        year = request.get('year')
+        if not isinstance(year, int) or isinstance(year, bool) or not 1 <= year <= 9998:
+            raise CalendarError('range')
+        if command == 'add':
+            if len(sources) >= MAX_SOURCES:
+                raise CalendarError('sourcesLimit')
+            name = request.get('name', '')
+            if not isinstance(name, str) or not name.strip() or len(name) > 128 or re.search(r'[\x00-\x1f\x7f]', name):
+                raise CalendarError('name')
+            url = safe_url(request.get('url'))
+            if any(source['url'] == url for source in sources):
+                raise CalendarError('duplicate')
+            sources.append({'id': uuid.uuid4().hex, 'name': name.strip(), 'url': url, 'enabled': True})
+            write_json(path, sources)
+        elif command in ('toggle', 'remove'):
+            source = next((s for s in sources if s['id'] == request.get('id')), None)
+            if source is None:
+                raise CalendarError('storage')
+            if command == 'remove':
+                sources.remove(source)
+                cache_path(source).unlink(missing_ok=True)
+            else:
+                if not isinstance(request.get('enabled'), bool):
+                    raise CalendarError('invalid')
+                source['enabled'] = request['enabled']
+            write_json(path, sources)
+        elif command != 'snapshot':
+            raise CalendarError('invalid')
+        enabled = [source for source in sources if source['enabled']]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            reports = list(pool.map(lambda source: run_worker(source, year, bool(request.get('refresh'))), enabled))
+        by_id = {report['id']: report for report in reports}
+        public, events = [], []
+        for source in sources:
+            report = by_id.get(source['id'], {})
+            public.append({'id': source['id'], 'name': source['name'], 'enabled': source['enabled'],
+                           'error': report.get('error', ''), 'stale': report.get('stale', False), 'fetchedAt': report.get('fetchedAt', 0)})
+            events.extend(dict(event, sourceId=source['id'], sourceName=source['name']) for event in report.get('events', []))
+        events.sort(key=lambda event: (event['start'], event['title']))
+        return {'year': year, 'sources': public, 'events': events, 'error': ''}
+
+
+if __name__ == '__main__':
+    os.umask(0o077)
+    try:
+        raw = sys.stdin.buffer.readline(16385)
+        if len(raw) > 16384:
+            raise CalendarError('invalid')
+        request = json.loads(raw)
+        if not isinstance(request, dict):
+            raise CalendarError('invalid')
+        if sys.argv[1:] == ['--worker']:
+            # Kill download/parser children when the shell stops the parent.
+            if ctypes.CDLL(None).prctl(1, signal.SIGTERM, 0, 0, 0) != 0 or os.getppid() == 1:
+                raise CalendarError('unavailable')
+            resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+            result = worker(request)
+        else:
+            result = operate(request)
+    except CalendarError as failure:
+        result = {'error': failure.code}
+    except Exception:
+        result = {'error': 'storage'}
+    print(json.dumps(result, ensure_ascii=False))

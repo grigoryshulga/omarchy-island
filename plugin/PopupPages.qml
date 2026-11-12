@@ -304,6 +304,7 @@ Item {
   }
   CalendarView {
     id: calendarPage
+    subscriptions:root.service && ("calendars" in root.service) ? root.service.calendars : null
     reminders:root.service && ("reminders" in root.service) ? root.service.reminders : null
     parent:root.pageHolder(2)
     anchors.fill:parent

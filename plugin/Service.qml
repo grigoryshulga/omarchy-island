@@ -15,6 +15,8 @@ import "Downloads.js" as Downloads
 Item {
   id: root
   property var shell: null
+  readonly property alias calendars:calendarState
+  CalendarState {id:calendarState}
   readonly property alias reminders:reminderState
   ReminderState {id:reminderState}
   readonly property alias weather: weatherService

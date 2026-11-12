@@ -132,6 +132,7 @@ else:
         (module / 'bin').mkdir()
         shutil.copy2(project / 'plugin/bin/watch-downloads', module / 'bin/watch-downloads')
         (module / 'ReminderState.qml').write_text('import QtQuick\nItem {}\n')
+        (module / 'CalendarState.qml').write_text('import QtQuick\nItem {}\n')
         (module / 'WeatherService.qml').write_text('import QtQuick\nItem {}\n')
         (module / 'T3State.qml').write_text('import QtQuick\nItem {signal activityChanged(var session)}\n')
         (module / 'IndicatorState.qml').write_text('import QtQuick\nItem {property var consumers:[];property bool downloading:false; function announceMode(mode,on){} function showOsd(payload){return false} function hideOsd(){}}\n')

@@ -60,3 +60,6 @@ ChoiceButton 1.0 ChoiceButton.qml
 ReminderState 1.0 ReminderState.qml
 ReminderPanel 1.0 ReminderPanel.qml
 CalendarYear 1.0 CalendarYear.qml
+CalendarState 1.0 CalendarState.qml
+CalendarAgenda 1.0 CalendarAgenda.qml
+CalendarSources 1.0 CalendarSources.qml

@@ -12,6 +12,13 @@ Item {
   required property var strings
   property var reminders:null
   property bool yearMode:false
+  property bool sourcesMode:false
+  property var subscriptions:null
+  readonly property var markedDays:reminderDays.concat(subscriptions ? subscriptions.eventDays : [])
+  function activateSubscriptions() {if(active && visible && subscriptions) subscriptions.activate(viewYear)}
+  onSubscriptionsChanged:activateSubscriptions()
+  onViewYearChanged:activateSubscriptions()
+  Component.onCompleted:activateSubscriptions()
   readonly property var reminderDays:reminders ? reminders.rows.map(function(row){return Reminders.dayKey(row.at)}) : []
   property bool radialBraille: true
   property var externalFeedback: null
@@ -31,10 +38,10 @@ Item {
   readonly property string monthTitle: strings.t("calendar.monthYear").arg(locale.standaloneMonthName(viewMonth,Locale.LongFormat)).arg(Calendar.localDate(viewYear,viewMonth,1).toLocaleDateString(locale,"yyyy"))
   signal backRequested()
   signal weekStartRequested(string value)
-  readonly property real monthImplicitHeight:body.implicitHeight-(yearMode ? yearGrid.implicitHeight-calendarGrid.implicitHeight : 0)
+  readonly property real monthImplicitHeight:body.implicitHeight-(yearMode && !sourcesMode ? yearGrid.implicitHeight-calendarGrid.implicitHeight : 0)
   implicitHeight: body.implicitHeight
-  onActiveChanged: if(!active) settingsMenu.close()
-  onVisibleChanged: if(!visible) settingsMenu.close()
+  onActiveChanged: {if(!active) settingsMenu.close();else activateSubscriptions()}
+  onVisibleChanged: {if(!visible) settingsMenu.close();else activateSubscriptions()}
 
   function pulseFrom(item) {
     if(externalFeedback) {externalFeedback.pulseFrom(item);return}
@@ -46,6 +53,7 @@ Item {
     glow.pulse(at)
   }
   function showToday() {
+    sourcesMode=false
     yearMode=false;viewYear=today.getFullYear(); viewMonth=today.getMonth()
     selectedDay={year:viewYear,month:viewMonth,day:today.getDate(),key:todayKey}
   }
@@ -56,6 +64,7 @@ Item {
   }
   function selectDay(day) { selectedDay=day; viewYear=day.year; viewMonth=day.month }
   function focusSelectedDay() {
+    if(sourcesMode) {sourcesPanel.focusEditor();return}
     if(yearMode) {yearGrid.focusMonth();return}
     for(var i=0;i<dayCells.count;i++) {
       var item=dayCells.itemAt(i)
@@ -65,6 +74,11 @@ Item {
   function chooseWeekStart(value) {
     weekStartRequested(value)
     settingsMenu.close()
+  }
+  function stepSetting(index,delta) {
+    var count=subscriptions ? 3 : 2,next=(index+delta+count)%count
+    if(next===2) subscriptionsButton.forceActiveFocus()
+    else weekChoices.itemAt(next).forceActiveFocus()
   }
   function focusWeekStart() {
     if(settingsMenu.opened) weekChoices.itemAt(firstDay===0 ? 0 : 1).forceActiveFocus()
@@ -112,13 +126,13 @@ Item {
     Item {
       Layout.fillWidth: true
       implicitHeight: currentDate.implicitHeight+Style.space(8)
-      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); root.backRequested() } }
+      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack || root.sourcesMode; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); if(root.sourcesMode) root.sourcesMode=false;else root.backRequested() } }
       FeedbackButton {
         id: currentDate
         objectName: "calendarCurrentDate"
         anchors.horizontalCenter: parent.horizontalCenter
         width: Math.min(implicitWidth,parent.width-2*(settingsButton.width+Style.space(8)))
-        text: root.today.toLocaleDateString(root.locale,root.strings.t("calendar.currentDateFormat"))
+        text: root.sourcesMode ? root.strings.t("ics.sources") : root.today.toLocaleDateString(root.locale,root.strings.t("calendar.currentDateFormat"))
         fontSize: Design.type.page
         fontWeight: Design.weight("page")
         color: "transparent"
@@ -142,7 +156,7 @@ Item {
     }
     GridLayout {
       id:calendarGrid
-      visible:!root.yearMode
+      visible:!root.yearMode && !root.sourcesMode
       Layout.fillWidth: true
       columns: 8
       columnSpacing:Design.gap.tight
@@ -220,7 +234,7 @@ Item {
               intensity: 3.8
             }
           }
-          Rectangle {anchors.bottom:parent.bottom;anchors.bottomMargin:2;anchors.horizontalCenter:parent.horizontalCenter;width:4;height:4;radius:2;visible:root.reminderDays.indexOf(dayButton.modelData.key)>=0;color:dayButton.modelData.today ? Design.onAccent : Design.accent}
+          Rectangle {anchors.bottom:parent.bottom;anchors.bottomMargin:2;anchors.horizontalCenter:parent.horizontalCenter;width:4;height:4;radius:2;visible:root.markedDays.indexOf(dayButton.modelData.key)>=0;color:dayButton.modelData.today ? Design.onAccent : Design.accent}
           focusable: true
           onClicked: { root.pulseFrom(dayButton); root.selectDay(modelData) }
         }
@@ -228,13 +242,14 @@ Item {
     }
 
     CalendarYear {
-      id:yearGrid;Layout.fillWidth:true;visible:root.yearMode
-      year:root.viewYear;month:root.viewMonth;firstDay:root.firstDay;todayKey:root.todayKey;reminderDays:root.reminderDays
+      id:yearGrid;Layout.fillWidth:true;visible:root.yearMode && !root.sourcesMode
+      year:root.viewYear;month:root.viewMonth;firstDay:root.firstDay;todayKey:root.todayKey;reminderDays:root.markedDays
       onYearShift:delta=>root.shiftMonth(delta)
       onTodayRequested:{root.showToday();Qt.callLater(root.focusSelectedDay)}
       onMonthChosen:month=>{root.viewMonth=month;root.yearMode=false;root.selectedDay=Calendar.parts(Calendar.civilDate(root.viewYear,month,1));Qt.callLater(root.focusSelectedDay)}
     }
     RowLayout {
+      visible:!root.sourcesMode
       Layout.fillWidth: true
       spacing:Design.gap.small
       FeedbackButton { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
@@ -248,10 +263,21 @@ Item {
       }
       FeedbackButton { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
     }
+    CalendarAgenda {
+      Layout.fillWidth:true
+      visible:!root.sourcesMode && !!root.subscriptions && root.subscriptions.hasEnabled
+      strings:root.strings;subscriptions:root.subscriptions;selectedKey:root.selectedDay.key
+    }
+    CalendarSources {
+      id:sourcesPanel
+      Layout.fillWidth:true
+      visible:root.sourcesMode && !!root.subscriptions
+      strings:root.strings;subscriptions:root.subscriptions
+    }
     ReminderPanel {
       id:reminderPanel
       Layout.fillWidth:true
-      visible:!!root.reminders
+      visible:!!root.reminders && !root.sourcesMode
       strings:root.strings;reminders:root.reminders;selectedKey:root.selectedDay.key
     }
   }
@@ -288,11 +314,21 @@ Item {
           leftAlign: true
           background: "transparent"
           onClicked: {root.pulseFrom(settingsButton);root.chooseWeekStart(modelData)}
-          Keys.onDownPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
-          Keys.onUpPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
-          Keys.onTabPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
-          Keys.onBacktabPressed: weekChoices.itemAt((index+1)%2).forceActiveFocus()
+          Keys.onDownPressed: root.stepSetting(index,1)
+          Keys.onUpPressed: root.stepSetting(index,-1)
+          Keys.onTabPressed: root.stepSetting(index,1)
+          Keys.onBacktabPressed: root.stepSetting(index,-1)
         }
+      }
+      ActionButton {
+        id:subscriptionsButton;objectName:"calendarSubscriptions"
+        visible:!!root.subscriptions;width:parent.width
+        text:root.strings.t("ics.sources");leftAlign:true;background:"transparent"
+        onClicked:{settingsMenu.close();root.sourcesMode=true;Qt.callLater(sourcesPanel.focusEditor)}
+        Keys.onDownPressed:root.stepSetting(2,1)
+        Keys.onUpPressed:root.stepSetting(2,-1)
+        Keys.onTabPressed:root.stepSetting(2,1)
+        Keys.onBacktabPressed:root.stepSetting(2,-1)
       }
     }
   }

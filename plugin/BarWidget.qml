@@ -125,6 +125,7 @@ BarWidget {
     if(!Settings.get(settings,"trackAlerts") && alertKind==="media") {alertKind="";alertLife.stop()}
     if(pinned && Settings.pages(settings).indexOf(controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1)<0) openControls()
     if (service && Array.isArray(setting("musicApps",null))) service.allowedPlayers = setting("musicApps",[])
+    if(service && ("calendars" in service)) service.calendars.allowed=Settings.get(settings,"calendarEnabled")
     if(service && ("weather" in service)) {
       service.weather.allowed=setting("weatherEnabled",true)!==false
       service.weather.unitOverride=String(setting("weatherUnit",""))
