@@ -53,6 +53,12 @@ Rectangle {
   readonly property var execActions: (Security.parseExecActions(members[0].execActions) || []).map(function(action,index) {
     return {label:action.label,row:members[0],index:index}
   })
+  // Action definitions change much less often than notification bodies. Bind
+  // delegates to those definitions, then resolve the latest target on click.
+  readonly property string codeSchema: JSON.stringify(codeActions.map(function(action){return action.code}))
+  readonly property string linkSchema: JSON.stringify(linkActions.map(function(action){return action.link}))
+  readonly property string senderSchema: JSON.stringify(senderActions.filter(function(action){return action.id!=="default"}).map(function(action){return {id:action.id,text:action.text}}))
+  readonly property string execSchema: JSON.stringify(execActions.map(function(action){return {label:action.label,index:action.index}}))
   function dismiss() {
     var backend = service, keys = members.map(function(member) { return member.key })
     keys.forEach(function(key) { backend.remove(key) })
@@ -136,46 +142,46 @@ Rectangle {
         enabled: parent.reveal>0
       spacing:Design.gap.tight
       Repeater {
-        model: root.codeActions
+        model: JSON.parse(root.codeSchema)
         ActionButton {
           feedback: root.feedback
-          required property var modelData
-          objectName: "copyCode-" + modelData.code
-          text: (root.copied === modelData.code ? "✓ " : "󰆏 ") + modelData.code
+          required property string modelData
+          objectName: "copyCode-" + modelData
+          text: (root.copied === modelData ? "✓ " : "󰆏 ") + modelData
           focusable: true; bordered: true
-          onClicked: { root.service.copyCode(modelData.row,modelData.code); root.copied = modelData.code }
+          onClicked: {var action=root.codeActions.find(function(action){return action.code===modelData});if(action) {root.service.copyCode(action.row,action.code);root.copied=action.code}}
         }
       }
       Repeater {
-        model: root.linkActions
+        model: JSON.parse(root.linkSchema)
         ActionButton {
           feedback: root.feedback
-          required property var modelData
+          required property string modelData
           text: root.strings.t("openLink")
           focusable: true
-          onClicked: Security.openExternalUrl(modelData.link)
+          onClicked: Security.openExternalUrl(modelData)
         }
       }
       Repeater {
-        model: root.senderActions.filter(function(a) { return a.id !== "default" })
+        model: JSON.parse(root.senderSchema)
         ActionButton {
           feedback: root.feedback
           required property var modelData
           objectName: "notificationAction-" + modelData.id
           text: Model.plain(modelData.text)
           focusable: true
-          onClicked: root.invokeAction(modelData)
+          onClicked: {var action=root.senderActions.find(function(action){return action.id===modelData.id && action.text===modelData.text});if(action) root.invokeAction(action)}
         }
       }
       Repeater {
-        model: root.execActions
+        model: JSON.parse(root.execSchema)
         ActionButton {
           feedback: root.feedback
           required property var modelData
           objectName: "notificationExecAction-" + modelData.index
           text: Model.plain(modelData.label)
           focusable: true
-          onClicked: root.service.execAction(modelData.row,modelData.index)
+          onClicked: {var action=root.execActions[modelData.index];if(action) root.service.execAction(action.row,action.index)}
         }
       }
       ActionButton {

@@ -30,6 +30,18 @@ Item {
   readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
   readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
   readonly property var displayedRows: !expanded && !hovering && service && service.latest ? (service.latest.downloadPath ? [] : [service.latest]) : rows
+  readonly property var groups: Model.previewGroups(displayedRows,100)
+  function syncGroups() {
+    Model.syncKeys(groupItems,groups.map(function(group){return group.source}))
+    Qt.callLater(updateNotificationIcon)
+  }
+  function updateNotificationIcon() {
+    var item=notificationGroups.itemAt(0)
+    notificationIcon=item ? item.notificationIcon : null
+  }
+  onGroupsChanged: syncGroups()
+  Component.onCompleted: syncGroups()
+  ListModel {id:groupItems}
   readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
   readonly property var t3:service && ("t3" in service) ? service.t3 : null
   readonly property bool showT3:!!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
@@ -63,6 +75,7 @@ Item {
     strings: root.strings
     bar: root.bar
     expanded: root.expanded
+    active: root.overviewActive
     radialBraille: root.radialBraille
     onExpandRequested: root.expandRequested()
   }
@@ -129,13 +142,11 @@ Item {
       spacing: Style.space(root.compactNotifications ? 4 : 8)
       Repeater {
         id:notificationGroups
-        onItemAdded:(index,item)=>{if(index===0) root.notificationIcon=item.notificationIcon}
-        onItemRemoved:(index,item)=>{if(root.notificationIcon===item.notificationIcon) root.notificationIcon=null}
-        model: Model.previewGroups(root.displayedRows,100)
+        model: groupItems
         NotificationGroup {
-          required property var modelData
+          required property string entryKey
           width: cards.width
-          group: modelData
+          group: root.groups.find(function(group){return group.source===entryKey}) || ({source:entryKey,rows:[],positions:[],total:0})
           strings: root.strings
           service: root.service
           radialBraille: root.radialBraille
@@ -164,6 +175,7 @@ Item {
         SectionHeading {width:parent.width;visible:root.expanded || root.hovering;title:root.strings.t("downloads.title")}
         DownloadList {
           width:parent.width
+          active:root.overviewActive
           rows:root.expanded || root.hovering ? root.downloads : root.service && root.service.latest && root.service.latest.downloadPath ? [root.service.latest] : []
           service:root.service;strings:root.strings;expanded:root.expanded
         }

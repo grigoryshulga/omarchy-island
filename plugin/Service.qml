@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import Quickshell.Services.Notifications
 import Quickshell.Services.Mpris
 import qs.Commons
@@ -23,11 +24,14 @@ Item {
   readonly property alias t3: t3State
   property var latestT3:null
   property string t3TargetScreen:""
+  property string activeAppId:ToplevelManager.activeToplevel ? ToplevelManager.activeToplevel.appId : ""
+  readonly property bool t3Focused:activeAppId.toLowerCase()==="com.t3tools.t3code"
+  onT3FocusedChanged:if(t3Focused) latestT3=null
   signal t3Arrival()
   T3State {
     id:t3State
     onActivityChanged:session=>{
-      if(root.doNotDisturb) return
+      if(root.doNotDisturb || root.t3Focused) return
       root.t3TargetScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
       root.latestT3=session
       root.t3Arrival()

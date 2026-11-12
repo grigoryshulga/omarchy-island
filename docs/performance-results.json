@@ -1,0 +1,168 @@
+{
+  "date": "2026-11-12",
+  "baselineCommit": "726fbf4dcf492cc7b54deec63999af48ab71dee8",
+  "environment": {
+    "cpu": "AMD Ryzen 9 7900X",
+    "quickshell": "0.3.2",
+    "qt": "6.12.0",
+    "platform": "offscreen",
+    "backend": "software"
+  },
+  "measurement": "Synchronous QML work in milliseconds; median of three runs per version",
+  "before": {
+    "samples": [
+      {
+        "CALENDAR": {
+          "months120Ms": 1681,
+          "years20Ms": 245,
+          "retainedDay": false
+        },
+        "SPOTLIGHT": {
+          "moves240Ms": 521
+        },
+        "NOTIFICATIONS": {
+          "updates30Ms": 161,
+          "retainedCard": false
+        }
+      },
+      {
+        "CALENDAR": {
+          "months120Ms": 1669,
+          "years20Ms": 237,
+          "retainedDay": false
+        },
+        "SPOTLIGHT": {
+          "moves240Ms": 514
+        },
+        "NOTIFICATIONS": {
+          "updates30Ms": 156,
+          "retainedCard": false
+        }
+      },
+      {
+        "CALENDAR": {
+          "months120Ms": 1754,
+          "years20Ms": 245,
+          "retainedDay": false
+        },
+        "SPOTLIGHT": {
+          "moves240Ms": 525
+        },
+        "NOTIFICATIONS": {
+          "updates30Ms": 171,
+          "retainedCard": false
+        }
+      }
+    ],
+    "median": {
+      "CALENDAR": {
+        "months120Ms": 1681,
+        "years20Ms": 245
+      },
+      "SPOTLIGHT": {
+        "moves240Ms": 521
+      },
+      "NOTIFICATIONS": {
+        "updates30Ms": 161
+      }
+    }
+  },
+  "after": {
+    "samples": [
+      {
+        "CALENDAR": {
+          "months120Ms": 60,
+          "years20Ms": 11,
+          "retainedDay": true
+        },
+        "SPOTLIGHT": {
+          "moves240Ms": 73
+        },
+        "NOTIFICATIONS": {
+          "updates30Ms": 7,
+          "retainedCard": true
+        }
+      },
+      {
+        "CALENDAR": {
+          "months120Ms": 62,
+          "years20Ms": 11,
+          "retainedDay": true
+        },
+        "SPOTLIGHT": {
+          "moves240Ms": 77
+        },
+        "NOTIFICATIONS": {
+          "updates30Ms": 7,
+          "retainedCard": true
+        }
+      },
+      {
+        "CALENDAR": {
+          "months120Ms": 63,
+          "years20Ms": 10,
+          "retainedDay": true
+        },
+        "SPOTLIGHT": {
+          "moves240Ms": 74
+        },
+        "NOTIFICATIONS": {
+          "updates30Ms": 6,
+          "retainedCard": true
+        }
+      }
+    ],
+    "median": {
+      "CALENDAR": {
+        "months120Ms": 62,
+        "years20Ms": 11
+      },
+      "SPOTLIGHT": {
+        "moves240Ms": 74
+      },
+      "NOTIFICATIONS": {
+        "updates30Ms": 7
+      }
+    }
+  },
+  "integration": {
+    "baselineCommit": "73d7f8f4f109bdaff7e7a3b5a9270ca6a64346ea",
+    "measurement": "Single run per version after integrating native reminders and year overview; separate from the initial three-run medians",
+    "before": {
+      "CALENDAR": {
+        "months120Ms": 1884,
+        "years20Ms": 672,
+        "retainedDay": false
+      },
+      "YEAR_VIEW": {
+        "years20Ms": 584,
+        "retainedDay": false
+      },
+      "SPOTLIGHT": {
+        "moves240Ms": 401
+      },
+      "NOTIFICATIONS": {
+        "updates30Ms": 144,
+        "retainedCard": false
+      }
+    },
+    "after": {
+      "CALENDAR": {
+        "months120Ms": 124,
+        "years20Ms": 73,
+        "retainedDay": true
+      },
+      "YEAR_VIEW": {
+        "years20Ms": 71,
+        "retainedDay": true
+      },
+      "SPOTLIGHT": {
+        "moves240Ms": 70
+      },
+      "NOTIFICATIONS": {
+        "updates30Ms": 6,
+        "retainedCard": true
+      }
+    }
+  }
+}

@@ -20,7 +20,14 @@ ShellRoot {
         verify(menu.visible);menu.clicked();wait(50)
         verify(calendar.sourcesMode)
         var name=findChild(calendar,"calendarSourceName"),url=findChild(calendar,"calendarSourceUrl"),add=findChild(calendar,"calendarSourceAdd")
-        name.text="Calendar <b>";url.text="file:///etc/passwd";verify(!add.enabled)
+        name.text="Calendar <b>"
+        var yesterday=new Date(Date.now()-86400000)
+        calendar.today=yesterday
+        var key=yesterday.getFullYear()+"-"+String(yesterday.getMonth()+1).padStart(2,"0")+"-"+String(yesterday.getDate()).padStart(2,"0")
+        calendar.selectDay({year:yesterday.getFullYear(),month:yesterday.getMonth(),day:yesterday.getDate(),key:key})
+        findChild(calendar,"calendarDateRefresh").triggered()
+        verify(calendar.sourcesMode);compare(name.text,"Calendar <b>")
+        url.text="file:///etc/passwd";verify(!add.enabled)
         name.forceActiveFocus();keyClick(Qt.Key_Return);verify(url.activeFocus)
         url.text="webcal://example.com/private-token/basic.ics";verify(add.enabled)
         keyClick(Qt.Key_Return)
@@ -28,6 +35,13 @@ ShellRoot {
         verify(subscriptions.events.length>0)
         compare(name.text,"");compare(url.text,"")
         verify(JSON.stringify(subscriptions.sources).indexOf("private-token")<0)
+        if(Quickshell.env("ISLAND_ICS_CAPTURE")) {
+          calendar.grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_ICS_CAPTURE")+"-sources.png")});wait(100)
+        }
+        subscriptions.activate(2027);subscriptions.activate(2026)
+        tryVerify(function(){return !subscriptions.busy && subscriptions.reports[2027]!==undefined && subscriptions.reports[2026]!==undefined},5000)
+        verify(subscriptions.eventsForYear(2026).length>0)
+        compare(subscriptions.eventsForYear(2027).length,0)
         var id=subscriptions.sources[0].id
         calendar.sourcesMode=false
         calendar.selectDay({year:2026,month:2,day:29,key:"2026-03-29"})
@@ -36,6 +50,9 @@ ShellRoot {
         var event=subscriptions.events.filter(function(e){return e.title.indexOf("<img")===0})[0]
         var label=findChild(calendar,"calendarEvent-"+event.id)
         verify(label!==null);compare(label.textFormat,Text.PlainText)
+        if(Quickshell.env("ISLAND_ICS_CAPTURE")) {
+          calendar.grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_ICS_CAPTURE")+"-agenda.png")});wait(100)
+        }
         calendar.sourcesMode=true
         findChild(calendar,"calendarRefresh").clicked()
         tryVerify(function(){return !subscriptions.busy && subscriptions.sources[0].stale},5000)

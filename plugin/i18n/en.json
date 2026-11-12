@@ -283,5 +283,6 @@
   "ics.error.sourcesLimit": "Up to six subscriptions are supported",
   "ics.error.name": "Enter a calendar name",
   "ics.error.duplicate": "This calendar is already subscribed",
-  "ics.error.unavailable": "Calendar service did not respond. Try refreshing."
+  "ics.error.unavailable": "Calendar service did not respond. Try refreshing.",
+  "ics.sourceList": "Sources"
 }

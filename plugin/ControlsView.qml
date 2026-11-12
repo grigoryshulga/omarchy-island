@@ -152,6 +152,7 @@ Item {
         id:mainTiles
         model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"},{key:"settings",icon:"󰒓"}]
         ControlTile {
+          effectsActive:root.active && !root.section
           required property var modelData
           objectName:"controlOpen-"+modelData.key
           Layout.fillWidth:true
@@ -172,6 +173,7 @@ Item {
       uniformCellWidths:true
       columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
       ControlTile {
+        effectsActive:root.active && !root.section
         compact:true
         objectName:"controlMicrophone";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.microphone");glyph:"󰍭"
@@ -181,6 +183,7 @@ Item {
         onClicked:root.toggleMode("microphone")
       }
       ControlTile {
+        effectsActive:root.active && !root.section
         compact:true
         objectName:"controlDnd";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.dndShort");glyph:"󰂛"
@@ -189,6 +192,7 @@ Item {
         onClicked:root.toggleMode("dnd")
       }
       ControlTile {
+        effectsActive:root.active && !root.section
         compact:true
         objectName:"controlNightLight";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("indicator.nightLight");glyph:"󰔎"
@@ -197,6 +201,7 @@ Item {
         onClicked:root.toggleMode("nightLight")
       }
       ControlTile {
+        effectsActive:root.active && !root.section
         compact:true
         objectName:"controlStayAwake";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.stayAwakeShort");glyph:""
@@ -205,6 +210,7 @@ Item {
         onClicked:root.toggleMode("stayAwake")
       }
       ControlTile {
+        effectsActive:root.active && !root.section
         compact:true
         objectName:"controlRecording";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.recordingShort");glyph:"󰻂"
@@ -214,6 +220,7 @@ Item {
         onClicked:root.toggleMode("recording")
       }
       ControlTile {
+        effectsActive:root.active && !root.section
         compact:true
         objectName:"controlRemote";Layout.fillWidth:true
         title:root.strings.t("controls.remoteShort");glyph:"󰢹"
@@ -261,6 +268,7 @@ Item {
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
     anchors.topMargin:Design.gap.small
     visible:root.section==="settings"
+    active:root.active && root.section==="settings"
     settings:root.settings;strings:root.strings
     feedback:root.externalFeedback
     onSettingRequested:(key,value)=>root.settingRequested(key,value)

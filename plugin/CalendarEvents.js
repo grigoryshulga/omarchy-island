@@ -14,6 +14,7 @@ function days(events) {
   var marked={}
   events.forEach(function(event){
     var day=new Date(event.startDay+"T12:00:00Z")
+    if(isNaN(day.getTime())) return
     for(var i=0;i<380;i++) {
       var key=day.toISOString().slice(0,10)
       if(key>event.endDay) break

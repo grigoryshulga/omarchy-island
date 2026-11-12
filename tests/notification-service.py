@@ -44,8 +44,26 @@ def run(root):
         def send(title, replace=0, hints=None):
             return int(api.Notify('Test sender', dbus.UInt32(replace), '', title, 'Body', dbus.Array([], signature='s'), dbus.Dictionary(hints or {}, signature='sv'), dbus.Int32(-1)))
 
+        # Focus only suppresses presentation, and leaving T3 never replays it.
+        ipc('focusApp', 'foot')
+        ipc('t3Activity')
+        assert state()['t3Arrivals'] == 1 and state()['latestT3']
+        ipc('focusApp', 'com.t3tools.T3Code')
+        assert state()['t3Focused'] and state()['latestT3'] is None
+        ipc('t3Activity')
+        assert state()['t3Arrivals'] == 1
+        ipc('focusApp', '')
+        assert not state()['t3Focused'] and state()['t3Arrivals'] == 1
+        ipc('t3Activity')
+        assert state()['t3Arrivals'] == 2
+        ipc('focusApp', 'com.t3tools.T3Code.Other')
+        ipc('t3Activity')
+        assert state()['t3Arrivals'] == 3, 'Unrelated app was suppressed'
+        ipc('focusApp', 'com.t3tools.T3Code')
+
         first = send('Unread')
         s = wait_for(lambda s: len(s['active']) == 1)
+        assert s['latest'], 'T3 focus suppressed another notification source'
         key = s['active'][0]['key']
         send('Updated', first)
         wait_for(lambda s: len(s['active']) == 1 and s['active'][0]['summary'] == 'Updated')
@@ -142,10 +160,14 @@ import Quickshell
 import Quickshell.Io
 import "Island" as Island
 ShellRoot {
-  Island.Service {id:service}
+  Island.Service {id:service; activeAppId:""}
+  property int t3Arrivals:0
+  Connections {target:service; function onT3Arrival(){t3Arrivals++}}
   IpcHandler {
     target:"test"
-    function state():string {return JSON.stringify({loaded:service.loaded,active:service.activeEntries,history:service.historyEntries,refs:Object.keys(service.refs).length,latest:service.latest})}
+    function state():string {return JSON.stringify({loaded:service.loaded,active:service.activeEntries,history:service.historyEntries,refs:Object.keys(service.refs).length,latest:service.latest,latestT3:service.latestT3,t3Focused:service.t3Focused,t3Arrivals:t3Arrivals})}
+    function focusApp(appId:string):void {service.activeAppId=appId}
+    function t3Activity():void {service.t3.activityChanged({id:"thread",status:"completed"})}
     function age(key:string):void {service.entries=service.entries.map(function(r){if(r.key===key){r.ts=Date.now()/1000-400;r.duration=1}return r})}
     function expireHistory():void {service.history=service.history.map(function(r){r.closed_ts=1;return r});service.pruneHistory()}
     function clearActive():void {service.clear()}

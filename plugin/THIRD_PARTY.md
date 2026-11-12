@@ -6,7 +6,7 @@
 
 `ReminderState.qml` and the calendar reminder controls integrate with the installed Omarchy `omarchy-reminder` command and its JSON contract. The native command retains ownership of systemd timers, reminder messages, notification delivery and clearing; no scheduling backend is copied.
 
-`ClockModel.js` is copied from Omarchy’s clock panel to preserve its format ring, alternative formats and ISO week formatting.
+`ClockModel.js` is copied from Omarchy’s clock panel to preserve its format ring, alternative formats and ISO week formatting. The epoch-aligned clock timer in `BarWidget.qml` follows that panel’s `WallClock.qml`.
 
 `KeyboardLayoutModel.js` is adapted from Omarchy’s keyboard-layout widget: keyboard filtering and initial device selection follow its conventions, while Island shows full language names transiently.
 

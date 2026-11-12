@@ -20,6 +20,8 @@ BorderSurface {
   property bool hasCursor: false
   property bool focusable: false
   property bool bordered: false
+  // Content and border items are decoration; composite controls can opt out.
+  property bool islandSpotlightLeaf: true
 
   property color foreground: variant==="primary" ? Design.selectedText : Design.text
   property color background: variant==="primary" ? Design.selection : variant==="soft" ? Design.raised : "transparent"

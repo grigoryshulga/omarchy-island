@@ -14,11 +14,12 @@ Item {
   property bool yearMode:false
   property bool sourcesMode:false
   property var subscriptions:null
-  readonly property var markedDays:reminderDays.concat(subscriptions ? subscriptions.eventDays : [])
-  function activateSubscriptions() {if(active && visible && subscriptions) subscriptions.activate(viewYear)}
+  property bool subscriptionsReady:false
+  readonly property var markedDays:reminderDays.concat(subscriptions ? subscriptions.daysForYear(viewYear) : [])
+  function activateSubscriptions() {if(subscriptionsReady && active && visible && subscriptions) subscriptions.activate(viewYear)}
   onSubscriptionsChanged:activateSubscriptions()
   onViewYearChanged:activateSubscriptions()
-  Component.onCompleted:activateSubscriptions()
+  Component.onCompleted:{subscriptionsReady=true;activateSubscriptions()}
   readonly property var reminderDays:reminders ? reminders.rows.map(function(row){return Reminders.dayKey(row.at)}) : []
   property bool radialBraille: true
   property var externalFeedback: null
@@ -40,7 +41,7 @@ Item {
   signal weekStartRequested(string value)
   readonly property real monthImplicitHeight:body.implicitHeight-(yearMode && !sourcesMode ? yearGrid.implicitHeight-calendarGrid.implicitHeight : 0)
   implicitHeight: body.implicitHeight
-  onActiveChanged: {if(!active) settingsMenu.close();else activateSubscriptions()}
+  onActiveChanged: {if(!active) settingsMenu.close();else {refreshToday();activateSubscriptions()}}
   onVisibleChanged: {if(!visible) settingsMenu.close();else activateSubscriptions()}
 
   function pulseFrom(item) {
@@ -56,6 +57,13 @@ Item {
     sourcesMode=false
     yearMode=false;viewYear=today.getFullYear(); viewMonth=today.getMonth()
     selectedDay={year:viewYear,month:viewMonth,day:today.getDate(),key:todayKey}
+  }
+  function refreshToday() {
+    var now=new Date()
+    if(Calendar.key(now.getFullYear(),now.getMonth(),now.getDate())===todayKey) return
+    var follow=selectedDay.key===todayKey && viewYear===today.getFullYear() && viewMonth===today.getMonth()
+    today=now
+    if(follow && !yearMode && !sourcesMode) showToday()
   }
   function shiftMonth(delta) {
     if(yearMode) {viewYear=Math.max(1,Math.min(9999,viewYear+delta));return}
@@ -108,11 +116,7 @@ Item {
   Timer {
     objectName:"calendarDateRefresh"
     interval: 60000; repeat: true; running: root.active && root.visible
-    onTriggered: {
-      var follow=root.selectedDay.key===root.todayKey && root.viewYear===root.today.getFullYear() && root.viewMonth===root.today.getMonth()
-      root.today=new Date()
-      if(follow && !root.yearMode) root.showToday()
-    }
+    onTriggered: root.refreshToday()
   }
   Controls.ScrollView {
     id:calendarScroll
@@ -172,10 +176,10 @@ Item {
         color: Design.secondaryText
       }
       Repeater {
-        model: root.weekdays
+        model: 7
         PlainText {
-          required property int modelData
           required property int index
+          readonly property int modelData: root.weekdays[index]
           Layout.row: 0; Layout.column: index+1
           Layout.fillWidth: true
           Layout.preferredHeight: Style.space(24)
@@ -187,10 +191,10 @@ Item {
         }
       }
       Repeater {
-        model: root.weekNumbers
+        model: 6
         PlainText {
           required property int index
-          required property int modelData
+          readonly property int modelData: root.weekNumbers[index]
           objectName: "calendarWeek-"+index
           Layout.row: index+1; Layout.column: 0
           Layout.preferredWidth: Style.space(28)
@@ -204,11 +208,13 @@ Item {
       }
       Repeater {
         id:dayCells
-        model: root.cells
+        // A JS array model resets the Repeater on every month/year change.
+        // Keep the controls (and keyboard focus); only their dates change.
+        model: 42
         FeedbackButton {
           id: dayButton
-          required property var modelData
           required property int index
+          readonly property var modelData: root.cells[index]
           readonly property bool islandCalendarDay: true
           objectName: "calendar-day-"+modelData.key
           Layout.row: Math.floor(index/7)+1; Layout.column: index%7+1
@@ -265,8 +271,8 @@ Item {
     }
     CalendarAgenda {
       Layout.fillWidth:true
-      visible:!root.sourcesMode && !!root.subscriptions && root.subscriptions.hasEnabled
-      strings:root.strings;subscriptions:root.subscriptions;selectedKey:root.selectedDay.key
+      visible:!root.sourcesMode && !root.yearMode && root.selectedDay.year===root.viewYear && root.selectedDay.month===root.viewMonth && !!root.subscriptions && root.subscriptions.hasEnabled
+      strings:root.strings;subscriptions:root.subscriptions;year:root.viewYear;selectedKey:root.selectedDay.key
     }
     CalendarSources {
       id:sourcesPanel

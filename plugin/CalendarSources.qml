@@ -11,7 +11,7 @@ ColumnLayout {
   function focusEditor() {name.forceActiveFocus()}
   RowLayout {
     Layout.fillWidth:true
-    SectionHeading {Layout.fillWidth:true;title:root.strings.t("ics.sources");detail:Commons.I18n.formatNumber((root.subscriptions ? root.subscriptions.sources.length : 0))+" / "+Commons.I18n.formatNumber(6)}
+    SectionHeading {Layout.fillWidth:true;title:root.strings.t("ics.sourceList");detail:Commons.I18n.formatNumber((root.subscriptions ? root.subscriptions.sources.length : 0))+" / "+Commons.I18n.formatNumber(6)}
     T3Spinner {visible:(!!root.subscriptions && root.subscriptions.busy);active:visible}
     FeedbackButton {objectName:"calendarRefresh";text:root.strings.t("ics.refresh");focusable:true;enabled:!(!!root.subscriptions && root.subscriptions.busy) && (!!root.subscriptions && root.subscriptions.hasEnabled);onClicked:root.subscriptions.refresh(true)}
   }

@@ -12,6 +12,7 @@ Item {
   required property var strings
   property var settings:({})
   property var feedback:null
+  property bool active:true
   property int category:0
   property bool ownsKeys:false
   signal settingRequested(string key,var value)
@@ -89,6 +90,7 @@ Item {
                 wrapMode:Text.Wrap
               }
               ControlSwitch {
+                effectsActive:root.active
                 objectName:"setting-"+row.key
                 Accessible.name:root.strings.t("settings."+row.key)
                 visible:!row.modelData.type

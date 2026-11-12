@@ -7,6 +7,7 @@ Column {
   required property var service
   required property var strings
   property bool expanded:false
+  property bool active:true
   spacing:Design.gap.small
   // Keep delegates and pointer focus stable as byte counts change.
   function sync() {
@@ -30,6 +31,7 @@ Column {
       required property var model
       width:root.width
       row:model
+      active:root.active
       service:root.service;strings:root.strings;expanded:root.expanded
     }
   }

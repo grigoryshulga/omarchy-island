@@ -9,7 +9,8 @@ ColumnLayout {
   required property var strings
   required property var subscriptions
   property string selectedKey:""
-  readonly property var rows:subscriptions ? Model.onDay(subscriptions.events,selectedKey) : []
+  property int year:new Date().getFullYear()
+  readonly property var rows:subscriptions ? Model.onDay(subscriptions.eventsForYear(year),selectedKey) : []
   readonly property var locale:Qt.locale(Commons.I18n.formatLocale)
   spacing:Design.gap.small
   function timeLabel(event) {

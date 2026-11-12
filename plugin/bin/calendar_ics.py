@@ -168,6 +168,8 @@ def expand(raw, year, timezone=None):
         return events
     except CalendarError:
         raise
+    except MemoryError:
+        raise CalendarError('limit') from None
     except Exception:
         raise CalendarError('invalid') from None
 

@@ -157,6 +157,15 @@ ShellRoot {
       Qt.quit()
     }
     function test_indicators(){
+      widget.updateSetting("format","HH:mm")
+      var tick=findChild(widget,"islandClockTick")
+      check(tick && tick.step===60000,"minute clock must not tick every second")
+      check(tick.interval>0 && tick.interval<=60000,"minute clock must align to the next epoch minute")
+      widget.updateSetting("format","HH:mm:ss")
+      check(tick.step===1000 && tick.interval>0 && tick.interval<=1000,"seconds clock must rearm immediately")
+      widget.updateSetting("format","HH:mm 'seconds'")
+      check(tick.step===60000,"literal seconds must not enable second ticks")
+      widget.updateSetting("format","dddd HH:mm")
       wait(100)
       var clock=findChild(widget,"islandClock"),label=findChild(widget,"islandClockText"),gauge=findChild(widget,"islandOsdGauge"),display=findChild(widget,"islandClockDisplay")
       check(!backend.osdActive,"layout flashed at startup")

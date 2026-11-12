@@ -30,6 +30,7 @@ with tempfile.TemporaryDirectory() as tmp:
     try:
         # Missing root is harmless; existing files are not replayed.
         watcher.add_tree(root)
+        assert watcher.wait_timeout() == 1.0, 'A missing download directory is retried'
         root.mkdir()
         (root / 'old.txt').write_text('old')
         sub = root / 'nested'
@@ -37,12 +38,14 @@ with tempfile.TemporaryDirectory() as tmp:
         watcher.add_tree(root)
         pump()
         assert completed() == []
+        assert watcher.wait_timeout() is None, 'An idle watcher must block on inotify without periodic wakeups'
         partial = sub / 'файл $ spaced.zip.crdownload'
         with partial.open('w') as stream:
             stream.write('first'); stream.flush()
             pump()
             assert events[-1]['count'] == 1
             assert events[-1]['files'][0]['bytes'] == 5
+            assert watcher.wait_timeout() == 0.2, 'Active downloads still need timely size/completion updates'
             assert completed() == []
         pump(1.1)
         assert completed() == [], 'A closed partial is not a completed download'
@@ -55,6 +58,10 @@ with tempfile.TemporaryDirectory() as tmp:
         assert completed() == [final.name]
         assert [e for e in events if e['event']=='complete'][0]['bytes'] == 14
         assert events[-1] == {'event': 'active', 'count': 0, 'files': []}
+        assert watcher.wait_timeout() is None, 'The watcher returns to sleep after the final empty snapshot'
+        watcher.snapshot = [{'path': 'pending empty snapshot'}]
+        assert watcher.wait_timeout() == 0.2, 'Throttled final snapshots must be flushed before sleeping'
+        watcher.snapshot = []
         # A new subtree is watched even when created and populated at once.
         deep = sub / 'new' / 'deep'
         deep.mkdir(parents=True)

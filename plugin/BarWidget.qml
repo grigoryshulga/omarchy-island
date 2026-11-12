@@ -169,8 +169,18 @@ BarWidget {
   implicitHeight: vertical ? Math.max(Style.space(80),clockMeasure.implicitHeight+leftIndicators.implicitHeight+rightIndicators.implicitHeight+Style.space(24)) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
-  Connections { target: root.service; ignoreUnknownSignals:true; function onT3Arrival() {root.showT3Activity()} function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
-  Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
+  Connections { target: root.service; ignoreUnknownSignals:true; function onT3Arrival() {root.showT3Activity()} function onLatestT3Changed() { if (root.service && !root.service.latestT3 && root.alertKind === "t3") { root.alertKind = ""; alertLife.stop() } } function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
+  // Epoch scheduling follows Omarchy's WallClock and remains positive across
+  // DST folds. Only formats displaying seconds need second-by-second work.
+  Timer {
+    id: clockTick
+    objectName: "islandClockTick"
+    readonly property int step: Clock.clockNeedsSeconds(root.configuredFormat) ? 1000 : 60000
+    function arm() {interval=Clock.msUntilNextTick(Date.now(),step);restart()}
+    onStepChanged: {root.now=new Date();arm()}
+    onTriggered: {root.now=new Date();arm()}
+    Component.onCompleted: arm()
+  }
   Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; objectName:"islandAlertLife"; interval: 3000; onTriggered: root.alertKind = "" }

@@ -23,6 +23,10 @@ Rectangle {
   property bool radialBraille: true
   property int limit: 3
   readonly property var mergedRows: Model.coalesceNotifications(group.rows)
+  function syncRows() {Model.syncKeys(rowItems,mergedRows.map(Model.notificationKey))}
+  onMergedRowsChanged: syncRows()
+  Component.onCompleted: syncRows()
+  ListModel {id:rowItems}
   readonly property var feedback: externalFeedback || brailleFeedback
   signal expandRequested()
   function dismissGroup() {
@@ -51,10 +55,10 @@ Rectangle {
         objectName:"notificationSourceIcon"
         Layout.preferredWidth: Style.space(root.compact ? 12 : 16); Layout.preferredHeight: width
         PlainText { anchors.centerIn: parent; text: "󰂚"; font.pixelSize: root.compact ? Style.font.caption : Style.font.body; color: Design.accent; visible: icon.status !== Image.Ready }
-        Image { id: icon; anchors.fill: parent; source: root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
+        Image { id: icon; anchors.fill: parent; source: root.group.rows.length && root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
       PlainText { Layout.fillWidth: true; Layout.minimumWidth:0; text: root.group.source; color: Design.accent; typeRole:"caption" }
-      PlainText { objectName:"groupTime";visible: root.compact || root.mergedRows.length===1; text: new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Design.secondaryText; typeRole:"caption" }
+      PlainText { objectName:"groupTime";visible: root.compact || root.mergedRows.length===1; text: root.group.rows.length ? new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm") : ""; color: Design.secondaryText; typeRole:"caption" }
       Item {
         visible:root.toolsShown>0
         Layout.preferredWidth:tools.implicitWidth*root.toolsShown
@@ -90,10 +94,11 @@ Rectangle {
       }
     }
     Repeater {
-      model: root.mergedRows
+      model: rowItems
       Loader {
-        required property var modelData
+        required property string entryKey
         required property int index
+        readonly property var modelData: root.mergedRows.find(function(row){return Model.notificationKey(row)===entryKey}) || ({key:"",app:root.group.source,summary:"",body:"",ts:0})
         Layout.fillWidth: true
         Layout.fillHeight: false
         Layout.preferredHeight: item ? item.implicitHeight : 0

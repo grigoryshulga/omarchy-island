@@ -43,6 +43,12 @@ ShellRoot {
         var firstPhase=progress.phase
         wait(260)
         if(!Commons.Style.reduceMotion) verify(firstPhase!==progress.phase,"Braille activity must animate")
+        content.overviewActive=false
+        wait(50)
+        var stoppedPhase=progress.phase
+        wait(100)
+        compare(progress.phase,stoppedPhase,"Inactive Overview must stop download animation")
+        content.overviewActive=true
         send({event:"active",files:[{path:path+".part",bytes:2097152}]})
         wait(50)
         compare(findChild(content,"download-"+service.downloads[0].key),card,"Byte updates preserve delegate and focus")

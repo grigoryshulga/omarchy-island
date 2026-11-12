@@ -14,6 +14,20 @@ function plain(s) {
   return String(s || "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
 }
 function source(row) { return String(row.source || row.app || "Unknown") }
+// Reconcile identity separately from row data: JS array Repeater models destroy
+// every delegate even when only the body of one notification changed.
+function syncKeys(model, keys) {
+  for (var at=model.count-1; at>=0; --at)
+    if (keys.indexOf(model.get(at).entryKey)<0) model.remove(at)
+  for (var i=0; i<keys.length; ++i) {
+    var found=-1
+    for (var j=i; j<model.count; ++j)
+      if (model.get(j).entryKey===keys[i]) {found=j;break}
+    if (found<0) model.insert(i,{entryKey:keys[i]})
+    else if (found!==i) model.move(found,i,1)
+  }
+}
+function notificationKey(row) { return JSON.stringify([source(row), String(row.summary || "")]) }
 function collect(live, history) {
   var seen = {}, out = []
   live.concat(history).forEach(function(row) {
@@ -49,7 +63,7 @@ function hasMedia(player, stoppedState) {
 function coalesceNotifications(rows) {
   var groups = [], byHeader = Object.create(null)
   rows.forEach(function(row) {
-    var key = JSON.stringify([source(row), String(row.summary || "")])
+    var key = notificationKey(row)
     if (!byHeader[key]) { byHeader[key] = []; groups.push(byHeader[key]) }
     byHeader[key].push(row)
   })
