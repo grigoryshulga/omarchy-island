@@ -100,3 +100,17 @@ assert.equal(rims.length, 4, 'neighbor shader work is bounded');
 assert.equal(rims[0].rect.x, 110, 'nearest rims take priority');
 assert.equal(rims[3].rect.x, 125);
 console.log('PASS: adjacent rims, invisible wrappers, clipping, square corners and bounded proximity selection.');
+
+const decorative = item({
+  mapFromItem() { throw new Error('button decoration must not be picked'); },
+  mapToItem() { throw new Error('button decoration must not be scanned for neighbors'); }
+});
+const leafButton = surface(110, 0, {clicked() {}, islandSpotlightLeaf: true, children: [decorative]});
+assert.equal(model.pick(leafButton, null, {x: 50, y: 30}), leafButton);
+scene.children = [leafButton];
+assert.equal(model.neighbors(scene, null, {x: 95, y: 30}, 60).length, 1);
+leafButton.islandSpotlightLeaf = false;
+leafButton.children = [button];
+assert.equal(model.pick(leafButton, null, {x: 50, y: 30}), button,
+  'composite controls may opt back into descendant picking');
+console.log('PASS: leaf controls skip decorative subtrees while composite controls retain nested picking.');

@@ -14,6 +14,7 @@ Item {
   readonly property var feedback: externalFeedback || brailleFeedback
   readonly property bool hovered: hover.hovered
   property bool expanded: false
+  property bool active: true
   property bool radialBraille: true
   readonly property var player: service ? service.player : null
   signal expandRequested()
@@ -34,7 +35,7 @@ Item {
   Timer {
     interval: 500
     repeat: true
-    running: root.visible && root.expanded && root.player !== null && root.player.isPlaying && root.player.positionSupported
+    running: root.active && root.visible && root.expanded && root.player !== null && root.player.isPlaying && root.player.positionSupported
     onTriggered: if (root.player) root.player.positionChanged()
   }
   ColumnLayout {

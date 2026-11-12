@@ -14,7 +14,7 @@ function pick(item, source, point) {
   if (!item || !item.visible || !item.enabled || item.opacity <= 0) return null
   var local = item.mapFromItem(source, point.x, point.y)
   if (item.clip && !contains(item, local, false)) return null
-  var children = Array.prototype.slice.call(item.children || [])
+  var children = item.islandSpotlightLeaf === true ? [] : Array.prototype.slice.call(item.children || [])
   children.sort(function(a, b) { return a.z - b.z })
   for (var i = children.length - 1; i >= 0; --i) {
     var found = pick(children[i], source, point)
@@ -74,6 +74,7 @@ function neighbors(root, source, point, reach) {
       // Excludes the hovered surface and enclosing cards, avoiding stacked rims.
       if (distance > 0 && distance < reach) found.push({rect: rect, radius: r, distance: distance})
     }
+    if (item.islandSpotlightLeaf === true) return
     var children = item.children || []
     for (var i = 0; i < children.length; ++i) visit(children[i], clip)
   }

@@ -12,6 +12,7 @@ Item {
   property string todayKey:""
   property var reminderDays:[]
   readonly property var formatLocale:Qt.locale(Commons.I18n.formatLocale)
+  readonly property var weekdays:Calendar.weekdays(firstDay)
   signal monthChosen(int month)
   signal yearShift(int delta)
   signal todayRequested()
@@ -24,6 +25,7 @@ Item {
       FeedbackButton {
         id:tile
         required property int index
+        readonly property var cells:Calendar.monthCells(root.year,index,root.firstDay,root.todayKey)
         objectName:"calendarYearMonth-"+index
         Layout.fillWidth:true;Layout.minimumWidth:0;Layout.preferredWidth:1
         implicitHeight:mini.implicitHeight+Design.gap.small*2
@@ -41,13 +43,14 @@ Item {
           GridLayout {
             Layout.fillWidth:true;columns:7;columnSpacing:0;rowSpacing:0
             Repeater {
-              model:Calendar.weekdays(root.firstDay)
-              PlainText {required property int modelData;Layout.fillWidth:true;Layout.preferredWidth:1;text:root.formatLocale.dayName(modelData,Locale.NarrowFormat);typeRole:"caption";horizontalAlignment:Text.AlignHCenter;color:tile.selected ? Design.selectedSecondaryText : Design.secondaryText}
+              model:7
+              PlainText {required property int index;readonly property int modelData:root.weekdays[index];Layout.fillWidth:true;Layout.preferredWidth:1;text:root.formatLocale.dayName(modelData,Locale.NarrowFormat);typeRole:"caption";horizontalAlignment:Text.AlignHCenter;color:tile.selected ? Design.selectedSecondaryText : Design.secondaryText}
             }
             Repeater {
-              model:Calendar.monthCells(root.year,tile.index,root.firstDay,root.todayKey)
+              model:42
               PlainText {
-                required property var modelData
+                required property int index
+                readonly property var modelData:tile.cells[index]
                 Layout.fillWidth:true;Layout.preferredWidth:1
                 text:modelData.inMonth ? Commons.I18n.formatNumber(modelData.day) : ""
                 typeRole:"caption";horizontalAlignment:Text.AlignHCenter

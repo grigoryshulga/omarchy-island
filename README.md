@@ -259,10 +259,13 @@ ISLAND_T3_ONLY=1 python3 tests/indicators.py # T3 count, spinner, reduced motion
 python3 tests/dictation.py                 # Dictation states and reduced motion
 ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
 python3 tests/artwork-render.py            # GPU artwork frames and reduced motion
+python3 tests/performance.py               # QML timings, delegate reuse, focus and inactive-page work
 ISLAND_TEST_GPU=1 python3 tests/weather-summary.py # Weather GPU, themes, layout and reduced motion
 ```
 
 Read scripts before running them: live checks may interact with the current session. Artwork rendering requires OpenGL 3.3, a C++ compiler, and Qt6Gui.
+
+The [performance audit](docs/performance-audit.md) records measured bottlenecks and verification. Compare committed sources with `python3 tests/performance.py --baseline-ref <commit>` and the working tree with `--measure-only`; both use an isolated offscreen process. These timings measure synchronous QML work rather than GPU frame time.
 
 ## License
 

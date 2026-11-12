@@ -142,11 +142,19 @@ class Watcher:
                     pass
         self.publish()
 
+    def wait_timeout(self):
+        if self.root not in self.dirs.values():
+            return 1.0  # Recover if ~/downloads is created after startup.
+        # Keep ticking through a throttled final empty snapshot. Otherwise a
+        # completed download could leave the bar's activity indicator stuck.
+        return 0.2 if self.active or self.moves or self.snapshot else None
+
     def run(self):
+        self.publish()
         while True:
             if self.root not in self.dirs.values():
                 self.add_tree(self.root)
-            if select.select([self.fd], [], [], 0.2)[0]:
+            if select.select([self.fd], [], [], self.wait_timeout())[0]:
                 self.read()
             self.tick()
 

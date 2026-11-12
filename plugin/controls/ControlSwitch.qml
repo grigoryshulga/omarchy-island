@@ -5,6 +5,7 @@ import ".."
 
 ToggleSwitch {
   id:root
+  property bool effectsActive:true
   objectName:"controlPowerSwitch"
   foreground:Design.text
   accent:Design.accent
@@ -39,7 +40,7 @@ ToggleSwitch {
     }
   }
   IndicatorGlow {
-    active:(root.checked || root.hot) && root.visible
+    active:root.effectsActive && (root.checked || root.hot) && root.visible
     intensity:root.checked ? 2.8 : 1.6
     accent:root.accent
     width:Style.space(38);height:width

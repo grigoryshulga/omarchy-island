@@ -10,6 +10,7 @@ FeedbackButton {
   property string glyph: ""
   property bool drillDown: false
   property bool showLed: !drillDown
+  property bool effectsActive: true
   property color glyphColor: selected ? Design.accent : Design.text
   implicitWidth:Style.space(compact ? 120 : 190)
   implicitHeight:Style.space(compact ? 72 : 88)
@@ -22,7 +23,7 @@ FeedbackButton {
     width:Style.space(5);height:width;radius:width/2
     color:root.selected ? root.glyphColor : Design.secondaryText
     opacity:root.selected ? 1 : 0.35
-    IndicatorGlow {anchors.centerIn:parent;active:root.selected && root.visible;accent:root.glyphColor;width:Style.space(34);height:width}
+    IndicatorGlow {anchors.centerIn:parent;active:root.effectsActive && root.selected && root.visible;accent:root.glyphColor;width:Style.space(34);height:width}
   }
   RowLayout {
     anchors.fill:parent
@@ -31,7 +32,7 @@ FeedbackButton {
     PlainText {
       id:glyph
       text:root.glyph;font.pixelSize:root.compact ? Style.font.icon : Style.font.iconLarge;color:root.glyphColor
-      IndicatorGlow {anchors.centerIn:parent;active:root.selected && root.visible;accent:root.glyphColor;z:-1}
+      IndicatorGlow {anchors.centerIn:parent;active:root.effectsActive && root.selected && root.visible;accent:root.glyphColor;z:-1}
     }
     ColumnLayout {
       Layout.fillWidth:true
