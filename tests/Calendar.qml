@@ -27,9 +27,11 @@ ShellRoot {
         if(Quickshell.env("ISLAND_CALENDAR_CAPTURE")) {
           calendar.grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_CALENDAR_CAPTURE")+"-month.png")});wait(100)
         }
-        calendar.viewYear=2024;calendar.viewMonth=0
         findChild(calendar,"calendarMonth").clicked()
         verify(calendar.yearMode)
+        findChild(calendar,"calendarDateRefresh").triggered()
+        verify(calendar.yearMode)
+        calendar.viewYear=2024;calendar.viewMonth=0
         for(var i=0;i<12;i++) verify(findChild(calendar,"calendarYearMonth-"+i).visible)
         verify(calendar.monthImplicitHeight<calendar.implicitHeight)
         calendar.height=400

@@ -92,11 +92,12 @@ Item {
   }
   MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));else glow.pulse(Qt.point(mouse.x,mouse.y))} }
   Timer {
+    objectName:"calendarDateRefresh"
     interval: 60000; repeat: true; running: root.active && root.visible
     onTriggered: {
       var follow=root.selectedDay.key===root.todayKey && root.viewYear===root.today.getFullYear() && root.viewMonth===root.today.getMonth()
       root.today=new Date()
-      if(follow) root.showToday()
+      if(follow && !root.yearMode) root.showToday()
     }
   }
   Controls.ScrollView {

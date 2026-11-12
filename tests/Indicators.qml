@@ -121,6 +121,7 @@ ShellRoot {
       states.microphoneMuted=true;service.doNotDisturb=true
       scene.mockNightLight=true;scene.mockStayAwake=true
       t3State.allowed=true;t3State.waitingCount=3
+      service.reminders.rows=[{unit:"test",label:"Check the oven",at:Date.now()/1000+300}]
       widget.hoverSuppressed=true
       var popup=findChild(widget,"islandPopup"),clock=findChild(widget,"islandClock")
       for (var edge of ["top","bottom","left","right"]) {
