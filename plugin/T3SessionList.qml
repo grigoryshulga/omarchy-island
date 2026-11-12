@@ -15,7 +15,7 @@ Column {
   property bool expanded:false
   property bool active:false
   property bool listExpanded:false
-  onExpandedChanged:if(!expanded) listExpanded=false
+  onExpandedChanged:if(!expanded) {listExpanded=false;viewport.contentItem.contentY=0}
   property var feedback:null
   readonly property var rows:bridge ? bridge.rows : []
   signal expandRequested()
@@ -67,7 +67,7 @@ Column {
           row:root.bridge.row(sessionId) || ({id:sessionId,title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
           bridge:root.bridge;strings:root.strings;expanded:root.expanded;feedback:root.feedback
           active:root.active && visible && y+height>viewport.contentItem.contentY && y<viewport.contentItem.contentY+viewport.availableHeight
-          visible:root.listExpanded || index<4
+          visible:root.expanded ? root.listExpanded || index<4 : index===0
           onExpandRequested:root.expandRequested()
         }
       }
@@ -75,7 +75,7 @@ Column {
   }
   FeedbackButton {
     objectName:"t3ExpandList"
-    visible:root.rows.length>4
+    visible:root.expanded && root.rows.length>4
     width:parent.width
     text:root.listExpanded ? root.strings.t("t3.collapseList") : root.strings.t("t3.expandList").arg(Commons.I18n.formatNumber(root.rows.length-4))
     focusable:root.expanded
