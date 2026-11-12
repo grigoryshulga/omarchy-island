@@ -224,6 +224,11 @@ ShellRoot {
         compare(lifetime.interval,4000)
         lifetime.interval=20;lifetime.restart();wait(60)
         compare(widget.alertKind,"","T3 popup must expire")
+        service.t3Arrival()
+        compare(widget.alertKind,"t3")
+        service.latestT3=null
+        compare(widget.alertKind,"","Focusing T3 must close its popup")
+        verify(!lifetime.running,"Closed T3 popup kept its timer")
         console.log("T3_ACTIVITY_POPUP_PASS")
         console.log("ISLAND_MOTION_PASS")
         Qt.quit()

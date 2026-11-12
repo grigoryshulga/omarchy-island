@@ -172,6 +172,8 @@ Enable **Controls → Settings → Integrations → T3 Code sessions**. Sessions
 - When T3 is disconnected or has no sessions, its entire section is hidden. Drafts stay in memory for reconnection, and responses remain disabled while disconnected. If no result arrives within 20 seconds, the card marks the send as unconfirmed instead of waiting indefinitely. An unconfirmed send is never retried automatically; check it in T3. Reconnection is automatic.
 - Up to 30 top-level sessions are shown, prioritizing pending requests and running work. Recently finished sessions remain for 30 minutes. Archived, explicitly settled, and child-agent threads are excluded. Overview must be enabled to use the cards.
 
+Activity popups are suppressed while a T3 Code desktop window is focused. Focusing T3 Code also closes an existing activity popup. Session cards and the bar indicator keep updating; suppressed popups are not replayed when focus moves elsewhere.
+
 Discovery reads `$T3CODE_HOME/userdata/server-runtime.json`, defaulting to `~/.t3/userdata/server-runtime.json`. `T3CODE_HOME`, if set, must be available in the Omarchy shell environment. Only literal loopback HTTP origins are accepted; remote environments are outside this integration's scope.
 
 When enabled, the bridge uses `t3 auth session issue` to obtain a one-hour token with `orchestration:read` and, if answers are enabled, `orchestration:operate`. The latter is T3's general orchestration permission; Island exposes only validated answers to pending questions. Tokens are held in memory, rotated before expiry, and revoked on normal disconnect or shutdown. Turning off the integration stops the bridge. Session text and drafts are never added to notification history or written to disk by Island.
