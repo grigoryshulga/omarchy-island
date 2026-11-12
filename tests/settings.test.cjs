@@ -24,4 +24,23 @@ assert.equal(settings.valid('musicVisualizationStyle', 'future'), false);
 assert.equal(settings.osdAllowed({osdVolume:false}, 'volume'), false);
 assert.equal(settings.osdAllowed({osdVolume:false}, 'download'), true);
 assert.equal(settings.osdAllowed({osdModes:false}, osd.parse(JSON.stringify({icon:'󰂛', message:'DND'})).kind), false);
+// Every supported setting remains reachable, apart from the reserved style key.
+assert.deepEqual(settings.sections.map(section => section.id), ['general', 'panel', 'alerts', 'modules']);
+const rows = settings.sections.flatMap(section => section.groups.flatMap(group => group.rows));
+assert.equal(new Set(rows.map(row => row.key)).size, rows.length);
+assert.deepEqual(rows.filter(row => !row.fixed).map(row => row.key).sort(),
+  Object.keys(settings.defaults).filter(key => !['musicVisualizationStyle', 'agentLimitsPins'].includes(key)).sort());
+assert.deepEqual(rows.filter(row => row.dependsOn).map(row => [row.key, row.dependsOn]),
+  [['hoverDelay', 'hoverPreview'], ['t3Responses', 't3Enabled']]);
+for (const lang of ['en', 'ru']) {
+  const strings = require(`../plugin/i18n/${lang}.json`);
+  for (const section of settings.sections) {
+    assert.ok(strings[`settings.tab.${section.id}`]);
+    for (const group of section.groups) {
+      assert.ok(strings[`settings.group.${group.id}`]);
+      if (group.description) assert.ok(strings[`settings.description.${group.id}`]);
+      for (const row of group.rows) assert.ok(strings[`settings.${row.key}`]);
+    }
+  }
+}
 console.log('PASS: Island settings validation, disabled pages, opening fallback and OSD filtering.');

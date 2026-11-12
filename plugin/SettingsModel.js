@@ -61,12 +61,22 @@ function osdKey(kind) {
 function osdAllowed(settings, kind) { var key = osdKey(kind); return !key || get(settings, key) }
 // Row labels and option labels use settings.<key> and settings.option.<value>.
 var sections = [
-  {id:"behavior",rows:[{key:"hoverPreview"},{key:"hoverDelay",type:"delay"},{key:"openingPage",type:"choice"},{key:"panelAnimation"},{key:"animationsEnabled"}]},
-  {id:"sections",rows:[{key:"controlsEnabled",fixed:true},{key:"overviewEnabled"},{key:"calendarEnabled"},{key:"weatherEnabled"}]},
-  {id:"music",rows:[{key:"trackAlerts"},{key:"musicVisualization",type:"choice"},{key:"musicVisualizationStyle",type:"choice",fixed:true}]},
-  {id:"limits",rows:[{key:"agentLimitsEnabled"},{key:"agentLimitsMode",type:"choice"},{key:"agentLimitsIndicator",type:"choice"},{key:"agentLimitsWarning",type:"percent"},{key:"agentLimitsCritical",type:"percent"}]},
-  {id:"integrations",rows:[{key:"t3Enabled"},{key:"t3Responses"}]},
-  {id:"indicators",rows:[{key:"indicatorDnd"},{key:"indicatorMicrophone"},{key:"indicatorRecording"},{key:"indicatorRemote"},{key:"indicatorNightLight"},{key:"indicatorStayAwake"},{key:"indicatorUpdate"}]},
-  {id:"events",rows:[{key:"notificationStyle",type:"choice"},{key:"osdVolume"},{key:"osdBrightness"},{key:"osdKeyboard"},{key:"osdLayout"},{key:"osdMicrophone"},{key:"osdModes"}]}
+  {id:"general",groups:[
+    {id:"opening",rows:[{key:"hoverPreview"},{key:"hoverDelay",type:"delay",dependsOn:"hoverPreview"},{key:"openingPage",type:"choice"}]},
+    {id:"animations",rows:[{key:"panelAnimation"},{key:"animationsEnabled"}]}
+  ]},
+  {id:"panel",groups:[
+    {id:"pages",rows:[{key:"controlsEnabled",fixed:true},{key:"overviewEnabled"},{key:"calendarEnabled"},{key:"weatherEnabled"}]},
+    {id:"indicators",description:true,rows:[{key:"indicatorDnd"},{key:"indicatorMicrophone"},{key:"indicatorRecording"},{key:"indicatorRemote"},{key:"indicatorNightLight"},{key:"indicatorStayAwake"},{key:"indicatorUpdate"}]}
+  ]},
+  {id:"alerts",groups:[
+    {id:"notifications",rows:[{key:"notificationStyle",type:"choice"}]},
+    {id:"events",description:true,rows:[{key:"osdVolume"},{key:"osdBrightness"},{key:"osdKeyboard"},{key:"osdLayout"},{key:"osdMicrophone"},{key:"osdModes"}]}
+  ]},
+  {id:"modules",groups:[
+    {id:"music",rows:[{key:"trackAlerts"},{key:"musicVisualization",type:"choice"}]},
+    {id:"t3",rows:[{key:"t3Enabled"},{key:"t3Responses",dependsOn:"t3Enabled"}]},
+    {id:"limits",rows:[{key:"agentLimitsEnabled"},{key:"agentLimitsMode",type:"choice"},{key:"agentLimitsIndicator",type:"choice"},{key:"agentLimitsWarning",type:"percent"},{key:"agentLimitsCritical",type:"percent"}]}
+  ]}
 ]
-if (typeof module !== "undefined") module.exports = {defaults:defaults,valid:valid,get:get,pages:pages,nextPage:nextPage,openingPage:openingPage,osdAllowed:osdAllowed}
+if (typeof module !== "undefined") module.exports = {defaults:defaults,valid:valid,get:get,pages:pages,nextPage:nextPage,openingPage:openingPage,osdAllowed:osdAllowed,sections:sections}

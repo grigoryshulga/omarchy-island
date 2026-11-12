@@ -51,8 +51,11 @@ Item {
   signal weatherRequested()
   signal inboxRequested()
   readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
-  readonly property real contentTop: tabs.visible ? tabs.implicitHeight+Design.gap.section : 0
-  implicitHeight: contentTop+Math.max(root.expanded ? calendarWeatherHeight : 0,controls ? controlsPage.implicitHeight : weather || calendar ? calendarWeatherHeight : inbox.implicitHeight)
+  readonly property bool settingsOpen: controls && controlsPage.section==="settings"
+  // Keep the popup surface size while Settings uses the space of the hidden tabs.
+  readonly property real navigationHeight: expanded && visible ? tabs.implicitHeight+Design.gap.section : 0
+  readonly property real contentTop: tabs.visible ? navigationHeight : 0
+  implicitHeight: navigationHeight+Math.max(root.expanded ? calendarWeatherHeight : 0,controls ? controlsPage.implicitHeight : weather || calendar ? calendarWeatherHeight : inbox.implicitHeight)
   readonly property real calendarWeatherHeight:Math.max(root.calendar ? calendarPage.implicitHeight : calendarPage.monthImplicitHeight,weatherPage.implicitHeight,controlsPage.implicitHeight)
   clip: true
   function showToday() { calendarPage.showToday() }
@@ -192,7 +195,7 @@ Item {
     id: tabs
     objectName: "islandTabs"
     anchors.left: parent.left; anchors.right: parent.right
-    visible: root.expanded
+    visible: root.expanded && !root.settingsOpen
     spacing:Design.gap.tight
     uniformCellSizes: true
     TabButton {
