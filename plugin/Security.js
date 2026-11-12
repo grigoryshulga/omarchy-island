@@ -141,3 +141,9 @@ function localImageUrl(path) {
   var text = localImagePath(path)
   return text ? "file://" + text.split("/").map(encodeURIComponent).join("/") : ""
 }
+
+function reminderArgs(minutes,message) {
+  var value=String(minutes || "").trim()
+  if(!/^[0-9]+$/.test(value) || Number(value)<1 || Number(value)>2147483647 || typeof message!=="string" || message.length>4096 || /[\x00]/.test(message)) return []
+  return [String(Number(value))].concat(message ? [message] : [])
+}

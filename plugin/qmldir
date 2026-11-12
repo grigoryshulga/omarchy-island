@@ -57,3 +57,6 @@ WeatherScene 1.0 WeatherScene.qml
 WeatherService 1.0 WeatherService.qml
 WeatherView 1.0 WeatherView.qml
 ChoiceButton 1.0 ChoiceButton.qml
+ReminderState 1.0 ReminderState.qml
+ReminderPanel 1.0 ReminderPanel.qml
+CalendarYear 1.0 CalendarYear.qml

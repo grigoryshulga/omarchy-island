@@ -10,7 +10,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 
 - **Overview:** grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls include seeking and volume when supported by the player. Devices with a battery also show a 20-segment charge gauge and power profiles. The gauge shows partial segments, uses the theme danger role below 20%, and gently pulses the leading segment while charging (unless reduced motion is enabled).
 - **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
-- **Calendar and weather:** month navigation, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
+- **Calendar and weather:** month/year navigation, native Omarchy reminders, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
 - **T3 Code (optional):** live session cards in Overview, a bar indicator for running sessions and pending requests, and inline answers to questions. Cards preserve drafts and focus while sessions update. Permission and authentication requests open in T3.
@@ -90,6 +90,16 @@ In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weat
 In the calendar, arrows or Vim keys move the selected date, **Page Up / Page Down** changes months, and **Home** returns to today. Sliders use **Left / Right** or **H / L**. Embedded system panels retain their native navigation.
 
 No global shortcut is assigned. Bind `omarchy-shell island toggle` to one if desired.
+
+### Calendar and reminders
+
+Click the month name below the grid to switch to a year overview. Choose one of the twelve months to return to its daily grid. Previous/next moves by a year in this mode; Page Up / Page Down on a focused month does the same. Home returns to today. Week order, date labels and numbers follow the selected week-start and Omarchy locale.
+
+The calendar includes the full native reminder flow: enter a positive number of minutes, optionally add a message, create the reminder, view active reminders with a countdown, or clear all. Times are relative to **now**, not the selected calendar date. Days with reminders have a marker in the month view and bold dates in the year view; the selected day's reminder rows are highlighted.
+
+A compact reminder badge appears to the right of the clock while reminders are active. It shows their count, offers the nearest reminder and time in its tooltip, and opens Calendar on click. Island reads `omarchy-reminder show --json` every ten seconds and after its own changes. Existing reminders and native CLI commands remain compatible. The installed `omarchy-reminder` command owns systemd timers, messages and notification delivery; Island creates no second reminder store. Reminders survive an Island restart, with the native backend's existing runtime lifetime rather than guaranteed persistence across a reboot. The stock reminder overlay can remain installed.
+
+External Google Calendar/ICS subscriptions are **not connected yet**. [Integration research](docs/calendar-integrations.md) compares public ICS, secret Google iCal links and OAuth, with a proposed implementation sequence.
 
 ### IPC
 
@@ -234,6 +244,7 @@ python3 tests/settings.py                  # Wayland settings, persistence and p
 python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
+python3 tests/calendar-reminders.py        # Native reminder CLI fixture, calendar forms and year navigation
 python3 tests/keyboard.py                  # Keyboard input and focus
 QT_QPA_PLATFORM=offscreen python3 tests/keyboard.py # Keyboard checks without Wayland focus
 python3 tests/indicators.py                # Wayland indicators and native OSD

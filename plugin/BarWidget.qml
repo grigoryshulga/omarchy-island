@@ -274,6 +274,16 @@ BarWidget {
     }
     RowLayout {
       id:rightIndicators
+      FeedbackButton {
+        objectName:"islandReminderIndicator"
+        readonly property var reminders:root.service && ("reminders" in root.service) ? root.service.reminders : null
+        visible:Settings.get(root.settings,"calendarEnabled") && !!reminders && reminders.count>0
+        text:reminders ? "󰢌 "+Commons.I18n.formatNumber(reminders.count) : ""
+        foreground:clockLabel.color;variant:"soft";fontSize:Design.type.bar
+        implicitHeight:trigger.height;horizontalPadding:Design.gap.small;verticalPadding:0
+        tooltipText:reminders && reminders.count ? reminders.rows[0].label+" · "+new Date(reminders.rows[0].at*1000).toLocaleString(Qt.locale(Commons.I18n.formatLocale),"d MMM HH:mm") : ""
+        onClicked:root.openCalendar()
+      }
       objectName:"islandRightIndicators"
       anchors.left:centerContent.horizontalCenter
       anchors.leftMargin:centerContent.indicatorSpan/2+Style.space(11)

@@ -5,10 +5,14 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "CalendarModel.js" as Calendar
+import "ReminderModel.js" as Reminders
 
 Item {
   id: root
   required property var strings
+  property var reminders:null
+  property bool yearMode:false
+  readonly property var reminderDays:reminders ? reminders.rows.map(function(row){return Reminders.dayKey(row.at)}) : []
   property bool radialBraille: true
   property var externalFeedback: null
   property bool showBack: true
@@ -27,6 +31,7 @@ Item {
   readonly property string monthTitle: strings.t("calendar.monthYear").arg(locale.standaloneMonthName(viewMonth,Locale.LongFormat)).arg(Calendar.localDate(viewYear,viewMonth,1).toLocaleDateString(locale,"yyyy"))
   signal backRequested()
   signal weekStartRequested(string value)
+  readonly property real monthImplicitHeight:body.implicitHeight-(yearMode ? yearGrid.implicitHeight-calendarGrid.implicitHeight : 0)
   implicitHeight: body.implicitHeight
   onActiveChanged: if(!active) settingsMenu.close()
   onVisibleChanged: if(!visible) settingsMenu.close()
@@ -41,15 +46,17 @@ Item {
     glow.pulse(at)
   }
   function showToday() {
-    viewYear=today.getFullYear(); viewMonth=today.getMonth()
+    yearMode=false;viewYear=today.getFullYear(); viewMonth=today.getMonth()
     selectedDay={year:viewYear,month:viewMonth,day:today.getDate(),key:todayKey}
   }
   function shiftMonth(delta) {
+    if(yearMode) {viewYear=Math.max(1,Math.min(9999,viewYear+delta));return}
     var next=Calendar.stepMonth(viewYear,viewMonth,delta)
     viewYear=next.year; viewMonth=next.month
   }
   function selectDay(day) { selectedDay=day; viewYear=day.year; viewMonth=day.month }
   function focusSelectedDay() {
+    if(yearMode) {yearGrid.focusMonth();return}
     for(var i=0;i<dayCells.count;i++) {
       var item=dayCells.itemAt(i)
       if(item && item.modelData.key===selectedDay.key) {item.forceActiveFocus(Qt.TabFocusReason);return}
@@ -92,9 +99,14 @@ Item {
       if(follow) root.showToday()
     }
   }
+  Controls.ScrollView {
+    id:calendarScroll
+    objectName:"calendarScroll"
+    anchors.fill:parent;clip:true;contentWidth:availableWidth
+    Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
   ColumnLayout {
     id: body
-    width: parent.width
+    width: calendarScroll.availableWidth
     spacing:Design.gap.medium
     Item {
       Layout.fillWidth: true
@@ -129,6 +141,7 @@ Item {
     }
     GridLayout {
       id:calendarGrid
+      visible:!root.yearMode
       Layout.fillWidth: true
       columns: 8
       columnSpacing:Design.gap.tight
@@ -206,26 +219,41 @@ Item {
               intensity: 3.8
             }
           }
+          Rectangle {anchors.bottom:parent.bottom;anchors.bottomMargin:2;anchors.horizontalCenter:parent.horizontalCenter;width:4;height:4;radius:2;visible:root.reminderDays.indexOf(dayButton.modelData.key)>=0;color:dayButton.modelData.today ? Design.onAccent : Design.accent}
           focusable: true
           onClicked: { root.pulseFrom(dayButton); root.selectDay(modelData) }
         }
       }
     }
 
+    CalendarYear {
+      id:yearGrid;Layout.fillWidth:true;visible:root.yearMode
+      year:root.viewYear;month:root.viewMonth;firstDay:root.firstDay;todayKey:root.todayKey;reminderDays:root.reminderDays
+      onYearShift:delta=>root.shiftMonth(delta)
+      onTodayRequested:{root.showToday();Qt.callLater(root.focusSelectedDay)}
+      onMonthChosen:month=>{root.viewMonth=month;root.yearMode=false;root.selectedDay=Calendar.parts(Calendar.civilDate(root.viewYear,month,1));Qt.callLater(root.focusSelectedDay)}
+    }
     RowLayout {
       Layout.fillWidth: true
       spacing:Design.gap.small
       FeedbackButton { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
-      PlainText {
+      FeedbackButton {
         objectName: "calendarMonth"
         Layout.fillWidth: true
-        horizontalAlignment: Text.AlignHCenter
-        text: root.monthTitle
-        typeRole:"caption"
-        color: Design.secondaryText
+        text: root.yearMode ? Commons.I18n.formatNumber(root.viewYear) : root.monthTitle
+        fontSize:Design.type.label;focusable:true
+        tooltipText:root.strings.t(root.yearMode ? "calendar.showMonth" : "calendar.showYear")
+        onClicked:root.yearMode=!root.yearMode
       }
       FeedbackButton { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
     }
+    ReminderPanel {
+      id:reminderPanel
+      Layout.fillWidth:true
+      visible:!!root.reminders
+      strings:root.strings;reminders:root.reminders;selectedKey:root.selectedDay.key
+    }
+  }
   }
   Controls.Popup {
     id: settingsMenu

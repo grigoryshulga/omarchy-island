@@ -240,5 +240,17 @@
   "design.optionRemoteDetail": "Подходит для длительных проверок и нескольких параллельных проектов.",
   "design.working": "Проверка сборки и зависимостей",
   "design.opened": "В приложении этот заголовок открывает сессию T3.",
-  "design.reset": "Попробовать ещё раз"
+  "design.reset": "Попробовать ещё раз",
+  "calendar.showYear": "Показать весь год",
+  "calendar.showMonth": "Показать месяц",
+  "reminders.title": "Напоминания",
+  "reminders.add": "Добавить",
+  "reminders.clear": "Очистить все",
+  "reminders.minutes": "Минуты",
+  "reminders.message": "Текст (необязательно)",
+  "reminders.relative": "Через указанное число минут от текущего времени",
+  "reminders.save": "Создать",
+  "reminders.empty": "Нет активных напоминаний",
+  "reminders.unavailable": "Не удалось прочитать напоминания Omarchy",
+  "reminders.failed": "Не удалось изменить напоминания"
 }

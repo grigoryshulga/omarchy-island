@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const vm=require('node:vm');
+const fs=require('node:fs');
+const model=require('../plugin/ReminderModel.js');
+const security=vm.createContext({});
+vm.runInContext(fs.readFileSync(require.resolve('../plugin/Security.js'),'utf8').replace(/^\.pragma.*$/gm,''),security);
+for(const value of ['',0,-1,'1.5','0x10','1; false','$(date)','999999999999']) assert.equal(security.reminderArgs(value,'hello').length,0);
+assert.equal(JSON.stringify(security.reminderArgs('0005','literal $ & <b>')),JSON.stringify(['5','literal $ & <b>']));
+assert.equal(security.reminderArgs('5','\0').length,0);
+assert.equal(model.rows({reminders:[{unit:'b',at:30,label:'later'},{unit:'a',at:20,label:'first'},{unit:'c',at:1}]},10)[0].label,'first');
+assert.deepEqual(model.rows({reminders:[null,{at:'25',unit:'bad'}]},10),[]);
+assert.equal(model.remaining(72,10,String),'1:02');
+assert.equal(model.remaining(1,10,String),'0:00');
+console.log('PASS: reminder validation, expiry, ordering and countdown.');

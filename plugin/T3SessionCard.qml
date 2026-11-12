@@ -24,8 +24,8 @@ Rectangle {
   readonly property string questionSchema:request && request.canRespond ? JSON.stringify(request.questions) : "[]"
   readonly property string response:request ? bridge.response(request.id) : ""
   readonly property bool blocked:["sending","sent","uncertain"].indexOf(response)>=0
-  readonly property bool editable:expanded && bridge.connected && bridge.canRespond && bridge.responsesEnabled && !blocked
-  readonly property string statusText:strings.t(!bridge.connected ? "t3.disconnected" : needsInput ? (row.requestKind==="user_input" ? "t3.needsAnswer" : "t3.needsAction") : "t3.status."+row.status)
+  readonly property bool editable:expanded && !!bridge && bridge.connected && bridge.canRespond && bridge.responsesEnabled && !blocked
+  readonly property string statusText:strings.t(!bridge || !bridge.connected ? "t3.disconnected" : needsInput ? (row.requestKind==="user_input" ? "t3.needsAnswer" : "t3.needsAction") : "t3.status."+row.status)
   readonly property string detailText:request && !request.canRespond ? [request.prompt,request.reason].filter(function(v){return !!v}).join("\n\n") : row.summary
   property real now:Date.now()/1000
   onRequestKeyChanged:detailsOpen=false
@@ -118,7 +118,7 @@ Rectangle {
     PlainText {
       Layout.fillWidth:true;wrapMode:Text.Wrap;typeRole:"caption";color:Design.secondaryText
       visible:root.expanded && root.needsInput && (!root.request || !root.request.canRespond || !root.bridge.canRespond || (root.response!=="" && root.response!=="sending"))
-      text:root.strings.t(root.response ? "t3.response."+root.response : !root.bridge.connected ? "t3.response.offline" : root.request && root.request.canRespond && !root.bridge.canRespond ? "t3.readOnly" : "t3.continueInT3")
+      text:root.strings.t(root.response ? "t3.response."+root.response : (!root.bridge || !root.bridge.connected) ? "t3.response.offline" : root.request && root.request.canRespond && !root.bridge.canRespond ? "t3.readOnly" : "t3.continueInT3")
     }
     PlainText {
       Layout.fillWidth:true;visible:root.expanded && root.detailsOpen

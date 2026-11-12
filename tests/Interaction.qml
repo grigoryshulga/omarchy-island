@@ -369,7 +369,7 @@ ShellRoot {
       wait(150)
       check(today.color===Island.Design.accent && today.foreground===Island.Design.onAccent,"today does not use accent fill with inverse text")
       check(findChild(today,"calendarTodayGlow").active,"today has no braille glow")
-      check(findChild(calendar,"calendarMonth").font.pixelSize<findChild(calendar,"calendarCurrentDate").fontSize,"calendar typography hierarchy is reversed")
+      check(findChild(calendar,"calendarMonth").fontSize<findChild(calendar,"calendarCurrentDate").fontSize,"calendar typography hierarchy is reversed")
       check(findChild(calendar,"calendarPrevious").y>=0 && findChild(calendar,"calendarMonth").mapToItem(calendar,0,0).y>today.mapToItem(calendar,0,0).y,"month navigation is not below the grid")
       mouseClick(findChild(calendar,"calendarSettings"));wait(180)
       check(findChild(calendar,"calendarSettingsMenu").opened,"calendar gear did not open settings")

@@ -44,6 +44,13 @@ ShellRoot {
   }
   QtObject {
     id:service
+    property var reminders:QtObject {
+      property var rows:[]
+      readonly property int count:rows.length
+      property double now:Date.now()/1000
+      property bool busy:false
+      property string error:""
+    }
     property var t3:t3State
     property var indicators:states
     property bool doNotDisturb:false
@@ -161,6 +168,17 @@ ShellRoot {
       check(!t3Indicator.visible,"settled T3 sessions kept the bar indicator")
       t3State.allowed=false
       console.log("T3_INDICATOR_PASS")
+      var reminderBadge=findChild(widget,"islandReminderIndicator")
+      check(!reminderBadge.visible,"Empty reminders badge is visible")
+      service.reminders.rows=[{unit:"test",label:"Check the oven",at:Date.now()/1000+300}];wait(30)
+      check(reminderBadge.visible && reminderBadge.tooltipText.indexOf("Check the oven")>=0,"Reminder badge is missing its nearest reminder")
+      check(reminderBadge.mapToItem(clock,0,0).x>label.mapToItem(clock,0,0).x+label.width,"Reminders must be right of the clock")
+      check(Math.abs(label.mapToItem(clock,0,0).x+label.width/2-clock.width/2)<1,"Reminders moved the centered clock")
+      reminderBadge.clicked();wait(30)
+      check(widget.pinned && widget.calendarMode,"Reminder badge did not open Calendar")
+      widget.close();service.reminders.rows=[];wait(30)
+      check(!reminderBadge.visible,"Cleared reminders left a badge")
+      console.log("REMINDERS_INDICATOR_PASS")
       if(Quickshell.env("ISLAND_T3_ONLY")) {console.log("INDICATORS_PASS");Qt.quit();return}
       if(Quickshell.env("ISLAND_TEST_GPU")) {
         var frozen=new Date(2026,10,10,19,47),saved=widget.now
