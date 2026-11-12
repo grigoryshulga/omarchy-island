@@ -50,11 +50,12 @@ class ModelTests(unittest.TestCase):
         self.assertEqual([r['id'] for r in select_threads(rows[35:],now)],['question'])
 
     def test_project_icons(self):
-        for icon in ({'kind':'emoji','emoji':'🏝️'}, {'kind':'monogram','text':'OI'},
+        for icon in ({'kind':'emoji','emoji':'🏝️'}, {'kind':'monogram','text':'OI','color':'blue'},
                      {'kind':'lucide','name':'folder-code','color':'green'}):
             view=session_view({'id':'t','projectId':'p'}, {'p':'Island'}, project_icons={'p':icon})
             self.assertEqual(view['projectIcon'], project_icon(icon))
             self.assertEqual(view['projectIcon']['kind'], icon['kind'])
+            if 'color' in icon:self.assertEqual(view['projectIcon']['color'],icon['color'])
         for invalid in (None, '', {'kind':'image','url':'file:///etc/passwd'},
                         {'kind':'lucide','name':'../secret'}, {'kind':'lucide','name':'x'*65},
                         {'kind':'emoji','emoji':'x'*33}, {'kind':'monogram','text':'a\n'}):

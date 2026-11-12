@@ -18,6 +18,7 @@ Item {
   property bool expanded: false
   property bool hovering: false
   property string alertKind: ""
+  readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
   readonly property var notificationIcon: inbox.toastIcon
   property bool controls: false
   property bool calendar: false

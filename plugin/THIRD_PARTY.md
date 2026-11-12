@@ -50,4 +50,4 @@ SOFTWARE.
 
 ## Lucide project icons
 
-`vendor/lucide/Icons.js` contains SVG geometry from Lucide 1.8.0, distributed under the ISC license. See [LICENSE](vendor/lucide/LICENSE). Icon names come from T3 project metadata; colors follow the live Island theme. No runtime dependency or remote icon requests are required.
+`vendor/lucide/Icons.js` contains SVG geometry from Lucide 1.8.0, distributed under the ISC license. See [LICENSE](vendor/lucide/LICENSE). Icon names come from T3 project metadata; named project colors follow T3, with the live Island accent as a fallback. No runtime dependency or remote icon requests are required.

@@ -46,3 +46,10 @@ assert.equal(model.statusRank({status:'completed'}),1);
 assert.equal(model.statusRank({status:'failed'}),1);
 assert.equal(model.statusRank({status:'running'}),2);
 assert.equal(model.statusRank({status:'starting'}),2);
+
+for(const [row,role] of [[{status:'running'},'info'],[{status:'completed'},'success'],[{status:'failed'},'danger'],[{status:'running',requestId:'q'},'warning'],[{status:'cancelled'},'secondaryText']]) assert.equal(model.statusRole(row),role);
+const icons=require('../plugin/ProjectIconModel.js');
+assert.equal(icons.color('red',true,'fallback'),'#ff6467');
+assert.equal(icons.color('red',false,'fallback'),'#e7000b');
+assert.equal(icons.color('unknown',true,'fallback'),'fallback');
+assert.equal(icons.color('constructor',true,'fallback'),'fallback');

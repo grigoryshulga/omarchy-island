@@ -140,15 +140,18 @@ def project_icon(value):
     if not isinstance(value, dict):
         return None
     kind = value.get("kind")
+    color = value.get("color")
+    colors = {"gray", "red", "orange", "amber", "yellow", "lime", "green", "emerald", "teal", "cyan", "sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose"}
+    appearance = {"color": color} if isinstance(color, str) and color in colors else {}
     if kind == "lucide":
         name = value.get("name", "")
         if isinstance(name, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) and len(name) <= 64:
-            return {"kind": kind, "name": name}
+            return {"kind": kind, "name": name, **appearance}
     elif kind in ("emoji", "monogram"):
         key = "emoji" if kind == "emoji" else "text"
         content = value.get(key)
         if isinstance(content, str) and 0 < len(content) <= 32 and not any(ord(c) < 32 for c in content):
-            return {"kind": kind, key: content}
+            return {"kind": kind, key: content, **(appearance if kind == "monogram" else {})}
     return None
 
 

@@ -116,7 +116,6 @@ ShellRoot {
     property bool artworkFadeTailSeen: false
     property real startWidth: 0
     property real playerWidth: 0
-    property point mediaControlPosition: Qt.point(0,0)
     property string nativeSize: ""
     function sampleExit(popup) {
       checkExit(popup.visible && popup.backingWindowVisible && popup.shown>0.1 && popup.shown<0.95,"close has no perceptible intermediate frame")
@@ -162,14 +161,17 @@ ShellRoot {
       }
       if(exitTick===106) widget.alertKind="media"
       if(exitTick===132) {
+        checkExit(popup.bareCardShown && popup.padding===0,"music toast retained its outer container")
+        checkExit(!findChild(widget,"mediaSectionHeading").visible,"music toast retained its section heading")
+        checkExit(player.color.toString()==="#00000000","music toast paints a nested card")
+        checkExit(art.visible && !findChild(widget,"islandToastWaves").active,"music toast lost artwork or gained notification waves")
         p.trackTitle="A very long track title that should elide without moving the player controls"
-        mediaControlPosition=findChild(player,"mediaToggle").mapToGlobal(0,0)
         widget.hoverOpen=true
       }
       if(exitTick===138) {
-        var at=findChild(player,"mediaToggle").mapToGlobal(0,0)
-        checkExit(Math.abs(at.x-mediaControlPosition.x)<1 && Math.abs(at.y-mediaControlPosition.y)<1,"hovering Now Playing moved its transport controls")
-        console.log("STABLE_MEDIA_CONTROLS_PASS")
+        checkExit(!popup.bareCardShown && findChild(widget,"mediaSectionHeading").visible,"hovering music toast did not restore Overview")
+        checkExit(player.color.toString()===Island.Design.surface.toString(),"Overview did not restore its media card")
+        console.log("MUSIC_TOAST_CARD_PASS")
       }
       if(exitTick===140) {
         startWidth=popup.drawnWidth

@@ -65,3 +65,4 @@ CalendarState 1.0 CalendarState.qml
 CalendarAgenda 1.0 CalendarAgenda.qml
 CalendarSources 1.0 CalendarSources.qml
 ProjectIcon 1.0 ProjectIcon.qml
+singleton ThemePalette 1.0 ThemePalette.qml

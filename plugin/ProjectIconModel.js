@@ -1,0 +1,4 @@
+// T3 project icon colors: light (600) and dark (400) palette variants.
+var colors={"gray":["#4a5565","#99a1af"],"red":["#e7000b","#ff6467"],"orange":["#f54900","#ff8904"],"amber":["#e17100","#ffb900"],"yellow":["#d08700","#fdc700"],"lime":["#5ea500","#9ae600"],"green":["#00a63e","#05df72"],"emerald":["#009966","#00d492"],"teal":["#009689","#00d5be"],"cyan":["#0092b8","#00d3f2"],"sky":["#0084d1","#00bcff"],"blue":["#155dfc","#51a2ff"],"indigo":["#4f39f6","#7c86ff"],"violet":["#7f22fe","#a684ff"],"purple":["#9810fa","#c27aff"],"fuchsia":["#c800de","#ed6aff"],"pink":["#e60076","#fb64b6"],"rose":["#ec003f","#ff637e"]}
+function color(name,dark,fallback) {return Object.prototype.hasOwnProperty.call(colors,name) ? colors[name][dark ? 1 : 0] : fallback}
+if(typeof module!=="undefined") module.exports={color:color}

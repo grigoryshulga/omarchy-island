@@ -23,3 +23,8 @@ for(const file of readdirSync(join(__dirname,'../plugin')).filter(name=>name.end
   assert.ok(!/\bPanelSeparator\s*\{/.test(source),`${file} introduces a decorative separator`);
 }
 console.log('Design palette and no-divider checks passed');
+
+const palette=require('../plugin/ThemePaletteModel.js');
+assert.deepEqual(palette.parse('color1 = "#ee0000"\ncolor2 = "#00ee00"\ncolor3 = "#eeee00"\ncolor4 = "#0000ee"'),{red:'#ee0000',green:'#00ee00',yellow:'#eeee00',blue:'#0000ee'});
+assert.deepEqual(palette.parse('blue = "#4488ff"\ncolor4 = "#0000ee"\ngreen = "#44ee88" # comment'),{blue:'#4488ff',green:'#44ee88'});
+assert.deepEqual(palette.parse('blue = "not a color"\nred = "#12345678"'),{});

@@ -25,6 +25,7 @@ Rectangle {
   readonly property string response:request ? bridge.response(request.id) : ""
   readonly property bool blocked:["sending","sent","uncertain"].indexOf(response)>=0
   readonly property bool editable:expanded && !!bridge && bridge.connected && bridge.canRespond && bridge.responsesEnabled && !blocked
+  readonly property color statusColor:!bridge || !bridge.connected ? Design.secondaryText : Design[T3.statusRole(row)]
   readonly property string statusText:strings.t(!bridge || !bridge.connected ? "t3.disconnected" : needsInput ? (row.requestKind==="user_input" ? "t3.needsAnswer" : "t3.needsAction") : "t3.status."+row.status)
   readonly property string detailText:request && !request.canRespond ? [request.prompt,request.reason].filter(function(v){return !!v}).join("\n\n") : row.summary
   property real now:Date.now()/1000
@@ -55,12 +56,20 @@ Rectangle {
     RowLayout {
       Layout.fillWidth:true
       spacing:Design.gap.medium
-      T3Spinner {id:workingIcon;objectName:"t3SessionSpinner";visible:root.working;active:root.active && root.bridge.connected;Layout.alignment:Qt.AlignVCenter}
-      PlainText {id:stateIcon;visible:!root.working;text:root.needsInput ? "󰋗" : root.row.status==="completed" ? "✓" : "·";color:root.needsInput ? Design.accent : Design.secondaryText}
+      Item {
+        id:statusSlot
+        implicitWidth:Style.space(20)
+        implicitHeight:titleRow.height
+        Layout.minimumWidth:implicitWidth;Layout.maximumWidth:implicitWidth
+        Layout.alignment:Qt.AlignTop
+        T3Spinner {id:workingIcon;objectName:"t3SessionSpinner";anchors.centerIn:parent;visible:root.working;active:root.active && root.bridge.connected;tint:root.statusColor}
+        PlainText {id:stateIcon;anchors.fill:parent;visible:!root.working;text:root.needsInput ? "󰋗" : root.row.status==="completed" ? "✓" : "·";color:root.statusColor;horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter}
+      }
       ColumnLayout {
         Layout.fillWidth:true;Layout.minimumWidth:0
         spacing:Design.gap.tight
         RowLayout {
+          id:titleRow
           Layout.fillWidth:true;spacing:Design.gap.small
           FeedbackButton {
             id:titleLink
@@ -92,7 +101,7 @@ Rectangle {
           Layout.fillWidth:true;spacing:Design.gap.medium
           ProjectIcon {objectName:"t3ProjectIcon";visible:!!root.row.project;icon:root.row.projectIcon || null;Layout.alignment:Qt.AlignVCenter}
           PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;text:root.row.project;typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
-          PlainText {visible:!root.needsInput || root.compactToast;Layout.maximumWidth:Math.max(Style.space(80),(root.width-Style.space(48))*0.65);text:root.statusText;typeRole:"caption";color:root.needsInput ? Design.accent : Design.secondaryText;horizontalAlignment:Text.AlignRight;elide:Text.ElideRight}
+          PlainText {objectName:"t3StatusLabel";visible:!root.needsInput || root.compactToast;Layout.maximumWidth:Math.max(Style.space(80),(root.width-Style.space(48))*0.65);text:root.statusText;typeRole:"caption";color:root.statusColor;horizontalAlignment:Text.AlignRight;elide:Text.ElideRight}
         }
       }
     }

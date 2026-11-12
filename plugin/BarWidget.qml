@@ -371,7 +371,7 @@ BarWidget {
     alignmentItem: clockLabel
     open: root.pinned || (root.hoverOpen && root.hoverContentAvailable) || (root.showAlert && !root.stripNotification)
     frameless: root.notificationToast || bareCard
-    bareCard: root.alertKind==="t3" && !root.pinned && !root.hoverOpen
+    bareCard: (root.alertKind==="t3" || root.alertKind==="media") && !root.pinned && !root.hoverOpen
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
     onVisibleChanged: if (!visible) Qt.callLater(function(){
       if(!preview.visible && !preview.open) {root.contentExpanded=false;root.calendarMode=false;root.weatherMode=false;root.controlsMode=false}
@@ -406,7 +406,7 @@ BarWidget {
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
       height: preview.layoutHeight
-      active: preview.frameSuppressed && preview.visible
+      active: preview.frameSuppressed && preview.visible && !previewContent.mediaToast
     }
     ArtworkBackground {
       objectName: "islandPopupArtwork"
@@ -415,7 +415,7 @@ BarWidget {
       height: Math.min(preview.contentHeight,Style.space(root.contentExpanded ? 285 : 175)+previewContent.contentTop)
       reveal: 1-previewContent.pageProgress
       // Let the last dithered dots finish disappearing after the page settles.
-      visible: opacity>0.001 && artworkReveal>0.001 && preview.visible && !preview.frameSuppressed
+      visible: opacity>0.001 && artworkReveal>0.001 && preview.visible && (!preview.frameSuppressed || previewContent.mediaToast)
       service: root.service
     }
     BrailleSpotlight {

@@ -60,6 +60,21 @@ ShellRoot {
         verify(spinner.animating,"Working session spinner is stopped")
         var glyph=findChild(spinner,"t3SpinnerGlyph"),frame=glyph.text
         wait(120);verify(glyph.text!==frame,"Braille spinner did not advance")
+        var title=findChild(workingCard,"t3SessionTitle"),projectIcon=findChild(workingCard,"t3ProjectIcon")
+        var titleX=title.mapToItem(workingCard,0,0).x,projectX=projectIcon.mapToItem(workingCard,0,0).x
+        for(var variant of [Object.assign({},second,{status:"completed"}),Object.assign({},second,{status:"failed"}),Object.assign({},second,{requestId:"pending"}),second]) {
+          snapshot([row,variant]);wait(180)
+          compare(title.mapToItem(workingCard,0,0).x,titleX,"Status moved the title")
+          compare(projectIcon.mapToItem(workingCard,0,0).x,projectX,"Status moved the project icon")
+          var icon=workingCard.statusIcon
+          verify(Math.abs(icon.mapToItem(workingCard,icon.width/2,icon.height/2).y-title.mapToItem(workingCard,0,title.height/2).y)<1,"Status icon is not aligned with the title")
+          compare(findChild(workingCard,"t3StatusLabel").color.toString(),workingCard.statusColor.toString(),"Status label missed its semantic color")
+          compare(workingCard.statusColor.toString(),(variant.requestId ? Island.Design.warning : variant.status==="completed" ? Island.Design.success : variant.status==="failed" ? Island.Design.danger : Island.Design.info).toString())
+        }
+        var palette=Island.ThemePalette.values
+        Island.ThemePalette.values={blue:"#4488ff",green:"#44dd88",yellow:"#ffdd44"};wait(30)
+        compare(workingCard.statusColor.toString(),Island.Design.info.toString(),"Live theme change did not update status")
+        Island.ThemePalette.values=palette
         var section=findChild(pages,"t3Section"),many=[row,second]
         for(var n=3;n<=6;n++) many.push(Object.assign({},second,{id:"thread-"+n}))
         snapshot(many);wait(50)
@@ -85,11 +100,12 @@ ShellRoot {
         verify(card.y<doneCard.y && doneCard.y<workingCard.y,"Threads must sort as needs input, completed, working")
         compare(findChild(card,"t3Answer-q1"),field,"Sorting replaced the input form")
         compare(field.text,draft,"Sorting discarded the input draft")
-        row.projectIcon={kind:"lucide",name:"folder-code"}
+        row.projectIcon={kind:"lucide",name:"folder-code",color:"red"}
         snapshot([row,second]);wait(80)
         var projectIcon=findChild(card,"t3ProjectIcon")
         verify(projectIcon.visible && projectIcon.geometry.indexOf("path")>=0,"API project icon was not rendered")
         compare(findChild(projectIcon,"projectLucideIcon").status,Image.Ready)
+        compare(projectIcon.tint.toString(),projectIcon.dark ? "#ff6467" : "#e7000b","Project icon lost the original T3 color")
         pages.controls=true;wait(30);verify(!spinner.animating,"Hidden page kept animating")
         pages.controls=false;wait(300)
         field.forceActiveFocus()

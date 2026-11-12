@@ -25,6 +25,7 @@ Item {
   signal weatherRequested()
   signal closeRequested()
   readonly property bool showPlayer: service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
+  readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
   property bool historyOpen: false
   onExpandedChanged: if (!expanded) historyOpen = false
   readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
@@ -71,11 +72,13 @@ Item {
     spacing:Design.gap.small
     SectionHeading {
       objectName:"mediaSectionHeading"
+      visible:!root.mediaToast
       Layout.fillWidth:true
       title:root.service && root.service.player && /spotify/i.test(root.service.player.identity || "") ? "Spotify" : root.strings.t("media.title")
     }
     MediaCard {
       id: mediaPlayer
+      color:root.mediaToast ? "transparent" : Design.surface
       externalFeedback: root.externalFeedback
       objectName: "islandMediaPlayer"
       Layout.fillWidth: true

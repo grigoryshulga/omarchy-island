@@ -2,6 +2,13 @@
 var busyStates = ["preparing", "starting", "queued", "running", "waiting"]
 function busy(row) { return row && busyStates.indexOf(row.status) >= 0 }
 // Requests include questions, approvals and authentication handled in T3.
+function statusRole(row) {
+  if(row && row.requestId) return "warning"
+  if(row && row.status==="failed") return "danger"
+  if(row && row.status==="completed") return "success"
+  if(busy(row)) return "info"
+  return "secondaryText"
+}
 function statusRank(row) {return row && row.requestId ? 0 : busy(row) ? 2 : 1}
 function toggle(selected, value, multi) {
   if (!multi) return [value]
@@ -34,4 +41,4 @@ function transitions(previous, next) {
     return state!=="idle" && (old ? alertState(old)!==state : !!row.requestId || busy(row))
   })
 }
-if(typeof module!=="undefined") module.exports={statusRank:statusRank,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}
+if(typeof module!=="undefined") module.exports={statusRole:statusRole,statusRank:statusRank,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}
