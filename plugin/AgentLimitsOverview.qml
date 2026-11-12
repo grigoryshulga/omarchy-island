@@ -50,7 +50,7 @@ Column {
   Controls.ScrollView {
     id:viewport
     visible:!root.centerOpen && root.rows.length>0
-    width:parent.width;height:Math.min(cards.implicitHeight,Style.space(root.expanded ? 220 : 130))
+    width:parent.width;height:Math.min(cards.implicitHeight,Style.space(104))
     clip:true;contentWidth:availableWidth
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
     Column {
@@ -62,7 +62,7 @@ Column {
           width:cards.width
           row:root.rows.find(function(r){return r.id===windowId}) || ({id:windowId,name:"",label:"",remaining:null})
           strings:root.strings;feedback:root.feedback
-          pinned:root.backend.pins.indexOf(windowId)>=0;interactive:root.expanded
+          pinned:root.backend.pins.indexOf(windowId)>=0;interactive:false;compact:true
           now:root.backend.now
           onPinRequested:id=>root.pin(id)
         }

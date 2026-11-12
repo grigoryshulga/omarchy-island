@@ -461,6 +461,7 @@ BarWidget {
       compactNotifications: preview.frameSuppressed && !root.pinned && !root.hoverOpen
       radialBraille: root.setting("radialBraille",true)
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+      height:Math.min(implicitHeight,parent.height)
       service: root.service; strings: strings; bar: root.bar
       expanded: root.contentExpanded
       focus: root.pinned

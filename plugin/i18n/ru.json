@@ -1,4 +1,12 @@
 {
+  "overview.t3Finished": "Завершены: %1",
+  "overview.t3Failed": "С ошибкой: %1",
+  "overview.t3Other": "Неактивны: %1",
+  "overview.back": "Назад к обзору",
+  "overview.mediaDetails": "Управление воспроизведением",
+  "overview.t3Details": "Все сессии T3 Code",
+  "overview.t3Attention": "Требуют внимания: %1",
+  "overview.t3Working": "Работают: %1",
   "media.title": "Media",
   "t3.expandList": "Показать ещё %1",
   "t3.collapseList": "Свернуть список",

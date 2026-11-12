@@ -1,4 +1,12 @@
 {
+  "overview.t3Finished": "Completed: %1",
+  "overview.t3Failed": "Failed: %1",
+  "overview.t3Other": "Inactive: %1",
+  "overview.back": "Back to overview",
+  "overview.mediaDetails": "Playback details",
+  "overview.t3Details": "All T3 Code sessions",
+  "overview.t3Attention": "Needs attention: %1",
+  "overview.t3Working": "Working: %1",
   "media.title": "Media",
   "t3.expandList": "Show %1 more",
   "t3.collapseList": "Show fewer",

@@ -15,6 +15,7 @@ Rectangle {
   property var feedback:null
   property bool detailsOpen:false
   property bool compactToast:false
+  property bool compactOverview:false
   readonly property var statusIcon:working ? workingIcon : stateIcon
   readonly property bool islandSpotlightSurface:true
   readonly property var request:row ? row.request : null
@@ -31,6 +32,7 @@ Rectangle {
   property real now:Date.now()/1000
   onRequestKeyChanged:detailsOpen=false
   signal expandRequested()
+  signal overviewDetailsRequested()
   function answers() {
     var result={}
     for(var i=0;i<questions.count;i++) {var q=questions.itemAt(i);if(q.answer.length) result[q.question.id]=q.answer}
@@ -86,18 +88,20 @@ Rectangle {
               text:root.row.title;typeRole:"body";font.weight:Font.DemiBold;elide:Text.ElideRight
             }
           }
+          PlainText {visible:root.compactOverview && root.needsInput;text:root.statusText;typeRole:"caption";color:root.statusColor;Layout.maximumWidth:root.width*0.3;elide:Text.ElideRight}
           PlainText {text:T3.duration(root.row,root.now,Commons.I18n.formatNumber);typeRole:"caption";color:Design.secondaryText}
           FeedbackButton {
             objectName:"t3Details"
-            visible:!root.expanded || root.detailText!==""
+            visible:root.compactOverview || !root.expanded || root.detailText!==""
             iconText:root.detailsOpen ? "󰅃" : "󰅀"
             tooltipText:root.strings.t(root.expanded ? root.detailsOpen ? "t3.hideDetails" : "t3.details" : "t3.expand")
             horizontalPadding:Design.gap.tight;verticalPadding:Design.gap.micro
             focusable:root.expanded;feedback:root.feedback
-            onClicked:root.expanded ? root.detailsOpen=!root.detailsOpen : root.expandRequested()
+            onClicked:root.compactOverview && root.expanded ? root.overviewDetailsRequested() : root.expanded ? root.detailsOpen=!root.detailsOpen : root.expandRequested()
           }
         }
         RowLayout {
+          visible:!root.compactOverview
           Layout.fillWidth:true;spacing:Design.gap.medium
           ProjectIcon {objectName:"t3ProjectIcon";visible:!!root.row.project;icon:root.row.projectIcon || null;Layout.alignment:Qt.AlignVCenter}
           PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;text:root.row.project;typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
@@ -107,7 +111,7 @@ Rectangle {
     }
     ColumnLayout {
       Layout.fillWidth:true
-      visible:root.expanded && !!root.request && root.request.canRespond
+      visible:root.expanded && !root.compactOverview && !!root.request && root.request.canRespond
       enabled:root.editable
       spacing:Design.gap.medium
       Repeater {
@@ -127,11 +131,11 @@ Rectangle {
     }
     PlainText {
       Layout.fillWidth:true;wrapMode:Text.Wrap;typeRole:"caption";color:Design.secondaryText
-      visible:root.expanded && root.needsInput && (!root.request || !root.request.canRespond || !root.bridge.canRespond || (root.response!=="" && root.response!=="sending"))
+      visible:root.expanded && !root.compactOverview && root.needsInput && (!root.request || !root.request.canRespond || !root.bridge.canRespond || (root.response!=="" && root.response!=="sending"))
       text:root.strings.t(root.response ? "t3.response."+root.response : (!root.bridge || !root.bridge.connected) ? "t3.response.offline" : root.request && root.request.canRespond && !root.bridge.canRespond ? "t3.readOnly" : "t3.continueInT3")
     }
     PlainText {
-      Layout.fillWidth:true;visible:root.expanded && root.detailsOpen
+      Layout.fillWidth:true;visible:root.expanded && !root.compactOverview && root.detailsOpen
       text:root.detailText;wrapMode:Text.Wrap;typeRole:"caption"
     }
   }

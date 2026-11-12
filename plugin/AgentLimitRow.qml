@@ -10,22 +10,30 @@ Surface {
   required property var strings
   property bool pinned:false
   property bool interactive:false
+  property bool compact:false
   property var feedback:null
   property double now:Date.now()
   Accessible.name:row.name+" · "+row.label
-  Accessible.description:strings.t(row.stale ? "limits.cached" : "limits.remaining")
+  Accessible.description:strings.t(row.pendingReset ? "limits.awaitingReset" : row.stale ? "limits.cached" : "limits.remaining")
   signal pinRequested(string id)
-  implicitHeight:body.implicitHeight+Design.gap.large*2
+  readonly property real padding:compact ? Design.gap.small : Design.gap.large
+  implicitHeight:body.implicitHeight+padding*2
   LayoutMirroring.enabled:Commons.I18n.rightToLeft
   LayoutMirroring.childrenInherit:true
   ColumnLayout {
     id:body
-    x:Design.gap.large;y:Design.gap.large
-    width:parent.width-2*Design.gap.large
+    x:root.padding;y:root.padding
+    width:parent.width-2*root.padding
     spacing:Design.gap.tight
     RowLayout {
       Layout.fillWidth:true
-      PlainText {Layout.fillWidth:true;typeRole:"title";text:root.row.name+" · "+root.row.label;elide:Text.ElideRight}
+      PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;typeRole:root.compact ? "body" : "title";text:root.row.name+" · "+root.row.label;elide:Text.ElideRight}
+      BatteryGauge {
+        visible:root.compact && root.row.remaining!==null
+        Layout.preferredWidth:Style.space(104)
+        fraction:root.row.remaining===null ? 0 : root.row.remaining/100
+        warningThreshold:(Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical"))+0.001)/100
+      }
       PlainText {
         objectName:"limitRemaining"
         typeRole:"title"
@@ -43,14 +51,14 @@ Surface {
     }
     BatteryGauge {
       Layout.fillWidth:true
-      visible:root.row.remaining!==null
+      visible:!root.compact && root.row.remaining!==null
       fraction:root.row.remaining===null ? 0 : root.row.remaining/100
       warningThreshold:(Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical"))+0.001)/100
     }
     PlainText {
       Layout.fillWidth:true;typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap
       objectName:"limitResetCountdown"
-      visible:text!==""
+      visible:!root.compact && text!==""
       text:Model.resetCountdown(root.row,root.now,root.strings,Commons.I18n.formatNumber)
     }
   }

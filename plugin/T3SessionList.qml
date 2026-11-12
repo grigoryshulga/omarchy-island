@@ -15,10 +15,16 @@ Column {
   property bool expanded:false
   property bool active:false
   property bool listExpanded:false
+  property bool summaryMode:false
+  property bool allSessions:false
+  property real maximumHeight:Style.space(376)
+  readonly property var summaryIds:T3.overviewRows(rows)
+  readonly property var counts:T3.counts(rows)
   onExpandedChanged:if(!expanded) {listExpanded=false;viewport.contentItem.contentY=0}
   property var feedback:null
   readonly property var rows:bridge ? bridge.rows : []
   signal expandRequested()
+  signal detailsRequested()
   spacing:Design.gap.small
   // Keep stable delegates and order within each status group, including drafts.
   function sync() {
@@ -42,13 +48,50 @@ Column {
   }
   onRowsChanged:sync()
   Component.onCompleted:sync()
-  SectionHeading {width:parent.width;title:"T3 Code";detail:Commons.I18n.formatNumber(root.rows.length)}
+  Item {
+    visible:!root.allSessions
+    width:parent.width
+    implicitHeight:Math.max(headingContent.implicitHeight,openDetails.implicitHeight)
+    Flow {
+      id:headingContent
+      objectName:"t3SummaryHeading"
+      width:parent.width-(root.summaryMode ? openDetails.width+Design.gap.small : 0)
+      spacing:Design.gap.small
+      SectionHeading {width:root.summaryMode ? implicitWidth : parent.width;title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length);height:Design.compactControlHeight}
+      Repeater {
+        model:[{key:"attention",icon:"󰋗",role:"warning"},{key:"working",icon:"",role:"info"},{key:"finished",icon:"✓",role:"success"},{key:"failed",icon:"󰅙",role:"danger"},{key:"other",icon:"·",role:"secondaryText"}]
+        FeedbackButton {
+          id:badge
+          required property var modelData
+          readonly property int count:root.counts[modelData.key]
+          readonly property color tint:Design[modelData.role]
+          objectName:"t3Count-"+modelData.key
+          visible:root.summaryMode && count>0
+          compact:true;focusable:root.expanded;feedback:root.feedback
+          horizontalPadding:Design.gap.tight
+          implicitWidth:badgeContent.implicitWidth+2*horizontalPadding
+          tooltipText:root.strings.t("overview.t3"+modelData.key.charAt(0).toUpperCase()+modelData.key.slice(1)).arg(Commons.I18n.formatNumber(count))
+          Accessible.name:tooltipText
+          onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()
+          RowLayout {
+            id:badgeContent
+            anchors.centerIn:parent
+            spacing:Design.gap.micro
+            T3Spinner {objectName:"t3CountSpinner";visible:badge.modelData.key==="working";active:root.active && root.visible;tint:badge.tint}
+            PlainText {visible:badge.modelData.key!=="working";text:badge.modelData.icon;typeRole:"caption";color:badge.tint}
+            PlainText {text:Commons.I18n.formatNumber(badge.count);typeRole:"caption";color:badge.tint}
+          }
+        }
+      }
+    }
+    FeedbackButton {id:openDetails;objectName:"t3OpenDetails";anchors.right:parent.right;anchors.top:parent.top;implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;visible:root.summaryMode;iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔";tooltipText:root.strings.t("overview.t3Details");compact:true;focusable:root.expanded;feedback:root.feedback;onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()}
+  }
   ListModel {id:items}
   Controls.ScrollView {
     id:viewport
     objectName:"t3SessionsScroll"
     width:parent.width
-    height:Math.min(cards.implicitHeight,Style.space(root.expanded ? 376 : 352))
+    height:Math.min(cards.implicitHeight,root.summaryMode ? Style.space(144) : root.maximumHeight)
     visible:root.rows.length>0
     contentWidth:availableWidth
     clip:true
@@ -66,16 +109,18 @@ Column {
           width:cards.width
           row:root.bridge.row(sessionId) || ({id:sessionId,title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
           bridge:root.bridge;strings:root.strings;expanded:root.expanded;feedback:root.feedback
+          compactOverview:root.summaryMode
           active:root.active && visible && y+height>viewport.contentItem.contentY && y<viewport.contentItem.contentY+viewport.availableHeight
-          visible:root.expanded ? root.listExpanded || index<4 : index===0
+          visible:root.summaryMode ? root.summaryIds.indexOf(sessionId)>=0 && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
           onExpandRequested:root.expandRequested()
+          onOverviewDetailsRequested:root.detailsRequested()
         }
       }
     }
   }
   FeedbackButton {
     objectName:"t3ExpandList"
-    visible:root.expanded && root.rows.length>4
+    visible:!root.summaryMode && !root.allSessions && root.expanded && root.rows.length>4
     width:parent.width
     text:root.listExpanded ? root.strings.t("t3.collapseList") : root.strings.t("t3.expandList").arg(Commons.I18n.formatNumber(root.rows.length-4))
     focusable:root.expanded

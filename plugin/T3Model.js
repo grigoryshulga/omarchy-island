@@ -10,6 +10,24 @@ function statusRole(row) {
   return "secondaryText"
 }
 function statusRank(row) {return row && row.requestId ? 0 : busy(row) ? 2 : 1}
+function overviewRows(rows) {
+  var working=0
+  return rows.filter(function(row){
+    if(row.requestId || row.status==="failed") return true
+    return busy(row) && ++working<=2
+  }).map(function(row){return row.id})
+}
+function counts(rows) {
+  var result={attention:0,working:0,finished:0,failed:0,other:0}
+  rows.forEach(function(row){
+    if(row.requestId) result.attention++
+    else if(busy(row)) result.working++
+    else if(row.status==="completed") result.finished++
+    else if(row.status==="failed") result.failed++
+    else result.other++
+  })
+  return result
+}
 function toggle(selected, value, multi) {
   if (!multi) return [value]
   return selected.indexOf(value) >= 0 ? selected.filter(function(v){return v!==value}) : selected.concat([value])
@@ -41,4 +59,4 @@ function transitions(previous, next) {
     return state!=="idle" && (old ? alertState(old)!==state : !!row.requestId || busy(row))
   })
 }
-if(typeof module!=="undefined") module.exports={statusRole:statusRole,statusRank:statusRank,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}
+if(typeof module!=="undefined") module.exports={overviewRows:overviewRows,counts:counts,statusRole:statusRole,statusRank:statusRank,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}

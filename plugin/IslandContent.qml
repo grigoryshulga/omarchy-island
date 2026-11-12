@@ -25,15 +25,42 @@ Item {
   signal calendarRequested()
   signal weatherRequested()
   signal closeRequested()
-  readonly property bool limitsCenterOpen:limitsBlock.visible && limitsBlock.centerOpen
-  function closeLimits() {if(!limitsCenterOpen) return false;limitsBlock.centerOpen=false;return true}
-  readonly property bool showPlayer:!limitsCenterOpen && service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
+  readonly property bool limitsCenterOpen:!!limitsBlock.backend && limitsBlock.backend.allowed && expanded && limitsBlock.centerOpen
+  property string detailPage: ""
+  property real pageHeight: Style.space(520)
+  readonly property bool detailOpen: limitsCenterOpen || detailPage!==""
+  property var returnFocus: null
+  property real summaryScrollY: 0
+  KeyboardNavigation {id:detailNavigation;scope:root}
+  function openDetails(page) {
+    if(!expanded) {expandRequested();return}
+    returnFocus=detailNavigation.focused
+    summaryScrollY=overviewScroll.contentItem.contentY
+    detailPage=page
+    historyOpen=false
+    overviewScroll.contentItem.contentY=0
+    Qt.callLater(function(){detailNavigation.first(body)})
+  }
+  function restoreSummary() {
+    Qt.callLater(function(){
+      overviewScroll.contentItem.contentY=summaryScrollY
+      if(returnFocus && returnFocus.visible) detailNavigation.focusItem(returnFocus)
+    })
+  }
+  function back() {
+    if(!detailOpen) return false
+    detailPage="";limitsBlock.centerOpen=false;historyOpen=false
+    restoreSummary()
+    return true
+  }
+  readonly property bool showPlayer:(!detailOpen || detailPage==="media") && service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
   readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
   property bool historyOpen: false
-  onExpandedChanged: if (!expanded) historyOpen = false
+  onExpandedChanged: if (!expanded) {historyOpen=false;detailPage=""}
   readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
   readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
   readonly property var displayedRows: !expanded && !hovering && service && service.latest ? (service.latest.downloadPath ? [] : [service.latest]) : rows
+  readonly property int notificationLimit:expanded ? (detailPage==="notifications" ? 100 : 3) : hovering ? 3 : 1
   readonly property var groups: Model.previewGroups(displayedRows,100)
   function syncGroups() {
     Model.syncKeys(groupItems,groups.map(function(group){return group.source}))
@@ -48,15 +75,28 @@ Item {
   ListModel {id:groupItems}
   readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
   readonly property var t3:service && ("t3" in service) ? service.t3 : null
-  readonly property bool showT3:!limitsCenterOpen && !!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
+  readonly property bool showT3:(!detailOpen || detailPage==="t3") && !!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
   property var notificationIcon:null
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
-  implicitHeight: body.implicitHeight
+  implicitHeight: expanded ? pageHeight : body.implicitHeight
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
+  Controls.ScrollView {
+    id:overviewScroll
+    objectName:"overviewScroll"
+    width:parent.width
+    height:Math.min(root.height,root.implicitHeight)
+    clip:true;contentWidth:availableWidth
+    Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
   ColumnLayout {
     id: body
-    width: parent.width
+    width: overviewScroll.availableWidth
     spacing: root.compactNotifications ? Design.gap.tight : Design.gap.section
+  RowLayout {
+    visible:root.detailPage!==""
+    Layout.fillWidth:true
+    FeedbackButton {objectName:"overviewBack";iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
+    SectionHeading {Layout.fillWidth:true;title:root.detailPage==="t3" ? "T3 Code" : root.strings.t(root.detailPage==="media" ? "media.title" : "notifications.active")}
+  }
   T3SessionCard {
     id:t3Toast
     objectName:"t3ActivityToast"
@@ -75,7 +115,7 @@ Item {
     spacing:Design.gap.small
     SectionHeading {
       objectName:"mediaSectionHeading"
-      visible:!root.mediaToast
+      visible:!root.mediaToast && !mediaPlayer.compactOverview && root.detailPage!=="media"
       Layout.fillWidth:true
       title:root.service && root.service.player && /spotify/i.test(root.service.player.identity || "") ? "Spotify" : root.strings.t("media.title")
     }
@@ -89,6 +129,8 @@ Item {
       strings: root.strings
       bar: root.bar
       expanded: root.expanded
+      compactOverview:!root.mediaToast && root.detailPage!=="media"
+      onDetailsRequested:root.openDetails("media")
       active: root.overviewActive
       radialBraille: root.radialBraille
       onExpandRequested: root.expandRequested()
@@ -100,7 +142,7 @@ Item {
     id:battery
     objectName:"islandBatteryOverview"
     Layout.fillWidth:true
-    visible:!root.limitsCenterOpen && present && (root.expanded || root.hovering)
+    visible:!root.detailOpen && present && (root.expanded || root.hovering)
     active:root.overviewActive && root.visible && (root.expanded || root.hovering)
     strings:root.strings
     externalFeedback:root.externalFeedback
@@ -110,8 +152,16 @@ Item {
     id:limitsBlock
     Layout.fillWidth:true
     backend:root.service && ("agentLimits" in root.service) ? root.service.agentLimits : null
-    visible:!!backend && backend.allowed && (root.expanded || root.hovering)
+    visible:(!root.detailOpen || root.limitsCenterOpen) && !!backend && backend.allowed && (root.expanded || root.hovering)
     strings:root.strings;expanded:root.expanded;feedback:root.externalFeedback
+    onCenterOpenChanged:{
+      if(centerOpen) {
+        root.returnFocus=detailNavigation.focused
+        root.summaryScrollY=overviewScroll.contentItem.contentY
+        overviewScroll.contentItem.contentY=0
+        Qt.callLater(function(){detailNavigation.first(limitsBlock)})
+      } else root.restoreSummary()
+    }
     onExpandRequested:root.expandRequested()
     onSettingRequested:(key,value)=>root.settingRequested(key,value)
   }
@@ -122,12 +172,28 @@ Item {
     bridge:root.t3;strings:root.strings;expanded:root.expanded
     active:root.overviewActive && root.visible && root.showT3
     feedback:root.externalFeedback
+    summaryMode:root.detailPage!=="t3"
+    allSessions:root.detailPage==="t3"
+    maximumHeight:Math.max(Style.space(96),root.height-Style.space(128))
+    onDetailsRequested:root.openDetails("t3")
     onExpandRequested:root.expandRequested()
   }
 
   RowLayout {
+    Layout.fillWidth:true
+    visible:root.expanded && !root.detailOpen
+    FeedbackButton {
+      objectName:"notificationsOpenDetails"
+      text:root.strings.t("notifications.active")+" · "+Commons.I18n.formatNumber(root.rows.length)
+      iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔"
+      Layout.fillWidth:true;leftAlign:true;focusable:true;feedback:root.externalFeedback
+      onClicked:root.openDetails("notifications")
+    }
+    FeedbackButton {objectName:"overviewDnd";iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
+  }
+  RowLayout {
     Layout.fillWidth: true
-    visible: root.expanded && !root.limitsCenterOpen
+    visible: root.expanded && root.detailPage==="notifications"
     FeedbackButton {
       objectName: "notificationsActive"
       text: root.strings.t("notifications.active")
@@ -148,16 +214,16 @@ Item {
   }
   RowLayout {
     Layout.fillWidth: true
-    visible: !root.limitsCenterOpen && root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
+    visible: root.detailPage==="notifications" && root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
     Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Design.secondaryText; typeRole:"caption" }
   }
   Controls.ScrollView {
     id: scroll
     objectName: "notificationsScroll"
-    visible: !root.limitsCenterOpen && (root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification"))
+    visible: (!root.detailOpen || root.detailPage==="notifications") && (root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification"))
     Layout.fillWidth: true
-    Layout.preferredHeight: Math.min(cards.implicitHeight,root.showT3 ? Math.max(Style.space(96),Style.space(root.expanded ? 360 : 330)-t3Block.implicitHeight) : Style.space(root.compactNotifications ? 96 : root.expanded ? 360 : 330))
+    Layout.preferredHeight: Math.min(cards.implicitHeight,(root.detailPage==="notifications" ? Math.max(Style.space(96),root.height-Style.space(180)) : Style.space(root.compactNotifications ? 96 : root.expanded ? 220 : 330)))
     clip: true
     contentWidth: availableWidth
     Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
@@ -178,9 +244,9 @@ Item {
           expanded: root.expanded
           compact: root.compactNotifications
           externalFeedback: root.externalFeedback
-          limit: root.expanded ? 100 : root.hovering ? 3 : 1
+          limit: root.notificationLimit
           visible: group.positions[0] < limit
-          onExpandRequested: root.expandRequested()
+          onExpandRequested: root.expanded ? root.openDetails("notifications") : root.expandRequested()
         }
       }
       PlainText {
@@ -222,7 +288,7 @@ Item {
     }
   }
   Flow {
-    visible: !root.limitsCenterOpen && root.expanded && root.service && root.service.mutedSources.length > 0
+    visible: root.detailPage==="notifications" && root.expanded && root.service && root.service.mutedSources.length > 0
     Layout.fillWidth: true
     spacing:Design.gap.tight
     Repeater {
@@ -231,5 +297,6 @@ Item {
     }
   }
   PlainText { Layout.fillWidth: true; visible: !root.compactNotifications && root.service && root.service.error !== ""; text: root.strings.t("error").arg(root.service ? root.service.error : ""); color: Design.danger; wrapMode: Text.Wrap }
+  }
   }
 }

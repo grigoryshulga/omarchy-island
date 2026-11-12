@@ -169,7 +169,7 @@ ShellRoot {
         widget.hoverOpen=true
       }
       if(exitTick===138) {
-        checkExit(!popup.bareCardShown && findChild(widget,"mediaSectionHeading").visible,"hovering music toast did not restore Overview")
+        checkExit(!popup.bareCardShown && player.compactOverview,"hovering music toast did not restore Overview")
         checkExit(player.color.toString()===Island.Design.surface.toString(),"Overview did not restore its media card")
         console.log("MUSIC_TOAST_CARD_PASS")
       }

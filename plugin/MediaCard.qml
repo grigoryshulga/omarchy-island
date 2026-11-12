@@ -14,13 +14,15 @@ Surface {
   readonly property var feedback: externalFeedback || brailleFeedback
   readonly property bool hovered: hover.hovered
   property bool expanded: false
+  property bool compactOverview: false
   property bool active: true
   property bool radialBraille: true
   readonly property var player: service ? service.player : null
   signal expandRequested()
   signal closeRequested()
+  signal detailsRequested()
   implicitHeight: body.implicitHeight+2*Design.cardPadding
-  MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return} root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
+  MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return} root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); if(root.compactOverview && root.expanded) root.detailsRequested();else root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight {
@@ -51,6 +53,7 @@ Surface {
         Layout.fillWidth: true
         Layout.minimumWidth: 0
         spacing:Design.gap.tight
+        PlainText {visible:root.compactOverview;Layout.fillWidth:true;text:root.player ? root.player.identity : root.strings.t("media.title");typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
         PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); typeRole: "section" }
         PlainText { Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Design.accent : Design.secondaryText; typeRole:"caption" }
       }
@@ -63,11 +66,21 @@ Surface {
         FeedbackButton { feedback: root.feedback; iconText: "󰒮"; tooltipText: root.strings.t("previous"); radius: Design.controlRadius; iconSize: Style.font.iconLarge; horizontalPadding:Design.gap.small; verticalPadding:Design.gap.small; focusable: true; enabled: root.player !== null && root.player.canGoPrevious; onClicked: root.service.media("previous") }
         PlayPauseButton { feedback: root.feedback; objectName: "mediaToggle"; playing: root.player !== null && root.player.isPlaying; tooltipText: root.strings.t("playPause"); enabled: root.player !== null && root.player.canTogglePlaying; onClicked: root.service.media("toggle") }
         FeedbackButton { feedback: root.feedback; iconText: "󰒭"; tooltipText: root.strings.t("next"); radius: Design.controlRadius; iconSize: Style.font.iconLarge; horizontalPadding:Design.gap.small; verticalPadding:Design.gap.small; focusable: true; enabled: root.player !== null && root.player.canGoNext; onClicked: root.service.media("next") }
+        FeedbackButton {objectName:"mediaOpenDetails";visible:root.compactOverview;iconText:"󰅀";tooltipText:root.strings.t("overview.mediaDetails");compact:true;focusable:root.expanded;feedback:root.feedback;onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()}
       }
+    }
+    Rectangle {
+      objectName:"mediaCompactProgress"
+      visible:root.compactOverview && root.player && root.player.lengthSupported && root.player.positionSupported
+      Layout.fillWidth:true
+      implicitHeight:Style.space(2)
+      radius:Math.min(Design.controlRadius,height/2)
+      color:Design.raised
+      Rectangle {height:parent.height;width:parent.width*(root.player ? Math.max(0,Math.min(1,root.player.position/Math.max(1,root.player.length))) : 0);radius:parent.radius;color:Design.accent}
     }
     Item {
       Layout.fillWidth: true
-      property real reveal: root.expanded && root.player !== null ? 1 : 0
+      property real reveal: root.expanded && !root.compactOverview && root.player !== null ? 1 : 0
       implicitHeight: details.implicitHeight * reveal
       visible: reveal > 0
       clip: true

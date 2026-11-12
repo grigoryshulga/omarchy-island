@@ -53,3 +53,16 @@ assert.equal(icons.color('red',true,'fallback'),'#ff6467');
 assert.equal(icons.color('red',false,'fallback'),'#e7000b');
 assert.equal(icons.color('unknown',true,'fallback'),'fallback');
 assert.equal(icons.color('constructor',true,'fallback'),'fallback');
+
+
+// Overview hides terminal successes and bounds working rows without hiding requests/failures.
+const overviewRows = [
+  {id:'done',status:'completed'}, {id:'a',status:'running'},
+  {id:'b',status:'queued'}, {id:'c',status:'running'},
+  {id:'question',status:'running',requestId:'request'}, {id:'failed',status:'failed'}
+];
+assert.deepEqual(model.overviewRows(overviewRows), ['a','b','question','failed']);
+assert.deepEqual(model.counts(overviewRows), {attention:1,working:3,finished:1,failed:1,other:0});
+assert.deepEqual(model.overviewRows([{id:'done',status:'completed'}]), []);
+
+assert.deepEqual(model.counts([{status:'cancelled'}, {status:'idle'}, {status:'failed',requestId:'q'}]), {attention:1,working:0,finished:0,failed:0,other:2});
