@@ -20,11 +20,14 @@ Item {
   property string alertKind: ""
   property var weather: null
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
+  signal settingRequested(string key,var value)
   signal expandRequested()
   signal calendarRequested()
   signal weatherRequested()
   signal closeRequested()
-  readonly property bool showPlayer: service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
+  readonly property bool limitsCenterOpen:limitsBlock.visible && limitsBlock.centerOpen
+  function closeLimits() {if(!limitsCenterOpen) return false;limitsBlock.centerOpen=false;return true}
+  readonly property bool showPlayer:!limitsCenterOpen && service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
   readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
   property bool historyOpen: false
   onExpandedChanged: if (!expanded) historyOpen = false
@@ -45,7 +48,7 @@ Item {
   ListModel {id:groupItems}
   readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
   readonly property var t3:service && ("t3" in service) ? service.t3 : null
-  readonly property bool showT3:!!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
+  readonly property bool showT3:!limitsCenterOpen && !!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
   property var notificationIcon:null
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
   implicitHeight: body.implicitHeight
@@ -97,11 +100,20 @@ Item {
     id:battery
     objectName:"islandBatteryOverview"
     Layout.fillWidth:true
-    visible:present && (root.expanded || root.hovering)
+    visible:!root.limitsCenterOpen && present && (root.expanded || root.hovering)
     active:root.overviewActive && root.visible && (root.expanded || root.hovering)
     strings:root.strings
     externalFeedback:root.externalFeedback
     onExpandRequested:root.expandRequested()
+  }
+  AgentLimitsOverview {
+    id:limitsBlock
+    Layout.fillWidth:true
+    backend:root.service && ("agentLimits" in root.service) ? root.service.agentLimits : null
+    visible:!!backend && backend.allowed && (root.expanded || root.hovering)
+    strings:root.strings;expanded:root.expanded;feedback:root.externalFeedback
+    onExpandRequested:root.expandRequested()
+    onSettingRequested:(key,value)=>root.settingRequested(key,value)
   }
   T3SessionList {
     id:t3Block
@@ -115,7 +127,7 @@ Item {
 
   RowLayout {
     Layout.fillWidth: true
-    visible: root.expanded
+    visible: root.expanded && !root.limitsCenterOpen
     FeedbackButton {
       objectName: "notificationsActive"
       text: root.strings.t("notifications.active")
@@ -136,14 +148,14 @@ Item {
   }
   RowLayout {
     Layout.fillWidth: true
-    visible: root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
+    visible: !root.limitsCenterOpen && root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
     Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Design.secondaryText; typeRole:"caption" }
   }
   Controls.ScrollView {
     id: scroll
     objectName: "notificationsScroll"
-    visible: root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification")
+    visible: !root.limitsCenterOpen && (root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification"))
     Layout.fillWidth: true
     Layout.preferredHeight: Math.min(cards.implicitHeight,root.showT3 ? Math.max(Style.space(96),Style.space(root.expanded ? 360 : 330)-t3Block.implicitHeight) : Style.space(root.compactNotifications ? 96 : root.expanded ? 360 : 330))
     clip: true
@@ -210,7 +222,7 @@ Item {
     }
   }
   Flow {
-    visible: root.expanded && root.service && root.service.mutedSources.length > 0
+    visible: !root.limitsCenterOpen && root.expanded && root.service && root.service.mutedSources.length > 0
     Layout.fillWidth: true
     spacing:Design.gap.tight
     Repeater {

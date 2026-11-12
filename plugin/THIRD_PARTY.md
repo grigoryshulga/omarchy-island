@@ -51,3 +51,7 @@ SOFTWARE.
 ## Lucide project icons
 
 `vendor/lucide/Icons.js` contains SVG geometry from Lucide 1.8.0, distributed under the ISC license. See [LICENSE](vendor/lucide/LICENSE). Icon names come from T3 project metadata; named project colors follow T3, with the live Island accent as a fallback. No runtime dependency or remote icon requests are required.
+
+## Agent Limits
+
+`bin/agent-limits-sync`, `vendor/agent-limits/defaults.json`, the pure JS usage helpers, provider connection descriptions, and the collector tests are adapted from Grigory Shulga's [omarchy-agent-limits](https://github.com/grigoryshulga/omarchy-agent-limits), revision `06aea198476a0ff4fadb656ed5ac2b0439852a5a` (MIT). Island changes the defaults path and propagates unpriced token counts through aggregate buckets and enforces private cache permissions. UI components are implemented with Island's own design system. No provider brand assets are copied. See [license](vendor/agent-limits/LICENSE).

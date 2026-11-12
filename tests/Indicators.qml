@@ -51,6 +51,20 @@ ShellRoot {
       property bool busy:false
       property string error:""
     }
+    property var agentLimits:QtObject {
+      property bool allowed:false
+      property bool indicatorVisible:false
+      property var tightest:({name:"Codex",label:"Weekly",remaining:8,stale:false})
+      property var summary:[]
+      property var rows:[]
+      property var pins:[]
+      property var catalog:[]
+      property var cache:({providers:[]})
+      property double now:Date.now()
+      property string error:""
+      property bool busy:false
+      function loadCatalog(){}
+    }
     property var t3:t3State
     property var indicators:states
     property bool doNotDisturb:false
@@ -230,6 +244,13 @@ ShellRoot {
       widget.close();service.reminders.rows=[];wait(30)
       check(!reminderBadge.visible,"Cleared reminders left a badge")
       console.log("REMINDERS_INDICATOR_PASS")
+      var limitIndicator=findChild(widget,"islandAgentLimitsIndicator")
+      check(!limitIndicator.visible,"disabled limit indicator is visible")
+      service.agentLimits.allowed=true;service.agentLimits.indicatorVisible=true;wait(40)
+      check(limitIndicator.visible && limitIndicator.implicitWidth>0,"limit indicator missing")
+      check(clock.tooltipText.indexOf("Codex")>=0 && clock.tooltipText.indexOf("Weekly")>=0,"limit indicator tooltip lost provider/window")
+      check(limitIndicator.mapToItem(clock,0,0).x+limitIndicator.width<label.mapToItem(clock,0,0).x,"limit indicator overlaps clock")
+      service.agentLimits.indicatorVisible=false;service.agentLimits.allowed=false;wait(20)
       if(Quickshell.env("ISLAND_T3_ONLY")) {console.log("INDICATORS_PASS");Qt.quit();return}
       if(Quickshell.env("ISLAND_TEST_GPU")) {
         var frozen=new Date(2026,10,10,19,47),saved=widget.now

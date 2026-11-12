@@ -152,6 +152,7 @@ else:
         (module / 'ReminderState.qml').write_text('import QtQuick\nItem {}\n')
         (module / 'CalendarState.qml').write_text('import QtQuick\nItem {}\n')
         (module / 'WeatherService.qml').write_text('import QtQuick\nItem {}\n')
+        (module / 'AgentLimitsState.qml').write_text('import QtQuick\nItem {}\n')
         (module / 'T3State.qml').write_text('import QtQuick\nItem {signal activityChanged(var session)}\n')
         (module / 'IndicatorState.qml').write_text('import QtQuick\nItem {property var consumers:[];property bool downloading:false; function announceMode(mode,on){} function showOsd(payload){return false} function hideOsd(){}}\n')
         (module / 'DictationState.qml').write_text('import QtQuick\nItem {property bool active:false;readonly property bool showing:false}\n')

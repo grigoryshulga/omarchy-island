@@ -14,6 +14,7 @@ BarWidget {
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
   readonly property var t3:service && ("t3" in service) ? service.t3 : null
+  readonly property var agentLimits:service && ("agentLimits" in service) ? service.agentLimits : null
   property var registeredIndicators: null
   readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
   property real osdShown:showOsd ? 1 : 0
@@ -196,7 +197,7 @@ BarWidget {
     fixedWidth: root.implicitWidth
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
-    tooltipText: [root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : "",root.indicators && root.indicators.updateAvailable ? strings.t("indicator.updateAvailable") : ""].filter(function(s){return s!==""}).join(" · ")
+    tooltipText: [root.agentLimits && root.agentLimits.indicatorVisible && root.agentLimits.tightest ? root.agentLimits.tightest.name+" · "+root.agentLimits.tightest.label+" · "+Commons.I18n.formatNumber(Math.round(root.agentLimits.tightest.remaining))+"%" : "",root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : "",root.indicators && root.indicators.updateAvailable ? strings.t("indicator.updateAvailable") : ""].filter(function(s){return s!==""}).join(" · ")
     onPressed: button => { if (button === Qt.RightButton) root.cycleClockFormat(); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     onWheelMoved: delta => {if(delta) root.cyclePage(delta<0 ? 1 : -1)}
     ArtworkBackground {
@@ -232,6 +233,20 @@ BarWidget {
           T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:t3Count.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter}
           PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
           PlainText {id:t3Count;objectName:"islandT3Count";Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;verticalAlignment:Text.AlignVCenter}
+        }
+        MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
+      }
+      Item {
+        objectName:"islandAgentLimitsIndicator"
+        visible:!!root.agentLimits && root.agentLimits.indicatorVisible
+        implicitWidth:root.vertical ? Math.min(root.barSize-Style.space(4),limitIndicatorText.implicitWidth) : limitIndicatorText.implicitWidth
+        implicitHeight:root.vertical ? Style.space(18) : trigger.height
+        PlainText {
+          id:limitIndicatorText
+          anchors.centerIn:parent
+          width:parent.width;elide:Text.ElideRight;typeRole:"bar"
+          text:root.agentLimits && root.agentLimits.tightest ? "󰧑 "+Commons.I18n.formatNumber(Math.round(root.agentLimits.tightest.remaining))+"%"+(root.agentLimits.tightest.stale ? " ·" : "") : ""
+          color:root.agentLimits && root.agentLimits.tightest && root.agentLimits.tightest.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.barDanger : Design.barText
         }
         MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
       }

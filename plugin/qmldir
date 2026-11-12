@@ -41,6 +41,7 @@ PopupReveal 1.0 PopupReveal.qml
 PowerState 1.0 PowerState.qml
 singleton Preferences 1.0 Preferences.qml
 Service 1.0 Service.qml
+SettingsRow 1.0 SettingsRow.qml
 SettingsView 1.0 SettingsView.qml
 StatusBeacon 1.0 StatusBeacon.qml
 T3Question 1.0 T3Question.qml
@@ -66,3 +67,9 @@ CalendarAgenda 1.0 CalendarAgenda.qml
 CalendarSources 1.0 CalendarSources.qml
 ProjectIcon 1.0 ProjectIcon.qml
 singleton ThemePalette 1.0 ThemePalette.qml
+
+AgentLimitsState 1.0 AgentLimitsState.qml
+AgentLimitsOverview 1.0 AgentLimitsOverview.qml
+AgentLimitRow 1.0 AgentLimitRow.qml
+AgentLimitsCenter 1.0 AgentLimitsCenter.qml
+AgentLimitsProviders 1.0 AgentLimitsProviders.qml

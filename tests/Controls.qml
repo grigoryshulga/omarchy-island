@@ -159,28 +159,63 @@ ShellRoot {
       check(view.implicitHeight===stableHeight && !loader.active && settingsView.visible,"Settings did not inherit Controls size or started native backend")
       for(var windowWidth of [520,360]) {
         controlsWindow.implicitWidth=windowWidth;wait(40)
-        for(var tabName of ["behavior","sections","music","indicators","events"]) {
+        for(var tabName of ["general","panel","alerts","modules"]) {
           var tab=findChild(settingsView,"settingsTab-"+tabName),label=findChild(tab,"tabLabel")
           check(label.text.length>0 && label.width>=label.implicitWidth,"settings tab label is clipped: "+tabName+" ("+label.width+" < "+label.implicitWidth+")")
+          tab.forceActiveFocus();wait(20)
           var at=tab.mapToItem(settingsView,0,0)
-          check(at.x>=0 && at.x+tab.width<=settingsView.width && at.y+tab.height<=findChild(settingsView,"settingsViewport").y,"settings tab overflowed its container: "+tabName)
+          check(at.x>=-1 && at.x+tab.width<=settingsView.width+1 && at.y+tab.height<=findChild(settingsView,"settingsViewport").y,"focused settings tab was not revealed: "+tabName)
+          check(at.y===0,"settings categories wrapped into another row")
         }
       }
       controlsWindow.implicitWidth=520;wait(40)
       var hover=findChild(settingsView,"setting-hoverPreview")
       hover.toggled()
       check(scene.preferences[0]==="hoverPreview" && scene.preferences[1]===false,"toggle did not persist")
-      for(var category of ["sections","music","indicators","events","behavior"]) {
+      for(var category of ["panel","modules","alerts","general"]) {
         findChild(settingsView,"settingsTab-"+category).clicked();wait(20)
         check(view.implicitHeight===stableHeight,"settings category resized Controls")
-        if(category==="sections") check(!findChild(settingsView,"setting-controlsEnabled").enabled,"Controls can be disabled, losing Settings access")
-        if(category==="music") check(!findChild(settingsView,"setting-musicVisualizationStyle").enabled,"placeholder style is interactive")
-        if(category==="events") {
+        if(category==="panel") check(!findChild(settingsView,"setting-controlsEnabled").enabled,"Controls can be disabled, losing Settings access")
+        if(category==="modules") check(!findChild(settingsView,"setting-musicVisualizationStyle"),"placeholder style remains visible")
+        if(category==="alerts") {
           var style=findChild(settingsView,"setting-notificationStyle")
           style.changed("bar")
           check(scene.preferences[0]==="notificationStyle" && scene.preferences[1]==="bar","notification style did not persist")
         }
       }
+      var viewport=findChild(settingsView,"settingsViewport")
+      var delay=findChild(settingsView,"setting-hoverDelay"),delayHeight=delay.parent.parent.implicitHeight
+      view.settings={hoverPreview:false};wait(20)
+      check(!delay.enabled && delay.parent.parent.implicitHeight===delayHeight,"dependent delay moved or stayed interactive")
+      view.settings={};wait(20)
+      check(delay.enabled,"delay did not follow its parent switch")
+      var opening=findChild(settingsView,"setting-openingPage"),openingLabel=findChild(settingsView,"settingLabel-openingPage")
+      check(opening.mapToItem(settingsView,0,0).y<openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"wide choice did not stay inline")
+      controlsWindow.implicitWidth=360
+      var fontSize=Commons.Style.fontBaseSize
+      Commons.Style.fontOverrides=({});Commons.Style.fontBaseSize=fontSize*1.5;wait(40)
+      check(opening.width<=settingsView.width && opening.mapToItem(settingsView,0,0).y>=openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"narrow choice did not move below label")
+      for(var tabName of ["general","panel","alerts","modules"]) {
+        var tab=findChild(settingsView,"settingsTab-"+tabName)
+        tab.forceActiveFocus();wait(20)
+        var at=tab.mapToItem(settingsView,0,0)
+        check(at.x>=-1 && at.x+tab.width<=settingsView.width+1,"large text tab cannot be reached")
+      }
+      Commons.Style.fontBaseSize=fontSize;controlsWindow.implicitWidth=520;wait(40)
+      findChild(settingsView,"settingsTab-panel").clicked();wait(20)
+      check(viewport.contentHeight>viewport.height,"long settings category is not scrollable")
+      viewport.contentY=viewport.contentHeight-viewport.height
+      findChild(settingsView,"settingsTab-modules").clicked();wait(20)
+      check(viewport.contentY===0,"category switch retained previous scroll position")
+      var warning=findChild(settingsView,"setting-agentLimitsWarning"),critical=findChild(settingsView,"setting-agentLimitsCritical")
+      check(warning && critical && warning.maximum===100 && warning.step===5 && critical.value===5,"agent limit thresholds were lost during regrouping")
+      warning.moved(35)
+      check(scene.preferences[0]==="agentLimitsWarning" && scene.preferences[1]===35,"agent limit threshold did not persist")
+      var answer=findChild(settingsView,"setting-t3Responses"),answerHeight=answer.parent.parent.implicitHeight
+      check(!answer.enabled,"T3 responses are interactive while integration is off")
+      view.settings={t3Enabled:true};wait(20)
+      check(answer.enabled && answer.parent.parent.implicitHeight===answerHeight,"T3 responses did not follow parent or moved form")
+      view.settings={}
       view.back();wait(30)
       for(var section of ["audio","bluetooth","network","tailscale","monitors"]){
         view.openSection(section)

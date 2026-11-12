@@ -8,11 +8,12 @@ Item {
   id:root
   objectName:"batteryGauge"
   property real fraction:0
+  property real warningThreshold:0.20
   property bool charging:false
   property bool active:false
   // Urgency uses the same semantic role as every other Island warning.
   readonly property color lowChargeColor:Design.danger
-  readonly property color accent:fraction<0.20 ? lowChargeColor : Design.accent
+  readonly property color accent:fraction<warningThreshold ? lowChargeColor : Design.accent
   readonly property bool animating:active && visible && charging && fraction<1 && !Preferences.reduceMotion
   property real pulse:1
   implicitHeight:Style.space(10)

@@ -21,6 +21,8 @@ Item {
   readonly property alias reminders:reminderState
   ReminderState {id:reminderState}
   readonly property alias weather: weatherService
+  readonly property alias agentLimits:agentLimitsState
+  AgentLimitsState {id:agentLimitsState}
   readonly property alias t3: t3State
   property var latestT3:null
   property string t3TargetScreen:""
