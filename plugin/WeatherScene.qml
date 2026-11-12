@@ -1,6 +1,5 @@
 import QtQuick
 import qs.Commons
-import qs.Commons as Commons
 
 ShaderEffect {
   id: root
@@ -10,9 +9,9 @@ ShaderEffect {
   property vector2d size: Qt.vector2d(width,height)
   property real phase: 0
   property real night: isDay ? 0 : 1
-  property color accent: Commons.Color.accent
-  property color foreground: Commons.Color.foreground
-  property color muted: Commons.Color.muted
+  property color accent: Design.accent
+  property color foreground: Design.text
+  property color muted: Design.secondaryText
   vertexShader: Qt.resolvedUrl("shaders/weather.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/weather.frag.qsb")
   NumberAnimation on phase {

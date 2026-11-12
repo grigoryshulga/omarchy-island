@@ -32,6 +32,40 @@ function kind(code) {
   if(n===95 || n===96 || n===99) return 7
   return -1
 }
+// One Celsius scale for the whole week. Unit conversion is affine, so changing
+// the displayed unit must not move the ranges (or introduce rounding drift).
+function temperatureRanges(days) {
+  var valid=(days || []).filter(function(day) {
+    return day && number(day.min,-100,70)!==null && number(day.max,-100,70)!==null && day.min<=day.max
+  })
+  if(!valid.length) return []
+  var low=Math.min.apply(null,valid.map(function(day){return day.min}))
+  var high=Math.max.apply(null,valid.map(function(day){return day.max})),span=high-low
+  return valid.map(function(day) {
+    return {date:day.date,min:day.min,max:day.max,code:day.code,
+      rangeTop:span ? (high-day.max)/span : 0.5,
+      rangeHeight:span ? (day.max-day.min)/span : 0}
+  })
+}
+// Forecast solar timestamps are city-local wall times, not machine-local
+// instants. Use the city's date to choose today, then local Date objects solely
+// for Qt's locale-aware time formatting. Missing/polar/stale dates stay empty.
+function solarEvents(now,report) {
+  var result={sunrise:null,sunset:null}
+  var offset=report ? number(report.utcOffset,-50400,50400) : null
+  if(offset===null || !isFinite(now)) return result
+  var date=new Date(now+offset*1000).toISOString().slice(0,10)
+  var days=report.days || []
+  for(var i=0;i<days.length;i++) {
+    if(days[i].date!==date) continue
+    for(var key in result) {
+      var match=/^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/.exec(days[i][key] || "")
+      if(match && match[1]===date) result[key]=new Date(2000,0,1,Number(match[2]),Number(match[3]))
+    }
+    break
+  }
+  return result
+}
 function parseReport(raw) {
   if(typeof raw!=="string" || raw.length>262144) return null
   try {

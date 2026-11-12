@@ -119,6 +119,35 @@ polar.current.isDay=true;
 assert.equal(Weather.skyHour(cityTime('2026-11-10T12:00'),polar),12);
 const localNow=new Date(2026,10,10,14,30).getTime();
 assert.equal(Weather.skyHour(localNow,parsed),14.5);
+const ranges=Weather.temperatureRanges([{min:-8,max:-4},{min:-6,max:2},{min:0,max:0}]);
+assert.equal(ranges[0].rangeTop,0.6);
+assert.equal(ranges[0].rangeHeight,0.4);
+assert.equal(ranges[1].rangeTop,0);
+assert.equal(ranges[1].rangeHeight,0.8);
+assert.equal(ranges[2].rangeTop,0.2);
+assert.equal(ranges[2].rangeHeight,0);
+for(const row of ranges) assert.ok(row.rangeTop>=0 && row.rangeTop+row.rangeHeight<=1);
+assert.equal(Weather.temperatureRanges([{min:7,max:7}])[0].rangeTop,0.5);
+assert.equal(Weather.temperatureRanges([{min:7,max:7}])[0].rangeHeight,0);
+assert.equal(Weather.temperatureRanges([]).length,0);
+assert.equal(Weather.temperatureRanges([{min:null,max:3},{min:4,max:1}]).length,0);
+// The sunrise belongs to the selected city's date, even before UTC midnight.
+for(const tz of ['America/Los_Angeles','Asia/Tokyo','Pacific/Apia']) {
+ process.env.TZ=tz;
+ const events=Weather.solarEvents(cityTime('2026-11-11T00:01'),solar);
+ assert.equal(events.sunrise.getHours(),8);
+ assert.equal(events.sunrise.getMinutes(),2);
+ assert.equal(events.sunset.getHours(),15);
+ assert.equal(events.sunset.getMinutes(),58);
+}
+assert.equal(Weather.solarEvents(cityTime('2026-11-10T12:00'),polar).sunrise,null);
+assert.equal(Weather.solarEvents(cityTime('2026-11-12T12:00'),solar).sunrise,null);
+assert.equal(Weather.solarEvents(Date.now(),parsed).sunrise,null);
+assert.equal(Weather.solarEvents(Date.now(),null).sunrise,null);
+const badSolar=JSON.parse(JSON.stringify(solar));
+badSolar.days[0].sunrise='2026-11-10T25:99';badSolar.days[0].sunset='2026-11-11T16:00';
+assert.equal(Weather.solarEvents(cityTime('2026-11-10T12:00'),badSolar).sunrise,null);
+assert.equal(Weather.solarEvents(cityTime('2026-11-10T12:00'),badSolar).sunset,null);
 assert.equal(Weather.parseSuggestions(JSON.stringify({query:'old',results:[{name:'City',latitude:1,longitude:2}]}),'new').length,0);
 assert.equal(Weather.parseSuggestions(JSON.stringify({query:'new',results:[{name:'City',latitude:1,longitude:2},{name:'Bad',latitude:999,longitude:2}]}),'new').length,1);
 assert.equal(Weather.nativeSettings(JSON.stringify({bar:{layout:{right:[{id:'omarchy.weather',unit:'metric',refreshMinutes:20}]}}})).refreshMinutes,20);
