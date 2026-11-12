@@ -126,6 +126,7 @@ class FakeServer(ThreadingHTTPServer):
         self.resolved=False;self.writes=[];self.drop=False;self.protocol=2;self.pings=0
         self.request_id='request-1';self.request_projection=projection()
         self.socket_ready=threading.Event();self.client=None;self.sequence=1
+        self.subscription_ready=threading.Event()
     def shell(self):
         return {'snapshotSequence':self.sequence, 'schemaVersion':2, 'projects':[{'id':'p1','title':'Project'}], 'threads':[{
             'id':'thread-1', 'projectId':'p1', 'title':'A session', 'status':'running',
@@ -163,6 +164,13 @@ class Handler(BaseHTTPRequestHandler):
                     data=json.dumps({'_tag':'Chunk','requestId':'shell','values':[{'kind':'snapshot','snapshot':self.server.shell()}]}).encode()
                     # Test fragmented UTF-8 JSON with a ping in between fragments.
                     self.connection.sendall(frame(data[:17],final=False)+frame(b'ping',opcode=9)+frame(data[17:],opcode=0))
+                    # Real T3 follows snapshots/resume with project enrichment;
+                    # these partial snapshots must never clear the thread list.
+                    enrichment = dict(self.server.shell(), threads=[], archivedThreads=[])
+                    self.connection.sendall(frame({'_tag':'Chunk','requestId':'shell','values':[
+                        {'kind':'snapshot','snapshot':enrichment,'resolvedRepositoryIdentityRoots':['/workspace']},
+                        {'kind':'synchronized'}]}))
+                    self.server.subscription_ready.set()
                 elif message.get('tag')=='orchestration.dispatchCommand':
                     self.server.writes.append(message['payload'])
                     if self.server.drop:
@@ -178,6 +186,53 @@ class Handler(BaseHTTPRequestHandler):
             if self.server.resolved:p['runtimeRequests'][0]['status']='resolved'
             return self.respond({'projection':p,'snapshotSequence':self.server.sequence})
         self.respond({},404)
+
+
+class ShellStreamTests(unittest.TestCase):
+    def setUp(self):
+        loader = importlib.machinery.SourceFileLoader('t3_bridge', str(project/'plugin/bin/t3-bridge'))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        self.events = []
+        self.bridge = module.Bridge(Path('/unused'), True, self.events.append)
+        self.bridge.ws = type('Socket', (), {'send': lambda _, value: None})()
+        self.bridge.threads = {'work': {'id':'work', 'status':'running'}}
+        self.bridge.projects = {'p1':'First', 'p2':'Second'}
+        self.bridge.publish()
+
+    def snapshot(self, snapshot, **fields):
+        self.bridge.frame({'_tag':'Chunk', 'requestId':'shell', 'values':[
+            dict(kind='snapshot', snapshot=snapshot, **fields)]})
+        self.bridge.publish()
+
+    def test_enrichment_keeps_threads_and_other_projects(self):
+        # T3 sends this on resume AND on repository metadata refreshes.
+        self.snapshot({'snapshotSequence':10, 'threads':[], 'archivedThreads':[],
+                       'projects':[{'id':'p1','title':'Renamed'}]},
+                      resolvedRepositoryIdentityRoots=['/workspace'])
+        self.assertEqual(list(self.bridge.threads), ['work'])
+        self.assertEqual(self.bridge.projects, {'p1':'Renamed', 'p2':'Second'})
+        self.assertEqual(len(self.events), 1, 'Metadata must not remove and reannounce sessions')
+        # A later unchanged thread update must stay quiet as well.
+        self.bridge.frame({'_tag':'Chunk','requestId':'shell','values':[
+            {'kind':'thread.updated','sequence':11,'location':'active',
+             'thread':{'id':'work','status':'running'}}]})
+        self.bridge.publish()
+        self.assertEqual(len(self.events), 1)
+
+    def test_empty_roots_still_marks_enrichment(self):
+        self.snapshot({'snapshotSequence':10,'threads':[], 'archivedThreads':[], 'projects':[]},
+                      resolvedRepositoryIdentityRoots=[])
+        self.assertEqual(list(self.bridge.threads), ['work'])
+        self.assertEqual(self.bridge.projects, {'p1':'First', 'p2':'Second'})
+        self.assertEqual(len(self.events), 1)
+
+    def test_authoritative_snapshot_can_remove_all_threads(self):
+        self.snapshot({'snapshotSequence':10,'threads':[], 'archivedThreads':[], 'projects':[]})
+        self.assertEqual(self.bridge.threads, {})
+        self.assertEqual(self.bridge.projects, {})
+        self.assertEqual(self.events[-1]['rows'], [])
 
 
 class IntegrationTests(unittest.TestCase):
@@ -228,6 +283,8 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(self.wait(lambda e:e['type']=='response')['status'],'sent')
         updated=self.wait(lambda e:e['type']=='sessions')
         self.assertEqual(updated['rows'][0]['requestId'],'')
+        self.assertTrue(all(e['rows'] for e in self.seen if e['type']=='sessions'),
+                        'Enrichment must not temporarily hide sessions')
         self.assertEqual(self.server.writes[0]['answers'],{'q1':[answer]})
         self.assertEqual(self.server.writes[0]['type'],'runtime-request.respond')
         self.assertGreater(self.server.pings,0)
@@ -296,6 +353,30 @@ class IntegrationTests(unittest.TestCase):
         self.wait(lambda e:e.get('status')=='uncertain')
         self.wait(lambda e:e.get('status')=='connected')
         self.assertEqual(len(self.server.writes),1)
+    def test_reconnect_always_publishes_baseline(self):
+        self.start(True)
+        self.wait(lambda e:e.get('status')=='connected')
+        self.wait(lambda e:e['type']=='sessions')
+        self.assertTrue(self.server.subscription_ready.wait(2))
+        self.server.subscription_ready.clear()
+        self.server.client.sendall(frame(b'', opcode=8))
+        self.wait(lambda e:e.get('status')=='offline')
+        self.wait(lambda e:e.get('status')=='connected')
+        try:
+            snapshot = self.wait(lambda e:e['type']=='sessions', timeout=2)
+        except queue.Empty:
+            self.fail('Reconnect must restore the alert baseline even when sessions are unchanged')
+        self.assertEqual(snapshot['rows'][0]['id'], 'thread-1')
+        self.assertTrue(self.server.subscription_ready.wait(2))
+        # The first real transition after reconnect must not be used as a baseline.
+        self.server.resolved=True
+        self.server.sequence+=1
+        completed=dict(self.server.shell()['threads'][0],status='completed',
+                       latestRunCompletedAt=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()))
+        self.server.client.sendall(frame({'_tag':'Chunk','requestId':'shell','values':[
+            {'kind':'thread.updated','sequence':self.server.sequence,'location':'active','thread':completed}]}))
+        update=self.wait(lambda e:e['type']=='sessions')
+        self.assertEqual(update['rows'][0]['status'], 'completed')
     def test_version_guard_before_credentials(self):
         self.server.protocol=3;self.start()
         self.wait(lambda e:e.get('status')=='incompatible')

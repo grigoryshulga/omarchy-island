@@ -131,6 +131,18 @@ ShellRoot {
         verify(longSend.activeFocus,"Tab must reach Send on a long form")
         var buttonAt=longSend.mapToItem(sessionScroll,0,0)
         verify(buttonAt.y>=0 && buttonAt.y+longSend.height<=sessionScroll.height+1,"Keyboard focus must scroll the send button into view")
+        // Reconnect snapshots stay quiet; the next completion must still alert.
+        service.doNotDisturb=false
+        service.activeAppId="island-test"
+        alerts.clear()
+        service.t3.receive('{"type":"connection","status":"offline"}')
+        service.t3.receive('{"type":"connection","status":"connected","canRespond":true,"environmentId":"env-1"}')
+        snapshot([second]);wait(30)
+        compare(alerts.count,0,"Reconnect baseline must not reannounce running threads")
+        snapshot([Object.assign({},second,{status:"completed"})]);wait(30)
+        compare(alerts.count,1,"First completion after reconnect must alert")
+        snapshot([Object.assign({},second,{status:"completed",summary:"Updated metadata"})]);wait(30)
+        compare(alerts.count,1,"Metadata must not repeat the completion popup")
         snapshot([]);wait(30)
         alerts.clear()
         service.doNotDisturb=false

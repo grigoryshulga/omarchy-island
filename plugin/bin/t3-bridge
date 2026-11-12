@@ -72,6 +72,9 @@ class Bridge:
                       "payload": {"afterSequence": self.sequence, "requestCompletionMarker": True}, "headers": []})
         self.output({"type": "connection", "status": "connected", "environmentId": self.environment,
                      "canRespond": not self.readonly})
+        # QML resets its alert baseline on disconnect. Always supply a fresh
+        # baseline, or the next real transition (including completion) is lost.
+        self.last_output = ""
         self.publish()
 
     def http(self, path, method="GET"):
@@ -158,8 +161,16 @@ class Bridge:
                     kind = event.get("kind")
                     if kind == "snapshot":
                         snapshot = event["snapshot"]
-                        self.threads = {r["id"]: r for r in snapshot["threads"]}
-                        self.projects = {p["id"]: p.get("title", "") for p in snapshot["projects"]}
+                        projects = {p["id"]: p.get("title", "") for p in snapshot["projects"]}
+                        # Resume and repository enrichment snapshots contain no
+                        # threads and only a subset of projects. The presence of
+                        # this field (even []) distinguishes them from a full
+                        # snapshot, which may legitimately remove all threads.
+                        if "resolvedRepositoryIdentityRoots" in event:
+                            self.projects.update(projects)
+                        else:
+                            self.threads = {r["id"]: r for r in snapshot["threads"]}
+                            self.projects = projects
                         self.dirty = True
                     elif kind == "thread.updated":
                         row = event["thread"]
