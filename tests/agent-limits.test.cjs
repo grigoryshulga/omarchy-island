@@ -30,3 +30,15 @@ assert.equal(M.metrics({},'week').available,false);
 assert.equal(M.metrics({total:{tokens:100},days:[{tokens:0,priced:true}]},'today').available,true);
 assert.equal(M.metrics({days:[{tokens:100,priced:true},{tokens:200,priced:true}]},'today').tokens,200);
 console.log('PASS: Agent Limits quota semantics, reset uncertainty, hysteresis, pins and mixed pricing.');
+
+const resetStrings={t:key=>({'limits.resetIn':'Reset in %1','limits.daysHoursMinutes':'%1 d %2 h %3 min','limits.hoursMinutes':'%1 h %2 min','limits.minutes':'%1 min','limits.awaitingReset':'Awaiting confirmed reset'})[key]};
+const countdown=(offset,extra={})=>M.resetCountdown({resetsAt:now+offset,...extra},now,resetStrings,String);
+assert.equal(countdown((26*60+5)*60000),'Reset in 1 d 2 h 5 min');
+assert.equal(countdown(65*60000),'Reset in 1 h 5 min');
+assert.equal(countdown(59999),'Reset in 1 min');
+assert.equal(countdown(60001),'Reset in 2 min');
+assert.equal(countdown(0),'Awaiting confirmed reset');
+assert.equal(countdown(60000,{pendingReset:true}),'Awaiting confirmed reset');
+assert.equal(countdown(60000,{resetsAt:0}),'');
+assert.equal(countdown(60000,{resetsAt:NaN}),'');
+assert.equal(M.resetCountdown({resetsAt:now+60000},now,resetStrings,v=>'['+v+']'),'Reset in [1] min');

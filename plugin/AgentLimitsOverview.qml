@@ -36,7 +36,12 @@ Column {
     SectionHeading {Layout.fillWidth:true;title:root.strings.t("limits.title")}
     FeedbackButton {
       objectName:"limitsExpand"
-      text:root.strings.t(root.centerOpen ? "limits.collapse" : "limits.all")
+      iconText:(root.centerOpen !== Commons.I18n.rightToLeft) ? "󰁍" : "󰁔"
+      iconSize:Style.font.iconLarge
+      tooltipText:root.strings.t(root.centerOpen ? "calendar.back" : "limits.all")
+      implicitWidth:Design.compactControlHeight
+      implicitHeight:Design.compactControlHeight
+      horizontalPadding:0;verticalPadding:0
       compact:true;focusable:root.expanded;feedback:root.feedback
       onClicked:{if(!root.expanded) root.expandRequested();else {root.centerOpen=!root.centerOpen;if(!root.centerOpen) root.sync(true)}}
     }

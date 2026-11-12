@@ -39,6 +39,15 @@ function summary(rows,pins,automatic,mode) {
   if(mode!=="pinned") automatic.forEach(function(id){if(ids.indexOf(id)<0) ids.push(id)})
   return ids.map(function(id){return rows.find(function(r){return r.id===id})}).filter(function(r){return !!r})
 }
+function resetCountdown(row,now,strings,formatNumber) {
+  if(row.pendingReset || (row.resetsAt>0 && row.resetsAt<=now)) return strings.t("limits.awaitingReset")
+  if(!finite(row.resetsAt) || row.resetsAt<=0) return ""
+  var minutes=Math.ceil((row.resetsAt-now)/60000),hours=Math.floor(minutes/60),days=Math.floor(hours/24)
+  var key=days>0 ? "limits.daysHoursMinutes" : hours>0 ? "limits.hoursMinutes" : "limits.minutes"
+  var values=days>0 ? [days,hours%24,minutes%60] : hours>0 ? [hours,minutes%60] : [minutes]
+  var duration=strings.t(key).replace(/%([1-3])/g,function(_,index){return formatNumber(values[Number(index)-1])})
+  return strings.t("limits.resetIn").replace("%1",duration)
+}
 function tightest(rows) {
   return rows.filter(function(r){return r.remaining!==null}).reduce(function(best,r){return !best || r.remaining<best.remaining ? r : best},null)
 }
@@ -61,4 +70,4 @@ function metrics(provider,range) {
   })
   return result
 }
-if(typeof module!=="undefined") module.exports={parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}
+if(typeof module!=="undefined") module.exports={resetCountdown:resetCountdown,parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}

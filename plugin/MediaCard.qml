@@ -81,6 +81,7 @@ Surface {
           id: timeline
           Layout.fillWidth: true
           spacing:Design.gap.tight
+          PlainText {objectName:"mediaElapsed";text:Model.time(seek.liveValue);typeRole:"caption";color:Design.text;Layout.alignment:Qt.AlignVCenter}
           IslandSlider {
             id: seek
             objectName: "mediaSeek"
@@ -93,6 +94,7 @@ Surface {
             onClicked: position => root.feedback.pulseFrom(seek,position)
             onReleased: value => { if (root.player && root.player.canSeek) root.player.position = value }
           }
+          PlainText {objectName:"mediaDuration";text:Model.time(seek.maximum);typeRole:"caption";color:Design.text;Layout.alignment:Qt.AlignVCenter}
           VolumePopover {
             id: volumeControl
             feedback: root.feedback
@@ -102,14 +104,6 @@ Surface {
             availableWidth: timeline.width
           }
         }
-        RowLayout {
-          Layout.fillWidth: true
-          Layout.rightMargin: volumeControl.implicitWidth+timeline.spacing
-          PlainText { objectName: "mediaElapsed"; text: Model.time(seek.liveValue); typeRole:"caption"; color: Design.text }
-          Item { Layout.fillWidth: true }
-          PlainText { objectName: "mediaDuration"; text: Model.time(seek.maximum); typeRole:"caption"; color: Design.text }
-        }
-
       }
     }
   }

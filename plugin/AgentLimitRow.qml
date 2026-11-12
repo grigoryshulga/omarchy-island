@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.Commons as Commons
 import qs.Commons
+import "AgentLimitsModel.js" as Model
 
 Surface {
   id:root
@@ -11,6 +12,8 @@ Surface {
   property bool interactive:false
   property var feedback:null
   property double now:Date.now()
+  Accessible.name:row.name+" · "+row.label
+  Accessible.description:strings.t(row.stale ? "limits.cached" : "limits.remaining")
   signal pinRequested(string id)
   implicitHeight:body.implicitHeight+Design.gap.large*2
   LayoutMirroring.enabled:Commons.I18n.rightToLeft
@@ -26,7 +29,7 @@ Surface {
       PlainText {
         objectName:"limitRemaining"
         typeRole:"title"
-        text:root.row.remaining===null ? "—" : Commons.I18n.formatNumber(Math.round(root.row.remaining))+"%"
+        text:(root.row.remaining===null ? "—" : Commons.I18n.formatNumber(Math.round(root.row.remaining))+"%")+(root.row.stale ? " ·" : "")
         color:root.row.remaining!==null && root.row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : Design.text
       }
       FeedbackButton {
@@ -46,10 +49,9 @@ Surface {
     }
     PlainText {
       Layout.fillWidth:true;typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap
-      text:[root.strings.t(root.row.pendingReset ? "limits.awaitingReset" : root.row.exhausted ? "limits.exhausted" : root.row.remaining===null ? "limits.unavailable" : root.row.remaining<=Preferences.get("agentLimitsWarning") ? "limits.low" : "limits.remaining"),
-        root.row.stale ? root.strings.t("limits.cached") : "",
-        root.row.checkedAt>0 ? root.strings.t("limits.measuredAt").arg(new Date(root.row.checkedAt).toLocaleString(Qt.locale(Commons.I18n.formatLocale),"ddd HH:mm")) : "",
-        root.row.resetsAt>root.now && !root.row.pendingReset ? root.strings.t("limits.resetAt").arg(new Date(root.row.resetsAt).toLocaleString(Qt.locale(Commons.I18n.formatLocale),"ddd HH:mm")) : ""].filter(function(s){return !!s}).join(" · ")
+      objectName:"limitResetCountdown"
+      visible:text!==""
+      text:Model.resetCountdown(root.row,root.now,root.strings,Commons.I18n.formatNumber)
     }
   }
 }
