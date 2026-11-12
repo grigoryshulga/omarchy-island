@@ -15,6 +15,7 @@ BrailleGauge 1.0 BrailleGauge.qml
 BrailleSpotlight 1.0 BrailleSpotlight.qml
 CalendarView 1.0 CalendarView.qml
 ControlTile 1.0 ControlTile.qml
+ControlsState 1.0 ControlsState.qml
 ControlsView 1.0 ControlsView.qml
 DictationField 1.0 DictationField.qml
 DictationOsd 1.0 DictationOsd.qml
@@ -63,3 +64,4 @@ CalendarYear 1.0 CalendarYear.qml
 CalendarState 1.0 CalendarState.qml
 CalendarAgenda 1.0 CalendarAgenda.qml
 CalendarSources 1.0 CalendarSources.qml
+ProjectIcon 1.0 ProjectIcon.qml

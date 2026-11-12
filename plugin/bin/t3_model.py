@@ -136,11 +136,28 @@ def validate_answers(request, answers):
     return result
 
 
-def session_view(row, projects, request=None):
+def project_icon(value):
+    if not isinstance(value, dict):
+        return None
+    kind = value.get("kind")
+    if kind == "lucide":
+        name = value.get("name", "")
+        if isinstance(name, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) and len(name) <= 64:
+            return {"kind": kind, "name": name}
+    elif kind in ("emoji", "monogram"):
+        key = "emoji" if kind == "emoji" else "text"
+        content = value.get(key)
+        if isinstance(content, str) and 0 < len(content) <= 32 and not any(ord(c) < 32 for c in content):
+            return {"kind": kind, key: content}
+    return None
+
+
+def session_view(row, projects, request=None, project_icons=None):
     pending = row.get("pendingRuntimeRequest")
     status = row.get("activityRunStatus") or row.get("status", "idle")
     return {"id": row["id"], "title": text(row.get("title"), 256),
             "project": text(projects.get(row.get("projectId"), ""), 256),
+            "projectIcon": project_icon((project_icons or {}).get(row.get("projectId"))),
             "status": status if status in BUSY | TERMINAL else "idle",
             "startedAt": timestamp(row.get("activityRunStartedAt") or row.get("latestRunStartedAt")),
             "finishedAt": 0 if status in BUSY else timestamp(row.get("latestRunCompletedAt")),

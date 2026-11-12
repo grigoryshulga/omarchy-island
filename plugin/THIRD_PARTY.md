@@ -47,3 +47,7 @@ SOFTWARE.
 ## ICS calendar dependencies
 
 `vendor/calendar/` bundles unmodified source wheels for icalendar, recurring-ical-events, x-wr-timezone and their Python dependencies. They retain their own BSD, MIT, Apache, PSF and LGPL licenses, independent of Island's license. See [the dependency manifest](vendor/calendar/README.md), [pinned versions and hashes](vendor/calendar/lock.json), and [license copies](vendor/calendar/licenses/). Libraries can be replaced or modified without a runtime integrity restriction; the manifest documents how.
+
+## Lucide project icons
+
+`vendor/lucide/Icons.js` contains SVG geometry from Lucide 1.8.0, distributed under the ISC license. See [LICENSE](vendor/lucide/LICENSE). Icon names come from T3 project metadata; colors follow the live Island theme. No runtime dependency or remote icon requests are required.

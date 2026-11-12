@@ -21,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 project = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project / 'plugin/bin'))
-from t3_model import request_view, select_threads, session_view, validate_answers
+from t3_model import project_icon, request_view, select_threads, session_view, validate_answers
 from t3_transport import local_origin, TransportError, WebSocket, MAX_MESSAGE
 
 QUESTION = {'id':'q1', 'question':'Where?', 'options':[{'label':'Local', 'value':'local', 'description':'On this machine'}], 'allowCustomAnswer':True}
@@ -48,6 +48,17 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(selected[0]['id'], 'question')
         self.assertFalse({'old','archived','child','sidechat','delegated'} & {r['id'] for r in selected})
         self.assertEqual([r['id'] for r in select_threads(rows[35:],now)],['question'])
+
+    def test_project_icons(self):
+        for icon in ({'kind':'emoji','emoji':'🏝️'}, {'kind':'monogram','text':'OI'},
+                     {'kind':'lucide','name':'folder-code','color':'green'}):
+            view=session_view({'id':'t','projectId':'p'}, {'p':'Island'}, project_icons={'p':icon})
+            self.assertEqual(view['projectIcon'], project_icon(icon))
+            self.assertEqual(view['projectIcon']['kind'], icon['kind'])
+        for invalid in (None, '', {'kind':'image','url':'file:///etc/passwd'},
+                        {'kind':'lucide','name':'../secret'}, {'kind':'lucide','name':'x'*65},
+                        {'kind':'emoji','emoji':'x'*33}, {'kind':'monogram','text':'a\n'}):
+            self.assertIsNone(project_icon(invalid))
 
     def test_answers_and_revision(self):
         p = projection(); request = request_view(p, 'request-1')
@@ -220,6 +231,17 @@ class ShellStreamTests(unittest.TestCase):
              'thread':{'id':'work','status':'running'}}]})
         self.bridge.publish()
         self.assertEqual(len(self.events), 1)
+
+    def test_project_icon_metadata_updates(self):
+        self.bridge.threads['work']['projectId']='p1'
+        icon={'kind':'emoji','emoji':'🏝️'}
+        self.snapshot({'snapshotSequence':10,'threads':[], 'projects':[{'id':'p1','title':'Island','projectIcon':icon}]},
+                      resolvedRepositoryIdentityRoots=['/workspace'])
+        self.assertEqual(self.events[-1]['rows'][0]['projectIcon'],icon)
+        self.bridge.frame({'_tag':'Chunk','requestId':'shell','values':[
+            {'kind':'project.updated','project':{'id':'p1','title':'Island','projectIcon':{'kind':'lucide','name':'folder-code'}}}]})
+        self.bridge.publish()
+        self.assertEqual(self.events[-1]['rows'][0]['projectIcon'],{'kind':'lucide','name':'folder-code'})
 
     def test_empty_roots_still_marks_enrichment(self):
         self.snapshot({'snapshotSequence':10,'threads':[], 'archivedThreads':[], 'projects':[]},

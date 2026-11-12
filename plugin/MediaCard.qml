@@ -5,7 +5,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
-Item {
+Surface {
   id: root
   required property var service
   required property var strings
@@ -18,8 +18,9 @@ Item {
   property bool radialBraille: true
   readonly property var player: service ? service.player : null
   signal expandRequested()
-  implicitHeight: body.implicitHeight
-  MouseArea { anchors.fill: parent; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
+  signal closeRequested()
+  implicitHeight: body.implicitHeight+2*Design.cardPadding
+  MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return} root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight {
@@ -40,7 +41,8 @@ Item {
   }
   ColumnLayout {
     id: body
-    width: parent.width
+    anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top
+    anchors.margins:Design.cardPadding
     spacing:Design.gap.medium
     RowLayout {
       Layout.fillWidth: true

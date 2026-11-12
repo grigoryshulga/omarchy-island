@@ -48,7 +48,7 @@ Item {
   property var notificationIcon:null
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
   implicitHeight: body.implicitHeight
-  MouseArea { anchors.fill: parent; onClicked: mouse => {if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
+  MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   ColumnLayout {
     id: body
     width: parent.width
@@ -65,19 +65,29 @@ Item {
     feedback:root.externalFeedback
     onExpandRequested:root.expandRequested()
   }
-  MediaCard {
-    id: mediaPlayer
-    externalFeedback: root.externalFeedback
-    objectName: "islandMediaPlayer"
-    Layout.fillWidth: true
-    visible: root.showPlayer
-    service: root.service
-    strings: root.strings
-    bar: root.bar
-    expanded: root.expanded
-    active: root.overviewActive
-    radialBraille: root.radialBraille
-    onExpandRequested: root.expandRequested()
+  ColumnLayout {
+    Layout.fillWidth:true
+    visible:root.showPlayer
+    spacing:Design.gap.small
+    SectionHeading {
+      objectName:"mediaSectionHeading"
+      Layout.fillWidth:true
+      title:root.service && root.service.player && /spotify/i.test(root.service.player.identity || "") ? "Spotify" : root.strings.t("media.title")
+    }
+    MediaCard {
+      id: mediaPlayer
+      externalFeedback: root.externalFeedback
+      objectName: "islandMediaPlayer"
+      Layout.fillWidth: true
+      service: root.service
+      strings: root.strings
+      bar: root.bar
+      expanded: root.expanded
+      active: root.overviewActive
+      radialBraille: root.radialBraille
+      onExpandRequested: root.expandRequested()
+      onCloseRequested:root.closeRequested()
+    }
   }
 
   BatteryOverview {
@@ -185,14 +195,6 @@ Item {
         width: parent.width
         visible: root.expanded && root.rows.length === 0 && root.downloads.length === 0
         spacing:Design.gap.tight
-        BrailleClap {
-          objectName: "notificationsEmptyClap"
-          visible:!root.showT3
-          anchors.horizontalCenter: parent.horizontalCenter
-          width: Math.min(parent.width,Style.space(220))
-          height: Style.space(150)
-          active: visible && root.overviewActive && root.visible && root.expanded
-        }
         PlainText {
           width: parent.width
           text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty")

@@ -1,6 +1,8 @@
 // Presentation helpers; bridge data and answers never become shell text.
 var busyStates = ["preparing", "starting", "queued", "running", "waiting"]
 function busy(row) { return row && busyStates.indexOf(row.status) >= 0 }
+// Requests include questions, approvals and authentication handled in T3.
+function statusRank(row) {return row && row.requestId ? 0 : busy(row) ? 2 : 1}
 function toggle(selected, value, multi) {
   if (!multi) return [value]
   return selected.indexOf(value) >= 0 ? selected.filter(function(v){return v!==value}) : selected.concat([value])
@@ -32,4 +34,4 @@ function transitions(previous, next) {
     return state!=="idle" && (old ? alertState(old)!==state : !!row.requestId || busy(row))
   })
 }
-if(typeof module!=="undefined") module.exports={alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}
+if(typeof module!=="undefined") module.exports={statusRank:statusRank,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}

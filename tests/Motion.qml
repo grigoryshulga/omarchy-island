@@ -229,6 +229,17 @@ ShellRoot {
         service.latestT3=null
         compare(widget.alertKind,"","Focusing T3 must close its popup")
         verify(!lifetime.running,"Closed T3 popup kept its timer")
+        widget.openControls();wait(450)
+        verify(fakeBar.activePopout!==widget && typeof fakeBar.activePopout.close==="function","Clock still owns the bar underline or lost popup coordination")
+        var dndControl=findChild(widget,"controlDnd"),wasDnd=service.doNotDisturb
+        mouseClick(dndControl,dndControl.width/2,dndControl.height/2,Qt.RightButton)
+        verify(popup.open && service.doNotDisturb!==wasDnd,"Control right click must toggle without dismissing")
+        mouseClick(findChild(popup,"islandPopupBackground"),3,3,Qt.RightButton)
+        verify(!popup.open && !widget.pinned,"Popup background right click did not immediately close")
+        compare(fakeBar.activePopout,null,"Dismissed popup kept coordination ownership")
+        widget.openOverview();wait(350)
+        fakeBar.activePopout.close()
+        verify(!popup.open,"Opening another popout cannot close Island")
         console.log("T3_ACTIVITY_POPUP_PASS")
         console.log("ISLAND_MOTION_PASS")
         Qt.quit()
@@ -236,7 +247,7 @@ ShellRoot {
     }
   }
   Island.PopupReveal {id:reducedReveal;targetWidth:200;targetHeight:100}
-  Timer {id:exitClock;interval:16;repeat:true;onTriggered:test.test_exit_step()}
+  Timer {id:exitClock;interval:16;repeat:true;onTriggered:{try {test.test_exit_step()} catch(error) {console.log("ISLAND_MOTION_FAIL",error.stack);Qt.quit()}}}
 
   property int tick: 0
   property var sizes: []

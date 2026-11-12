@@ -1,4 +1,7 @@
 {
+  "media.title": "Media",
+  "t3.expandList": "Показать ещё %1",
+  "t3.collapseList": "Свернуть список",
   "dictation.listening": "Слушаю",
   "dictation.transcribing": "Распознаю",
   "downloads.title": "Downloads",
@@ -94,6 +97,7 @@
   "controls.quick": "Быстрые настройки",
   "controls.microphone": "Микрофон выкл.",
   "controls.noMicrophone": "Нет микрофона",
+  "controls.rightClickToggle": "ПКМ — переключить",
   "controls.on": "Вкл.",
   "controls.off": "Выкл.",
   "controls.unavailable": "Управление временно недоступно",

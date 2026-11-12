@@ -90,6 +90,7 @@ Rectangle {
         }
         RowLayout {
           Layout.fillWidth:true;spacing:Design.gap.medium
+          ProjectIcon {objectName:"t3ProjectIcon";visible:!!root.row.project;icon:root.row.projectIcon || null;Layout.alignment:Qt.AlignVCenter}
           PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;text:root.row.project;typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
           PlainText {visible:!root.needsInput || root.compactToast;Layout.maximumWidth:Math.max(Style.space(80),(root.width-Style.space(48))*0.65);text:root.statusText;typeRole:"caption";color:root.needsInput ? Design.accent : Design.secondaryText;horizontalAlignment:Text.AlignRight;elide:Text.ElideRight}
         }

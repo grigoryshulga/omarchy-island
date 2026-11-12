@@ -42,6 +42,7 @@ class Bridge:
         self.environment = ""
         self.threads = {}
         self.projects = {}
+        self.project_icons = {}
         self.details = {}
         self.last_output = ""
         self.pending = {}
@@ -85,6 +86,7 @@ class Bridge:
         self.sequence = shell["snapshotSequence"]
         self.threads = {t["id"]: t for t in shell["threads"]}
         self.projects = {p["id"]: p.get("title", "") for p in shell["projects"]}
+        self.project_icons = {p["id"]: p.get("projectIcon") for p in shell["projects"]}
         self.last_refresh = time.monotonic()
 
     def projection(self, thread_id):
@@ -108,7 +110,7 @@ class Bridge:
                     request = cached[1]
             else:
                 self.details.pop(row["id"], None)
-            rows.append(session_view(row, self.projects, request))
+            rows.append(session_view(row, self.projects, request, self.project_icons))
         output = {"type": "sessions", "rows": rows}
         serial = json.dumps(output, sort_keys=True)
         if serial != self.last_output:
@@ -166,11 +168,14 @@ class Bridge:
                         # threads and only a subset of projects. The presence of
                         # this field (even []) distinguishes them from a full
                         # snapshot, which may legitimately remove all threads.
+                        icons = {p["id"]: p.get("projectIcon") for p in snapshot["projects"]}
                         if "resolvedRepositoryIdentityRoots" in event:
                             self.projects.update(projects)
+                            self.project_icons.update(icons)
                         else:
                             self.threads = {r["id"]: r for r in snapshot["threads"]}
                             self.projects = projects
+                            self.project_icons = icons
                         self.dirty = True
                     elif kind == "thread.updated":
                         row = event["thread"]
@@ -184,9 +189,11 @@ class Bridge:
                         self.dirty = True
                     elif kind == "project.updated":
                         self.projects[event["project"]["id"]] = event["project"].get("title", "")
+                        self.project_icons[event["project"]["id"]] = event["project"].get("projectIcon")
                         self.dirty = True
                     elif kind == "project.removed":
                         self.projects.pop(event["projectId"], None)
+                        self.project_icons.pop(event["projectId"], None)
                         self.dirty = True
                     elif kind == "snapshot-required":
                         raise TransportError("reconnect")

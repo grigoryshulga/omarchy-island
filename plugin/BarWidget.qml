@@ -358,12 +358,14 @@ BarWidget {
     function onShownChanged() {Qt.callLater(dictationOverlay.release)}
     function onOpenChanged() {Qt.callLater(dictationOverlay.release)}
   }
+  // Keep popout coordination without the bar marking the clock as its owner.
+  Item {id:popupCoordinator;function close(){root.close()}}
   IslandPopup {
     id: preview
     objectName: "islandPopup"
     anchorItem: trigger
     bar: root.bar
-    owner: root
+    owner: popupCoordinator
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: false
     alignmentItem: clockLabel

@@ -172,7 +172,7 @@ PanelWindow {
       opacity: root.shown
       clip: true
       // Empty parts of the card should never count as an outside click.
-      MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onClicked: mouse => root.backgroundClicked(Qt.point(mouse.x,mouse.y)) }
+      MouseArea { objectName:"islandPopupBackground";anchors.fill: parent; acceptedButtons: Qt.AllButtons; onClicked: mouse => {if(mouse.button===Qt.RightButton) root.close();else root.backgroundClicked(Qt.point(mouse.x,mouse.y))} }
       Item {
         id: contentHolder
         x: (card.width-root.layoutWidth)/2+root.insetLeft

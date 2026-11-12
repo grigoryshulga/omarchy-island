@@ -24,6 +24,13 @@ Item {
   readonly property var microphone:indicators ? indicators.microphone : null
   property var execute:function(command){Quickshell.execDetached(command)}
   property var systemCall:function(target,method,args){return IpcRegistry.call(target,method,args)}
+  property var controlState:nativeState
+  ControlsState {
+    id:nativeState
+    active:root.active && !root.section && root.controlState===nativeState
+    execute:root.execute
+    onActionFailed:root.error=root.strings.t("controls.unavailable")
+  }
   signal dismissRequested()
   signal settingRequested(string key, var value)
   implicitHeight:section ? detailHeight : landing.implicitHeight
@@ -158,7 +165,10 @@ Item {
           Layout.fillWidth:true
           feedback:root.externalFeedback
           title:root.strings.t("controls."+modelData.key)
-          description:modelData.key==="settings" ? "" : root.strings.t("controls."+modelData.key+"Hint")
+          showLed:root.controlState.available(modelData.key)
+          selected:showLed && root.controlState.enabledState(modelData.key)
+          tooltipText:showLed ? root.strings.t("controls.rightClickToggle")+" · "+root.modeState(selected) : title
+          onRightClicked:root.controlState.toggle(modelData.key)
           glyph:modelData.icon
           drillDown:true
           onClicked:root.openSection(modelData.key)
@@ -177,9 +187,10 @@ Item {
         compact:true
         objectName:"controlMicrophone";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.microphone");glyph:"󰍭"
-        description:root.microphone ? root.modeState(root.indicators.microphoneMuted) : root.strings.t("controls.noMicrophone")
+        tooltipText:root.microphone ? root.modeState(root.indicators.microphoneMuted) : root.strings.t("controls.noMicrophone")
         selected:root.indicators && root.indicators.microphoneMuted
         enabled:!!root.microphone
+        onRightClicked:clicked()
         onClicked:root.toggleMode("microphone")
       }
       ControlTile {
@@ -187,8 +198,9 @@ Item {
         compact:true
         objectName:"controlDnd";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.dndShort");glyph:"󰂛"
-        description:root.modeState(root.service && root.service.doNotDisturb)
+        tooltipText:root.modeState(root.service && root.service.doNotDisturb)
         selected:root.service && root.service.doNotDisturb
+        onRightClicked:clicked()
         onClicked:root.toggleMode("dnd")
       }
       ControlTile {
@@ -196,8 +208,9 @@ Item {
         compact:true
         objectName:"controlNightLight";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("indicator.nightLight");glyph:"󰔎"
-        description:root.modeState(root.indicators && root.indicators.nightLight)
+        tooltipText:root.modeState(root.indicators && root.indicators.nightLight)
         selected:root.indicators && root.indicators.nightLight
+        onRightClicked:clicked()
         onClicked:root.toggleMode("nightLight")
       }
       ControlTile {
@@ -205,8 +218,9 @@ Item {
         compact:true
         objectName:"controlStayAwake";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.stayAwakeShort");glyph:""
-        description:root.modeState(root.indicators && root.indicators.stayAwake)
+        tooltipText:root.modeState(root.indicators && root.indicators.stayAwake)
         selected:root.indicators && root.indicators.stayAwake
+        onRightClicked:clicked()
         onClicked:root.toggleMode("stayAwake")
       }
       ControlTile {
@@ -214,9 +228,10 @@ Item {
         compact:true
         objectName:"controlRecording";Layout.fillWidth:true;feedback:root.externalFeedback
         title:root.strings.t("controls.recordingShort");glyph:"󰻂"
-        description:root.strings.t(root.indicators && root.indicators.recording ? "controls.stopRecording" : "controls.startRecording")
+        tooltipText:root.strings.t(root.indicators && root.indicators.recording ? "controls.stopRecording" : "controls.startRecording")
         selected:root.indicators && root.indicators.recording
         glyphColor:selected ? Design.danger : Design.text
+        onRightClicked:clicked()
         onClicked:root.toggleMode("recording")
       }
       ControlTile {
@@ -224,7 +239,7 @@ Item {
         compact:true
         objectName:"controlRemote";Layout.fillWidth:true
         title:root.strings.t("controls.remoteShort");glyph:"󰢹"
-        description:root.strings.t(root.indicators && root.indicators.remoteActive ? "controls.connected" : "controls.noConnection")
+        tooltipText:root.strings.t(root.indicators && root.indicators.remoteActive ? "controls.connected" : "controls.noConnection")
         selected:root.indicators && root.indicators.remoteActive
         glyphColor:selected ? Design.accent : Design.secondaryText
         enabled:false

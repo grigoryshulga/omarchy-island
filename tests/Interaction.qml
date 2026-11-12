@@ -111,12 +111,14 @@ ShellRoot {
       anchors.fill: parent
       Rectangle { anchors.fill: parent; color: Commons.Color.popups.background }
       property bool testPages: false
+      property bool dismissed:false
       Island.CalendarView { id: calendar; visible: !calendarSurface.testPages; x: 12; y: 12; width: parent.width-24; strings: strings; onWeekStartRequested: value => weekStart=value }
       Island.PopupPages {
         id: pages
         x: 12; y: 12; width: parent.width-24; height: implicitHeight
         visible: calendarSurface.testPages
         service: service; strings: strings; expanded: true; hovering: true
+        onDismissRequested:calendarSurface.dismissed=true
         onControlsRequested: {pages.controls=true;pages.weather=false;pages.calendar=false}
         onCalendarRequested: {pages.controls=false;pages.weather=false;pages.calendar=true}
         onWeatherRequested: {pages.controls=false;pages.calendar=false;pages.weather=true}
@@ -145,8 +147,9 @@ ShellRoot {
       check(toggle !== null,"missing toggle")
       check(findChild(media,"mediaTitle").font.pixelSize===Island.Design.type.section,"track title did not use its larger size")
       mouseClick(toggle)
-      check(service.mediaCalls===1,"toggle click did not reach player: " + service.mediaCalls)
-      check(Spotlight.pick(media,media,Qt.point(media.width/2,1))===null,"transparent media wrapper captured the spotlight")
+      check(service.mediaCalls===1,"toggle click did not reach player: "+service.mediaCalls)
+      check(Spotlight.pick(media,media,Qt.point(media.width/2,1))===media,"media card does not contain the spotlight")
+      check(media.color===Island.Design.surface && media.radius===Island.Design.cardRadius,"media controls are not in a themed card")
       var musicGlow=findChild(media,"mediaSpotlight")
       if(!Commons.Style.reduceMotion) check(musicGlow.rippling,"play button did not start a music ripple")
       check(p.isPlaying,"player did not play")
@@ -492,6 +495,16 @@ ShellRoot {
       mouseDrag(pager,pager.width/2,30,pager.width*0.35,0,Qt.LeftButton)
       tryVerify(function(){return pages.weather},1200)
       check(pages.weather,"edge swipe did not wrap tabs")
+      pages.requestPage(1);wait(350)
+      var heading=findChild(pages,"mediaSectionHeading")
+      check(heading.title==="Media","generic media heading is missing")
+      p.identity="Spotify";wait(20)
+      check(heading.title==="Spotify","Spotify heading is missing")
+      p.identity="Test Music"
+      var player=findChild(pages,"islandMediaPlayer")
+      mouseClick(player,player.width-2,player.height-2,Qt.RightButton)
+      check(calendarSurface.dismissed,"media background right click did not dismiss popup")
+
       console.log("CYCLIC_TABS_PASS")
       console.log("ISLAND_INTERACTION_PASS")
       if (Quickshell.env("ISLAND_CALENDAR_CAPTURE_PATH")) {

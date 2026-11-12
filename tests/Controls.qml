@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import Quickshell
+import Quickshell.Networking
 import qs.Commons as Commons
 import "Island" as Island
 
@@ -17,6 +18,24 @@ ShellRoot {
     property var microphone:({})
     property bool nightLight:false
     property bool stayAwake:false
+  }
+  QtObject {
+    id:tileState
+    property bool on:true
+    property bool known:true
+    property var toggled:[]
+    function available(key){return known && ["audio","bluetooth","network","tailscale"].indexOf(key)>=0}
+    function enabledState(key){return on}
+    function toggle(key){if(available(key)) {toggled=toggled.concat([key]);on=!on}}
+  }
+  QtObject {id:fakeAdapter;property bool enabled:true}
+  QtObject {id:fakeAudio;property bool muted:false}
+  QtObject {id:fakeOutput;property var audio:fakeAudio}
+  QtObject {id:fakeNetwork;property var backend:NetworkBackendType.NetworkManager;property bool wifiEnabled:true}
+  Island.ControlsState {
+    id:actions
+    adapter:fakeAdapter;output:fakeOutput;networking:fakeNetwork
+    execute:function(command){scene.commands=scene.commands.concat([command])}
   }
   QtObject {
     id:service
@@ -50,6 +69,7 @@ ShellRoot {
     visible:true;implicitWidth:520;implicitHeight:620
     Island.ControlsView {
       id:view;anchors.fill:parent;anchors.margins:16
+      controlState:tileState
       service:service;bar:bar;strings:translations;active:true
       onSettingRequested:(key,value)=>{scene.preferences=[key,value]}
       execute:function(command){scene.commands=scene.commands.concat([command])}
@@ -73,8 +93,57 @@ ShellRoot {
         check(view.section==="" && view.error==="","failed panel cannot return to Controls")
         console.log("CONTROLS_PASS");Qt.quit();return
       }
+      check(actions.enabledState("audio") && actions.enabledState("network") && actions.enabledState("bluetooth"),"native enabled state differs")
+      actions.toggle("audio");check(fakeAudio.muted && !actions.enabledState("audio"),"audio mute did not follow real state")
+      actions.toggle("audio");check(!fakeAudio.muted,"audio unmute failed")
+      actions.toggle("network");check(!fakeNetwork.wifiEnabled && !actions.enabledState("network"),"Wi-Fi did not turn off")
+      actions.toggle("network");check(fakeNetwork.wifiEnabled,"Wi-Fi did not turn on")
+      actions.toggle("bluetooth");fakeAdapter.enabled=false;actions.toggle("bluetooth")
+      check(scene.commands[0].join(" ")==="omarchy-bluetooth-power off" && scene.commands[1].join(" ")==="omarchy-bluetooth-power on","Bluetooth bypassed persistent native power helper")
+      actions.adapter=null;actions.output=null
+      check(!actions.available("audio") && !actions.available("bluetooth") && !actions.available("tailscale"),"unavailable device can toggle")
+      actions.toggle("audio");actions.toggle("bluetooth");actions.toggle("tailscale");actions.toggle("settings")
+      check(scene.commands.length===2,"unavailable function launched a command")
+      actions.tailscaleKnown=true;actions.tailscaleEnabled=true
+      check(actions.available("tailscale") && actions.enabledState("tailscale"),"authorized Tailscale state missing")
+      actions.tailscaleKnown=false
+      actions.active=true
+      tryVerify(function(){return actions.tailscaleKnown && actions.outputName==="test-output"},3000)
+      check(actions.tailscaleEnabled,"Tailscale JSON status was not read")
+      actions.toggle("tailscale")
+      tryVerify(function(){return !actions.tailscaleEnabled},3000)
+      actions.toggle("tailscale")
+      tryVerify(function(){return actions.tailscaleEnabled},3000)
+      actions.active=false
+      scene.commands=[]
       var main=findChild(view,"controlMainGrid"),quick=findChild(view,"controlQuickGrid")
       check(main.y+main.height<quick.y && quick.columns===3,"main settings are not above the three-column quick controls")
+      for(var key of ["audio","bluetooth","network","tailscale"]) {
+        var tile=findChild(view,"controlOpen-"+key)
+        check(tile.height<=Commons.Style.space(52),"main tile is not compact")
+        check(tile.showLed && tile.selected,"enabled function has no indicator: "+key)
+        mouseClick(tile,tile.width/2,tile.height/2,Qt.RightButton);wait(10)
+        check(view.section==="" && !tile.selected && tileState.toggled.slice(-1)[0]===key,"right click did not toggle without opening: "+key)
+        tileState.on=true;wait(10)
+        check(tile.selected,"indicator did not follow external state: "+key)
+      }
+      for(var key of ["monitors","settings"]) {
+        var tile=findChild(view,"controlOpen-"+key),count=tileState.toggled.length
+        check(!tile.showLed,"non-toggle tile has an indicator")
+        mouseClick(tile,tile.width/2,tile.height/2,Qt.RightButton)
+        check(tileState.toggled.length===count && view.section==="","non-toggle right click changed state")
+      }
+      tileState.known=false;wait(10)
+      check(!findChild(view,"controlOpen-bluetooth").showLed,"unavailable state shown as enabled")
+      tileState.known=true
+      var audioTile=findChild(view,"controlOpen-audio")
+      mouseClick(audioTile,audioTile.width/2,audioTile.height/2,Qt.LeftButton)
+      check(view.section==="audio","left click no longer opens panel")
+      view.back();wait(50)
+      var dnd=findChild(view,"controlDnd")
+      mouseClick(dnd,dnd.width/2,dnd.height/2,Qt.RightButton)
+      check(service.doNotDisturb,"quick control right click did not toggle")
+      mouseClick(dnd,dnd.width/2,dnd.height/2,Qt.RightButton)
       view.toggleMode("dnd");check(service.doNotDisturb,"DND did not toggle")
       wait(190)
       check(findChild(findChild(view,"controlDnd"),"controlIndicatorGlow").shown>0.99,"active control has no braille status light")

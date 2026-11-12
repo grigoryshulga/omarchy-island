@@ -1,4 +1,7 @@
 {
+  "media.title": "Media",
+  "t3.expandList": "Show %1 more",
+  "t3.collapseList": "Show fewer",
   "dictation.listening": "Listening",
   "dictation.transcribing": "Transcribing",
   "downloads.title": "Downloads",
@@ -90,6 +93,7 @@
   "controls.quick": "Quick controls",
   "controls.microphone": "Mic muted",
   "controls.noMicrophone": "No microphone",
+  "controls.rightClickToggle": "Right-click to toggle",
   "controls.on": "On",
   "controls.off": "Off",
   "controls.unavailable": "This control is temporarily unavailable",

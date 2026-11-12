@@ -301,6 +301,7 @@ Item {
     onExpandRequested: root.expandRequested()
     onCalendarRequested: root.calendarRequested()
     onWeatherRequested: root.weatherRequested()
+    onCloseRequested:root.dismissRequested()
   }
   CalendarView {
     id: calendarPage

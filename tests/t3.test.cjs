@@ -40,3 +40,9 @@ assert.equal(model.transitions([running],[{...running,status:'completed'}]).leng
 assert.equal(model.transitions([running],[{...running,requestId:'question'}]).length,1);
 assert.deepEqual(model.transitions([], [{...running,status:'completed'}]),[]);
 assert.deepEqual(model.transitions([running], []),[]);
+
+assert.equal(model.statusRank({status:'running',requestId:'q'}),0);
+assert.equal(model.statusRank({status:'completed'}),1);
+assert.equal(model.statusRank({status:'failed'}),1);
+assert.equal(model.statusRank({status:'running'}),2);
+assert.equal(model.statusRank({status:'starting'}),2);
