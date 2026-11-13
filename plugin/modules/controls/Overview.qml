@@ -1,9 +1,9 @@
 import QtQuick
 import "../.." as Island
-Island.ModulePage {
+Island.ModuleView {
   id:root
-  available:true
-  implicitHeight:content.implicitHeight
+  available:!!presentation && (presentation.expanded || presentation.hovering) && !!backend
+  implicitHeight:presentation.detail ? Math.max(content.implicitHeight,presentation.pageHeight-Island.Design.controlHeight-Island.Design.gap.section) : content.implicitHeight
   navigationHidden:content.section==="settings"
   ownsKeys:content.settingsOwnKeys
   property var observedBackend:null
@@ -17,11 +17,15 @@ Island.ModulePage {
   onObservingChanged:sync()
   Component.onCompleted:sync()
   Component.onDestruction:if(observedBackend) observedBackend.watch(root,false)
-  function back(){if(content.section==="settings") {content.back();return true}return false}
+  function back(){if(content.section) {content.back();return true}return false}
   Island.ControlsView {
     id:content;objectName:"islandControls";anchors.fill:parent
     service:root.presentation.service;strings:root.presentation.strings;bar:root.presentation.bar
     settings:root.presentation.settings;externalFeedback:root.presentation.feedback
+    favoritesInteractive:root.presentation.expanded
+    favoriteMode:!root.presentation.detail
+    onSectionRequested:key=>{root.detailsRequested();Qt.callLater(function(){if(root.presentation.detail) content.openSection(key)})}
+    onAllRequested:root.detailsRequested()
     active:root.presentation.active
     controlState:root.backend
     panelCommand:root.backend ? root.backend.panelCommand : []

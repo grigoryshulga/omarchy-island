@@ -2,15 +2,15 @@ const assert = require('node:assert/strict');
 const settings = require('../plugin/SettingsModel.mjs');
 const osd = require('../plugin/Osd.js');
 
-assert.deepEqual(settings.pages({}), [0, 1, 2, 3]);
-assert.deepEqual(settings.pages({overviewEnabled:false, calendarEnabled:false, weatherEnabled:false}), [0]);
-assert.deepEqual(settings.pages({}, false), [0, 1, 2]);
+assert.deepEqual(settings.pages({}), [1, 2, 3]);
+assert.deepEqual(settings.pages({overviewEnabled:false, calendarEnabled:false, weatherEnabled:false}), [1]);
+assert.deepEqual(settings.pages({}, false), [1, 2]);
 assert.equal(settings.nextPage([0, 2], 0, -1), 2);
 assert.equal(settings.nextPage([0, 2], 2, 1), 0);
 assert.equal(settings.nextPage([0], 0, 1), 0);
 assert.equal(settings.openingPage({openingPage:'last'}, 2), 2);
-assert.equal(settings.openingPage({openingPage:'last', calendarEnabled:false}, 2), 0);
-assert.equal(settings.openingPage({overviewEnabled:false}, 1), 0);
+assert.equal(settings.openingPage({openingPage:'last', calendarEnabled:false}, 2), 1);
+assert.equal(settings.openingPage({overviewEnabled:false}, 1), 1);
 assert.equal(settings.get({hoverDelay:-1}, 'hoverDelay'), 140);
 assert.equal(settings.get({hoverDelay:1000}, 'hoverDelay'), 1000);
 for (const invalid of [-1, 1001, 1.5, NaN, Infinity, '140']) assert.equal(settings.valid('hoverDelay', invalid), false);
@@ -32,7 +32,7 @@ assert.deepEqual(settings.sections.map(section => section.id), ['general', 'pane
 const rows = settings.sections.flatMap(section => section.groups.flatMap(group => group.rows));
 assert.equal(new Set(rows.map(row => row.key)).size, rows.length);
 assert.deepEqual(rows.filter(row => !row.fixed).map(row => row.key).sort(),
-  Object.keys(settings.defaults).filter(key => !['musicVisualizationStyle', 'agentLimitsPins', 'overviewLayout'].includes(key)).sort());
+  Object.keys(settings.defaults).filter(key => !['musicVisualizationStyle', 'agentLimitsPins', 'overviewEnabled', 'overviewLayout'].includes(key)).sort());
 assert.deepEqual(rows.filter(row => row.dependsOn).map(row => [row.key, row.dependsOn]),
   [['hoverDelay', 'hoverPreview'], ['t3Responses', 't3Enabled']]);
 for (const lang of ['en', 'ru']) {

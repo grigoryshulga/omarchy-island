@@ -6,6 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import Quickshell.Io
 import "controls"
+import "controls/Layout.js" as ControlLayout
 
 Item {
   id:root
@@ -13,8 +14,14 @@ Item {
   required property var strings
   property var bar:null
   property var settings:({})
+  property var externalSettings:({})
+  readonly property var nativeSettings:section.indexOf("plugin:")===0 ? externalSettings : settings
   property var externalFeedback:null
   property bool active:false
+  property bool favoriteMode:false
+  property bool favoritesInteractive:true
+  signal sectionRequested(string key)
+  signal allRequested()
   property string section:""
   property string error:""
   property bool changing:false
@@ -26,6 +33,35 @@ Item {
   property var systemCall:function(target,method,args){return {ran:false}}
   property var panelCommand:[]
   property var controlState:null
+  readonly property var layoutState:controlState && ("layoutState" in controlState) ? controlState.layoutState : null
+  readonly property var controlLayout:layoutState ? layoutState.layout : ControlLayout.normalize({})
+  property var externalControls:[]
+  function controlTitle(key) {
+    if(key.indexOf("plugin:")===0) {
+      for(var i=0;i<externalControls.length;i++) if(externalControls[i].key===key) return externalControls[i].name
+      return key.slice(7)
+    }
+    var shortKeys=["dnd","stayAwake","recording"]
+    return strings.t(key==="nightLight" ? "indicator.nightLight" : "controls."+key+(shortKeys.indexOf(key)>=0 ? "Short" : ""))
+  }
+  function mainModel() {
+    var icons={audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓"}
+    return controlLayout.main.filter(function(key){return root.controlLayout.hidden.indexOf(key)<0}).map(function(key){return {key:key,icon:icons[key] || "󰒓"}})
+  }
+  function refreshCatalog() {
+    if(!panelCommand.length || catalogBuilder.running) return
+    catalogBuilder.command=panelCommand.concat(["--catalog"]);catalogBuilder.running=true
+  }
+  Process {
+    id:catalogBuilder
+    property string result:""
+    onStarted:result=""
+    stdout:StdioCollector {onStreamFinished:catalogBuilder.result=text}
+    onExited:code=>{
+      if(code!==0) {if(root.active) root.error=root.strings.t("controls.unavailable");return}
+      try {root.externalControls=JSON.parse(result)} catch(e) {root.error=root.strings.t("controls.unavailable")}
+    }
+  }
   Connections {
     target:root.controlState
     ignoreUnknownSignals:true
@@ -33,10 +69,11 @@ Item {
   }
   signal dismissRequested()
   signal settingRequested(string key, var value)
-  implicitHeight:section ? detailHeight : landing.implicitHeight
+  implicitHeight:favoriteMode ? favorites.implicitHeight : section ? detailHeight : landing.implicitHeight
 
   function openSection(name) {
-    if(["audio","bluetooth","network","tailscale","monitors","settings"].indexOf(name)<0) return
+    if(favoriteMode) {sectionRequested(name);return}
+    if(["audio","bluetooth","network","tailscale","monitors","settings","customize"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
     if(!section) detailHeight=landing.implicitHeight
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
@@ -44,6 +81,7 @@ Item {
     section=name;error=""
     changing=false
     if(name==="settings") Qt.callLater(function(){settingsPage.focusContent()})
+    else if(name==="customize") {refreshCatalog();Qt.callLater(function(){editor.forceActiveFocus()})}
     else requestPanel()
   }
   function launchExternalPanel(id,payload) {
@@ -66,6 +104,7 @@ Item {
       }
     })
   }
+  onFavoriteModeChanged:if(favoriteMode) back()
   function modeState(enabled) {return strings.t(enabled ? "controls.on" : "controls.off")}
   function toggleMode(mode) {
     error=""
@@ -88,7 +127,7 @@ Item {
   property string buildOutput:""
   property string buildError:""
   function requestPanel() {
-    if(!active || !section || section==="settings" || panelBuilder.running) return
+    if(!active || !section || (section==="settings" || section==="customize") || panelBuilder.running) return
     if(!panelCommand.length) {error=strings.t("controls.unavailable");return}
     buildingSection=section;buildOutput="";buildError=""
     panelBuilder.command=panelCommand.concat([section])
@@ -115,7 +154,8 @@ Item {
       try {
         var result=JSON.parse(root.buildOutput)
         if(typeof result.url!=="string" || result.url.indexOf("file://")!==0) throw new Error("Invalid panel URL")
-        nativeLoader.setSource(result.url,{bar:embeddedBar,settings:root.settings})
+        root.externalSettings=result.settings || ({})
+        nativeLoader.setSource(result.url,{bar:embeddedBar,settings:root.nativeSettings})
       } catch(error) {root.error=root.strings.t("controls.unavailable");console.warn("Island Controls:",error)}
     }
   }
@@ -135,8 +175,8 @@ Item {
   }
   PluginBarApi {
     id:embeddedBar
-    pluginId:"gshulga.island"
-    moduleName:"gshulga.island.controls"
+    pluginId:root.section.indexOf("plugin:")===0 ? root.section.slice(7) : "gshulga.island"
+    moduleName:pluginId==="gshulga.island" ? "gshulga.island.controls" : pluginId
     shell:embeddedShell
     foreground:Design.text
     barForeground:foreground
@@ -146,10 +186,58 @@ Item {
     _moduleWidgets:function(id){return root.bar && typeof root.bar.moduleWidgets==="function" ? root.bar.moduleWidgets(id) : []}
     _run:function(command){if(root.bar) root.bar.run(command)}
   }
+  RowLayout {
+    id:favorites
+    objectName:"controlFavorites"
+    anchors.left:parent.left;anchors.right:parent.right
+    visible:root.favoriteMode
+    spacing:Design.gap.tight
+    Flickable {
+      Layout.fillWidth:true
+      implicitHeight:Design.controlHeight
+      contentWidth:favoriteRow.implicitWidth;contentHeight:height
+      flickableDirection:Flickable.HorizontalFlick
+      boundsBehavior:Flickable.StopAtBounds;clip:true
+      RowLayout {
+        id:favoriteRow;height:parent.height;spacing:Design.gap.tight
+        Repeater {
+          model:root.controlLayout.favorites
+          FeedbackButton {
+            required property string modelData
+            objectName:"controlFavorite-"+modelData
+            implicitWidth:Design.controlHeight;implicitHeight:Design.controlHeight
+            iconText:({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
+            tooltipText:root.controlTitle(modelData);focusable:true;feedback:root.externalFeedback
+            selected:root.controlState && root.controlState.enabledState(modelData)
+              || modelData==="dnd" && root.service && root.service.doNotDisturb
+              || modelData==="nightLight" && root.indicators && root.indicators.nightLight
+              || modelData==="stayAwake" && root.indicators && root.indicators.stayAwake
+              || modelData==="recording" && root.indicators && root.indicators.recording
+              || modelData==="microphone" && root.indicators && root.indicators.microphoneMuted
+            enabled:root.favoritesInteractive && modelData!=="remote" && (modelData!=="microphone" || !!root.microphone)
+            onClicked: {
+              if(ControlLayout.quickDefaults.indexOf(modelData)>=0) root.toggleMode(modelData)
+              else root.openSection(modelData)
+            }
+            onRightClicked: {
+              if(ControlLayout.quickDefaults.indexOf(modelData)>=0) clicked()
+              else if(root.controlState) root.controlState.toggle(modelData)
+            }
+          }
+        }
+      }
+    }
+    FeedbackButton {
+      objectName:"controlAll"
+      iconText:Commons.I18n.rightToLeft ? "󰅁" : "󰅂"
+      tooltipText:root.strings.t("controls.all");focusable:true;feedback:root.externalFeedback
+      onClicked:root.allRequested()
+    }
+  }
   ColumnLayout {
     id:landing
     anchors.left:parent.left;anchors.right:parent.right
-    visible:!root.section
+    visible:!root.section && !root.favoriteMode
     spacing:Design.gap.section
     GridLayout {
       objectName:"controlMainGrid"
@@ -159,14 +247,14 @@ Item {
       columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
       Repeater {
         id:mainTiles
-        model:[{key:"audio",icon:"󰕾"},{key:"bluetooth",icon:"󰂯"},{key:"network",icon:"󰤨"},{key:"tailscale",icon:"󰖂"},{key:"monitors",icon:"󰍺"},{key:"settings",icon:"󰒓"}]
+        model:root.mainModel()
         ControlTile {
           effectsActive:root.active && !root.section
           required property var modelData
           objectName:"controlOpen-"+modelData.key
           Layout.fillWidth:true
           feedback:root.externalFeedback
-          title:root.strings.t("controls."+modelData.key)
+          title:root.controlTitle(modelData.key)
           showLed:!!root.controlState && root.controlState.available(modelData.key)
           selected:showLed && root.controlState.enabledState(modelData.key)
           tooltipText:showLed ? root.strings.t("controls.rightClickToggle")+" · "+root.modeState(selected) : title
@@ -180,74 +268,115 @@ Item {
 
     GridLayout {
       objectName:"controlQuickGrid"
+      visible:quickTiles.count>0
       Layout.fillWidth:true
       columns:3
       uniformCellWidths:true
       columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
-      ControlTile {
-        effectsActive:root.active && !root.section
-        compact:true
-        objectName:"controlMicrophone";Layout.fillWidth:true;feedback:root.externalFeedback
-        title:root.strings.t("controls.microphone");glyph:"󰍭"
-        tooltipText:root.microphone ? root.modeState(root.indicators.microphoneMuted) : root.strings.t("controls.noMicrophone")
-        selected:root.indicators && root.indicators.microphoneMuted
-        enabled:!!root.microphone
-        onRightClicked:clicked()
-        onClicked:root.toggleMode("microphone")
-      }
-      ControlTile {
-        effectsActive:root.active && !root.section
-        compact:true
-        objectName:"controlDnd";Layout.fillWidth:true;feedback:root.externalFeedback
-        title:root.strings.t("controls.dndShort");glyph:"󰂛"
-        tooltipText:root.modeState(root.service && root.service.doNotDisturb)
-        selected:root.service && root.service.doNotDisturb
-        onRightClicked:clicked()
-        onClicked:root.toggleMode("dnd")
-      }
-      ControlTile {
-        effectsActive:root.active && !root.section
-        compact:true
-        objectName:"controlNightLight";Layout.fillWidth:true;feedback:root.externalFeedback
-        title:root.strings.t("indicator.nightLight");glyph:"󰔎"
-        tooltipText:root.modeState(root.indicators && root.indicators.nightLight)
-        selected:root.indicators && root.indicators.nightLight
-        onRightClicked:clicked()
-        onClicked:root.toggleMode("nightLight")
-      }
-      ControlTile {
-        effectsActive:root.active && !root.section
-        compact:true
-        objectName:"controlStayAwake";Layout.fillWidth:true;feedback:root.externalFeedback
-        title:root.strings.t("controls.stayAwakeShort");glyph:""
-        tooltipText:root.modeState(root.indicators && root.indicators.stayAwake)
-        selected:root.indicators && root.indicators.stayAwake
-        onRightClicked:clicked()
-        onClicked:root.toggleMode("stayAwake")
-      }
-      ControlTile {
-        effectsActive:root.active && !root.section
-        compact:true
-        objectName:"controlRecording";Layout.fillWidth:true;feedback:root.externalFeedback
-        title:root.strings.t("controls.recordingShort");glyph:"󰻂"
-        tooltipText:root.strings.t(root.indicators && root.indicators.recording ? "controls.stopRecording" : "controls.startRecording")
-        selected:root.indicators && root.indicators.recording
-        glyphColor:selected ? Design.danger : Design.text
-        onRightClicked:clicked()
-        onClicked:root.toggleMode("recording")
-      }
-      ControlTile {
-        effectsActive:root.active && !root.section
-        compact:true
-        objectName:"controlRemote";Layout.fillWidth:true
-        title:root.strings.t("controls.remoteShort");glyph:"󰢹"
-        tooltipText:root.strings.t(root.indicators && root.indicators.remoteActive ? "controls.connected" : "controls.noConnection")
-        selected:root.indicators && root.indicators.remoteActive
-        glyphColor:selected ? Design.accent : Design.secondaryText
-        enabled:false
+      Repeater {
+        id:quickTiles
+        model:root.controlLayout.quick.filter(function(key){return root.controlLayout.hidden.indexOf(key)<0})
+        Loader {
+          required property string modelData
+          Layout.fillWidth:true
+          Layout.preferredHeight:item ? item.implicitHeight : 0
+          sourceComponent:({microphone:quickmicrophone,dnd:quickdnd,nightLight:quicknightLight,stayAwake:quickstayAwake,recording:quickrecording,remote:quickremote})[modelData]
+        }
       }
     }
+    FeedbackButton {
+      objectName:"controlCustomize";text:root.strings.t("controls.customize");iconText:"󰒓"
+      focusable:true;feedback:root.externalFeedback
+      onClicked:root.openSection("customize")
+    }
+
     PlainText {Layout.fillWidth:true;visible:root.error!=="";text:root.error;color:Design.danger;wrapMode:Text.Wrap;typeRole:"caption"}
+  }
+  Component {
+    id:quickmicrophone
+    ControlTile {
+      width:parent ? parent.width : implicitWidth
+      effectsActive:root.active && !root.section
+      compact:true
+      objectName:"controlMicrophone";feedback:root.externalFeedback
+      title:root.strings.t("controls.microphone");glyph:"󰍭"
+      tooltipText:root.microphone ? root.modeState(root.indicators.microphoneMuted) : root.strings.t("controls.noMicrophone")
+      selected:root.indicators && root.indicators.microphoneMuted
+      enabled:!!root.microphone
+      onRightClicked:clicked()
+      onClicked:root.toggleMode("microphone")
+    }
+  }
+  Component {
+    id:quickdnd
+    ControlTile {
+      width:parent ? parent.width : implicitWidth
+      effectsActive:root.active && !root.section
+      compact:true
+      objectName:"controlDnd";feedback:root.externalFeedback
+      title:root.strings.t("controls.dndShort");glyph:"󰂛"
+      tooltipText:root.modeState(root.service && root.service.doNotDisturb)
+      selected:root.service && root.service.doNotDisturb
+      onRightClicked:clicked()
+      onClicked:root.toggleMode("dnd")
+    }
+  }
+  Component {
+    id:quicknightLight
+    ControlTile {
+      width:parent ? parent.width : implicitWidth
+      effectsActive:root.active && !root.section
+      compact:true
+      objectName:"controlNightLight";feedback:root.externalFeedback
+      title:root.strings.t("indicator.nightLight");glyph:"󰔎"
+      tooltipText:root.modeState(root.indicators && root.indicators.nightLight)
+      selected:root.indicators && root.indicators.nightLight
+      onRightClicked:clicked()
+      onClicked:root.toggleMode("nightLight")
+    }
+  }
+  Component {
+    id:quickstayAwake
+    ControlTile {
+      width:parent ? parent.width : implicitWidth
+      effectsActive:root.active && !root.section
+      compact:true
+      objectName:"controlStayAwake";feedback:root.externalFeedback
+      title:root.strings.t("controls.stayAwakeShort");glyph:""
+      tooltipText:root.modeState(root.indicators && root.indicators.stayAwake)
+      selected:root.indicators && root.indicators.stayAwake
+      onRightClicked:clicked()
+      onClicked:root.toggleMode("stayAwake")
+    }
+  }
+  Component {
+    id:quickrecording
+    ControlTile {
+      width:parent ? parent.width : implicitWidth
+      effectsActive:root.active && !root.section
+      compact:true
+      objectName:"controlRecording";feedback:root.externalFeedback
+      title:root.strings.t("controls.recordingShort");glyph:"󰻂"
+      tooltipText:root.strings.t(root.indicators && root.indicators.recording ? "controls.stopRecording" : "controls.startRecording")
+      selected:root.indicators && root.indicators.recording
+      glyphColor:selected ? Design.danger : Design.text
+      onRightClicked:clicked()
+      onClicked:root.toggleMode("recording")
+    }
+  }
+  Component {
+    id:quickremote
+    ControlTile {
+      width:parent ? parent.width : implicitWidth
+      effectsActive:root.active && !root.section
+      compact:true
+      objectName:"controlRemote"
+      title:root.strings.t("controls.remoteShort");glyph:"󰢹"
+      tooltipText:root.strings.t(root.indicators && root.indicators.remoteActive ? "controls.connected" : "controls.noConnection")
+      selected:root.indicators && root.indicators.remoteActive
+      glyphColor:selected ? Design.accent : Design.secondaryText
+      enabled:false
+    }
   }
   Loader {
     id:nativeLoader
@@ -255,9 +384,9 @@ Item {
     anchors.left:parent.left;anchors.right:parent.right
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
     anchors.topMargin:Design.gap.small
-    active:root.active && !!root.section && root.section!=="settings"
+    active:root.active && !!root.section && root.section!=="settings" && root.section!=="customize"
     visible:active
-    onLoaded:{item.settings=Qt.binding(function(){return root.settings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
+    onLoaded:{item.settings=Qt.binding(function(){return root.nativeSettings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
     onStatusChanged:if(status===Loader.Error) root.error=root.strings.t("controls.unavailable")
     TapHandler {
       acceptedButtons:Qt.LeftButton | Qt.RightButton
@@ -290,6 +419,16 @@ Item {
     modules:root.service && root.service.modules ? root.service.modules : ({})
     feedback:root.externalFeedback
     onSettingRequested:(key,value)=>root.settingRequested(key,value)
+  }
+  LayoutEditor {
+    id:editor
+    anchors.left:parent.left;anchors.right:parent.right
+    anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
+    anchors.topMargin:Design.gap.small
+    visible:root.section==="customize"
+    backend:root.layoutState;strings:root.strings;feedback:root.externalFeedback
+    catalog:root.externalControls
+    titleFor:root.controlTitle
   }
   Connections {
     target:nativeLoader.item

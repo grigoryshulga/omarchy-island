@@ -405,13 +405,13 @@ ShellRoot {
       if(tick===340) {
         if(widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: wheel did not return visible overview");widget.close();Qt.quit();return}
         console.log("RESIZING_PAGE_WHEEL_PASS")
-        test.findChild(widget,"islandTabControls").clicked()
+        test.findChild(widget,"controlAll").clicked()
       }
       if(tick===370) {
         var controls=test.findChild(widget,"islandControls"),pager=test.findChild(widget,"islandPageSwipe")
-        if(!widget.controlsMode || !controls.active || Math.abs(controls.mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls tab did not switch visible page");widget.close();Qt.quit();return}
-        if(test.findChild(widget,"islandTabControls").x>=test.findChild(widget,"islandTabOverview").x) {console.log("ISLAND_MOTION_FAIL: Controls is not the first tab");widget.close();Qt.quit();return}
-        test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
+        if(!widget.controlsMode || !controls.active || Math.abs(controls.mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls did not open within Overview");widget.close();Qt.quit();return}
+        if(test.findChild(widget,"islandTabControls")) {console.log("ISLAND_MOTION_FAIL: Controls still has a separate tab");widget.close();Qt.quit();return}
+        test.findChild(widget,"overviewBack").clicked()
       }
       if(tick===400) {
         if(widget.controlsMode || widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls wheel did not return Overview");widget.close();Qt.quit();return}

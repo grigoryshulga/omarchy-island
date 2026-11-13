@@ -32,6 +32,7 @@ ShellRoot {
     function cancelSearch(){suggestions=[]}
     function choose(place){}
     function autoLocate(){}
+    function activate(){}
     function refresh(){}
   }
   QtObject {
@@ -166,7 +167,8 @@ ShellRoot {
         keyClick(Qt.Key_1,Qt.AltModifier);wait(280)
         check(pages.controls,"Alt+1 did not open Controls")
         var audio=findChild(pages,"controlOpen-audio"),bluetooth=findChild(pages,"controlOpen-bluetooth")
-        check(audio.activeFocus,"tab switch did not focus the current page")
+        check(findChild(pages,"overviewBack").activeFocus,"detail switch did not focus its Back button")
+        audio.forceActiveFocus()
         keyClick(Qt.Key_Right);check(bluetooth.activeFocus,"right arrow did not move between tiles: "+findChild(pages,"islandKeyboardNavigation").focused.objectName)
         keyClick(Qt.Key_J);check(findChild(pages,"controlOpen-tailscale").activeFocus,"Vim J did not move down")
         var dnd=findChild(pages,"controlDnd")
@@ -231,13 +233,14 @@ ShellRoot {
         check(pages.settings.notificationStyle==="bar" && !notificationStyle.popupOpen,"page navigation stole dropdown keys")
         var settingsHeight=findChild(pages,"islandControls").implicitHeight
         pages.settings={overviewEnabled:false,calendarEnabled:false,weatherEnabled:false};wait(80)
-        check(findChild(pages,"islandPageSwipe").count===1 && pages.enabledPages.join(",")==="0","disabled pages remained in swipe navigation")
-        keyClick(Qt.Key_2,Qt.AltModifier);keyClick(Qt.Key_3,Qt.AltModifier);wait(30)
+        check(findChild(pages,"islandPageSwipe").count===1 && pages.enabledPages.join(",")==="1","disabled pages remained in swipe navigation")
+        keyClick(Qt.Key_3,Qt.AltModifier);keyClick(Qt.Key_4,Qt.AltModifier);wait(30)
         check(pages.controls && findChild(pages,"islandControls").implicitHeight===settingsHeight,"disabled shortcuts navigated or resized Settings")
         pages.settings={calendarEnabled:false,weatherEnabled:false};wait(80)
-        pages.requestPage(1);wait(280)
+        pages.back();pages.back();wait(280)
         check(!pages.controls && Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(findChild(pages,"islandPageSwipe"),0,0).x)<1,"re-enabling Overview lost its content")
-        pages.requestPage(0);wait(280)
+        keyClick(Qt.Key_1,Qt.AltModifier);wait(280)
+        findChild(pages,"controlOpen-settings").clicked();wait(30)
         pages.back();wait(30)
         check(findChild(pages,"islandTabs").visible,"back did not restore main tabs")
         check(findChild(pages,"controlOpen-settings").activeFocus,"back did not restore Settings tile focus")

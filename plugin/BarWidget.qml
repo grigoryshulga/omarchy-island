@@ -57,7 +57,7 @@ BarWidget {
   readonly property bool stripNotification: !vertical && notificationToast && Settings.get(settings,"notificationStyle")==="bar"
   property bool contentExpanded: false
   property int selectedPage:1
-  readonly property bool controlsMode:selectedPage===0
+  readonly property bool controlsMode:selectedPage===1 && previewContent.controls
   readonly property bool calendarMode:selectedPage===2
   readonly property bool weatherMode:selectedPage===3
   property bool hoverOpen: false
@@ -98,7 +98,7 @@ BarWidget {
     previewContent.alertKind = alertKind
   }
   function openPage(index) {
-    if(Settings.pages(settings, !service || !service.weather || service.weather.allowed).indexOf(index)<0) index=0
+    if(Settings.pages(settings, !service || !service.weather || service.weather.allowed).indexOf(index)<0) index=1
     selectedPage=index
     contentExpanded=true;pinned=true;hoverOpen=false;alertKind="";lastOpenedPage=index
     activateWeather()
@@ -112,7 +112,8 @@ BarWidget {
     openPage(3)
   }
   function openControls() {
-    openPage(0)
+    openPage(1)
+    Qt.callLater(function(){previewContent.openDetails("controls")})
   }
   function toggleCalendar() { if (pinned && calendarMode) close(); else openCalendar() }
   function close() { hoverSuppressed = true; pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop() }
