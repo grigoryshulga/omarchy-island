@@ -47,10 +47,11 @@ assert.equal(trail.advance(samples, {x: 40, y: 60}, {x: 40, y: 60}, 1000).length
 let bounded = [], previous = {x: 0, y: 0};
 for (let i = 0; i < 100; i++) {
   const point = {x: i * 5, y: i % 2 * 5};
-  bounded = trail.advance(bounded, previous, point, i * 64);
+  bounded = trail.advance(bounded, previous, point, i * 32);
   previous = point;
-  assert.ok(bounded.length <= 12, 'path memory stays bounded');
+  assert.ok(bounded.length <= 24, 'path memory stays bounded');
 }
+assert.ok(bounded.length >= 22, 'continuous motion retains a denser path throughout the fade');
 console.log('PASS: visible path retention, curved motion, smooth fading and bounded history.');
 const box = {x: 40, y: 30, width: 220, height: 130};
 let hit = model.collision({x: 180, y: 95}, {x: 254, y: 95}, box, 18, 25);

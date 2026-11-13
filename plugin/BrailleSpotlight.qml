@@ -7,10 +7,12 @@ import "SpotlightTrail.js" as Trail
 ShaderEffect {
   id: root
   property bool active: false
+  readonly property bool effectsEnabled: Preferences.get("cursorEffectsEnabled")
+  readonly property bool effectActive: active && effectsEnabled
   property bool adaptive: true
   property Item surfaceRoot: null
-  readonly property var hoveredSurface: active && surfaceRoot ? Spotlight.pick(surfaceRoot,root,pointer) : null
-  readonly property var nearbySurfaces: active && surfaceRoot ? Spotlight.neighbors(surfaceRoot,root,pointer,spotRadius*0.75) : []
+  readonly property var hoveredSurface: effectActive && surfaceRoot ? Spotlight.pick(surfaceRoot,root,pointer) : null
+  readonly property var nearbySurfaces: effectActive && surfaceRoot ? Spotlight.neighbors(surfaceRoot,root,pointer,spotRadius*0.75) : []
   function neighborRect(index) {
     if (index >= nearbySurfaces.length) return Qt.vector4d(0,0,0,0)
     var rect = nearbySurfaces[index].rect
@@ -54,9 +56,21 @@ ShaderEffect {
   readonly property vector4d trail9: trailSample(9)
   readonly property vector4d trail10: trailSample(10)
   readonly property vector4d trail11: trailSample(11)
+  readonly property vector4d trail12: trailSample(12)
+  readonly property vector4d trail13: trailSample(13)
+  readonly property vector4d trail14: trailSample(14)
+  readonly property vector4d trail15: trailSample(15)
+  readonly property vector4d trail16: trailSample(16)
+  readonly property vector4d trail17: trailSample(17)
+  readonly property vector4d trail18: trailSample(18)
+  readonly property vector4d trail19: trailSample(19)
+  readonly property vector4d trail20: trailSample(20)
+  readonly property vector4d trail21: trailSample(21)
+  readonly property vector4d trail22: trailSample(22)
+  readonly property vector4d trail23: trailSample(23)
   property vector4d edgeImpact: Qt.vector4d(0,0,0,0)
   property real edgeProgress: 1
-  readonly property real edgeEnabled: focused && active && !Preferences.reduceMotion ? 1 : 0
+  readonly property real edgeEnabled: focused && effectActive && !Preferences.reduceMotion ? 1 : 0
   function clearEdge() {edgeBurst.stop();edgeProgress=1}
   function collide(previous, point) {
     if(!hoveredSurface || Preferences.reduceMotion) return
@@ -67,7 +81,10 @@ ShaderEffect {
     edgeBurst.restart()
   }
   NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Preferences.duration(800);easing.type:Easing.Linear}
-  onActiveChanged: {clearTrail();clearEdge()}
+  onEffectActiveChanged: {clearTrail();clearEdge()}
+  onEffectsEnabledChanged: {
+    if (!effectsEnabled) {wave.stop();rippleProgress=1}
+  }
   onHoveredSurfaceChanged: {clearTrail();clearEdge()}
   Connections {
     target: Preferences
@@ -76,7 +93,7 @@ ShaderEffect {
   Timer {
     objectName:"spotlightTrailClock"
     interval:32;repeat:true
-    running:root.active && root.visible && !Preferences.reduceMotion && root.trailPending
+    running:root.effectActive && root.visible && !Preferences.reduceMotion && root.trailPending
     onTriggered: {
       var now=Date.now()
       root.collide(root.lastTrailPoint,root.pointer)
@@ -91,7 +108,7 @@ ShaderEffect {
   property real artworkMix: artworkUrl.toString()!=="" && cover.status===Image.Ready ? artworkStrength : 0
   property point pointer: Qt.point(width/2,height/2)
   property point rippleOrigin: Qt.point(width/2,height/2)
-  property real shown: active ? 1 : 0
+  property real shown: effectActive ? 1 : 0
   property vector2d size: Qt.vector2d(width,height)
   property vector2d center: Qt.vector2d(pointer.x,pointer.y)
   property vector2d rippleCenter: Qt.vector2d(rippleOrigin.x,rippleOrigin.y)
@@ -105,7 +122,7 @@ ShaderEffect {
   Behavior on intensity {NumberAnimation {duration:Preferences.duration(140);easing.type:Easing.OutCubic}}
   property real rippleProgress: 1
   readonly property bool rippling: rippleProgress < 0.24
-  visible: shown > 0 || rippling
+  visible: effectsEnabled && (shown > 0 || rippling)
   vertexShader: Qt.resolvedUrl("shaders/spotlight.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/spotlight.frag.qsb")
   Image {
@@ -120,7 +137,7 @@ ShaderEffect {
   }
   Behavior on artworkMix { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   function pulse(point) {
-    if (Preferences.reduceMotion) return
+    if (!effectsEnabled || Preferences.reduceMotion) return
     rippleOrigin=point
     rippleProgress=0
     wave.restart()

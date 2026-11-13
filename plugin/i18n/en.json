@@ -142,6 +142,7 @@
   "settings.openingPage": "Opening page",
   "settings.panelAnimation": "Bar animations",
   "settings.animationsEnabled": "Interface animations",
+  "settings.cursorEffectsEnabled": "Cursor effects",
   "settings.controlsEnabled": "Controls",
   "settings.overviewEnabled": "Overview",
   "settings.calendarEnabled": "Calendar",
