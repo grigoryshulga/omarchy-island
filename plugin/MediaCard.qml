@@ -53,7 +53,6 @@ Item {
         Layout.fillWidth: true
         Layout.minimumWidth: 0
         spacing:Design.gap.tight
-        PlainText {visible:root.compactOverview && root.overviewSize==="standard";Layout.fillWidth:true;text:root.player ? root.player.identity : root.strings.t("media.title");typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
         PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); typeRole: "section" }
         PlainText { visible:root.overviewSize!=="minimal"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Design.accent : Design.secondaryText; typeRole:"caption" }
       }

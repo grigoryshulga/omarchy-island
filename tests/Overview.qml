@@ -129,6 +129,7 @@ ShellRoot {
         verify(!findChild(overview,"t3Count-working").visible,"Zero working count is visible")
         var seek=findChild(overview,"mediaCompactProgress")
         verify(seek.visible && seek.enabled,"Compact player has no seek control")
+        compare(findChild(overview,"mediaTitle").y,0,"Media still reserves a source row above the track title")
         compare(seek.trackStyle,"braille")
         verify(findChild(seek,"sliderBrailleProgress").visible,"Media did not use the shared dot track")
         seek.forceActiveFocus();keyClick(Qt.Key_Right);compare(p.position,21,"Braille progress cannot seek")
