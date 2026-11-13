@@ -17,6 +17,7 @@ Surface {
   Accessible.description:strings.t(row.pendingReset ? "limits.awaitingReset" : row.stale ? "limits.cached" : "limits.remaining")
   signal pinRequested(string id)
   readonly property real padding:compact ? Design.gap.small : Design.gap.large
+  readonly property color gaugeColor:row.remaining===null ? Design.accent : row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : row.remaining<=Preferences.get("agentLimitsWarning") ? Design.warning : Design.accent
   implicitHeight:body.implicitHeight+padding*2
   LayoutMirroring.enabled:Commons.I18n.rightToLeft
   LayoutMirroring.childrenInherit:true
@@ -27,23 +28,25 @@ Surface {
     spacing:Design.gap.tight
     RowLayout {
       Layout.fillWidth:true
-      PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;typeRole:root.compact ? "body" : "title";text:Model.displayName(root.row);elide:Text.ElideRight}
-      ShaderEffect {
-        objectName:"limitBrailleProgress"
-        visible:root.compact && root.row.remaining!==null
-        Layout.preferredWidth:Style.space(104)
-        Layout.preferredHeight:Style.space(24)
-        property vector2d size:Qt.vector2d(width,height)
-        property real amount:root.row.remaining===null ? 0 : Math.max(0,Math.min(1,root.row.remaining/100))
-        property color accent:root.row.remaining!==null && root.row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : Design.accent
-        vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
-        fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
-      }
+      spacing:Design.gap.small
       PlainText {
         objectName:"limitRemaining"
-        typeRole:"title"
+        typeRole:root.compact ? "body" : "title"
         text:(root.row.remaining===null ? "—" : Commons.I18n.formatNumber(Math.round(root.row.remaining))+"%")+(root.row.stale ? " ·" : "")
         color:root.row.remaining!==null && root.row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : Design.text
+      }
+      PlainText {
+        objectName:"limitName"
+        Layout.fillWidth:true;Layout.minimumWidth:0
+        typeRole:root.compact ? "body" : "title"
+        text:Model.displayName(root.row);elide:Text.ElideRight
+      }
+      PlainText {
+        objectName:"limitSummaryResetCountdown"
+        visible:root.compact && text!==""
+        Layout.maximumWidth:root.width*0.48;Layout.minimumWidth:0
+        typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight
+        text:Model.resetCountdown(root.row,root.now,root.strings,Commons.I18n.formatNumber)
       }
       FeedbackButton {
         objectName:"limitPin"
@@ -55,13 +58,13 @@ Surface {
       }
     }
     ShaderEffect {
-      objectName:"limitBrailleProgressFull"
+      objectName:"limitBrailleProgress"
       Layout.fillWidth:true
-      Layout.preferredHeight:Style.space(24)
-      visible:!root.compact && root.row.remaining!==null
+      Layout.preferredHeight:Style.space(root.compact ? 10 : 24)
+      visible:root.row.remaining!==null
       property vector2d size:Qt.vector2d(width,height)
       property real amount:root.row.remaining===null ? 0 : Math.max(0,Math.min(1,root.row.remaining/100))
-      property color accent:root.row.remaining!==null && root.row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : Design.accent
+      property color accent:root.gaugeColor
       vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
       fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
     }
