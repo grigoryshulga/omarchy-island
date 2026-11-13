@@ -5,8 +5,9 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
-Surface {
+Item {
   id: root
+  readonly property bool islandSpotlightSurface: true
   required property var service
   required property var strings
   property var bar: null
@@ -20,7 +21,7 @@ Surface {
   readonly property var player: service ? service.player : null
   signal expandRequested()
   signal closeRequested()
-  implicitHeight: body.implicitHeight+2*Design.cardPadding
+  implicitHeight: body.implicitHeight
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return} root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); if(!root.expanded) root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
@@ -43,7 +44,6 @@ Surface {
   ColumnLayout {
     id: body
     anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top
-    anchors.margins:Design.cardPadding
     spacing:Design.gap.medium
     RowLayout {
       Layout.fillWidth: true

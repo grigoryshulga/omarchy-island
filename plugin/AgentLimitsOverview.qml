@@ -66,7 +66,7 @@ Column {
           width:cards.width
           row:root.rows.find(function(r){return r.id===windowId}) || ({id:windowId,name:"",label:"",remaining:null})
           strings:root.strings;feedback:root.feedback
-          pinned:root.backend.pins.indexOf(windowId)>=0;interactive:false;compact:true
+          pinned:root.backend.pins.indexOf(windowId)>=0;interactive:false
           now:root.backend.now
           onPinRequested:id=>root.pin(id)
         }

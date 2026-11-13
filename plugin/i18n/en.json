@@ -310,7 +310,6 @@
   "limits.quiet": "No limits need attention. Open all limits to pin your windows.",
   "limits.error": "Could not update. Last available data may be outdated.",
   "limits.loading": "Updating limits…",
-  "limits.shared": "Connections and provider order are shared with Agent Limits.",
   "limits.tab.limits": "Limits",
   "limits.tab.usage": "Usage",
   "limits.tab.cost": "Cost",

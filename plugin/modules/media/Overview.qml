@@ -15,7 +15,6 @@ Island.ModuleView {
     }
     Island.MediaCard {
       id:card;objectName:"islandMediaPlayer";width:parent.width
-      color:root.toast ? "transparent" : Island.Design.surface
       externalFeedback:root.presentation.feedback
       service:root.backend;strings:root.presentation.strings;bar:root.presentation.bar
       expanded:root.presentation.expanded;compactOverview:!root.toast

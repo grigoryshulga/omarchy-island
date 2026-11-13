@@ -140,7 +140,7 @@ ShellRoot {
         verify(!findChild(overview,"mediaSeek").visible,"Summary still shows full playback controls")
         verify(!findChild(overview,"mediaSectionHeading").visible,"Summary still has an outer media heading")
         verify(findChild(overview,"limitRemaining").text.indexOf("·")>=0,"Cached quota lost its marker")
-        verify(!findChild(overview,"limitSummaryResetCountdown").visible,"Summary invented a reset countdown")
+        verify(!findChild(overview,"limitResetCountdown").visible,"Summary invented a reset countdown")
         verify(findChild(overview,"notification-n4")===null,"Summary did not cap notifications")
         var height=overview.implicitHeight
         var t3Button=findChild(overview,"t3OpenDetails")
@@ -160,8 +160,21 @@ ShellRoot {
         verify(findChild(overview,"notificationsHistory").visible,"History is missing from notification details")
         compare(overview.implicitHeight,height)
         verify(overview.back());wait(50)
+        var manyQuotas=[]
+        for(var q=0;q<12;q++) manyQuotas.push(Object.assign({},limits.summary[0],{id:"quota-"+q,label:"Window "+q}))
+        limits.rows=manyQuotas
         findChild(overview,"limitsExpand").clicked();wait(50)
         verify(overview.detailPage==="agentLimits" && !findChild(overview,"t3Section").visible,"Limits did not replace summary")
+        var limitsContent=findChild(overview,"limitsCenterContent")
+        var hostScroll=findChild(overview,"overviewScroll")
+        verify(limitsContent.height>Commons.Style.space(300),"Limits list still has an internal height cap")
+        verify(!limitsContent.clip,"Limits list must use the host clipping boundary")
+        var lastQuota=findChild(limitsContent,"limitRow-quota-11")
+        var lastPin=findChild(lastQuota,"limitPin")
+        navigation.focusItem(lastPin);wait(30)
+        var lastPosition=lastPin.mapToItem(hostScroll,0,0)
+        verify(hostScroll.contentItem.contentY>0,"Quota navigation did not scroll the full host")
+        verify(lastPosition.y>=0 && lastPosition.y+lastPin.height<=hostScroll.height+1,"Last quota remains clipped after keyboard navigation")
         compare(overview.implicitHeight,height)
         verify(overview.back());wait(50)
         bridge.rows=finished.concat([

@@ -147,7 +147,8 @@ ShellRoot {
       mouseClick(toggle)
       check(service.mediaCalls===1,"toggle click did not reach player: "+service.mediaCalls)
       check(Spotlight.pick(media,media,Qt.point(media.width/2,1))===media,"media card does not contain the spotlight")
-      check(media.color===Island.Design.surface && media.radius===Island.Design.cardRadius,"media controls are not in a themed card")
+      var trackTitle=findChild(media,"mediaTitle")
+      check(trackTitle.mapToItem(media,0,0).x===0,"media content still has card padding")
       var musicGlow=findChild(media,"mediaSpotlight")
       if(!Commons.Style.reduceMotion) check(musicGlow.rippling,"play button did not start a music ripple")
       check(p.isPlaying,"player did not play")
@@ -507,7 +508,10 @@ ShellRoot {
       check(heading.title==="Spotify","Spotify heading is missing")
       p.identity="Test Music"
       var player=findChild(pages,"islandMediaPlayer")
-      mouseClick(player,player.width-2,player.height-2,Qt.RightButton)
+      var compactSeek=findChild(player,"mediaCompactProgress")
+      mouseClick(compactSeek,compactSeek.width/2,compactSeek.height/2,Qt.RightButton)
+      check(!calendarSurface.dismissed,"track right click dismissed the popup")
+      mouseClick(player,1,1,Qt.RightButton)
       check(calendarSurface.dismissed,"media background right click did not dismiss popup")
 
       console.log("CYCLIC_TABS_PASS")
