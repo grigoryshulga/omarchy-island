@@ -67,8 +67,12 @@ ShellRoot {
   FloatingWindow {
     id:controlsWindow
     visible:true;implicitWidth:520;implicitHeight:620
+    // Offscreen windows need not apply implicit-size requests after creation.
+    // Exercise responsive content directly within a stable window surface.
+    property int testWidth:520
     Island.ControlsView {
-      id:view;anchors.fill:parent;anchors.margins:16
+      id:view;anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;anchors.margins:16
+      width:controlsWindow.testWidth-32
       controlState:tileState
       service:service;bar:bar;strings:translations;active:true
       onSettingRequested:(key,value)=>{scene.preferences=[key,value]}
@@ -158,7 +162,8 @@ ShellRoot {
       var settingsView=findChild(view,"islandSettings")
       check(view.implicitHeight===stableHeight && !loader.active && settingsView.visible,"Settings did not inherit Controls size or started native backend")
       for(var windowWidth of [520,360]) {
-        controlsWindow.implicitWidth=windowWidth;wait(40)
+        controlsWindow.testWidth=windowWidth;wait(40)
+        check(settingsView.width===windowWidth-32,"settings viewport did not reach requested width: "+windowWidth)
         for(var tabName of ["general","panel","alerts","modules"]) {
           var tab=findChild(settingsView,"settingsTab-"+tabName),label=findChild(tab,"tabLabel")
           check(label.text.length>0 && label.width>=label.implicitWidth,"settings tab label is clipped: "+tabName+" ("+label.width+" < "+label.implicitWidth+")")
@@ -168,7 +173,7 @@ ShellRoot {
           check(at.y===0,"settings categories wrapped into another row")
         }
       }
-      controlsWindow.implicitWidth=520;wait(40)
+      controlsWindow.testWidth=520;wait(40)
       var hover=findChild(settingsView,"setting-hoverPreview")
       hover.toggled()
       check(scene.preferences[0]==="hoverPreview" && scene.preferences[1]===false,"toggle did not persist")
@@ -191,7 +196,7 @@ ShellRoot {
       check(delay.enabled,"delay did not follow its parent switch")
       var opening=findChild(settingsView,"setting-openingPage"),openingLabel=findChild(settingsView,"settingLabel-openingPage")
       check(opening.mapToItem(settingsView,0,0).y<openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"wide choice did not stay inline")
-      controlsWindow.implicitWidth=360
+      controlsWindow.testWidth=360
       var fontSize=Commons.Style.fontBaseSize
       Commons.Style.fontOverrides=({});Commons.Style.fontBaseSize=fontSize*1.5;wait(40)
       check(opening.width<=settingsView.width && opening.mapToItem(settingsView,0,0).y>=openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"narrow choice did not move below label")
@@ -201,7 +206,7 @@ ShellRoot {
         var at=tab.mapToItem(settingsView,0,0)
         check(at.x>=-1 && at.x+tab.width<=settingsView.width+1,"large text tab cannot be reached")
       }
-      Commons.Style.fontBaseSize=fontSize;controlsWindow.implicitWidth=520;wait(40)
+      Commons.Style.fontBaseSize=fontSize;controlsWindow.testWidth=520;wait(40)
       findChild(settingsView,"settingsTab-panel").clicked();wait(20)
       check(viewport.contentHeight>viewport.height,"long settings category is not scrollable")
       viewport.contentY=viewport.contentHeight-viewport.height
