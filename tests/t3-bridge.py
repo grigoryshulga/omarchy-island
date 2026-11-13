@@ -7,6 +7,7 @@ import copy
 import hashlib
 import importlib.machinery
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -19,10 +20,12 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 project = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project / 'plugin/bin'))
+from t3_cli import CliError, LocalCli, run_cli
 from t3_model import project_icon, request_view, select_threads, session_view, validate_answers
 from t3_transport import local_origin, TransportError, WebSocket, MAX_MESSAGE
 
@@ -113,6 +116,50 @@ class ModelTests(unittest.TestCase):
             with self.assertRaises(TransportError): local_origin(origin)
 
 
+class CliTests(unittest.TestCase):
+    def test_untrusted_versions_never_execute(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('t3_cli.subprocess.run') as run:
+            for version in ('../../bin', '/tmp/t3', '1.2.3/../other', '', None, 123, '1.2.3\n', 'v1.2.3'):
+                with self.assertRaises(CliError):LocalCli().select(Path(tmp),version)
+            run.assert_not_called()
+
+    def test_missing_cli(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('t3_cli.shutil.which',return_value=None):
+            with self.assertRaises(CliError) as error:LocalCli().select(Path(tmp),'1.2.3')
+            self.assertEqual(error.exception.reason,'cli_missing')
+
+    def test_escaping_cache_symlink_is_not_executed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp);candidate=base/'runtime/versions/1.2.3/t3'
+            candidate.parent.mkdir(parents=True)
+            outside=base/'untrusted';outside.write_text('untrusted');outside.chmod(0o700)
+            candidate.symlink_to(outside)
+            with patch('t3_cli.shutil.which',return_value='/safe/t3'), patch('t3_cli.run_cli',return_value='t3 v1.2.3') as run:
+                cli=LocalCli();cli.select(base,'1.2.3')
+                self.assertEqual(cli.source,'path')
+                run.assert_called_once_with(['/safe/t3','--version'])
+
+    def test_mislabeled_cache_falls_back_to_verified_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp);candidate=base/'runtime/versions/1.2.3/t3'
+            candidate.parent.mkdir(parents=True);candidate.touch(mode=0o700)
+            with patch('t3_cli.shutil.which',return_value='/safe/t3'), patch('t3_cli.run_cli',side_effect=['t3 v2.0.0','t3 v1.2.3']):
+                cli=LocalCli();cli.select(base,'1.2.3')
+                self.assertEqual((cli.path,cli.version,cli.source),('/safe/t3','1.2.3','path'))
+
+    def test_cli_errors_are_bounded_and_sanitized(self):
+        for cause,reason in ((subprocess.TimeoutExpired(['t3'],12),'cli_timeout'),
+                             (FileNotFoundError(),'cli_missing'),
+                             (PermissionError(),'cli_failed'),
+                             (subprocess.CalledProcessError(1,['t3'],output='SECRET ServerOwnsDatabaseError'),'database'),
+                             (subprocess.CalledProcessError(1,['t3'],stderr='SECRET'),'cli_failed')):
+            with patch('t3_cli.subprocess.run',side_effect=cause) as run:
+                with self.assertRaises(CliError) as error:run_cli(['t3','--version'])
+                self.assertEqual(str(error.exception),reason)
+                self.assertEqual(run.call_args.kwargs['timeout'],12)
+
+
+
 def frame(payload, opcode=1, final=True):
     data = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
     size=len(data)
@@ -137,7 +184,7 @@ class FakeServer(ThreadingHTTPServer):
     daemon_threads=True
     def __init__(self):
         super().__init__(('127.0.0.1',0), Handler)
-        self.resolved=False;self.writes=[];self.drop=False;self.protocol=2;self.pings=0
+        self.resolved=False;self.writes=[];self.drop=False;self.protocol=2;self.pings=0;self.version='0.1.9-nightly.20261111.4515'
         self.request_id='request-1';self.request_projection=projection()
         self.socket_ready=threading.Event();self.client=None;self.sequence=1
         self.subscription_ready=threading.Event()
@@ -159,7 +206,7 @@ class Handler(BaseHTTPRequestHandler):
         else: self.respond({},404)
     def do_GET(self):
         if self.path=='/.well-known/t3/environment':
-            return self.respond({'environmentId':'env-1','orchestrationProtocolVersion':self.server.protocol})
+            return self.respond({'environmentId':'env-1','orchestrationProtocolVersion':self.server.protocol,'serverVersion':self.server.version})
         if self.path.startswith('/ws?'):
             assert 'orchestrationProtocol=2' in self.path and 'wsTicket=TICKET' in self.path
             accept=base64.b64encode(hashlib.sha1((self.headers['Sec-WebSocket-Key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode()
@@ -220,6 +267,20 @@ class ShellStreamTests(unittest.TestCase):
             dict(kind='snapshot', snapshot=snapshot, **fields)]})
         self.bridge.publish()
 
+    def test_repeated_failure_diagnostics_stay_quiet_until_recovery(self):
+        self.bridge.stage='auth'
+        self.bridge.server_version='1.2.3'
+        with patch('sys.stderr',new_callable=io.StringIO) as log:
+            self.bridge.connection('offline','database')
+            self.bridge.connection('offline','database')
+            self.assertEqual(len(log.getvalue().splitlines()),1)
+            self.bridge.connection('connected')
+            self.bridge.connection('offline','database')
+            self.assertEqual(len(log.getvalue().splitlines()),2)
+            diagnostic=json.loads(log.getvalue().splitlines()[0])
+            self.assertEqual(diagnostic['reason'],'database')
+            self.assertEqual(diagnostic['stage'],'auth')
+
     def test_enrichment_keeps_threads_and_other_projects(self):
         # T3 sends this on resume AND on repository metadata refreshes.
         self.snapshot({'snapshotSequence':10, 'threads':[], 'archivedThreads':[],
@@ -267,7 +328,7 @@ class IntegrationTests(unittest.TestCase):
         (self.root/'userdata').mkdir();(self.root/'bin').mkdir()
         (self.root/'userdata/server-runtime.json').write_text(json.dumps({'origin':f'http://127.0.0.1:{self.server.server_port}'}))
         cli=self.root/'bin/t3'
-        cli.write_text('#!'+sys.executable+'\nimport sys,json,os\nfrom pathlib import Path\nwith open(os.environ["CLI_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nif "issue" in sys.argv:print(json.dumps({"token":"TEST_SECRET","sessionId":"session-1"}))\nelse:print("Revoked session session-1")\n')
+        cli.write_text('#!'+sys.executable+'\nimport sys,json,os\nfrom pathlib import Path\nwith open(os.environ["CLI_LOG"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\nif "--version" in sys.argv:print("t3 v0.1.9-nightly.20261111.4515")\nelif "issue" in sys.argv:print(json.dumps({"token":"TEST_SECRET","sessionId":"session-1"}))\nelse:print("Revoked session session-1")\n')
         cli.chmod(0o755);self.process=None
     def start(self, readonly=False):
         env=dict(os.environ,T3CODE_HOME=str(self.root),CLI_LOG=str(self.root/'cli.log'),PATH=str(self.root/'bin')+os.pathsep+os.environ['PATH'])
@@ -293,6 +354,72 @@ class IntegrationTests(unittest.TestCase):
             self.process.stdout.close();self.process.stderr.close();self.process=None
     def tearDown(self):
         self.stop();self.server.shutdown();self.server.server_close();self.tmp.cleanup()
+    def cached_cli(self, version, reported=None):
+        binary=self.root/'runtime/versions'/version/'t3'
+        binary.parent.mkdir(parents=True,exist_ok=True)
+        source=(self.root/'bin/t3').read_text().replace('0.1.9-nightly.20261111.4515',reported or version)
+        binary.write_text(source.replace('sys.argv[1:]', '["cached",'+repr(version)+',*sys.argv[1:]]'))
+        binary.chmod(0o700)
+        return binary
+
+    def test_matching_cache_survives_newer_path_cli(self):
+        cached=self.cached_cli(self.server.version)
+        path_cli=self.root/'bin/t3'
+        path_cli.write_text(path_cli.read_text().replace(self.server.version,'0.1.10-nightly.20261113.4630'))
+        self.start(True)
+        connected=self.wait(lambda e:e.get('status')=='connected')
+        self.assertEqual(connected['cliSource'],'cache')
+        self.assertEqual(connected['cliVersion'],self.server.version)
+        self.assertEqual(connected['cliPath'],str(cached))
+        self.assertGreater(connected['lastConnectedAt'],0)
+        self.stop()
+        calls=[json.loads(line) for line in (self.root/'cli.log').read_text().splitlines()]
+        self.assertTrue(all(call[0]=='cached' for call in calls),calls)
+        self.assertIn('revoke',calls[-1])
+
+    def test_cli_mismatch_never_issues_credentials(self):
+        binary=self.root/'bin/t3'
+        binary.write_text(binary.read_text().replace(self.server.version,'0.1.10-nightly.20261113.4630'))
+        self.start(True)
+        event=self.wait(lambda e:e.get('reason')=='cli_version')
+        self.assertEqual(event['stage'],'cli')
+        self.assertEqual(event['serverVersion'],self.server.version)
+        self.assertEqual(event['cliVersion'],'0.1.10-nightly.20261113.4630')
+        self.stop()
+        self.assertNotIn('issue',(self.root/'cli.log').read_text())
+
+    def test_auth_failure_is_visible_and_logs_no_secrets(self):
+        binary=self.root/'bin/t3'
+        binary.write_text(binary.read_text().replace('if "--version" in sys.argv:',
+            'if "issue" in sys.argv:print("TEST_SECRET ServerOwnsDatabaseError");sys.exit(1)\nif "--version" in sys.argv:'))
+        self.start(True)
+        event=self.wait(lambda e:e.get('reason')=='database')
+        self.assertEqual(event['stage'],'auth')
+        self.assertEqual(event['cliSource'],'path')
+        self.process.stdin.close();self.process.wait(timeout=15)
+        diagnostic=self.process.stderr.read()
+        self.assertNotIn('TEST_SECRET',diagnostic)
+        self.assertIn('"reason": "database"',diagnostic)
+        self.process.stdout.close();self.process.stderr.close();self.process=None
+
+    def test_reconnect_selects_new_server_cli(self):
+        self.cached_cli(self.server.version)
+        self.start(True)
+        self.wait(lambda e:e.get('status')=='connected')
+        self.wait(lambda e:e['type']=='sessions')
+        self.assertTrue(self.server.subscription_ready.wait(2))
+        self.server.version='0.1.10-nightly.20261113.4630'
+        cached=self.cached_cli(self.server.version)
+        self.server.client.sendall(frame(b'',opcode=8))
+        self.wait(lambda e:e.get('status')=='offline')
+        connected=self.wait(lambda e:e.get('status')=='connected')
+        self.assertEqual(connected['cliPath'],str(cached))
+        self.assertEqual(connected['cliVersion'],self.server.version)
+        self.stop()
+        calls=[json.loads(line) for line in (self.root/'cli.log').read_text().splitlines()]
+        revoked=[call[1] for call in calls if 'revoke' in call]
+        self.assertEqual(revoked,['0.1.9-nightly.20261111.4515',self.server.version])
+
     def test_round_trip_stale_validation_and_cleanup(self):
         self.start()
         self.wait(lambda e:e.get('status')=='connected')
@@ -315,7 +442,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertGreater(self.server.pings,0)
         self.stop()
         calls=[json.loads(line) for line in (self.root/'cli.log').read_text().splitlines()]
-        self.assertIn('orchestration:operate',calls[0])
+        self.assertIn('orchestration:operate',next(call for call in calls if 'issue' in call))
         self.assertEqual(calls[-1][:4],['auth','session','revoke','session-1'])
     def test_readonly(self):
         self.start(True)

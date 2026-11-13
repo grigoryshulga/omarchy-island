@@ -287,6 +287,7 @@ Item {
     visible:root.section==="settings"
     active:root.active && root.section==="settings"
     settings:root.settings;strings:root.strings
+    modules:root.service && root.service.modules ? root.service.modules : ({})
     feedback:root.externalFeedback
     onSettingRequested:(key,value)=>root.settingRequested(key,value)
   }

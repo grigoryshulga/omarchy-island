@@ -18,6 +18,7 @@ import time
 from urllib.parse import quote, urlencode
 import uuid
 
+from t3_cli import CliError, LocalCli, valid_version
 from t3_model import identifier, request_identifier, request_view, select_threads, session_view, validate_answers
 from t3_transport import TransportError, WebSocket, http_json
 
@@ -49,30 +50,62 @@ class Bridge:
         self.rpc_sequence = 1
         self.dirty = False
         self.last_refresh = 0
+        self.local_cli = LocalCli()
+        self.server_version = ''
+        self.stage = 'runtime'
+        self.last_connected_at = 0
+        self.last_failure = None
 
     def cli(self, *args):
-        return subprocess.run(["t3", "auth", "session", *args, "--base-dir", str(self.base)],
-                              capture_output=True, text=True, timeout=12, check=True).stdout
+        return self.local_cli.auth(self.base, *args)
+
+    def connection(self, status, reason=''):
+        event = {'type': 'connection', 'status': status, 'reason': reason,
+                 'stage': self.stage, 'serverVersion': self.server_version,
+                 'cliVersion': self.local_cli.version, 'cliSource': self.local_cli.source,
+                 'cliPath': self.local_cli.path, 'lastConnectedAt': self.last_connected_at}
+        if status == 'connected':
+            event.update(environmentId=self.environment, canRespond=not self.readonly)
+            self.last_failure = None
+        elif reason:
+            signature = (status, reason, self.stage, self.server_version, self.local_cli.version)
+            if signature != self.last_failure:
+                # Fixed fields only; no raw subprocess/network errors or tokens.
+                print(json.dumps(dict(event, type='diagnostic')), file=sys.stderr, flush=True)
+                self.last_failure = signature
+        self.output(event)
 
     def connect(self):
+        self.stage = 'runtime'
+        self.server_version = ''
+        self.local_cli = LocalCli()
         runtime = json.loads((self.base / "userdata/server-runtime.json").read_text())
         self.origin = runtime["origin"]
+        self.stage = 'server'
         descriptor = http_json(self.origin, "/.well-known/t3/environment")
+        version = descriptor.get('serverVersion', '')
+        self.server_version = version if valid_version(version) else ''
         if descriptor.get("orchestrationProtocolVersion") != 2:
             raise TransportError("incompatible")
         self.environment = descriptor["environmentId"]
+        self.stage = 'cli'
+        self.local_cli.select(self.base, self.server_version)
         scopes = ["--scope", "orchestration:read"]
         if not self.readonly:
             scopes += ["--scope", "orchestration:operate"]
+        self.stage = 'auth'
         self.credential = json.loads(self.cli("issue", *scopes, "--ttl", "1h", "--label", "Omarchy Island", "--json"))
+        self.stage = 'snapshot'
         self.refresh_shell()
+        self.stage = 'subscribe'
         ticket = self.http("/api/auth/websocket-ticket/rpc", "POST")
         path = "/ws?" + urlencode({"orchestrationProtocol": "2", "wsTicket": ticket["ticket"]})
         self.ws = WebSocket(self.origin, path)
         self.ws.send({"_tag": "Request", "id": "shell", "tag": "orchestration.subscribeShell",
                       "payload": {"afterSequence": self.sequence, "requestCompletionMarker": True}, "headers": []})
-        self.output({"type": "connection", "status": "connected", "environmentId": self.environment,
-                     "canRespond": not self.readonly})
+        self.last_connected_at = int(time.time() * 1000)
+        self.stage = 'stream'
+        self.connection('connected')
         # QML resets its alert baseline on disconnect. Always supply a fresh
         # baseline, or the next real transition (including completion) is lost.
         self.last_output = ""
@@ -227,7 +260,7 @@ class Bridge:
         if self.credential:
             try:
                 self.cli("revoke", self.credential["sessionId"])
-            except (OSError, subprocess.SubprocessError):
+            except (OSError, subprocess.SubprocessError, CliError):
                 pass  # One-hour expiry also bounds credentials after SIGKILL.
             self.credential = None
 
@@ -272,7 +305,7 @@ class Bridge:
         delay = 2
         while not self.stopping:
             try:
-                self.output({"type": "connection", "status": "connecting"})
+                self.connection('connecting')
                 self.connect()
                 started = last_frame = last_publish = time.monotonic()
                 last_ping = 0
@@ -302,10 +335,13 @@ class Bridge:
                         self.publish()
                         last_publish = now
                 if not self.stopping:
-                    self.output({"type": "connection", "status": "connecting"})
-            except (OSError, ValueError, KeyError, TypeError, TransportError, subprocess.SubprocessError) as error:
+                    self.connection('connecting')
+            except (OSError, ValueError, KeyError, TypeError, TransportError, CliError, subprocess.SubprocessError) as error:
                 status = str(error) if isinstance(error, TransportError) and str(error) in ("incompatible", "auth", "origin") else "offline"
-                self.output({"type": "connection", "status": status})
+                reason = error.reason if isinstance(error, CliError) else status
+                if self.stage == 'runtime':
+                    reason = 'runtime'
+                self.connection(status, reason)
             finally:
                 self.disconnect()
             if not self.stopping:
