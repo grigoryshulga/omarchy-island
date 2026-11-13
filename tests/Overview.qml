@@ -139,7 +139,7 @@ ShellRoot {
         var notificationsArrow=findChild(overview,"notificationsOpenDetails"),bell=findChild(overview,"overviewDnd")
         verify(bell.x<notificationsArrow.x,"Bell must precede the navigation arrow")
         verify(!findChild(overview,"mediaSeek").visible,"Summary still shows full playback controls")
-        verify(!findChild(overview,"mediaSectionHeading").visible,"Summary still has an outer media heading")
+        verify(findChild(overview,"mediaSectionHeading")===null,"Media still has an outer source heading")
         verify(findChild(overview,"limitRemaining").text.indexOf("·")>=0,"Cached quota lost its marker")
         verify(!findChild(overview,"limitResetCountdown").visible,"Summary invented a reset countdown")
         verify(findChild(overview,"notification-n4")===null,"Summary did not cap notifications")
@@ -232,6 +232,12 @@ ShellRoot {
         overview.back();wait(30)
         verify(retainedPlayer.visible)
         verify(findChild(overview,"mediaSeek").visible,"Large media did not expose full controls")
+        compare(retainedPlayer.y,0,"Large media still reserves a source heading above the player")
+        for(var mediaSizeVariant of ["minimal","compact","standard","large"]) {
+          overview.changeLayout("media",{size:mediaSizeVariant},0);wait(30)
+          compare(retainedPlayer.y,0,"Media reserves source heading space in "+mediaSizeVariant)
+          compare(findChild(overview,"mediaTitle").y,0,"Media reserves a source caption in "+mediaSizeVariant)
+        }
         overview.hovering=false;overview.expanded=false;overview.alertKind="media";wait(30)
         verify(retainedPlayer.visible,"Layout preferences suppressed the media toast")
         overview.expanded=true;overview.alertKind=""
