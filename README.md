@@ -89,6 +89,14 @@ The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, a
 
 The popup follows the clock on top, bottom, left, and right panels, staying inside the current monitor. It opens inward from the panel and keeps its cross-axis center stable during expansion, including near screen corners. Side panels stack clock indicators above and below the time and show a compact OSD; notification summaries use a popup card even when the horizontal bar style is selected. Horizontal clock slots at the start or end of the bar use a compact width.
 
+### Customize Overview
+
+Hover or keyboard-focus the active **Overview** tab, then select its gear button to show or hide blocks, move them up or down, and choose the sizes supported by each module. All registered blocks appear in the editor, including those without current data or with a disabled integration. Showing a block does not enable its integration; enable optional integrations in Settings. Changes save immediately and apply across monitors and restarts. **Done** or Escape returns to the summary and restores keyboard focus.
+
+Media and Notifications support **Minimal**, **Compact**, **Standard**, and **Large**. Minimal media shows the title and transport controls; Compact adds the artist; Standard adds the source and seek bar; Large exposes the full player. Notifications show only their heading in Minimal, one recent item in Compact, three in Standard, and up to six in Large; the details arrow still opens the full list. Battery supports Minimal (status and profile) and Standard (with charge gauge). Other modules currently support Standard. Blocks still appear only when their normal availability conditions are met.
+
+Visibility and order affect the Overview summary and hover preview. Notification and activity toasts, bar indicators, and background integrations retain their behavior. Preferences are stored in `overviewLayout` as an ordered array of `{id, visible, size}` records in the Island shell entry. Missing modules retain their saved preferences; newly registered blocks are appended in catalog order. Without saved preferences, the existing order and appearance are used.
+
 ### Keyboard
 
 In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weather. Disabled sections have no shortcut and are skipped by wheel and swipe navigation; the remaining shortcuts keep their numbers. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control. Escape returns from Overview details to the summary, or from Island settings to Controls, before closing the popup. Dropdowns handle their own selection keys and Escape.

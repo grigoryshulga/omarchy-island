@@ -14,6 +14,7 @@ ColumnLayout {
   property bool expanded:false
   property bool hovering:false
   property bool detailOpen:false
+  property string overviewSize:"standard"
   readonly property string detailPage:detailOpen ? "notifications" : ""
   property string alertKind:""
   property bool radialBraille:true
@@ -28,7 +29,7 @@ ColumnLayout {
   onDetailOpenChanged:if(!detailOpen) historyOpen=false
   readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
   readonly property var displayedRows: !expanded && !hovering && service && service.latest ? (service.latest.downloadPath ? [] : [service.latest]) : rows
-  readonly property int notificationLimit:expanded ? (detailPage==="notifications" ? 100 : 3) : hovering ? 3 : 1
+  readonly property int notificationLimit:detailOpen && expanded ? 100 : expanded || hovering ? (overviewSize==="minimal" ? 0 : overviewSize==="compact" ? 1 : overviewSize==="large" ? 6 : 3) : 1
   readonly property var groups: Model.previewGroups(displayedRows,100)
   function syncGroups() {
     Model.syncKeys(groupItems,groups.map(function(group){return group.source}))
@@ -43,11 +44,12 @@ ColumnLayout {
   ListModel {id:groupItems}
   RowLayout {
     Layout.fillWidth:true
-    visible:root.expanded && !root.detailOpen
+    visible:(root.expanded || (root.hovering && root.overviewSize==="minimal")) && !root.detailOpen
     SectionHeading {Layout.fillWidth:true;title:root.strings.t("notifications.active");detail:Commons.I18n.formatNumber(root.rows.length)}
-    FeedbackButton {objectName:"overviewDnd";iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
+    FeedbackButton {objectName:"overviewDnd";visible:root.expanded;iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
     FeedbackButton {
       objectName:"notificationsOpenDetails"
+      visible:root.expanded
       iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔"
       iconSize:Style.font.iconLarge
       implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight
@@ -87,9 +89,9 @@ ColumnLayout {
   Controls.ScrollView {
     id: scroll
     objectName: "notificationsScroll"
-    visible: (!root.detailOpen || root.detailPage==="notifications") && (root.expanded || (root.hovering && (root.rows.length > 0)) || (!root.hovering && root.alertKind === "notification"))
+    visible: (root.detailOpen || root.overviewSize!=="minimal" || (!root.expanded && !root.hovering)) && (!root.detailOpen || root.detailPage==="notifications") && (root.expanded || (root.hovering && (root.rows.length > 0)) || (!root.hovering && root.alertKind === "notification"))
     Layout.fillWidth: true
-    Layout.preferredHeight: Math.min(cards.implicitHeight,(root.detailPage==="notifications" ? Math.max(Style.space(96),root.pageHeight-Style.space(180)) : Style.space(root.compactNotifications ? 96 : root.expanded ? 220 : 330)))
+    Layout.preferredHeight: Math.min(cards.implicitHeight,(root.detailPage==="notifications" ? Math.max(Style.space(96),root.pageHeight-Style.space(180)) : Style.space(root.compactNotifications ? 96 : root.expanded ? (root.overviewSize==="large" ? 440 : 220) : 330)))
     clip: true
     contentWidth: availableWidth
     Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff

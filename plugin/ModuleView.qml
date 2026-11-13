@@ -11,5 +11,6 @@ Item {
   property string tooltip:""
   signal expandRequested()
   signal detailsRequested()
+  signal customizeRequested()
   signal settingRequested(string key,var value)
 }

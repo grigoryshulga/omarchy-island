@@ -215,6 +215,10 @@ Item {
           readonly property var strings:root.strings
         }
         onDetailsRequested:root.requestPage(modelData.pageIndex)
+        onCustomizeRequested:{
+          var page=root.pageObject(tabSlot.modelData.pageIndex)
+          if(root.expanded && root.selectedPage===tabSlot.modelData.pageIndex && page && typeof page.configure==="function") page.configure(tabSlot.item.focusTarget)
+        }
       }
     }
   }

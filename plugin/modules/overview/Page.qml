@@ -8,6 +8,7 @@ Island.ModulePage {
   toastIcon:content.toastIcon
   interactionHovered:content.musicHovered
   function back(){return content.back()}
+  function configure(returnTarget){content.configure(returnTarget)}
   Island.IslandContent {
     id:content;anchors.fill:parent
     service:root.presentation.service;strings:root.presentation.strings;bar:root.presentation.bar

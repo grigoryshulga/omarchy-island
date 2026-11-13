@@ -3,5 +3,6 @@ export default {
   defaults:{trackAlerts:true,musicVisualization:"visible",musicVisualizationStyle:"default"},
   choices:{musicVisualization:["off","open","visible"],musicVisualizationStyle:["default"]},
   groups:[{id:"music",rows:[{key:"trackAlerts"},{key:"musicVisualization",type:"choice"}]}],
+  overviewSizes:["minimal", "compact", "large"],
   overview:"modules/media/Overview.qml"
 };

@@ -59,10 +59,13 @@ Overview and indicator QML roots extend `ModuleView`. `ModuleSlot` supplies `bac
 | `tooltip` | Optional indicator tooltip included in the clock tooltip |
 | `expandRequested()` | Pin/open the popup from a preview |
 | `detailsRequested()` | Toggle this integration's Overview details, or open Overview from its indicator |
+| `customizeRequested()` | An optional tab action; the host calls the page’s `configure(returnTarget)` method |
 | `settingRequested(key, value)` | Request validated persistence through the existing shell settings path |
 | `closeRequested()` | Close the current popup through its host |
 
-Overview context contains `strings`, `feedback`, `expanded`, `detail`, `active`, and `pageHeight`. Render summary and details in the same retained view, switching on `detail`; use `active` and reduced motion to stop invisible effects. The host owns the common detail heading and Back button, focus restoration, scroll restoration and popup geometry. An integration must not change the host's selected detail directly. Hover preview must remain read-only.
+A descriptor can declare `overviewSizes: ["minimal", "compact", "large"]` for the additional summary sizes it implements. `standard` is always supported and preserves the default appearance. The host exposes the selected size as `presentation.size`; views must use it explicitly rather than scaling fonts or the whole component. Detail views retain their full content independently of summary size. The customization editor shows only supported sizes, and falls back to `standard` for an unsupported saved size. Keep new variants compatible with hover previews, keyboard controls, live tokens and reduced motion. Visibility is a presentation preference, not a backend enable switch; toast presentations receive `standard`.
+
+Overview context contains `strings`, `feedback`, `expanded`, `detail`, `active`, `size`, and `pageHeight`. Render summary and details in the same retained view, switching on `detail`; use `active` and reduced motion to stop invisible effects. The host owns the common detail heading and Back button, focus restoration, scroll restoration and popup geometry. An integration must not change the host's selected detail directly. Hover preview must remain read-only.
 
 Indicator context contains `strings`, `vertical`, `barSize`, `barHeight`, `showAlert`, and `bar`. Retain a compact natural size for both orientations. Bind continuous effects to effective visibility and reduced motion.
 
