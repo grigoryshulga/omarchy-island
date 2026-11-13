@@ -22,16 +22,13 @@ Item {
     loops:Animation.Infinite
     from:0;to:1;duration:Preferences.duration(1800)
   }
-  ShaderEffect {
+  BrailleProgress {
     objectName:"batteryBrailleProgress"
     anchors.fill:parent
-    property vector2d size:Qt.vector2d(width,height)
-    property real amount:Math.max(0,Math.min(1,root.fraction))
-    property color accent:root.accent
-    property real phase:root.pulse
-    property real charging:root.animating ? 1 : 0
-    transform:Scale {origin.x:root.width/2; xScale:Commons.I18n.rightToLeft ? -1 : 1}
-    vertexShader:Qt.resolvedUrl("shaders/battery-gauge.vert.qsb")
-    fragmentShader:Qt.resolvedUrl("shaders/battery-gauge.frag.qsb")
+    value:root.fraction
+    accent:root.accent
+    phase:root.pulse
+    charging:root.animating ? 1 : 0
+    mirrored:Commons.I18n.rightToLeft
   }
 }

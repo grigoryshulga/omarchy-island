@@ -72,8 +72,6 @@ Surface {
       visible:root.compactOverview && root.player && root.player.lengthSupported && root.player.positionSupported
       Layout.fillWidth:true
       bar:root.bar
-      trackHeight:Style.space(2)
-      knobSize:0
       fillColor:Design.accent
       maximum:root.player ? Math.max(1,root.player.length) : 1
       value:root.player ? root.player.position : 0
@@ -103,6 +101,7 @@ Surface {
             objectName: "mediaSeek"
             Layout.fillWidth: true
             bar: root.bar
+            fillColor: Design.accent
             maximum: root.player && root.player.lengthSupported ? Math.max(1,root.player.length) : 1
             value: root.player && root.player.positionSupported ? root.player.position : 0
             enabled: root.player !== null && root.player.canSeek && root.player.lengthSupported && root.player.positionSupported

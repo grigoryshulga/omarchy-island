@@ -17,3 +17,4 @@ ControlSwitch 1.0 ControlSwitch.qml
 ListRow 1.0 ListRow.qml
 DataState 1.0 DataState.qml
 FormField 1.0 FormField.qml
+BrailleProgress 1.0 ../BrailleProgress.qml

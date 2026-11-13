@@ -21,6 +21,7 @@ ShellRoot {
     implicitWidth: 320; implicitHeight: 200
     Island.ArtworkBackground { id: artwork; anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top;height:160; service: service }
     Island.BrailleGauge {id:gauge;anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom;height:24;value:0.2}
+    Island.BrailleProgress {id:progressProbe;width:300;height:12;accent:"white";value:0.25;visible:false}
     Island.BrailleClap {id:clap;anchors.centerIn:parent;width:220;height:150;visible:false;active:false}
     Item {
       id:spotScene
@@ -207,6 +208,24 @@ ShellRoot {
       var stoppedPhase=spot.phase;wait(60)
       check(spot.phase===stoppedPhase,"hidden spotlight kept animating")
       console.log("SPOTLIGHT_FRAMES_PASS")
+      progressProbe.visible=true;wait(60)
+      var quarter=grabImage(progressProbe),leftInk=0,rightInk=0
+      for(var y=0;y<quarter.height;y++) {
+        for(var x=0;x<60;x++) leftInk+=quarter.red(x,y)
+        for(var x=240;x<300;x++) rightInk+=quarter.red(x,y)
+      }
+      check(leftInk>rightInk*3 && rightInk>0,"shared progress lost filled/empty dots")
+      progressProbe.value=0.75;wait(40)
+      check(!quarter.equals(grabImage(progressProbe)),"shared progress did not update")
+      progressProbe.value=0.25;progressProbe.mirrored=true;wait(40)
+      var mirrored=grabImage(progressProbe),mirroredLeft=0,mirroredRight=0
+      for(var y=0;y<mirrored.height;y++) {
+        for(var x=0;x<60;x++) mirroredLeft+=mirrored.red(x,y)
+        for(var x=240;x<300;x++) mirroredRight+=mirrored.red(x,y)
+      }
+      check(mirroredRight>mirroredLeft*3,"shared progress did not mirror")
+      wait(60);check(mirrored.equals(grabImage(progressProbe)),"static progress kept animating")
+      console.log("BRAILLE_PROGRESS_FRAMES_PASS")
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()
     }

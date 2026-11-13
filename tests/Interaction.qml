@@ -152,6 +152,7 @@ ShellRoot {
       if(!Commons.Style.reduceMotion) check(musicGlow.rippling,"play button did not start a music ripple")
       check(p.isPlaying,"player did not play")
       var seek=findChild(media,"mediaSeek")
+      check(seek.trackStyle==="braille" && findChild(seek,"sliderBrailleProgress").visible,"expanded media does not use the standard progress track")
       var elapsed=findChild(media,"mediaElapsed"),duration=findChild(media,"mediaDuration")
       check(elapsed.parent===seek.parent && duration.parent===seek.parent,"track times are not on the progress row")
       check(elapsed.x+elapsed.width<=seek.x && duration.x>=seek.x+seek.width,"track times do not bracket the progress bar")

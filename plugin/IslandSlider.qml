@@ -31,11 +31,12 @@ Item {
   property real maximum: 1
   property real step: 0.05
   property bool integer: false
+  property string trackStyle: "braille"
   property color trackColor: Design.raised
-  property color fillColor: bar ? bar.foreground : Design.text
+  property color fillColor: bar ? bar.foreground : trackStyle === "braille" ? Design.accent : Design.text
   property color knobColor: bar ? bar.foreground : Design.text
   property bool dragging: false
-  property real trackHeight: Math.max(4, Math.round(Style.spacing.controlHeight * 0.11))
+  property real trackHeight: trackStyle === "braille" ? Style.space(10) : Math.max(4, Math.round(Style.spacing.controlHeight * 0.11))
   property real knobSize: Math.max(14, Math.round(Style.spacing.controlHeight * 0.38))
   property real liveValue: value
 
@@ -74,15 +75,25 @@ Item {
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.leftMargin: root.knobSize / 2
-    anchors.rightMargin: root.knobSize / 2
+    anchors.leftMargin: root.trackStyle === "braille" ? 0 : root.knobSize / 2
+    anchors.rightMargin: anchors.leftMargin
     height: root.trackHeight
     radius: Design.cardRadius > 0 ? height / 2 : 0
-    color: root.trackColor
+    color: root.trackStyle === "braille" ? "transparent" : root.trackColor
+  }
+
+  BrailleProgress {
+    objectName: "sliderBrailleProgress"
+    anchors.fill: track
+    visible: root.trackStyle === "braille"
+    value: root.progress
+    accent: root.fillColor
+    mirrored: root.mirrored
   }
 
   Rectangle {
     id: fill
+    visible: root.trackStyle !== "braille"
     anchors.verticalCenter: track.verticalCenter
     anchors.left: track.left
     height: track.height
@@ -112,6 +123,7 @@ Item {
   BorderSurface {
     id: knob
     objectName: "sliderKnob"
+    visible: root.trackStyle !== "braille"
     width: root.knobSize
     height: root.knobSize
     radius: Design.cardRadius > 0 ? root.knobSize / 2 : 0

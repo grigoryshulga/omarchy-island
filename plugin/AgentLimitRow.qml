@@ -57,16 +57,13 @@ Surface {
         onClicked:root.pinRequested(root.row.id)
       }
     }
-    ShaderEffect {
+    BrailleProgress {
       objectName:"limitBrailleProgress"
       Layout.fillWidth:true
       Layout.preferredHeight:Style.space(root.compact ? 10 : 24)
       visible:root.row.remaining!==null
-      property vector2d size:Qt.vector2d(width,height)
-      property real amount:root.row.remaining===null ? 0 : Math.max(0,Math.min(1,root.row.remaining/100))
-      property color accent:root.gaugeColor
-      vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
-      fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
+      value:root.row.remaining===null ? 0 : root.row.remaining/100
+      accent:root.gaugeColor
     }
     PlainText {
       Layout.fillWidth:true;typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap

@@ -66,7 +66,8 @@ All components are inert UI: loading one does not construct a backend or start a
 | `DesignTextField` | Standard QtQuick Controls TextField editing API, including `text`, `placeholderText`, `readOnly`, `echoMode`, `accepted()`, `textEdited()`; `invalid` adds the error border while preserving the focus ring |
 | `DesignDropdown` | `label`, `value`, `options` (strings or `{value, label}` objects), `showLabel`, `popupOpen`; `changed(value)`, `open()`, `close()`, `toggle()`; owner updates `value` |
 | `ControlSwitch` | `checked`, `busy`, `interactive`, `effectsActive`; `toggled()`, `hovered(bool)`; owner updates `checked`; set `Accessible.name` |
-| `IslandSlider` | `value`, `minimum`, `maximum`, `step`, `integer`, `tickCount`, `dragging`, `liveValue`; `moved(value)`, `released(value)`, `rightClicked()`; owner updates `value` |
+| `IslandSlider` | `value`, `minimum`, `maximum`, `step`, `integer`, `tickCount`, `trackStyle` (`braille` by default, or `solid`), `dragging`, `liveValue`; `moved(value)`, `released(value)`, `rightClicked()`; owner updates `value` |
+| `BrailleProgress` | `value` (0–1, clamped for display), `accent`, `mirrored` (inherits layout mirroring); shared dot progress track, no input or animation; GPU shader rendering requires a compatible graphics backend |
 | `BrailleGauge` | `value` (0–1), `glyph`, `valueText`; progress display; GPU shader rendering requires a compatible graphics backend |
 | `Spinner` | `active`, `tint`, read-only `animating`; braille loading animation, static when motion is reduced |
 | `ModuleView` | Module view contract: `backend`, `presentation`, `available`, `tooltip`, `interactionHovered`, `toastIcon`, `expandRequested()`, `detailsRequested()`, `closeRequested()`, `settingRequested(key, value)` |
@@ -75,6 +76,8 @@ All components are inert UI: loading one does not construct a backend or start a
 | `FormField` | `label`, `hint`, `error`, read-only `message` (`error` or `hint`) and `control` (first editor item); default `content`; `focusEditor()` |
 
 Use `implicitWidth`/`implicitHeight` for natural size and `Layout.fillWidth` or anchors for available space. Do not alter the popup's Wayland surface or center. Long translated text should wrap where appropriate. Set accessible labels for controls with no visible text.
+
+`IslandSlider` uses the same braille dot field as battery charge and Agent Limits by default, with a full-width track and no thumb. Its full-height hit area, drag, wheel and keyboard controls remain available. Use `trackStyle: "solid"` for the traditional line and thumb. `BrailleProgress` exposes the same static track for read-only values; use `accent` for semantic status colors and inherit layout mirroring for right-to-left progress. Battery charging adds its host-owned wave without changing the shared static appearance.
 
 Buttons opt into keyboard navigation with `focusable: true`; choices, fields, dropdowns, switches and sliders already support it. Switches accept Space/Enter when interactive and not busy. A noninteractive switch is excluded from Tab navigation; turning interaction off while focused moves focus to the next control, or clears it when none is available. Busy switches retain focus. Sliders accept arrows/Home/End; dropdowns handle their own Escape. The common Overview host owns detail Back/Escape and focus restoration. See [the module contract](modules.md#views) for host navigation and retained views.
 
