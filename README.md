@@ -8,7 +8,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 
 ## Features
 
-- **Overview:** a bounded summary with compact music controls, quota rows, T3 activity counts, and up to three recent notifications. Music has a seekable braille progress bar shared with battery charge and Agent Limits with no submenu. Open another block’s arrow for details in the same page; Back or Escape restores the summary and its keyboard focus. Long content scrolls inside the popup. Notification details include grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls appear directly on the popup background (Spotify for Spotify players), with artwork behind the popup. Track-change toasts show only the music controls, without an outer container or section heading. They include seeking and volume when supported by the player, with elapsed and total time at the ends of the progress bar. Devices with a battery also show a braille charge gauge and power profiles. The gauge uses the theme danger role below 20% and shows a travelling pulse through its braille dots while charging (unless reduced motion is enabled). Below 20% while running on battery, a warning icon and percentage appear beside the clock; click to open Overview.
+- **Overview:** a bounded summary with compact media controls, quota rows, T3 activity counts, and up to three recent notifications. Media has a seekable braille progress bar shared with battery charge and Agent Limits with no submenu. Open another block’s arrow for details in the same page; Back or Escape restores the summary and its keyboard focus. Long content scrolls inside the popup. Notification details include grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls appear directly on the popup background (Spotify for Spotify players), with artwork behind the popup. All sources must expose an MPRIS session; browser support depends on the browser/site media integration. Automatic selection prefers playing sources, then paused media; an explicitly selected source stays selected while available. Track-change toasts show only the media controls, without an outer container or section heading. They include seeking and volume when supported by the player, with elapsed and total time at the ends of the progress bar. Devices with a battery also show a braille charge gauge and power profiles. The gauge uses the theme danger role below 20% and shows a travelling pulse through its braille dots while charging (unless reduced motion is enabled). Below 20% while running on battery, a warning icon and percentage appear beside the clock; click to open Overview.
 - **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
 - **Calendar and weather:** month/year navigation, read-only ICS subscriptions, native Omarchy reminders, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
@@ -131,7 +131,7 @@ omarchy-shell island-update refresh|clear
 
 Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
 
-Open **Controls → Settings** (the sixth tile) for four categories: **General** (opening and animations), **Panel** (pages and bar indicators), **Alerts** (notifications and system events), and **Modules** (Music, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the main page tabs while open, keeping the popup surface size stable and using the freed space for the form. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Controls always remain available so settings cannot become inaccessible. Disabling Overview does not suppress incoming notifications. Disabling Weather also stops weather requests.
+Open **Controls → Settings** (the sixth tile) for four categories: **General** (opening and animations), **Panel** (pages and bar indicators), **Alerts** (notifications and system events), and **Modules** (Media, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the main page tabs while open, keeping the popup surface size stable and using the freed space for the form. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Controls always remain available so settings cannot become inaccessible. Disabling Overview does not suppress incoming notifications. Disabling Weather also stops weather requests.
 
 | Menu setting | Configuration and default |
 |---|---|
@@ -141,7 +141,7 @@ Open **Controls → Settings** (the sixth tile) for four categories: **General**
 | Interface animations | `animationsEnabled: true`; system reduced motion always takes precedence; embedded system panels retain native Omarchy behavior |
 | Sections | `overviewEnabled`, `calendarEnabled`, `weatherEnabled`: all `true` |
 | Track announcements | `trackAlerts: true` |
-| Music visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
+| Media visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
 | Visualization style | `musicVisualizationStyle: "default"`; reserved configuration key, not shown in settings |
 | Notification style | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
 | T3 Code sessions | `t3Enabled: false`; opt in under Modules → T3 Code to connect to the local T3 server |
@@ -154,7 +154,7 @@ Other settings and existing contextual controls:
 | Setting | Behavior |
 |---|---|
 | `format` | Clock format, inherited from the original clock |
-| `musicApps` | Allowed MPRIS players; browsers are excluded by default |
+| `musicApps` | Optional MPRIS player filter by identity, desktop entry, or D-Bus name (case-insensitive substring); unset or `[]` accepts all sources, including browsers, video players, podcasts, and music apps |
 | `notificationDuration` | Notification toast duration; default `5000` ms |
 | `radialBraille` | Adaptive spotlight dots; default `true` |
 | `calendarWeekStart` | `sunday` or `monday`; unset follows the Omarchy locale |
