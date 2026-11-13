@@ -31,6 +31,8 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-qml-') as tmp:
     assert 'DOWNLOADS_SERVICE_PASS' in result.stdout and not any(s in result.stdout for s in ['FAIL!', 'ReferenceError:', 'TypeError:'])
 
     assert json.loads((root / 'opened.json').read_text()) == [str(home / 'downloads/nested')]
-    state = json.loads((home / '.local/state/omarchy/island/state.json').read_text())
+    state = json.loads((home / '.local/state/omarchy/island/downloads.json').read_text())
     assert len(state['downloads']) == 1
     assert state['downloads'][0]['downloadPath'].endswith('/file $ & <name>.zip')
+    notifications = json.loads((home / '.local/state/omarchy/island/notifications.json').read_text())
+    assert 'downloads' not in notifications

@@ -3,7 +3,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "controls"
-import "SettingsModel.js" as Settings
+import "SettingsModel.mjs" as Settings
 
 Item {
   id:root

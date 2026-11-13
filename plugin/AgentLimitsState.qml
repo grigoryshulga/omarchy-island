@@ -11,7 +11,8 @@ Item {
   property var cache:({schemaVersion:1,providers:[],state:"loading"})
   property var catalog:[]
   property var automatic:[]
-  property double now:Date.now()
+  property var clock:function(){return Date.now()}
+  property double now:clock()
   property string error:""
   property var rows:Model.windows(error ? Object.assign({},cache,{state:"error"}) : cache,now)
   readonly property var pins:Preferences.get("agentLimitsPins")
@@ -69,6 +70,6 @@ Item {
     }
   }
   // Poll as well as watching: the shared writer replaces the inode atomically.
-  Timer {interval:15000;repeat:true;running:root.allowed;onTriggered:{root.now=Date.now();snapshot.reload()}}
+  Timer {interval:15000;repeat:true;running:root.allowed;onTriggered:{root.now=root.clock();snapshot.reload()}}
   Timer {interval:300000;repeat:true;running:root.allowed;triggeredOnStart:true;onTriggered:root.refresh()}
 }

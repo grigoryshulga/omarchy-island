@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Prepare private storage; leave migration pending until the module saves clean data."""
+import json
+import fcntl
+import math
+from contextlib import contextmanager
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+LIMIT = 2_000_000
+PENDING = {"islandMigrationPending": True}
+
+
+def read(path):
+    with path.open('rb') as source:
+        raw = source.read(LIMIT + 1)
+    if len(raw) > LIMIT:
+        raise ValueError('State exceeds size limit')
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError('State must be an object')
+    return value
+
+
+@contextmanager
+def migration_lock(legacy):
+    fd = os.open(str(legacy) + '.lock', os.O_CREAT | os.O_RDWR, 0o600)
+    with os.fdopen(fd, 'a') as lock:
+        os.fchmod(lock.fileno(), 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def atomic_write(path, value):
+    fd, temporary = tempfile.mkstemp(prefix='.island-state-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as out:
+            json.dump(value, out)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(temporary, path)
+        sync_directory(path.parent)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def recent(rows, field, cutoff, limit):
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict)
+            and type(row.get(field)) in (int, float)
+            and math.isfinite(row[field]) and row[field] > cutoff][:limit]
+
+
+def retire(path, legacy, now):
+    # Migration-only ownership map. Runtime modules never read each other's store.
+    fields = {'notifications.json': ('history', 'muted', 'dnd'),
+              'downloads.json': ('downloads', 'recents')}
+    owned = fields.get(path.name)
+    if not owned:
+        return {'legacyPending': False}
+    value = read(path)
+    required = 'history' if path.name == 'notifications.json' else 'downloads'
+    if value.get('version') != 1 or not isinstance(value.get(required), list):
+        raise ValueError('No completed snapshot')
+    # Never remove the migration source before the destination is durable.
+    with path.open('rb') as destination:
+        os.fsync(destination.fileno())
+    sync_directory(path.parent)
+    with migration_lock(legacy):
+        try:
+            data = read(legacy)
+        except FileNotFoundError:
+            return {'legacyPending': False}
+        except (ValueError, UnicodeError):
+            data = {}
+        for field in owned:
+            data.pop(field, None)
+        # An unregistered/disabled peer may not migrate soon. Retain its settings,
+        # but prune its old messages/files while an enabled module maintains legacy.
+        for field, time_field, ttl, limit in [('history', 'closed_ts', 86400, 100),
+                                             ('downloads', 'ts', 1800, 30),
+                                             ('recents', 'ts', 1800, 30)]:
+            if field in data:
+                data[field] = recent(data[field], time_field, now - ttl, limit)
+                if not data[field]:
+                    del data[field]
+        if any(key in data for group in fields.values() for key in group):
+            atomic_write(legacy, data)
+            return {'legacyPending': True}
+        legacy.unlink()
+        sync_directory(legacy.parent)
+        return {'legacyPending': False}
+
+
+def prepare(path, legacy):
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    path.parent.chmod(0o700)
+    # Publish a complete marker atomically. A crash before the first sanitized
+    # save can retry migration; an existing empty/corrupt store never reimports.
+    if not path.exists():
+        fd, temporary = tempfile.mkstemp(prefix='.island-state-', dir=path.parent)
+        try:
+            with os.fdopen(fd, 'w') as out:
+                json.dump(PENDING, out)
+                out.flush()
+                os.fsync(out.fileno())
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                pass
+        finally:
+            os.unlink(temporary)
+    path.chmod(0o600)
+    try:
+        value = read(path)
+        if value != PENDING:
+            return {"data": value, "status": "loaded", "legacyPending": legacy.exists()}
+        try:
+            with migration_lock(legacy):
+                return {"data": read(legacy), "status": "legacy", "legacyPending": True}
+        except FileNotFoundError:
+            return {"data": {}, "status": "new"}
+    except (ValueError, UnicodeError):
+        return {"data": {}, "status": "corrupt", "legacyPending": legacy.exists()}
+
+
+if __name__ == '__main__':
+    try:
+        path, legacy = Path(sys.argv[1]), Path(sys.argv[2])
+        result = retire(path, legacy, float(sys.argv[4])) if len(sys.argv) > 3 and sys.argv[3] == 'retire' else prepare(path, legacy)
+        print(json.dumps(result))
+    except (OSError, ValueError):
+        # Do not expose paths or stored content in process logs.
+        raise SystemExit(1)

@@ -11,7 +11,7 @@ Item {
   required property var strings
   property var externalFeedback:null
   property bool active:false
-  property var power:localPower
+  property var power:null
   signal expandRequested()
   readonly property bool present:power && power.present
   readonly property string mode:power && power.device ? Model.modeLabel(power.device,power.onBattery,power.states,Commons.I18n.t) : ""
@@ -22,7 +22,6 @@ Item {
   }
   visible:present
   implicitHeight:present ? content.implicitHeight : 0
-  PowerState {id:localPower;active:root.active && root.power===localPower}
   function profileLabel(profile) {return Model.profileLabel(profile,Commons.I18n.t)}
   function focusProfile() {
     if(!profileMenu.opened || !power || power.busy || !choices.count) return
@@ -68,7 +67,7 @@ Item {
         objectName:"batteryProfileButton"
         feedback:root.externalFeedback
         visible:root.power && root.power.profiles.length>0
-        enabled:!root.power.busy
+        enabled:root.power && !root.power.busy
         text:root.power && root.power.activeProfile ? root.profileLabel(root.power.activeProfile) : root.strings.t("battery.profile")
         iconText:root.power ? Model.profileIcon(root.power.activeProfile) : ""
         tooltipText:root.strings.t("battery.profile")
@@ -117,7 +116,7 @@ Item {
           text:root.profileLabel(modelData)
           iconText:Model.profileIcon(modelData)
           selected:root.power && root.power.activeProfile===modelData
-          enabled:root.power && !root.power.busy
+          enabled:root.power && root.power && !root.power.busy
           leftAlign:true
           feedback:menuFeedback
           background:"transparent"
@@ -142,7 +141,7 @@ Item {
   Connections {
     target:root.power
     function onProfileApplied(success) {if(success) profileMenu.close()}
-    function onBusyChanged() {if(root.power && !root.power.busy) Qt.callLater(root.focusProfile)}
+    function onBusyChanged() {if(root.power && root.power && !root.power.busy) Qt.callLater(root.focusProfile)}
     function onProfilesChanged() {if(!root.power || !root.power.profiles.length) profileMenu.close()}
   }
 }

@@ -5,7 +5,14 @@ import "PowerModel.js" as Model
 
 Item {
   id:root
+  property bool allowed:true
   property bool active:false
+  property var consumers:[]
+  function watch(item,visible) {
+    var next=consumers.filter(function(consumer){return consumer!==item})
+    if(visible) next.push(item)
+    consumers=next;active=allowed && consumers.length>0
+  }
   property var device:UPower.displayDevice
   property bool onBattery:UPower.onBattery
   readonly property bool present:!!device && device.isPresent
@@ -38,7 +45,8 @@ Item {
     profileAction.command=setCommand.concat([onBattery ? "battery" : "ac",profile])
     profileAction.running=true
   }
-  onActiveChanged:refresh()
+  onActiveChanged:if(active) refresh();else {profileRead.running=false;profileAction.running=false;refreshPending=false}
+  onAllowedChanged:active=allowed && consumers.length>0
   onPresentChanged:refresh()
   onOnBatteryChanged:Qt.callLater(refresh)
   Connections {target:PowerProfiles;function onProfileChanged(){root.refresh()}}

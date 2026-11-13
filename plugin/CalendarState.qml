@@ -6,6 +6,7 @@ import "Security.js" as Security
 Item {
   id:root
   property bool allowed:true
+  property var helperCommand:["python3",String(Qt.resolvedUrl("bin/calendar-data")).replace(/^file:\/\//,"")]
   property bool activated:false
   property int year:new Date().getFullYear()
   property var sources:[]
@@ -57,7 +58,7 @@ Item {
   onAllowedChanged:if(!allowed) {worker.running=false;queue=[];reports=({});reportOrder=[]} else if(activated) refresh(false)
   Process {
     id:worker
-    command:["python3",String(Qt.resolvedUrl("bin/calendar-data")).replace(/^file:\/\//,"")]
+    command:root.helperCommand
     stdinEnabled:true
     property var request:({})
     property var result:null

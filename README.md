@@ -230,7 +230,8 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. All detached Islan
 
 ## Data and privacy
 
-- Notification history, mute, and DND state live in `~/.local/state/omarchy/island/state.json`, limited to 100 notifications and 24 hours. Directory permissions are `0700`; file permissions are `0600`.
+- Notification history, mute, and DND state live in `~/.local/state/omarchy/island/notifications.json`, limited to 100 notifications and 24 hours. Downloads independently stores up to 30 completed items for 30 minutes in `downloads.json` in the same directory. Directory permissions are `0700`; file permissions are `0600`.
+- Each module imports its own data from the old `state.json` once, when its new store is absent. After a successful save, migration removes that module's legacy fields; the file disappears when no pending data remains. Unmigrated history and downloads still expire under their retention limits. Clearing a new store does not import old entries again; a corrupt new store recovers empty.
 - Expired notifications enter history; sender withdrawal removes them from both lists while Island retains the sender reference. After restart, saved entries are history only. Transient notifications are not saved.
 - Verification-code notifications are redacted before persistence. Copied codes use a sensitive clipboard selection and are cleared after one minute unless the clipboard has changed.
 - Playback audio is read through `parec` and processed in memory without saving PCM. Voxtype uses its existing audio bridge during recording; Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
@@ -262,6 +263,8 @@ bin/design-gallery --capture-dir /tmp/island-design
 
 Sources live in `plugin/`. Register new top-level QML types in `plugin/qmldir`, which also declares the shared Preferences singleton. The root `manifest.json` serves the native plugin manager; `plugin/manifest.json` serves legacy flat installations. Keep shared metadata consistent and preserve their different entry point paths.
 
+Built-in features and integrations are registered in `plugin/ModuleCatalog.mjs`. Each module contributes its state, settings and views; shared hosts own Overview navigation, indicators and existing popup pages. See [the module contract and test harness](docs/modules.md) and [the glossary](GLOSSARY.md). New registrations take effect after a shell restart.
+
 After editing fragment shaders, run `bin/build-shaders` with Qt `qsb` installed. Include the generated vertex shaders and `.qsb` files in the change.
 
 ### Verification
@@ -270,7 +273,7 @@ After editing fragment shaders, run `bin/build-shaders` with Qt `qsb` installed.
 bin/test
 ```
 
-The suite covers JS models, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js, Python, `dbus-run-session`, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`.
+The suite covers JS models, module registration and lifecycle, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js 22.12 or newer, Python, `dbus-run-session`, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`.
 
 `bin/test` runs through `bin/test-session`: disposable HOME, temporary files and runtime directory, a private D-Bus session, and offscreen Qt rendering. Desktop display/IPC variables are not inherited. Python checks also enter this session when invoked directly. The runner cleans up its process group and temporary files on exit. This separates tests from the desktop; it is not a filesystem or network security sandbox.
 
@@ -292,6 +295,8 @@ python3 tests/panel-layout.py              # Wayland panel orientation, edge slo
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
 python3 tests/agent-limits-qml.py          # Isolated limits collector, pins, focus, center and failure policy
+python3 tests/modules.py                   # Shared fake host, registration, navigation and collector lifecycle
+python3 tests/module-storage.py            # Independent stores, legacy migration, restart and private permissions
 python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity

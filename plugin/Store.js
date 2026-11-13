@@ -139,9 +139,8 @@ function restored(entry) {
 
 // ------------------------------------------------------------ persistence
 //
-// Service.qml keeps three files in ~/.local/state/omarchy/notifications/:
-// live.json (the rows on screen, oldest first, restored after a restart),
-// history.json (closed rows, newest first) and quiet.json. A row goes through
+// NotificationState.qml owns ~/.local/state/omarchy/island/notifications.json.
+// Active rows become history after restart. A row goes through
 // persistable() on the way out and again on the way back in, so one an older
 // build or another program wrote is held to today's rules.
 

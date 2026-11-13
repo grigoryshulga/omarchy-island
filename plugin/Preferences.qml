@@ -1,7 +1,7 @@
 pragma Singleton
 import QtQuick
 import qs.Commons
-import "SettingsModel.js" as Settings
+import "SettingsModel.mjs" as Settings
 
 QtObject {
   id: root

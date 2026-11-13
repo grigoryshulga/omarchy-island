@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const settings = require('../plugin/SettingsModel.js');
+const settings = require('../plugin/SettingsModel.mjs');
 const osd = require('../plugin/Osd.js');
 
 assert.deepEqual(settings.pages({}), [0, 1, 2, 3]);

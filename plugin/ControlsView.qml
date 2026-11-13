@@ -22,14 +22,14 @@ Item {
   readonly property bool settingsOwnKeys:section==="settings" && settingsPage.ownsKeys
   readonly property var indicators:service && ("indicators" in service) ? service.indicators : null
   readonly property var microphone:indicators ? indicators.microphone : null
-  property var execute:function(command){Quickshell.execDetached(command)}
-  property var systemCall:function(target,method,args){return IpcRegistry.call(target,method,args)}
-  property var controlState:nativeState
-  ControlsState {
-    id:nativeState
-    active:root.active && !root.section && root.controlState===nativeState
-    execute:root.execute
-    onActionFailed:root.error=root.strings.t("controls.unavailable")
+  property var execute:function(command){}
+  property var systemCall:function(target,method,args){return {ran:false}}
+  property var panelCommand:[]
+  property var controlState:null
+  Connections {
+    target:root.controlState
+    ignoreUnknownSignals:true
+    function onActionFailed(){root.error=root.strings.t("controls.unavailable")}
   }
   signal dismissRequested()
   signal settingRequested(string key, var value)
@@ -89,13 +89,15 @@ Item {
   property string buildError:""
   function requestPanel() {
     if(!active || !section || section==="settings" || panelBuilder.running) return
+    if(!panelCommand.length) {error=strings.t("controls.unavailable");return}
     buildingSection=section;buildOutput="";buildError=""
-    panelBuilder.command=["python3",decodeURIComponent(Qt.resolvedUrl("controls/build-panel.py").toString().replace(/^file:\/\//,"")),section]
+    panelBuilder.command=panelCommand.concat([section])
     panelBuilder.running=true
   }
   onActiveChanged: {
     changing=true
     if(!active) {
+      panelBuilder.running=false
       settingsPage.closeEditors()
       if(nativeLoader.item) nativeLoader.item.close()
       nativeLoader.source=""
@@ -165,10 +167,10 @@ Item {
           Layout.fillWidth:true
           feedback:root.externalFeedback
           title:root.strings.t("controls."+modelData.key)
-          showLed:root.controlState.available(modelData.key)
+          showLed:!!root.controlState && root.controlState.available(modelData.key)
           selected:showLed && root.controlState.enabledState(modelData.key)
           tooltipText:showLed ? root.strings.t("controls.rightClickToggle")+" · "+root.modeState(selected) : title
-          onRightClicked:root.controlState.toggle(modelData.key)
+          onRightClicked:if(root.controlState) root.controlState.toggle(modelData.key)
           glyph:modelData.icon
           drillDown:true
           onClicked:root.openSection(modelData.key)

@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const M=require('../plugin/AgentLimitsModel.js'),S=require('../plugin/SettingsModel.js');
+const M=require('../plugin/AgentLimitsModel.js'),S=require('../plugin/SettingsModel.mjs');
 const now=Date.now(),id=M.key('codex','Weekly');
 function cache(percent,extra={}) {return {schemaVersion:1,providers:[{id:'codex',name:'Codex',limits:[{label:'Weekly',percent,...extra}]}]}}
 assert.equal(M.parse('invalid'),null);

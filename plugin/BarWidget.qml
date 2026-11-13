@@ -6,15 +6,22 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 import "ClockModel.js" as Clock
-import "SettingsModel.js" as Settings
+import "ModuleCatalog.mjs" as Catalog
+import "SettingsModel.mjs" as Settings
 
 BarWidget {
   id: root
   moduleName: "gshulga.island"
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
-  readonly property var t3:service && ("t3" in service) ? service.t3 : null
-  readonly property var agentLimits:service && ("agentLimits" in service) ? service.agentLimits : null
+  readonly property string moduleTooltips: {
+    var tips=[]
+    for(var i=0;i<moduleIndicators.count;i++) {
+      var slot=moduleIndicators.itemAt(i)
+      if(slot && slot.available && slot.tooltip) tips.push(slot.tooltip)
+    }
+    return tips.join(" · ")
+  }
   property var registeredIndicators: null
   readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
   property real osdShown:showOsd ? 1 : 0
@@ -48,9 +55,10 @@ BarWidget {
   property int lastOpenedPage:1
   readonly property bool stripNotification: !vertical && notificationToast && Settings.get(settings,"notificationStyle")==="bar"
   property bool contentExpanded: false
-  property bool controlsMode: false
-  property bool calendarMode: false
-  property bool weatherMode: false
+  property int selectedPage:1
+  readonly property bool controlsMode:selectedPage===0
+  readonly property bool calendarMode:selectedPage===2
+  readonly property bool weatherMode:selectedPage===3
   property bool hoverOpen: false
   property bool hoverContentAvailable:false
   property string alertKind: ""
@@ -73,14 +81,14 @@ BarWidget {
     updateSetting(vertical ? "verticalFormat" : "format",Clock.nextClockFormat(ring,configuredFormat))
   }
   function cyclePage(step) {
-    var index=controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1
+    var index=selectedPage
     previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
   readonly property string barText: showAlert && alertKind!=="t3" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
-  function activateWeather() { if(Settings.get(settings,"weatherEnabled") && service && ("weather" in service)) service.weather.activate() }
+  function activateWeather() { if(Settings.get(settings,"weatherEnabled") && service && service.weather) service.weather.activate() }
   function syncContentPresentation() {
     // Coalesce interaction changes so an exit never applies the closed
     // presentation before its fade. A reopen uses the latest state instead.
@@ -89,18 +97,16 @@ BarWidget {
     previewContent.alertKind = alertKind
   }
   function openPage(index) {
-    if(Settings.pages(settings, !service || !("weather" in service) || service.weather.allowed).indexOf(index)<0) index=0
-    controlsMode=index===0;calendarMode=index===2;weatherMode=index===3
+    if(Settings.pages(settings, !service || !service.weather || service.weather.allowed).indexOf(index)<0) index=0
+    selectedPage=index
     contentExpanded=true;pinned=true;hoverOpen=false;alertKind="";lastOpenedPage=index
     activateWeather()
+    previewContent.enterPage(index)
     Qt.callLater(function(){previewContent.forceActiveFocus()})
   }
   function open() {openPage(Settings.openingPage(settings,lastOpenedPage))}
   function openOverview() {openPage(1)}
-  function openCalendar() {
-    openPage(2)
-    if(calendarMode) previewContent.showToday()
-  }
+  function openCalendar() {openPage(2)}
   function openWeather() {
     openPage(3)
   }
@@ -113,7 +119,7 @@ BarWidget {
   function showT3Activity() {
     if(!service || !service.latestT3 || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
     if(service.t3TargetScreen && service.t3TargetScreen!==screenName) return
-    contentExpanded=false;controlsMode=false;calendarMode=false;weatherMode=false
+    contentExpanded=false;selectedPage=1
     alertKind="t3";alertLife.interval=4000;alertLife.restart()
   }
   function showNotification() {
@@ -124,15 +130,8 @@ BarWidget {
     Preferences.values=root.settings
     if(!Settings.get(settings,"hoverPreview") || !Settings.get(settings,"overviewEnabled")) {hoverDelay.stop();hoverOpen=false}
     if(!Settings.get(settings,"trackAlerts") && alertKind==="media") {alertKind="";alertLife.stop()}
-    if(pinned && Settings.pages(settings).indexOf(controlsMode ? 0 : calendarMode ? 2 : weatherMode ? 3 : 1)<0) openControls()
-    if (service && Array.isArray(setting("musicApps",null))) service.allowedPlayers = setting("musicApps",[])
-    if(service && ("calendars" in service)) service.calendars.allowed=Settings.get(settings,"calendarEnabled")
-    if(service && ("weather" in service)) {
-      service.weather.allowed=setting("weatherEnabled",true)!==false
-      service.weather.unitOverride=String(setting("weatherUnit",""))
-      service.weather.temperatureOverride=String(setting("weatherTemperatureUnit",""))
-      service.weather.refreshOverride=Number(setting("weatherRefreshMinutes",0)) || 0
-    }
+    if(pinned && Settings.pages(settings).indexOf(selectedPage)<0) openControls()
+    if(service && service.modules && service.modules.media && Array.isArray(setting("musicApps",null))) service.modules.media.allowedPlayers=setting("musicApps",[])
   }
   function updateSetting(key,value) {
     if(key==="calendarWeekStart" && value!=="sunday" && value!=="monday") return
@@ -147,7 +146,7 @@ BarWidget {
   onHoverOpenChanged: {
     Qt.callLater(function(){
       if(root.hoverOpen) {
-        if(!root.pinned) {root.contentExpanded=false;root.controlsMode=false;root.calendarMode=false;root.weatherMode=false}
+        if(!root.pinned) {root.contentExpanded=false;root.selectedPage=1}
         root.activateWeather()
       }
       root.syncContentPresentation()
@@ -197,7 +196,7 @@ BarWidget {
     fixedWidth: root.implicitWidth
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
-    tooltipText: [root.agentLimits && root.agentLimits.indicatorVisible && root.agentLimits.tightest ? root.agentLimits.tightest.name+" · "+root.agentLimits.tightest.label+" · "+Commons.I18n.formatNumber(Math.round(root.agentLimits.tightest.remaining))+"%" : "",root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : "",root.indicators && root.indicators.updateAvailable ? strings.t("indicator.updateAvailable") : ""].filter(function(s){return s!==""}).join(" · ")
+    tooltipText: [root.moduleTooltips,root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : "",root.indicators && root.indicators.updateAvailable ? strings.t("indicator.updateAvailable") : ""].filter(function(s){return s!==""}).join(" · ")
     onPressed: button => { if (button === Qt.RightButton) root.cycleClockFormat(); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     onWheelMoved: delta => {if(delta) root.cyclePage(delta<0 ? 1 : -1)}
     ArtworkBackground {
@@ -215,40 +214,23 @@ BarWidget {
       columns: root.vertical ? 1 : -1
       rows: root.vertical ? -1 : 1
       id:leftIndicators
-      Item {
-        id:t3Indicator
-        objectName:"islandT3Indicator"
-        visible:!!root.t3 && root.t3.allowed && (root.t3.waitingCount>0 || root.t3.workingCount>0)
-        readonly property bool waiting:!!root.t3 && root.t3.waitingCount>0
-        readonly property string text:Commons.I18n.formatNumber(root.t3 ? root.t3.waitingCount || root.t3.workingCount : 0)
-        readonly property color color:root.showAlert ? Commons.Color.accent : root.bar ? root.bar.barForeground : Commons.Color.foreground
-        implicitWidth:root.vertical ? Math.min(root.barSize-Style.space(4),t3IndicatorBody.implicitWidth) : t3IndicatorBody.implicitWidth;implicitHeight:t3IndicatorBody.implicitHeight
-        GridLayout {
-          columns:root.vertical ? 1 : -1
-          rows:root.vertical ? -1 : 1
-          id:t3IndicatorBody
-          anchors.centerIn:parent
-          width:parent.width
-          columnSpacing:Style.space(4);rowSpacing:Style.space(4)
-          T3Spinner {objectName:"islandT3Spinner";tint:t3Indicator.color;visible:!t3Indicator.waiting;active:t3Indicator.visible;implicitWidth:t3Count.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter}
-          PlainText {visible:t3Indicator.waiting;text:"󰋗";color:t3Indicator.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
-          PlainText {id:t3Count;objectName:"islandT3Count";Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:t3Indicator.text;color:t3Indicator.color;typeRole:"bar";font.family:root.bar ? root.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;verticalAlignment:Text.AlignVCenter}
+      Repeater {
+        id:moduleIndicators
+        model:Catalog.ordered("indicator")
+        ModuleSlot {
+          required property var modelData
+          viewSource:modelData.indicator || ""
+          backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
+          presentation:QtObject {
+            readonly property bool vertical:root.vertical
+            readonly property real barSize:root.barSize
+            readonly property real barHeight:trigger.height
+            readonly property bool showAlert:root.showAlert
+            readonly property var bar:root.bar
+          }
+          visible:available
+          onDetailsRequested:root.openOverview()
         }
-        MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
-      }
-      Item {
-        objectName:"islandAgentLimitsIndicator"
-        visible:!!root.agentLimits && root.agentLimits.indicatorVisible
-        implicitWidth:root.vertical ? Math.min(root.barSize-Style.space(4),limitIndicatorText.implicitWidth) : limitIndicatorText.implicitWidth
-        implicitHeight:root.vertical ? Style.space(18) : trigger.height
-        PlainText {
-          id:limitIndicatorText
-          anchors.centerIn:parent
-          width:parent.width;elide:Text.ElideRight;typeRole:"bar"
-          text:root.agentLimits && root.agentLimits.tightest ? "󰧑 "+Commons.I18n.formatNumber(Math.round(root.agentLimits.tightest.remaining))+"%"+(root.agentLimits.tightest.stale ? " ·" : "") : ""
-          color:root.agentLimits && root.agentLimits.tightest && root.agentLimits.tightest.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.barDanger : Design.barText
-        }
-        MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.openOverview()}
       }
       objectName:"islandLeftIndicators"
       x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2-centerContent.indicatorSpan/2-Style.space(11-5*root.osdShown)-width
@@ -389,7 +371,7 @@ BarWidget {
     bareCard: (root.alertKind==="t3" || root.alertKind==="media") && !root.pinned && !root.hoverOpen
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
     onVisibleChanged: if (!visible) Qt.callLater(function(){
-      if(!preview.visible && !preview.open) {root.contentExpanded=false;root.calendarMode=false;root.weatherMode=false;root.controlsMode=false}
+      if(!preview.visible && !preview.open) {root.contentExpanded=false;root.selectedPage=1}
     })
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
     contentHeight: fittedContentHeight(previewContent.implicitHeight)
@@ -455,9 +437,7 @@ BarWidget {
       settings: root.settings
       onSettingRequested:(key,value)=>root.updateSetting(key,value)
       externalFeedback: panelFeedback
-      controls: root.controlsMode
-      calendar: root.calendarMode
-      weather: root.weatherMode
+      selectedPage:root.selectedPage
       compactNotifications: preview.frameSuppressed && !root.pinned && !root.hoverOpen
       radialBraille: root.setting("radialBraille",true)
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
@@ -466,14 +446,11 @@ BarWidget {
       expanded: root.contentExpanded
       focus: root.pinned
       Keys.onEscapePressed: {if(!previewContent.back()) root.close()}
-      Keys.onSpacePressed: event => { if (!root.controlsMode && !root.calendarMode && !root.weatherMode && root.service) root.service.media("toggle"); else event.accepted = false }
+      Keys.onSpacePressed: event => { if (root.selectedPage===1 && root.service) root.service.media("toggle"); else event.accepted = false }
 
       onExpandRequested: root.openOverview()
-      onControlsRequested: root.openControls()
       onDismissRequested: root.close()
-      onCalendarRequested: root.openCalendar()
-      onWeatherRequested: root.openWeather()
-      onInboxRequested: root.openOverview()
+      onPageRequested:index=>root.openPage(index)
     }
   }
   ShellIpc {

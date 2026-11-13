@@ -12,14 +12,16 @@ Column {
   required property var strings
   property bool expanded:false
   property bool centerOpen:false
+  property bool showHeader:true
   property var feedback:null
   property var rows:backend ? backend.summary : []
   signal settingRequested(string key,var value)
   signal expandRequested()
+  signal detailsRequested()
   spacing:Design.gap.small
   LayoutMirroring.enabled:Commons.I18n.rightToLeft
   LayoutMirroring.childrenInherit:true
-  onExpandedChanged:if(!expanded) centerOpen=false
+  onCenterOpenChanged:if(!centerOpen) sync(true)
   onVisibleChanged:if(visible) sync(true)
   // Existing delegates keep their place and keyboard focus during refreshes.
   function sync(reorder) {
@@ -32,6 +34,7 @@ Column {
   Component.onCompleted:sync()
   function pin(id) {settingRequested("agentLimitsPins",Model.toggle(backend.pins,id))}
   RowLayout {
+    visible:root.showHeader
     width:parent.width
     SectionHeading {Layout.fillWidth:true;title:root.strings.t("limits.title")}
     FeedbackButton {
@@ -43,7 +46,7 @@ Column {
       implicitHeight:Design.compactControlHeight
       horizontalPadding:0;verticalPadding:0
       compact:true;focusable:root.expanded;feedback:root.feedback
-      onClicked:{if(!root.expanded) root.expandRequested();else {root.centerOpen=!root.centerOpen;if(!root.centerOpen) root.sync(true)}}
+      onClicked:{if(!root.expanded) root.expandRequested();else root.detailsRequested()}
     }
   }
   ListModel {id:items}

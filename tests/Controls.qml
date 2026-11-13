@@ -74,6 +74,7 @@ ShellRoot {
       id:view;anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;anchors.margins:16
       width:controlsWindow.testWidth-32
       controlState:tileState
+      panelCommand:actions.panelCommand
       service:service;bar:bar;strings:translations;active:true
       onSettingRequested:(key,value)=>{scene.preferences=[key,value]}
       execute:function(command){scene.commands=scene.commands.concat([command])}
@@ -86,6 +87,9 @@ ShellRoot {
     when:false
     function check(ok,message){if(!ok){console.log("CONTROLS_FAIL:",message);Qt.quit();throw new Error(message)}}
     function test_controls(){
+      Commons.Style.fontFamily="monospace"
+      Commons.Style.fontOverrides=({})
+      Commons.Style.fontBaseSize=12
       wait(80)
       check(view.section==="" && view.implicitHeight>0,"controls landing is empty")
       var loader=findChild(view,"islandNativeControl")
@@ -199,6 +203,8 @@ ShellRoot {
       controlsWindow.testWidth=360
       var fontSize=Commons.Style.fontBaseSize
       Commons.Style.fontOverrides=({});Commons.Style.fontBaseSize=fontSize*1.5;wait(40)
+      check(view.width===328,"narrow fixture did not resize the tested content")
+      console.log("CONTROLS_LAYOUT",Commons.I18n.language,openingLabel.font.family,openingLabel.font.pixelSize,view.width)
       check(opening.width<=settingsView.width && opening.mapToItem(settingsView,0,0).y>=openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"narrow choice did not move below label")
       for(var tabName of ["general","panel","alerts","modules"]) {
         var tab=findChild(settingsView,"settingsTab-"+tabName)

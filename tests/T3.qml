@@ -6,7 +6,16 @@ import "Island" as Island
 import "Island/DesignTokens.js" as Tokens
 
 ShellRoot {
-  Island.Service {id:service}
+  id:scene
+  property var responseStates:[]
+  Connections {
+    target:service.t3
+    function onResponsesChanged(){scene.responseStates=scene.responseStates.concat([service.t3.response("request-2")])}
+  }
+  Island.Service {
+    id:service
+    moduleStateProperties:({t3:{bridgeCommand:[Quickshell.env("T3_TEST_BRIDGE")]}})
+  }
   SignalSpy {id:alerts;target:service;signalName:"t3Arrival"}
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("Island/i18n")}
   FloatingWindow {
@@ -113,8 +122,8 @@ ShellRoot {
         verify(projectIcon.visible && projectIcon.geometry.indexOf("path")>=0,"API project icon was not rendered")
         compare(findChild(projectIcon,"projectLucideIcon").status,Image.Ready)
         compare(projectIcon.tint.toString(),projectIcon.dark ? "#ff6467" : "#e7000b","Project icon lost the original T3 color")
-        pages.controls=true;wait(30);verify(!spinner.animating,"Hidden page kept animating")
-        pages.controls=false;wait(300)
+        pages.selectedPage=0;wait(30);verify(!spinner.animating,"Hidden page kept animating")
+        pages.selectedPage=1;wait(300)
         field.forceActiveFocus()
         if(Quickshell.env("ISLAND_T3_CAPTURE")) {
           findChild(pages,"t3Section").grabToImage(function(image){image.saveToFile(Quickshell.env("ISLAND_T3_CAPTURE"))})
@@ -159,9 +168,11 @@ ShellRoot {
         compare(service.t3.response(row.request.id),"uncertain","A lost reply must not leave Sending forever")
         verify(!submit.enabled,"Uncertain sends must not be retried")
         service.t3.responses=({});tryVerify(function(){return submit.enabled})
+        scene.responseStates=[]
         submit.forceActiveFocus();keyClick(Qt.Key_Return)
-        compare(service.t3.response("request-2"),"sending")
-        verify(!submit.enabled,"No double-submit")
+        // keyClick pumps events: a fast bridge can acknowledge before it returns.
+        verify(scene.responseStates.indexOf("sending")>=0,"Answer never entered sending")
+        if(service.t3.response("request-2")==="sending") verify(!submit.enabled,"No double-submit")
         tryCompare(service.t3,"waitingCount",0)
         tryCompare(service.t3,"workingCount",1)
         Commons.Style.cornerRadius=originalCorners;Commons.Style.reduceMotion=originalReduceMotion
@@ -189,7 +200,7 @@ ShellRoot {
         var buttonAt=longSend.mapToItem(sessionScroll,0,0)
         verify(buttonAt.y>=0 && buttonAt.y+longSend.height<=sessionScroll.height+1,"Keyboard focus must scroll the send button into view")
         // Reconnect snapshots stay quiet; the next completion must still alert.
-        service.doNotDisturb=false
+        service.setDoNotDisturb(false)
         service.activeAppId="island-test"
         alerts.clear()
         service.t3.receive('{"type":"connection","status":"offline"}')
@@ -202,15 +213,15 @@ ShellRoot {
         compare(alerts.count,1,"Metadata must not repeat the completion popup")
         snapshot([]);wait(30)
         alerts.clear()
-        service.doNotDisturb=false
+        service.setDoNotDisturb(false)
         snapshot([Object.assign({},second,{status:"running"})]);wait(30)
         compare(alerts.count,1)
         snapshot([Object.assign({},second,{status:"starting"})]);wait(30)
         compare(alerts.count,1,"Run phases must not repeat popups")
-        service.doNotDisturb=true
+        service.setDoNotDisturb(true)
         snapshot([Object.assign({},second,{status:"completed"})]);wait(30)
         compare(alerts.count,1,"DND must suppress popups")
-        service.doNotDisturb=false
+        service.setDoNotDisturb(false)
         snapshot([Object.assign({},second,{status:"running"})]);wait(30)
         compare(alerts.count,2)
         pages.expanded=false;pages.hovering=false;pages.alertKind="t3";wait(50)

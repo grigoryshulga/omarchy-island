@@ -65,6 +65,7 @@ ShellRoot {
       property bool busy:false
       function loadCatalog(){}
     }
+    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
     property var t3:t3State
     property var indicators:states
     property bool doNotDisturb:false

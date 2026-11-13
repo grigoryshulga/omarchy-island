@@ -73,3 +73,13 @@ AgentLimitsOverview 1.0 AgentLimitsOverview.qml
 AgentLimitRow 1.0 AgentLimitRow.qml
 AgentLimitsCenter 1.0 AgentLimitsCenter.qml
 AgentLimitsProviders 1.0 AgentLimitsProviders.qml
+ModuleRegistry 1.0 ModuleRegistry.qml
+ModuleStorage 1.0 ModuleStorage.qml
+ModuleView 1.0 ModuleView.qml
+ModuleSlot 1.0 ModuleSlot.qml
+MediaState 1.0 MediaState.qml
+DownloadsState 1.0 DownloadsState.qml
+NotificationState 1.0 NotificationState.qml
+NotificationContent 1.0 NotificationContent.qml
+ModulePage 1.0 ModulePage.qml
+ModuleTab 1.0 ModuleTab.qml

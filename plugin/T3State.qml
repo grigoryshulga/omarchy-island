@@ -7,6 +7,9 @@ import "T3Model.js" as T3
 
 Item {
   id:root
+  property var clock:function(){return Date.now()}
+  property var bridgeCommand:["python3",String(Qt.resolvedUrl("bin/t3-bridge")).replace(/^file:\/\//,"")]
+  property var openUrl:function(url){Util.execArgv(["xdg-open",url])}
   property bool allowed:Preferences.get("t3Enabled")
   property bool responsesEnabled:Preferences.get("t3Responses")
   property string status:"offline"
@@ -62,13 +65,14 @@ Item {
   function submit(id,request,answers) {
     var current=row(id),state=request ? response(request.id) : ""
     if(!connected || !canRespond || !responsesEnabled || !reader.running || !current || !request || !request.canRespond || !current.request || current.request.revision!==request.revision || ["sending","sent","uncertain"].indexOf(state)>=0) return false
-    var next=Object.assign({},responses);next[request.id]={status:"sending",startedAt:Date.now()};responses=next
+    var next=Object.assign({},responses);next[request.id]={status:"sending",startedAt:clock()};responses=next
     reader.write(JSON.stringify({type:"respond",threadId:id,requestId:request.id,revision:request.revision,answers:answers})+"\n")
     return true
   }
   function openThread(id) {
+    if(!allowed) return
     var url=Security.t3ThreadUrl(environmentId,id)
-    if(url && row(id)) Util.execArgv(["xdg-open",url])
+    if(url && row(id)) openUrl(url)
   }
   function restart() {
     canRespond=false;failPending()
@@ -82,7 +86,7 @@ Item {
   onResponsesEnabledChanged:restart()
   Process {
     id:reader
-    command:["python3",String(Qt.resolvedUrl("bin/t3-bridge")).replace(/^file:\/\//,"")].concat(root.responsesEnabled ? [] : ["--read-only"])
+    command:root.bridgeCommand.concat(root.responsesEnabled ? [] : ["--read-only"])
     running:root.allowed
     stdinEnabled:true
     stdout:SplitParser {onRead:data=>root.receive(data)}
@@ -92,6 +96,6 @@ Item {
   Timer {
     interval:1000;repeat:true
     running:root.allowed && Object.keys(root.responses).some(function(id){return root.response(id)==="sending"})
-    onTriggered:root.expireResponses(Date.now())
+    onTriggered:root.expireResponses(root.clock())
   }
 }

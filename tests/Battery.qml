@@ -98,6 +98,19 @@ ShellRoot {
       tryVerify(function(){return !backend.busy && backend.error!==""},2500)
       check(backend.activeProfile==="performance","failed profile change overwrote current profile")
       backend.active=false
+      var firstScreen={},secondScreen={}
+      backend.watch(firstScreen,true);backend.watch(secondScreen,true)
+      check(backend.active && backend.consumers.length===2,"battery did not share two visible consumers")
+      backend.watch(firstScreen,true)
+      check(backend.consumers.length===2,"repeated visibility duplicated a consumer")
+      backend.watch(firstScreen,false)
+      check(backend.active,"closing one monitor stopped another monitor's battery")
+      backend.allowed=false
+      check(!backend.active && !backend.busy,"disabled battery retained external work")
+      backend.allowed=true
+      check(backend.active,"enabled battery did not restore its visible consumer")
+      backend.watch(secondScreen,false)
+      check(!backend.active && !backend.busy && backend.consumers.length===0,"last monitor did not release the battery")
       console.log("BATTERY_PASS");Qt.quit()
     }
   }

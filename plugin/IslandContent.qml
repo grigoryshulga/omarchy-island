@@ -4,7 +4,7 @@ import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
-import "Model.js" as Model
+import "ModuleCatalog.mjs" as Catalog
 
 Item {
   id: root
@@ -12,7 +12,10 @@ Item {
   required property var strings
   property var bar: null
   property var externalFeedback: null
-  readonly property bool musicHovered: mediaPlayer.visible && mediaPlayer.hovered
+  readonly property bool musicHovered: {
+    for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.visible && slot.item && slot.item.interactionHovered) return true}
+    return false
+  }
   property bool overviewActive: true
   property bool expanded: false
   property bool radialBraille: true
@@ -25,10 +28,11 @@ Item {
   signal calendarRequested()
   signal weatherRequested()
   signal closeRequested()
-  readonly property bool limitsCenterOpen:!!limitsBlock.backend && limitsBlock.backend.allowed && expanded && limitsBlock.centerOpen
   property string detailPage: ""
+  property var moduleDefinitions:Catalog.ordered("overview").filter(function(entry){return !!entry.overview})
+  readonly property var detailDefinition:moduleDefinitions.find(function(entry){return entry.id===root.detailPage}) || null
   property real pageHeight: Style.space(520)
-  readonly property bool detailOpen: limitsCenterOpen || detailPage!==""
+  readonly property bool detailOpen: detailPage!==""
   property var returnFocus: null
   property real summaryScrollY: 0
   KeyboardNavigation {id:detailNavigation;scope:root}
@@ -37,7 +41,6 @@ Item {
     returnFocus=detailNavigation.focused
     summaryScrollY=overviewScroll.contentItem.contentY
     detailPage=page
-    historyOpen=false
     overviewScroll.contentItem.contentY=0
     Qt.callLater(function(){detailNavigation.first(body)})
   }
@@ -49,34 +52,16 @@ Item {
   }
   function back() {
     if(!detailOpen) return false
-    detailPage="";limitsBlock.centerOpen=false;historyOpen=false
+    detailPage=""
     restoreSummary()
     return true
   }
-  readonly property bool showPlayer:!detailOpen && service !== null && service.hasMedia && (expanded || hovering || alertKind === "media")
-  readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
-  property bool historyOpen: false
-  onExpandedChanged: if (!expanded) {historyOpen=false;detailPage=""}
-  readonly property var rows: service ? (historyOpen && expanded ? service.historyEntries : service.activeEntries) : []
-  readonly property var visibleRows: expanded ? rows : (hovering ? rows.slice(0,3) : service && service.latest ? [service.latest] : [])
-  readonly property var displayedRows: !expanded && !hovering && service && service.latest ? (service.latest.downloadPath ? [] : [service.latest]) : rows
-  readonly property int notificationLimit:expanded ? (detailPage==="notifications" ? 100 : 3) : hovering ? 3 : 1
-  readonly property var groups: Model.previewGroups(displayedRows,100)
-  function syncGroups() {
-    Model.syncKeys(groupItems,groups.map(function(group){return group.source}))
-    Qt.callLater(updateNotificationIcon)
+  onExpandedChanged:if(!expanded) detailPage=""
+  readonly property var t3:service && service.t3 ? service.t3 : null
+  readonly property var notificationIcon: {
+    for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.visible && slot.item && slot.item.toastIcon) return slot.item.toastIcon}
+    return null
   }
-  function updateNotificationIcon() {
-    var item=notificationGroups.itemAt(0)
-    notificationIcon=item ? item.notificationIcon : null
-  }
-  onGroupsChanged: syncGroups()
-  Component.onCompleted: syncGroups()
-  ListModel {id:groupItems}
-  readonly property var downloads: service && ("downloads" in service) ? service.downloads : []
-  readonly property var t3:service && ("t3" in service) ? service.t3 : null
-  readonly property bool showT3:(!detailOpen || detailPage==="t3") && !!t3 && t3.allowed && t3.connected && t3.rows.length>0 && (expanded || hovering)
-  property var notificationIcon:null
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
   implicitHeight: expanded ? pageHeight : body.implicitHeight
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
@@ -94,7 +79,7 @@ Item {
   RowLayout {
     visible:root.detailPage!==""
     Layout.fillWidth:true
-    SectionHeading {Layout.fillWidth:true;title:root.detailPage==="t3" ? "T3 Code" : root.strings.t("notifications.active")}
+    SectionHeading {Layout.fillWidth:true;title:root.detailDefinition ? (root.detailDefinition.title || root.strings.t(root.detailDefinition.titleKey)) : root.strings.t("notifications.active")}
     FeedbackButton {objectName:"overviewBack";implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
   }
   T3SessionCard {
@@ -109,197 +94,40 @@ Item {
     feedback:root.externalFeedback
     onExpandRequested:root.expandRequested()
   }
-  ColumnLayout {
-    Layout.fillWidth:true
-    visible:root.showPlayer
-    spacing:Design.gap.small
-    SectionHeading {
-      objectName:"mediaSectionHeading"
-      visible:!root.mediaToast && !mediaPlayer.compactOverview
+  Repeater {
+    id:moduleSections
+    model:root.moduleDefinitions
+    ModuleSlot {
+      id:moduleSection
+      required property var modelData
       Layout.fillWidth:true
-      title:root.service && root.service.player && /spotify/i.test(root.service.player.identity || "") ? "Spotify" : root.strings.t("media.title")
-    }
-    MediaCard {
-      id: mediaPlayer
-      color:root.mediaToast ? "transparent" : Design.surface
-      externalFeedback: root.externalFeedback
-      objectName: "islandMediaPlayer"
-      Layout.fillWidth: true
-      service: root.service
-      strings: root.strings
-      bar: root.bar
-      expanded: root.expanded
-      compactOverview:!root.mediaToast
-      active: root.overviewActive
-      radialBraille: root.radialBraille
-      onExpandRequested: root.expandRequested()
+      viewSource:modelData.overview || ""
+      backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
+      visible:available && (!root.detailOpen || root.detailPage===modelData.id)
+      presentation:QtObject {
+        readonly property var strings:root.strings
+        readonly property var feedback:root.externalFeedback
+        readonly property var bar:root.bar
+        readonly property bool hovering:root.hovering
+        readonly property string alertKind:root.alertKind
+        readonly property var alert:root.service && root.service.latest ? root.service.latest : null
+        readonly property bool radialBraille:root.radialBraille
+        readonly property bool expanded:root.expanded
+        readonly property bool detail:root.detailPage===moduleSection.modelData.id
+        readonly property bool active:root.overviewActive && root.visible && moduleSection.visible
+        readonly property real pageHeight:root.height
+      }
+      readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
+      onModuleEnabledChanged:if(!moduleEnabled && root.detailPage===modelData.id) root.back()
+      onDetailsRequested:root.detailPage===modelData.id ? root.back() : root.openDetails(modelData.id)
       onCloseRequested:root.closeRequested()
+      onExpandRequested:root.expandRequested()
+      onSettingRequested:(key,value)=>root.settingRequested(key,value)
     }
   }
 
-  BatteryOverview {
-    id:battery
-    objectName:"islandBatteryOverview"
-    Layout.fillWidth:true
-    visible:!root.detailOpen && present && (root.expanded || root.hovering)
-    active:root.overviewActive && root.visible && (root.expanded || root.hovering)
-    strings:root.strings
-    externalFeedback:root.externalFeedback
-    onExpandRequested:root.expandRequested()
-  }
-  AgentLimitsOverview {
-    id:limitsBlock
-    Layout.fillWidth:true
-    backend:root.service && ("agentLimits" in root.service) ? root.service.agentLimits : null
-    visible:(!root.detailOpen || root.limitsCenterOpen) && !!backend && backend.allowed && (root.expanded || root.hovering)
-    strings:root.strings;expanded:root.expanded;feedback:root.externalFeedback
-    onCenterOpenChanged:{
-      if(centerOpen) {
-        root.returnFocus=detailNavigation.focused
-        root.summaryScrollY=overviewScroll.contentItem.contentY
-        overviewScroll.contentItem.contentY=0
-        Qt.callLater(function(){detailNavigation.first(limitsBlock)})
-      } else root.restoreSummary()
-    }
-    onExpandRequested:root.expandRequested()
-    onSettingRequested:(key,value)=>root.settingRequested(key,value)
-  }
-  T3SessionList {
-    id:t3Block
-    Layout.fillWidth:true
-    visible:root.showT3
-    bridge:root.t3;strings:root.strings;expanded:root.expanded
-    active:root.overviewActive && root.visible && root.showT3
-    feedback:root.externalFeedback
-    summaryMode:root.detailPage!=="t3"
-    allSessions:root.detailPage==="t3"
-    maximumHeight:Math.max(Style.space(96),root.height-Style.space(128))
-    onDetailsRequested:root.openDetails("t3")
-    onExpandRequested:root.expandRequested()
-  }
+  PlainText {Layout.fillWidth:true;visible:!root.compactNotifications && root.service && root.service.error!==undefined && root.service.error!=="";text:root.strings.t("error").arg(root.service && root.service.error ? root.service.error : "");color:Design.danger;wrapMode:Text.Wrap}
 
-  RowLayout {
-    Layout.fillWidth:true
-    visible:root.expanded && !root.detailOpen
-    SectionHeading {Layout.fillWidth:true;title:root.strings.t("notifications.active");detail:Commons.I18n.formatNumber(root.rows.length)}
-    FeedbackButton {objectName:"overviewDnd";iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
-    FeedbackButton {
-      objectName:"notificationsOpenDetails"
-      iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔"
-      iconSize:Style.font.iconLarge
-      implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight
-      horizontalPadding:0;verticalPadding:0
-      tooltipText:root.strings.t("notifications.active")
-      compact:true;focusable:true;feedback:root.externalFeedback
-      onClicked:root.openDetails("notifications")
-    }
-  }
-  RowLayout {
-    Layout.fillWidth: true
-    visible: root.expanded && root.detailPage==="notifications"
-    FeedbackButton {
-      objectName: "notificationsActive"
-      text: root.strings.t("notifications.active")
-      selected: !root.historyOpen
-      focusable: true
-      onClicked: root.historyOpen = false
-    }
-    FeedbackButton {
-      objectName: "notificationsHistory"
-      text: root.strings.t("notifications.history")
-      selected: root.historyOpen
-      focusable: true
-      onClicked: root.historyOpen = true
-    }
-    Item { Layout.fillWidth: true }
-    FeedbackButton { objectName: "notificationsClear"; radius: Design.controlRadius; visible: root.expanded && root.rows.length > 0; text: root.strings.t("clear"); focusable: true; verticalPadding: 0; onClicked: root.historyOpen ? root.service.clearHistory() : root.service.clear() }
-    FeedbackButton { objectName: "notificationsDnd"; radius: Design.controlRadius; visible: root.expanded; text: root.service && root.service.doNotDisturb ? "󰂛" : "󰂚"; selected: root.service && root.service.doNotDisturb; tooltipText: root.strings.t("dnd"); focusable: true; verticalPadding: 0; onClicked: root.service.setDoNotDisturb(!root.service.doNotDisturb) }
-  }
-  RowLayout {
-    Layout.fillWidth: true
-    visible: root.detailPage==="notifications" && root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
-    Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
-    PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Design.secondaryText; typeRole:"caption" }
-  }
-  Controls.ScrollView {
-    id: scroll
-    objectName: "notificationsScroll"
-    visible: (!root.detailOpen || root.detailPage==="notifications") && (root.expanded || (root.hovering && (root.rows.length > 0 || root.downloads.length > 0)) || (!root.hovering && root.alertKind === "notification"))
-    Layout.fillWidth: true
-    Layout.preferredHeight: Math.min(cards.implicitHeight,(root.detailPage==="notifications" ? Math.max(Style.space(96),root.height-Style.space(180)) : Style.space(root.compactNotifications ? 96 : root.expanded ? 220 : 330)))
-    clip: true
-    contentWidth: availableWidth
-    Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
-    Column {
-      id: cards
-      width: scroll.availableWidth
-      spacing: Style.space(root.compactNotifications ? 4 : 8)
-      Repeater {
-        id:notificationGroups
-        model: groupItems
-        NotificationGroup {
-          required property string entryKey
-          width: cards.width
-          group: root.groups.find(function(group){return group.source===entryKey}) || ({source:entryKey,rows:[],positions:[],total:0})
-          strings: root.strings
-          service: root.service
-          radialBraille: root.radialBraille
-          expanded: root.expanded
-          compact: root.compactNotifications
-          externalFeedback: root.externalFeedback
-          limit: root.notificationLimit
-          visible: group.positions[0] < limit
-          onExpandRequested: root.expanded ? root.openDetails("notifications") : root.expandRequested()
-        }
-      }
-      PlainText {
-        width: parent.width
-        visible: root.hovering && !root.expanded && root.rows.length > 3
-        text: root.strings.tn("more",Math.max(0,root.rows.length-3)).arg(Commons.I18n.formatNumber(Math.max(0,root.rows.length-3)))
-        color: Design.secondaryText
-        horizontalAlignment: Text.AlignHCenter
-        topPadding: Style.space(4)
-        bottomPadding: Style.space(4)
-      }
-      Column {
-        objectName:"islandDownloads"
-        width:parent.width
-        spacing:Design.gap.small
-        visible:root.alertKind!=="t3" && ((root.expanded || root.hovering) ? root.downloads.length>0 : !!(root.service && root.service.latest && root.service.latest.downloadPath))
-        SectionHeading {width:parent.width;visible:root.expanded || root.hovering;title:root.strings.t("downloads.title")}
-        DownloadList {
-          width:parent.width
-          active:root.overviewActive
-          rows:root.expanded || root.hovering ? root.downloads : root.service && root.service.latest && root.service.latest.downloadPath ? [root.service.latest] : []
-          service:root.service;strings:root.strings;expanded:root.expanded
-        }
-      }
-      Column {
-        objectName: "notificationsEmpty"
-        width: parent.width
-        visible: root.expanded && root.rows.length === 0 && root.downloads.length === 0
-        spacing:Design.gap.tight
-        PlainText {
-          width: parent.width
-          text: root.strings.t(root.historyOpen ? "notifications.historyEmpty" : "empty")
-          color: Design.secondaryText
-          horizontalAlignment: Text.AlignHCenter
-          height: Style.space(32)
-          verticalAlignment: Text.AlignVCenter
-        }
-      }
-    }
-  }
-  Flow {
-    visible: root.detailPage==="notifications" && root.expanded && root.service && root.service.mutedSources.length > 0
-    Layout.fillWidth: true
-    spacing:Design.gap.tight
-    Repeater {
-      model: root.service ? root.service.mutedSources : []
-      FeedbackButton { radius: Design.controlRadius; required property string modelData; text: "󰂛 " + modelData.replace(/[<>]/g,"") + " ×"; focusable: true; onClicked: root.service.mute(modelData) }
-    }
-  }
-  PlainText { Layout.fillWidth: true; visible: !root.compactNotifications && root.service && root.service.error !== ""; text: root.strings.t("error").arg(root.service ? root.service.error : ""); color: Design.danger; wrapMode: Text.Wrap }
   }
   }
 }

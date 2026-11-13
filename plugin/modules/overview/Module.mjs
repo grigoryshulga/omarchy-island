@@ -1,0 +1,1 @@
+export default {id:"overview",titleKey:"tabs.overview",page:"modules/overview/Page.qml",enabledSetting:"overviewEnabled",pageIndex:1,tabObjectName:"islandTabOverview",defaults:{overviewEnabled:true}};

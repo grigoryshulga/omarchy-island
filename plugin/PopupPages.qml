@@ -1,10 +1,12 @@
 import QtQuick
+import QtQml.Models
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
-import "SettingsModel.js" as Settings
+import "SettingsModel.mjs" as Settings
+import "ModuleCatalog.mjs" as Catalog
 
 Item {
   id: root
@@ -13,16 +15,18 @@ Item {
   property var bar: null
   property var settings: ({})
   property var externalFeedback: null
-  readonly property bool musicHovered: !controls && !calendar && !weather && inbox.musicHovered
+  readonly property bool musicHovered: selectedPage===1 && !!pageObject(1) && pageObject(1).interactionHovered
   property bool keyboardActive: false
   property bool expanded: false
   property bool hovering: false
   property string alertKind: ""
   readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
-  readonly property var notificationIcon: inbox.toastIcon
-  property bool controls: false
-  property bool calendar: false
-  property bool weather: false
+  readonly property var notificationIcon: pageObject(1) ? pageObject(1).toastIcon : null
+  property int selectedPage:1
+  readonly property bool controls:selectedPage===0
+  readonly property bool calendar:selectedPage===2
+  readonly property bool weather:selectedPage===3
+  readonly property var pageDefinitions:Catalog.pages()
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   readonly property var weatherData: service && ("weather" in service) ? service.weather : null
   readonly property int lastPage: weatherData && weatherData.allowed ? 3 : 2
@@ -32,7 +36,6 @@ Item {
     return result.join(",")
   }
   readonly property var enabledPages:pageSignature.split(",").map(Number)
-  readonly property int selectedPage:controls ? 0 : calendar ? 2 : weather ? 3 : 1
   property bool radialBraille: true
   property bool ready: false
   property real wheelDistance: 0
@@ -46,62 +49,64 @@ Item {
   signal dismissRequested()
   signal settingRequested(string key, var value)
   signal expandRequested()
-  signal controlsRequested()
-  signal calendarRequested()
-  signal weatherRequested()
-  signal inboxRequested()
-  readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (controls || calendar || weather ? 1 : 0)
-  readonly property bool settingsOpen: controls && controlsPage.section==="settings"
+  signal pageRequested(int index)
+  readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (selectedPage!==1 ? 1 : 0)
+  readonly property bool settingsOpen:!!currentPage() && currentPage().navigationHidden
   // Keep the popup surface size while Settings uses the space of the hidden tabs.
   readonly property real navigationHeight: expanded && visible ? tabs.implicitHeight+Design.gap.section : 0
   readonly property real contentTop: tabs.visible ? navigationHeight : 0
-  implicitHeight: navigationHeight+Math.max(root.expanded ? calendarWeatherHeight : 0,controls ? controlsPage.implicitHeight : weather || calendar ? calendarWeatherHeight : inbox.implicitHeight)
-  readonly property real calendarWeatherHeight:Math.max(root.calendar ? calendarPage.implicitHeight : calendarPage.monthImplicitHeight,weatherPage.implicitHeight,controlsPage.implicitHeight)
-  clip: true
-  function showToday() { calendarPage.showToday() }
-  function back() {if(!controls && !calendar && !weather && inbox.back()) return true;if(controls && controlsPage.section==="settings") {controlsPage.back();return true}return false}
-  function pageHolder(index) {return [controlsHolder,inboxHolder,calendarHolder,weatherHolder][index]}
+  readonly property real calendarWeatherHeight: {
+    var result=0
+    for(var i=0;i<pageDefinitions.length;i++) {var page=pageObject(pageDefinitions[i].pageIndex);if(page) result=Math.max(result,page.stableHeight)}
+    return result
+  }
+  implicitHeight:navigationHeight+Math.max(root.expanded ? calendarWeatherHeight : 0,currentPage() ? currentPage().implicitHeight : 0)
+  clip:true
+  function pageHolder(index) {
+    for(var i=0;i<pageHolders.count;i++) {var holder=pageHolders.objectAt(i);if(holder && holder.pageIndex===index) return holder}
+    return null
+  }
+  function pageObject(index) {var holder=pageHolder(index);return holder ? holder.view.item : null}
+  function currentPage() {return pageObject(selectedPage)}
+  function enterPage(index) {var page=pageObject(index);if(page) page.enter()}
+  function showToday() {enterPage(2)}
+  function back() {return currentPage() ? currentPage().back() : false}
   function updatePages() {
     if(!ready) return
+    if(enabledPages.indexOf(selectedPage)<0) pageRequested(enabledPages[0])
     for(var i=pager.count-1;i>=0;i--) {
       var item=pager.itemAt(i)
       if(enabledPages.indexOf(item.pageIndex)<0) {pager.takeItem(i);item.parent=parking}
     }
     for(var at=0;at<enabledPages.length;at++) {
       var target=pageHolder(enabledPages[at]),from=-1
+      if(!target) continue
       for(var j=0;j<pager.count;j++) if(pager.itemAt(j)===target) {from=j;break}
       if(from<0) pager.insertItem(at,target)
       else if(from!==at) pager.moveItem(from,at)
     }
     scheduleSync()
   }
-  function cancelEdits() {weatherPage.cancelEditing()}
-  function handleCalendarKey(event) { return calendarPage.handleKey(event) }
-  function currentPage() {return controls ? controlsPage : weather ? weatherPage : calendar ? calendarPage : inbox}
+  function cancelEdits() {for(var i=0;i<pageDefinitions.length;i++){var page=pageObject(pageDefinitions[i].pageIndex);if(page) page.cancelEditing()}}
+  function handleCalendarKey(event) {var page=pageObject(2);return page ? page.handleKey(event) : false}
   function keyboardPage(index) {
     if(!keyboardActive || enabledPages.indexOf(index)<0) return
     requestPage(index)
-    Qt.callLater(function(){if(root.calendar) calendarPage.focusSelectedDay();else navigation.first(root.currentPage())})
+    Qt.callLater(function(){var page=root.currentPage();if(page && !page.focusPrimary()) navigation.first(page)})
   }
   function directionEnabled(horizontal) {
-    return keyboardActive && !controlsPage.settingsOwnKeys && navigation.contains(root,navigation.focused) && !navigation.editing(navigation.focused) && !navigation.nativeFocus() && !(horizontal && navigation.focused && "islandHandlesHorizontalKeys" in navigation.focused)
+    return keyboardActive && !(currentPage() && currentPage().ownsKeys) && navigation.contains(root,navigation.focused) && !navigation.editing(navigation.focused) && !navigation.nativeFocus() && !(horizontal && navigation.focused && "islandHandlesHorizontalKeys" in navigation.focused)
   }
   function keyboardDirection(x,y) {
-    if(calendar && navigation.focused && "islandCalendarDay" in navigation.focused) {
-      calendarPage.handleKey({key:x<0 ? Qt.Key_Left : x>0 ? Qt.Key_Right : y<0 ? Qt.Key_Up : Qt.Key_Down})
-      Qt.callLater(calendarPage.focusSelectedDay)
-    }
+    var page=currentPage(),event={key:x<0 ? Qt.Key_Left : x>0 ? Qt.Key_Right : y<0 ? Qt.Key_Up : Qt.Key_Down}
+    if(page && page.handleKey(event)) Qt.callLater(function(){page.focusPrimary()})
     else navigation.move(x,y)
   }
   function handleKeyboard(event) {
     if(!keyboardActive || navigation.editing(navigation.focused)) return false
-    var direction=navigation.direction(event)
-    if(calendar && navigation.focused && "islandCalendarDay" in navigation.focused) {
-      if(direction) return calendarPage.handleKey({key:direction.key})
-      return calendarPage.handleKey(event)
-    }
-    if(direction) return navigation.move(direction.x,direction.y)
-    return false
+    var page=currentPage(),direction=navigation.direction(event)
+    if(page && page.handleKey(direction ? {key:direction.key} : event)) return true
+    return direction ? navigation.move(direction.x,direction.y) : false
   }
   KeyboardNavigation {id:navigation;scope:root;containers:[tabs,root.currentPage()]}
   Shortcut {sequence:"Alt+1";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(0)}
@@ -176,18 +181,13 @@ Item {
     pageMotion.stop()
     pager.contentItem.cancelFlick()
     navigating=false
-    if(index===3 && !weather) weatherRequested()
-    else if(index===2 && !calendar) calendarRequested()
-    else if(index===0 && !controls) controlsRequested()
-    else if(index===1 && (controls || calendar || weather)) inboxRequested()
+    if(index!==selectedPage) pageRequested(index)
     scheduleSync()
   }
-  onControlsChanged: scheduleSync()
-  onCalendarChanged: scheduleSync()
-  onWeatherChanged: scheduleSync()
+  onSelectedPageChanged:scheduleSync()
   onWidthChanged: scheduleSync()
   onHeightChanged: scheduleSync()
-  onLastPageChanged: if(ready) {if(weather && lastPage<3) inboxRequested();else scheduleSync()}
+  onLastPageChanged: if(ready) {if(weather && lastPage<3) pageRequested(1);else scheduleSync()}
   onEnabledPagesChanged:Qt.callLater(updatePages)
   Component.onCompleted: { ready = true; updatePages(); scheduleSync() }
 
@@ -198,69 +198,27 @@ Item {
     visible: root.expanded && !root.settingsOpen
     spacing:Design.gap.tight
     uniformCellSizes: true
-    TabButton {
-      feedback: root.externalFeedback
-
-      objectName: "islandTabControls"
-      Layout.fillWidth: true
-      Layout.fillHeight: true
-      Layout.preferredWidth: 1
-      Layout.minimumWidth: 0
-      label: root.strings.t("tabs.controls")
-      tabActive: root.controls
-      fontSize: Design.type.label
-      radius: Design.controlRadius
-      focusable: true
-      onClicked: root.requestPage(0)
-    }
-    TabButton {
-      feedback: root.externalFeedback
-
-      objectName: "islandTabOverview"
-      visible:root.enabledPages.indexOf(1)>=0
-      Layout.fillWidth: true
-      Layout.fillHeight: true
-      Layout.preferredWidth: 1
-      Layout.minimumWidth: 0
-      label: root.strings.t("tabs.overview")
-      tabActive: !root.controls && !root.calendar && !root.weather
-      fontSize: Design.type.label
-      radius: Design.controlRadius
-      focusable: true
-      onClicked: root.requestPage(1)
-    }
-    TabButton {
-      feedback: root.externalFeedback
-
-      objectName: "calendarOpen"
-      visible:root.enabledPages.indexOf(2)>=0
-      Layout.fillWidth: true
-      Layout.fillHeight: true
-      Layout.preferredWidth: 1
-      Layout.minimumWidth: 0
-      label: root.strings.t("calendar.open")
-      tabActive: root.calendar
-      fontSize: Design.type.label
-      radius: Design.controlRadius
-      focusable: true
-      onClicked: root.requestPage(2)
-    }
-    WeatherChip {
-      feedback: root.externalFeedback
-
-      objectName: "weatherOpen"
-      Layout.fillWidth: true
-      Layout.fillHeight: true
-      Layout.preferredWidth: 1
-      Layout.minimumWidth: 0
-      visible: root.enabledPages.indexOf(3)>=0
-      showLabel: true
-      weather: root.weatherData
-      strings: root.strings
-      selected: root.weather
-      onClicked: root.requestPage(3)
+    Repeater {
+      model:root.pageDefinitions
+      ModuleSlot {
+        id:tabSlot
+        required property var modelData
+        Layout.fillWidth:true;Layout.fillHeight:true;Layout.preferredWidth:1;Layout.minimumWidth:0
+        visible:root.enabledPages.indexOf(modelData.pageIndex)>=0
+        viewSource:modelData.tab || "ModuleTab.qml"
+        backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
+        presentation:QtObject {
+          readonly property string title:tabSlot.modelData.title || root.strings.t(tabSlot.modelData.titleKey)
+          readonly property string objectName:tabSlot.modelData.tabObjectName || "moduleTab-"+tabSlot.modelData.id
+          readonly property bool selected:root.selectedPage===tabSlot.modelData.pageIndex
+          readonly property var feedback:root.externalFeedback
+          readonly property var strings:root.strings
+        }
+        onDetailsRequested:root.requestPage(modelData.pageIndex)
+      }
     }
   }
+
   Controls.SwipeView {
     id: pager
     objectName: "islandPageSwipe"
@@ -275,69 +233,41 @@ Item {
     Binding { target: pager.contentItem; property: "highlightFollowsCurrentItem"; value: false }
   }
   Item {id:parking;visible:false}
-  Item {id:controlsHolder;property int pageIndex:0}
-  Item {id:inboxHolder;property int pageIndex:1}
-  Item {id:calendarHolder;property int pageIndex:2}
-  Item {id:weatherHolder;property int pageIndex:3}
-  ControlsView {
-    id: controlsPage
-    parent:root.pageHolder(0)
-    anchors.fill:parent
-    settings: root.settings
-    onSettingRequested:(key,value)=>root.settingRequested(key,value)
-    objectName: "islandControls"
-    service: root.service; strings: root.strings; bar: root.bar
-    externalFeedback: root.externalFeedback
-    active: root.controls && root.visible && (root.expanded || root.hovering)
-    onDismissRequested: root.dismissRequested()
-  }
-  IslandContent {
-    id: inbox
-    onSettingRequested:(key,value)=>root.settingRequested(key,value)
-    parent:root.pageHolder(1)
-    anchors.fill:parent
-    pageHeight:root.calendarWeatherHeight
-    overviewActive:!root.controls && !root.calendar && !root.weather
-    externalFeedback: root.externalFeedback
-    service: root.service; strings: root.strings; bar: root.bar
-    expanded: root.expanded; hovering: root.hovering; alertKind: root.alertKind
-    compactNotifications: root.compactNotifications
-    weather: root.weatherData
-    radialBraille: root.radialBraille
-    onExpandRequested: root.expandRequested()
-    onCalendarRequested: root.calendarRequested()
-    onWeatherRequested: root.weatherRequested()
-    onCloseRequested:root.dismissRequested()
-  }
-  CalendarView {
-    id: calendarPage
-    subscriptions:root.service && ("calendars" in root.service) ? root.service.calendars : null
-    reminders:root.service && ("reminders" in root.service) ? root.service.reminders : null
-    parent:root.pageHolder(2)
-    anchors.fill:parent
-    externalFeedback: root.externalFeedback
-    objectName: "islandCalendar"
-    strings: root.strings
-    showBack: false
-    active: root.calendar && root.visible && (root.expanded || root.hovering)
-    weekStart: String(root.settings.calendarWeekStart || "")
-    onWeekStartRequested: value => root.settingRequested("calendarWeekStart",value)
-    radialBraille: root.radialBraille
-    onBackRequested: root.inboxRequested()
-  }
-  WeatherView {
-    id: weatherPage
-    parent:root.pageHolder(3)
-    anchors.fill:parent
-    externalFeedback: root.externalFeedback
-    objectName: "islandWeather"
-    strings: root.strings
-    showBack: false
-    weather: root.weatherData
-    active: root.weather && (root.expanded || root.hovering)
-    radialBraille: root.radialBraille
-    onTemperatureUnitRequested: value => root.settingRequested("weatherTemperatureUnit",value)
-    onBackRequested: root.inboxRequested()
+  Instantiator {
+    id:pageHolders
+    model:root.pageDefinitions
+    onObjectAdded:Qt.callLater(root.updatePages)
+    delegate:Item {
+      id:holder
+      required property var modelData
+      readonly property int pageIndex:modelData.pageIndex
+      readonly property alias view:pageView
+      parent:parking
+      ModuleSlot {
+        id:pageView
+        anchors.fill:parent
+        viewSource:holder.modelData.page
+        backend:root.service && root.service.modules ? root.service.modules[holder.modelData.id] || null : null
+        presentation:QtObject {
+          readonly property var service:root.service
+          readonly property var strings:root.strings
+          readonly property var bar:root.bar
+          readonly property var settings:root.settings
+          readonly property var feedback:root.externalFeedback
+          readonly property var focusedItem:navigation.focused
+          readonly property bool selected:root.selectedPage===holder.pageIndex
+          readonly property bool active:selected && root.visible && (root.expanded || root.hovering)
+          readonly property bool expanded:root.expanded
+          readonly property bool hovering:root.hovering
+          readonly property string alertKind:root.alertKind
+          readonly property bool radialBraille:root.radialBraille
+          readonly property real pageHeight:root.calendarWeatherHeight
+        }
+        onCloseRequested:root.dismissRequested()
+        onExpandRequested:root.expandRequested()
+        onSettingRequested:(key,value)=>root.settingRequested(key,value)
+      }
+    }
   }
 
   NumberAnimation { id: pageMotion; onFinished:root.wrapping=false; target: pager.contentItem; property: "contentX"; duration: Preferences.duration(230); easing.type: Easing.OutCubic }

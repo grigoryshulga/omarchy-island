@@ -4,17 +4,31 @@ import Quickshell.Io
 import Quickshell.Bluetooth
 import Quickshell.Networking
 import Quickshell.Services.Pipewire
+import qs.Commons
 
 Item {
   id:root
   property bool active:false
+  property bool allowed:true
+  property var consumers:[]
+  function watch(item,visible) {
+    var next=consumers.filter(function(consumer){return consumer!==item})
+    if(visible) next.push(item)
+    consumers=next;active=allowed && consumers.length>0
+  }
+  onAllowedChanged:{active=allowed && consumers.length>0;if(!allowed) tailscaleAction.running=false}
   property var execute:function(command){Quickshell.execDetached(command)}
+  property var systemCall:function(target,method,args){return IpcRegistry.call(target,method,args)}
+  property var panelCommand:["python3",decodeURIComponent(Qt.resolvedUrl("controls/build-panel.py").toString().replace(/^file:\/\//,""))]
+  property var outputCommand:["omarchy-audio-output-sink"]
+  property var tailscaleCommand:["tailscale"]
   property var adapter:Bluetooth.defaultAdapter
-  readonly property var sink:Pipewire.defaultAudioSink
+  property var sink:Pipewire.defaultAudioSink
+  property var nodes:Pipewire.nodes.values
   property var networking:Networking
   property string outputName:""
   property var output: {
-    var nodes=Pipewire.nodes.values
+    var nodes=root.nodes
     for(var i=0;i<nodes.length;i++) {
       var node=nodes[i]
       if(node && node.isSink && !node.isStream && node.name===outputName) return node
@@ -24,6 +38,7 @@ Item {
   property bool tailscaleKnown:false
   property bool tailscaleEnabled:false
   function available(key) {
+    if(!allowed) return false
     if(key==="audio") return !!(output && output.audio)
     if(key==="bluetooth") return !!adapter
     if(key==="network") return networking.backend===NetworkBackendType.NetworkManager
@@ -43,22 +58,24 @@ Item {
     else if(key==="bluetooth") execute(["omarchy-bluetooth-power",adapter.enabled ? "off" : "on"])
     else if(key==="network") networking.wifiEnabled=!networking.wifiEnabled
     else if(key==="tailscale" && !tailscaleAction.running) {
-      tailscaleAction.command=tailscaleEnabled ? ["tailscale","down"] : ["tailscale","up","--timeout=10s"]
+      tailscaleAction.command=tailscaleCommand.concat(tailscaleEnabled ? ["down"] : ["up","--timeout=10s"])
       tailscaleAction.running=true
     }
   }
   function refresh() {
-    if(!active) return
+    if(!allowed || !active) return
     if(!resolveOutput.running) resolveOutput.running=true
     if(!tailscaleStatus.running && !tailscaleAction.running) tailscaleStatus.running=true
   }
-  onActiveChanged:if(active) refresh()
+  // Closing the page releases collectors, but a user-requested action may
+  // finish in the background. Disabling the module cancels that action too.
+  onActiveChanged:if(active) refresh();else {resolveOutput.running=false;tailscaleStatus.running=false}
   onSinkChanged:{outputName="";refresh()}
   PwObjectTracker {objects:root.active && root.output ? [root.output] : []}
   Timer {interval:2000;repeat:true;running:root.active;onTriggered:root.refresh()}
   Process {
     id:resolveOutput
-    command:["omarchy-audio-output-sink"]
+    command:root.outputCommand
     property string result:""
     onStarted:result=""
     stdout:StdioCollector {onStreamFinished:resolveOutput.result=text.trim()}
@@ -66,7 +83,7 @@ Item {
   }
   Process {
     id:tailscaleStatus
-    command:["tailscale","status","--json"]
+    command:root.tailscaleCommand.concat(["status","--json"])
     property string result:""
     onStarted:result=""
     stdout:StdioCollector {onStreamFinished:tailscaleStatus.result=text}
@@ -82,7 +99,7 @@ Item {
   }
   Process {
     id:tailscaleAction
-    onExited:code=>{if(code!==0) root.actionFailed();root.refresh()}
+    onExited:code=>{if(root.allowed && code!==0) root.actionFailed();root.refresh()}
   }
   signal actionFailed()
 }

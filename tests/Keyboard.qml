@@ -7,6 +7,16 @@ import "Island" as Island
 
 ShellRoot {
   QtObject {
+    id:fakeControls
+    property var panelCommand:["python3",decodeURIComponent(Qt.resolvedUrl("Island/controls/build-panel.py").toString().replace(/^file:\/\//,""))]
+    function watch(item,visible){}
+    function available(key){return false}
+    function enabledState(key){return false}
+    function toggle(key){}
+    function execute(argv){}
+    function systemCall(target,method,args){return {ran:true}}
+  }
+  QtObject {
     id:fakeWeather
     property bool allowed:true
     property bool loading:false
@@ -54,6 +64,7 @@ ShellRoot {
   QtObject {
     id:service
     // The real service always provides a bridge, even when T3 is disabled.
+    readonly property var modules:({controls:fakeControls,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3:({allowed:false,connected:false,canRespond:false,responsesEnabled:false,rows:[]})
     property var indicators:states
     property var weather:fakeWeather
@@ -106,10 +117,7 @@ ShellRoot {
       id:pages;anchors.fill:parent;anchors.margins:16
       expanded:true;keyboardActive:true
       service:service;bar:bar;strings:translations
-      onControlsRequested:{pages.controls=true;pages.calendar=false;pages.weather=false}
-      onInboxRequested:{pages.controls=false;pages.calendar=false;pages.weather=false}
-      onCalendarRequested:{pages.controls=false;pages.calendar=true;pages.weather=false}
-      onWeatherRequested:{pages.controls=false;pages.calendar=false;pages.weather=true}
+        onPageRequested:index=>pages.selectedPage=index
       onSettingRequested:(key,value)=>{var updated=Object.assign({},pages.settings);updated[key]=value;pages.settings=updated}
     }
     Commons.Translations {id:translations;directory:Qt.resolvedUrl("Island/i18n")}

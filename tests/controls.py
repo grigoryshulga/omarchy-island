@@ -18,8 +18,11 @@ with tempfile.TemporaryDirectory(prefix='island-controls-') as temporary:
     env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software',XDG_CACHE_HOME=str(root/'cache'))
     env.update(PATH=str(helpers)+os.pathsep+env['PATH'],ISLAND_TEST_TAILSCALE_STATE=str(root/'tailscale-state'))
     env.setdefault('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}')
-    for missing in [False, True]:
-        run_env = dict(env)
+    for language, missing in [("en", False), ("ru", False), ("en", True)]:
+        home=root / ("home-"+language+str(missing))
+        (home / '.config/omarchy').mkdir(parents=True)
+        (home / '.config/omarchy/language').write_text(language)
+        run_env = dict(env, HOME=str(home))
         if missing:
             run_env.update(OMARCHY_PATH=str(root/'missing-system'), ISLAND_TEST_MISSING_SYSTEM='1')
         try:result=subprocess.run(['qs','-p',str(root),'--no-color'],env=run_env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=20)

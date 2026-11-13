@@ -8,6 +8,7 @@ ShellRoot {
   QtObject {
     id: service
     property bool hasMedia: true
+    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3: ({allowed:false,connected:false,canRespond:false,responsesEnabled:false,rows:[]})
     property var player: player
     property var activeEntries: [{key:"one",app:"First",summary:"One",body:"Body",codes:"123456",ts:1}]

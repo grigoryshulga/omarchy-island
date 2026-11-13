@@ -91,7 +91,7 @@ def run(root):
         assert s['history'][0]['closed_reason'] == 'dismissed'
         assert s['refs'] == 0
         ipc('saveState')
-        saved = json.loads((root / 'home/.local/state/omarchy/island/state.json').read_text())
+        saved = json.loads((root / 'home/.local/state/omarchy/island/notifications.json').read_text())
         assert saved['history'][0]['closed_reason'] == 'dismissed', 'Save overwrote the closing reason'
         send('Still unread')
         wait_for(lambda s: len(s['active']) == 1)
@@ -126,6 +126,23 @@ def run(root):
         assert s['refs'] == 0, 'Restart restored live sender references'
         assert any(row['closed_reason'] == 'dismissed' for row in s['history'])
         assert any(row['summary'] == 'Unread at restart' and row['closed_reason'] == 'restart' for row in s['history'])
+        ipc('clearArchive')
+        api = dbus.Interface(bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications'), 'org.freedesktop.Notifications')
+        send('Survive disabling')
+        wait_for(lambda s: len(s['active']) == 1)
+        for _ in range(2):
+            ipc('enableNotifications', 'off')
+            wait_for(lambda s: not s['active'] and len(s['history']) == 1)
+            ipc('saveState')
+            ipc('enableNotifications', 'on')
+            s = wait_for(lambda s: len(s['history']) == 1)
+            assert s['history'][0]['summary'] == 'Survive disabling'
+            ipc('saveState')
+        process.terminate()
+        process.wait(timeout=5)
+        process = subprocess.Popen(['qs', '-p', str(root), '--no-color'], env=env, stdout=log, stderr=subprocess.STDOUT)
+        s = wait_for(lambda s: s['loaded'] and len(s['history']) == 1)
+        assert s['history'][0]['summary'] == 'Survive disabling', 'Disable/re-enable erased persisted history'
         print('PASS: D-Bus replacement, recall before/after timeout, separate clearing, transient rows, capacity, retention and restart history.')
     finally:
         process.terminate()
@@ -146,14 +163,10 @@ else:
         for name in ['Commons', 'Ui']:
             (root / name).symlink_to(Path('/usr/share/omarchy/shell') / name)
         module = root / 'Island'
-        module.mkdir()
-        for name in ['Service.qml', 'Store.js', 'Security.js', 'Markup.js', 'Detect.js', 'Model.js', 'Downloads.js']:
-            shutil.copy2(project / 'plugin' / name, module / name)
-        (module / 'bin').mkdir()
-        shutil.copy2(project / 'plugin/bin/watch-downloads', module / 'bin/watch-downloads')
-        (module / 'ReminderState.qml').write_text('import QtQuick\nItem {}\n')
-        (module / 'CalendarState.qml').write_text('import QtQuick\nItem {}\n')
-        (module / 'WeatherService.qml').write_text('import QtQuick\nItem {}\n')
+        shutil.copytree(project / 'plugin', module)
+        (module / 'ReminderState.qml').write_text('import QtQuick\nItem {property bool allowed:false;property var command:[];property var clock:function(){return 0}}\n')
+        (module / 'CalendarState.qml').write_text('import QtQuick\nItem {property bool allowed:false;property var helperCommand:[]}\n')
+        (module / 'WeatherService.qml').write_text('import QtQuick\nItem {property bool allowed:false;property string unitOverride:"";property string temperatureOverride:"";property int refreshOverride:0}\n')
         (module / 'AgentLimitsState.qml').write_text('import QtQuick\nItem {}\n')
         (module / 'T3State.qml').write_text('import QtQuick\nItem {signal activityChanged(var session)}\n')
         (module / 'IndicatorState.qml').write_text('import QtQuick\nItem {property var consumers:[];property bool downloading:false; function announceMode(mode,on){} function showOsd(payload){return false} function hideOsd(){}}\n')
@@ -171,11 +184,12 @@ ShellRoot {
     function state():string {return JSON.stringify({loaded:service.loaded,active:service.activeEntries,history:service.historyEntries,refs:Object.keys(service.refs).length,latest:service.latest,latestT3:service.latestT3,t3Focused:service.t3Focused,t3Arrivals:t3Arrivals})}
     function focusApp(appId:string):void {service.activeAppId=appId}
     function t3Activity():void {service.t3.activityChanged({id:"thread",status:"completed"})}
-    function age(key:string):void {service.entries=service.entries.map(function(r){if(r.key===key){r.ts=Date.now()/1000-400;r.duration=1}return r})}
-    function expireHistory():void {service.history=service.history.map(function(r){r.closed_ts=1;return r});service.pruneHistory()}
+    function age(key:string):void {service.notifications.entries=service.entries.map(function(r){if(r.key===key){r.ts=Date.now()/1000-400;r.duration=1}return r})}
+    function expireHistory():void {service.notifications.history=service.history.map(function(r){r.closed_ts=1;return r});service.pruneHistory()}
     function clearActive():void {service.clear()}
     function clearArchive():void {service.clearHistory()}
     function saveState():void {service.save()}
+    function enableNotifications(value:string):void {service.notifications.allowed=value==="on"}
   }
 }
 ''')

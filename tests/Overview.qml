@@ -52,6 +52,7 @@ ShellRoot {
   QtObject {
     id: service
     // The real service always provides a bridge, even when T3 is disabled.
+    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
     property var t3: bridge
     property var agentLimits: limits
     property var weather: fakeWeather
@@ -158,7 +159,7 @@ ShellRoot {
         compare(overview.implicitHeight,height)
         verify(overview.back());wait(50)
         findChild(overview,"limitsExpand").clicked();wait(50)
-        verify(overview.limitsCenterOpen && !findChild(overview,"t3Section").visible,"Limits did not replace summary")
+        verify(overview.detailPage==="agentLimits" && !findChild(overview,"t3Section").visible,"Limits did not replace summary")
         compare(overview.implicitHeight,height)
         verify(overview.back());wait(50)
         bridge.rows=finished.concat([

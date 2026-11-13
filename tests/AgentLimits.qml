@@ -4,7 +4,7 @@ import Quickshell
 import qs.Commons as Commons
 import "Island" as Island
 import "Island/AgentLimitsModel.js" as Model
-import "Island/SettingsModel.js" as Settings
+import "Island/SettingsModel.mjs" as Settings
 
 ShellRoot {
   id:scene
@@ -17,6 +17,8 @@ ShellRoot {
   FloatingWindow {
     id:window;visible:true;implicitWidth:540;implicitHeight:700
     Island.AgentLimitsOverview {
+      onDetailsRequested:centerOpen=!centerOpen
+      onExpandedChanged:if(!expanded) centerOpen=false
       id:overview;width:parent.width;expanded:true;backend:backend;strings:strings
       onSettingRequested:(key,value)=>{var next=Object.assign({},Island.Preferences.values);next[key]=value;Island.Preferences.values=next}
     }

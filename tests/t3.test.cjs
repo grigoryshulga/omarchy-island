@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const vm = require('node:vm');
 const model = require('../plugin/T3Model.js');
-const settings = require('../plugin/SettingsModel.js');
+const settings = require('../plugin/SettingsModel.mjs');
 const security = vm.createContext({});
 vm.runInContext(readFileSync(require.resolve('../plugin/Security.js'), 'utf8').replace(/^\.pragma.*$/gm, ''), security);
 assert.equal(settings.get({}, 't3Enabled'), false);

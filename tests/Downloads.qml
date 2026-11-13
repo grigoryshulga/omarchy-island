@@ -20,6 +20,7 @@ ShellRoot {
       function send(value) {service.downloadEvent(JSON.stringify(value))}
       function test_lifecycle() {
         tryCompare(service,"loaded",true)
+        tryCompare(service.downloadsState,"restored",true)
         service.indicators.consumers=[content]
         var path=service.downloadsDir+"/nested/file $ & <name>.zip"
         send({event:"active",files:[{path:path+".part",bytes:1048576}]})
@@ -56,10 +57,13 @@ ShellRoot {
         // Cancellation removes the active card without a completion toast.
         send({event:"active",files:[]})
         compare(service.downloads.length,0)
+        service.notifications.latest={key:"older_notification",summary:"Older notification"}
+        service.notifications.arrival++
         send({event:"complete",path:path,bytes:3145728})
         compare(service.entries.length,0)
         compare(service.history.length,0)
         compare(service.latest.downloadPath,path)
+        compare(service.notifications.latest.key,"older_notification","Downloads changed notification state")
         compare(service.downloads.length,1)
         wait(50)
         card=findChild(content,"download-"+service.downloads[0].key)
@@ -68,6 +72,7 @@ ShellRoot {
         verify(!findChild(card,"downloadProgress").visible)
         service.activate(service.downloads[0])
         compare(service.downloads.length,0)
+        compare(service.latest,null,"Removing a download replayed an older notification toast")
         send({event:"complete",path:"/tmp/outside",bytes:1})
         compare(service.downloads.length,0)
         service.setDoNotDisturb(true)
@@ -75,10 +80,10 @@ ShellRoot {
         compare(service.latest,null)
         compare(service.downloads.length,1)
         var expired={downloadPath:path,ts:Date.now()/1000-1801,key:"expired",filename:"expired",downloadedBytes:0,active:false,summary:"expired"}
-        service.downloads=[expired]
+        service.downloadsState.downloads=[expired]
         tryCompare(service,"downloads",[],2000)
         send({event:"complete",path:path,bytes:3145728})
-        service.save()
+        service.downloadsState.save()
         wait(400)
         verify(!service.indicators.downloading)
         console.log("DOWNLOADS_SERVICE_PASS")

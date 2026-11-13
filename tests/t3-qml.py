@@ -22,10 +22,8 @@ with tempfile.TemporaryDirectory(prefix='island-t3-qml-') as temporary:
              'questions':[{'id':'q1','text':'Какой вариант выбираешь для проверки интеграции Island?', 'required':True,'multiSelect':False,'allowCustomAnswer':True,
                            'options':[{'label':'Вариант A','value':'local','description':'Вариант A'}, {'label':'Вариант B','value':'remote','description':'Вариант B'}]}]}}
     (root/'fixture.json').write_text(json.dumps(fixture))
-    fake=binary/'python3'
+    fake=binary/'fake-t3-bridge'
     fake.write_text('#!'+sys.executable+'\n'+'''import sys,os,json
-if not sys.argv[1].endswith('/t3-bridge'):
-    os.execv(sys.executable,[sys.executable]+sys.argv[1:])
 row=json.load(open(os.environ['T3_FIXTURE']))
 def send(v):print(json.dumps(v),flush=True)
 send({'type':'connection','status':'connected','canRespond':True,'environmentId':'env-1'})
@@ -38,7 +36,7 @@ for line in sys.stdin:
     send({'type':'sessions','rows':[row]})
 ''')
     fake.chmod(0o755)
-    env=dict(os.environ,PATH=str(binary)+os.pathsep+os.environ['PATH'],HOME=str(home),T3CODE_HOME=str(home/'.t3'),
+    env=dict(os.environ,T3_TEST_BRIDGE=str(fake),HOME=str(home),T3CODE_HOME=str(home/'.t3'),
              T3_FIXTURE=str(root/'fixture.json'),T3_RESPONSES=str(root/'responses.jsonl'),QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
     result=subprocess.run(['dbus-run-session','--','qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=24)
     print(result.stdout)

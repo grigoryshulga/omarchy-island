@@ -52,6 +52,7 @@ ShellRoot {
   QtObject {
     id: service
     // The real service always provides a bridge, even when T3 is disabled.
+    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3: ({allowed:false,connected:false,canRespond:false,responsesEnabled:false,rows:[]})
     property var weather: fakeWeather
     readonly property var activeEntries: allEntries
@@ -119,10 +120,7 @@ ShellRoot {
         visible: calendarSurface.testPages
         service: service; strings: strings; expanded: true; hovering: true
         onDismissRequested:calendarSurface.dismissed=true
-        onControlsRequested: {pages.controls=true;pages.weather=false;pages.calendar=false}
-        onCalendarRequested: {pages.controls=false;pages.weather=false;pages.calendar=true}
-        onWeatherRequested: {pages.controls=false;pages.calendar=false;pages.weather=true}
-        onInboxRequested: {pages.controls=false;pages.weather=false;pages.calendar=false}
+        onPageRequested:index=>pages.selectedPage=index
         onSettingRequested: (key,value) => {
           var next=Object.assign({},pages.settings);next[key]=value;pages.settings=next
           if(key==="weatherTemperatureUnit") fakeWeather.temperatureUnit=value
@@ -332,20 +330,20 @@ ShellRoot {
       composed.expanded=true
       service.historyEntries=[{key:"old",app:"Archive",summary:"Old notification",body:"old",ts:1}]
       wait(30)
-      check(composed.rows.length===0,"history leaked into active notifications")
+      check(findChild(composed,"notificationContent").rows.length===0,"history leaked into active notifications")
       check(findChild(composed,"notificationsEmpty").visible,"empty notifications did not show clapping hands")
       findChild(composed,"notificationsOpenDetails").clicked();wait(30)
       mouseClick(findChild(composed,"notificationsHistory"));wait(30)
-      check(composed.historyOpen && composed.rows.length===1,"history toggle did not reveal archived notifications")
+      check(findChild(composed,"notificationContent").historyOpen && findChild(composed,"notificationContent").rows.length===1,"history toggle did not reveal archived notifications")
       check(findChild(composed,"notification-old")!==null,"archived notification did not render")
       check(!findChild(composed,"notificationsEmpty").visible,"clapping hands remained above archived notifications")
       service.allEntries=[{key:"unread",app:"Current",summary:"Unread",body:"",ts:2}]
       mouseClick(findChild(composed,"notificationsClear"));wait(30)
       check(service.allEntries.length===1,"history clear removed active notifications")
-      check(composed.rows.length===0,"history did not clear")
+      check(findChild(composed,"notificationContent").rows.length===0,"history did not clear")
       check(findChild(composed,"notificationsEmpty").visible,"empty history did not show clapping hands")
       composed.expanded=false;composed.hovering=true;wait(30)
-      check(!composed.historyOpen && composed.rows.length===1 && composed.rows[0].key==="unread","hover preview retained the history view")
+      check(!findChild(composed,"notificationContent").historyOpen && findChild(composed,"notificationContent").rows.length===1 && findChild(composed,"notificationContent").rows[0].key==="unread","hover preview retained the history view")
       check(!findChild(composed,"notificationsEmpty").visible,"clapping hands remained above active notifications")
       console.log("NOTIFICATION_HISTORY_UI_PASS")
       calendarWin.visible=true

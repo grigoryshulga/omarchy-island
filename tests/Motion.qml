@@ -39,6 +39,7 @@ ShellRoot {
     signal t3Arrival()
     property var latestT3: null
     property string t3TargetScreen: ""
+    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3: QtObject {
       property bool allowed:false
       property bool connected:true

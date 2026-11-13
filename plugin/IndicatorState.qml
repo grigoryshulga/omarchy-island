@@ -7,7 +7,7 @@ import qs.Commons
 import qs.Commons as Commons
 import "Osd.js" as Osd
 import "osd-bridge/OsdModel.js" as NativeOsd
-import "SettingsModel.js" as Settings
+import "SettingsModel.mjs" as Settings
 
 Item {
   id: root

@@ -14,7 +14,12 @@ Item {
   property var nativePreferences: ({unit:"",refreshMinutes:15})
   property var report: null
   property string error: ""
-  property real now: Date.now()/1000
+  property var clock:function(){return Date.now()/1000}
+  property var locationCommand:["omarchy-weather-location"]
+  property string cachePath:Quickshell.env("HOME")+"/.local/state/omarchy/island/weather.json"
+  property string locationPath:Quickshell.env("HOME")+"/.local/state/omarchy/settings/weather.json"
+  property string preferencesPath:Quickshell.env("HOME")+"/.config/omarchy/shell.json"
+  property real now:clock()
   property string locationKey: ""
   property var suggestions: []
   property string searchQuery: ""
@@ -28,11 +33,11 @@ Item {
   readonly property int refreshMinutes: Math.max(1,Math.min(120,refreshOverride || nativePreferences.refreshMinutes || 15))
   readonly property bool useImperial: Model.imperial(unitOverride || nativePreferences.unit,Commons.I18n.formatLocale,report ? report.country : "")
   readonly property string temperatureUnit: Model.temperatureUnit(temperatureOverride,useImperial)
-  readonly property string helper: String(Qt.resolvedUrl("bin/weather-data")).replace(/^file:\/\//,"")
+  property string helper: String(Qt.resolvedUrl("bin/weather-data")).replace(/^file:\/\//,"")
   function activate() {
     if(!allowed) return
     activated=true
-    now=Date.now()/1000
+    now=clock()
     if(!report || stale || report.days.length<8) refresh()
   }
   function refresh() {
@@ -58,14 +63,14 @@ Item {
     searchQuery="";geocode.running=false;suggestions=[]
   }
   function choose(place) {
-    if(!place || !Model.coordinates(place) || locationSave.running) return
-    locationSave.command=["omarchy-weather-location","--set",String(place.name).slice(0,128),place.latitude+","+place.longitude]
+    if(!allowed || !place || !Model.coordinates(place) || locationSave.running) return
+    locationSave.command=locationCommand.concat(["--set",String(place.name).slice(0,128),place.latitude+","+place.longitude])
     locationSave.running=true
     suggestions=[]
   }
   function autoLocate() {
-    if(locationSave.running) return
-    locationSave.command=["omarchy-weather-location","--clear"]
+    if(!allowed || locationSave.running) return
+    locationSave.command=locationCommand.concat(["--clear"])
     locationSave.running=true
     suggestions=[]
   }
@@ -75,7 +80,10 @@ Item {
     locationKey=key
     scheduleRefresh()
   }
-  onAllowedChanged: if(!allowed) { refreshPending=false; forecast.running=false; geocode.running=false; suggestions=[] }
+  onAllowedChanged: {
+    if(!allowed) {refreshPending=false;forecast.running=false;geocode.running=false;locationSave.running=false;suggestions=[]}
+    else {locationFile.reload();nativeSettingsFile.reload();if(activated) refresh()}
+  }
   Process {
     id: forecast
     command: ["python3",root.helper,"forecast"]
@@ -84,7 +92,7 @@ Item {
       onStreamFinished: {
         var parsed=Model.parseReport(text)
         if(parsed && root.requestLocationKey===root.locationKey) {
-          root.received=true; root.report=parsed; root.error=""; root.now=Date.now()/1000
+          root.received=true; root.report=parsed; root.error=""; root.now=root.clock()
           cache.setText(text)
         }
       }
@@ -97,10 +105,10 @@ Item {
   }
   Timer { interval: 25000; running: forecast.running; onTriggered: { forecast.running=false; root.error="network" } }
   Timer { interval: root.refreshMinutes*60000; running: root.activated && root.allowed; repeat: true; onTriggered: root.refresh() }
-  Timer { interval: 60000; running: root.activated; repeat: true; onTriggered: root.now=Date.now()/1000 }
+  Timer { interval: 60000; running: root.activated && root.allowed; repeat: true; onTriggered: root.now=root.clock() }
   FileView {
     id: cache
-    path: Quickshell.env("HOME")+"/.local/state/omarchy/island/weather.json"
+    path:root.cachePath
     atomicWrites: true; printErrors: false
     onLoaded: {
       var parsed=Model.parseReport(text())
@@ -109,15 +117,16 @@ Item {
   }
   FileView {
     id: locationFile
-    path: Quickshell.env("HOME")+"/.local/state/omarchy/settings/weather.json"
-    watchChanges: true; printErrors: false
+    path:root.locationPath
+    watchChanges:root.allowed; printErrors: false
     onFileChanged: reload()
     onLoaded: root.locationChanged(text())
     onLoadFailed: root.locationChanged("")
   }
   FileView {
-    path: Quickshell.env("HOME")+"/.config/omarchy/shell.json"
-    watchChanges: true; printErrors: false
+    id:nativeSettingsFile
+    path:root.preferencesPath
+    watchChanges:root.allowed; printErrors: false
     onFileChanged: reload()
     onLoaded: root.nativePreferences=Model.nativeSettings(text())
   }
