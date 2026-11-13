@@ -85,7 +85,7 @@ Control tiles show only an icon and title. Left-click opens a system panel; righ
 
 Cards and control tiles use a subtle fill without permanent outlines; nested action buttons stay transparent until interaction. Transparent page wrappers and grouped notification rows do not introduce additional spotlight boundaries.
 
-The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, and buttons. A soft brightness falloff, inner-edge bloom, and a path trail that fades over 720 ms stay clipped to the hovered surface, including its corners. Nearby elements catch a soft inner-edge glow on the side facing the cursor, including across gaps; transparent wrappers do not gain outlines. This proximity glow remains static with reduced motion. Approaching an edge scatters a few pixels along its inner rim. Reduced motion disables the trail and edge scatter.
+The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, and buttons. A soft brightness falloff, inner-edge bloom, and a path trail with up to 24 samples that fades over 720 ms stay clipped to the hovered surface, including its corners. Nearby elements catch a soft inner-edge glow on the side facing the cursor, including across gaps; transparent wrappers do not gain outlines. This proximity glow remains static with reduced motion. Approaching an edge scatters a few pixels along its inner rim. Reduced motion disables the trail and edge scatter.
 
 The popup follows the clock on top, bottom, left, and right panels, staying inside the current monitor. It opens inward from the panel and keeps its cross-axis center stable during expansion, including near screen corners. Side panels stack clock indicators above and below the time and show a compact OSD; notification summaries use a popup card even when the horizontal bar style is selected. Horizontal clock slots at the start or end of the bar use a compact width.
 
@@ -139,6 +139,7 @@ Open **Controls → Settings** (the sixth tile) for four categories: **General**
 | Opening page | `openingPage: "overview"`; also `controls` or `last` (last page during this shell session); a disabled destination falls back to Controls |
 | Bar animations | `panelAnimation: true`; controls bar artwork, beacon waves, and bar transitions |
 | Interface animations | `animationsEnabled: true`; system reduced motion always takes precedence; embedded system panels retain native Omarchy behavior |
+| Cursor effects | `cursorEffectsEnabled: true`; controls hover spotlights, the cursor trail, edge scatter, and click ripples under General → Animations |
 | Sections | `overviewEnabled`, `calendarEnabled`, `weatherEnabled`: all `true` |
 | Track announcements | `trackAlerts: true` |
 | Media visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |

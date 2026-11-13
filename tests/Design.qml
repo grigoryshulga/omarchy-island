@@ -21,6 +21,7 @@ ShellRoot {
       Island.Surface {id:surface;Layout.fillWidth:true;implicitHeight:60}
       Item {Layout.fillHeight:true}
     }
+    Island.BrailleSpotlight {id:spot; width:200;height:100;active:true}
     TestCase {
       id:test;when:false
       function test_design() {
@@ -68,6 +69,28 @@ ShellRoot {
         choice.forceActiveFocus();keyClick(Qt.Key_Return);verify(choice.selected)
         choice.enabled=false;keyClick(Qt.Key_Return);verify(choice.selected,"Disabled choice accepted an action")
         compare(input.text,draft)
+        Island.Preferences.values=({})
+        spot.pointer=Qt.point(20,30);wait(80)
+        spot.pointer=Qt.point(80,30);wait(80)
+        verify(spot.trailSamples.length>0,"Cursor movement must populate the trail")
+        spot.pulse(Qt.point(60,30));wait(20)
+        verify(spot.rippling)
+        Island.Preferences.values=({cursorEffectsEnabled:false})
+        wait(30)
+        verify(!spot.visible && !spot.effectActive,"Cursor effects stayed visible after disabling")
+        compare(spot.trailSamples.length,0)
+        verify(!findChild(spot,"spotlightTrailClock").running,"Disabled trail kept sampling")
+        compare(spot.rippleProgress,1)
+        var stoppedPhase=spot.phase
+        spot.pointer=Qt.point(140,60);spot.pulse(Qt.point(100,50));wait(80)
+        compare(spot.phase,stoppedPhase);compare(spot.rippleProgress,1)
+        compare(spot.trailSamples.length,0)
+        Island.Preferences.values=({cursorEffectsEnabled:true});wait(200)
+        verify(spot.visible && spot.effectActive,"Cursor effects did not resume")
+        Commons.Style.reduceMotion=true
+        spot.pointer=Qt.point(180,60);wait(80)
+        compare(spot.trailSamples.length,0)
+        verify(!findChild(spot,"spotlightTrailClock").running)
         console.log("DESIGN_PASS");Qt.quit()
       }
     }

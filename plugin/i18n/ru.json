@@ -146,6 +146,7 @@
   "settings.openingPage": "Страница при открытии",
   "settings.panelAnimation": "Анимации в баре",
   "settings.animationsEnabled": "Анимации интерфейса",
+  "settings.cursorEffectsEnabled": "Эффекты курсора",
   "settings.controlsEnabled": "Контролсы",
   "settings.overviewEnabled": "Обзор",
   "settings.calendarEnabled": "Календарь",

@@ -32,6 +32,18 @@ layout(std140, binding = 0) uniform buf {
   vec4 trail9;
   vec4 trail10;
   vec4 trail11;
+  vec4 trail12;
+  vec4 trail13;
+  vec4 trail14;
+  vec4 trail15;
+  vec4 trail16;
+  vec4 trail17;
+  vec4 trail18;
+  vec4 trail19;
+  vec4 trail20;
+  vec4 trail21;
+  vec4 trail22;
+  vec4 trail23;
   vec4 edgeImpact;
   float edgeProgress;
   float edgeEnabled;
