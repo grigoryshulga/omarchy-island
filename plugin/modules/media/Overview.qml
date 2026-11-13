@@ -12,11 +12,6 @@ Island.ModuleView {
     id:content
     x:root.toastPadding; y:root.toastPadding
     width:Math.max(0, parent.width - 2 * root.toastPadding)
-    spacing:Island.Design.gap.small
-    Island.SectionHeading {
-      objectName:"mediaSectionHeading";width:parent.width;visible:!root.toast && !card.compactOverview
-      title:root.backend && root.backend.player && /spotify/i.test(root.backend.player.identity || "") ? "Spotify" : root.presentation.strings.t("media.title")
-    }
     Island.MediaCard {
       id:card;objectName:"islandMediaPlayer";width:parent.width
       externalFeedback:root.presentation.feedback

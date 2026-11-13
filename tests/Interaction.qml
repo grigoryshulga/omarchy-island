@@ -502,10 +502,9 @@ ShellRoot {
       tryVerify(function(){return pages.weather},1200)
       check(pages.weather,"edge swipe did not wrap tabs")
       pages.requestPage(1);wait(350)
-      var heading=findChild(pages,"mediaSectionHeading")
-      check(heading.title==="Media","generic media heading is missing")
+      check(findChild(pages,"mediaSectionHeading")===null,"generic media source heading remains")
       p.identity="Spotify";wait(20)
-      check(heading.title==="Spotify","Spotify heading is missing")
+      check(findChild(pages,"mediaSectionHeading")===null,"Spotify source heading remains")
       p.identity="Test Music"
       var player=findChild(pages,"islandMediaPlayer")
       var compactSeek=findChild(player,"mediaCompactProgress")
