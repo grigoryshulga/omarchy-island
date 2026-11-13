@@ -163,7 +163,7 @@ ShellRoot {
       if(exitTick===106) widget.alertKind="media"
       if(exitTick===132) {
         checkExit(popup.bareCardShown && popup.padding===0,"music toast retained its outer container")
-        checkExit(!findChild(widget,"mediaSectionHeading").visible,"music toast retained its section heading")
+        checkExit(findChild(widget,"mediaSectionHeading")===null,"music toast retained its section heading")
         checkExit(player.color.toString()==="#00000000","music toast paints a nested card")
         checkExit(art.visible && !findChild(widget,"islandToastWaves").active,"music toast lost artwork or gained notification waves")
         p.trackTitle="A very long track title that should elide without moving the player controls"
