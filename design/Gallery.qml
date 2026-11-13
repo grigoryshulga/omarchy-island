@@ -12,12 +12,13 @@ Rectangle {
   property string previewTheme: "system"
   property var original: null
   property bool narrow: false
+  property bool sdkExample: false
   property bool largeText: false
   property int originalFontSize: 12
   property bool answered: false
   property string status: ""
   readonly property var strings: translations
-  Commons.Translations {id:translations;directory:Qt.resolvedUrl("Island/i18n")}
+  Commons.Translations {id:translations;directory:Qt.resolvedUrl("i18n")}
   function setTheme(name) {
     if(!original) original={background:Commons.Color.background,foreground:Commons.Color.foreground,
       accent:Commons.Color.accent,muted:Commons.Color.muted,urgent:Commons.Color.urgent,
@@ -77,7 +78,16 @@ Rectangle {
         Island.ActionButton {text:translations.t("design.narrow");selected:root.narrow;onClicked:root.narrow=!root.narrow}
         Item {Layout.fillWidth:true}
       }
+      Components {
+        visible:root.sdkExample
+        Layout.fillWidth:!root.narrow
+        Layout.preferredWidth:root.narrow ? 340 : -1
+        Layout.maximumWidth:root.narrow ? 340 : Infinity
+        Layout.margins:Island.Design.gap.large
+        strings:translations
+      }
       GridLayout {
+        visible:!root.sdkExample
         Layout.fillWidth:true;Layout.margins:Island.Design.gap.large
         columns:root.width>850 ? 2 : 1
         columnSpacing:Island.Design.gap.section;rowSpacing:Island.Design.gap.section
@@ -150,8 +160,8 @@ Rectangle {
           }
           RowLayout {
             Layout.fillWidth:true;spacing:Island.Design.gap.small
-            Island.ControlTile {Layout.fillWidth:true;Layout.preferredWidth:1;title:translations.t("controls.audio");description:translations.t("controls.audioHint");glyph:"󰕾";drillDown:true}
-            Island.ControlTile {Layout.fillWidth:true;Layout.preferredWidth:1;title:translations.t("controls.dndShort");description:translations.t("controls.on");glyph:"󰂛";selected:true;onClicked:selected=!selected}
+            Island.ControlTile {Layout.fillWidth:true;Layout.preferredWidth:1;title:translations.t("controls.audio");tooltipText:translations.t("controls.audioHint");glyph:"󰕾";drillDown:true}
+            Island.ControlTile {Layout.fillWidth:true;Layout.preferredWidth:1;title:translations.t("controls.dndShort");tooltipText:translations.t("controls.on");glyph:"󰂛";selected:true;onClicked:selected=!selected}
           }
           Island.SectionHeading {Layout.fillWidth:true;Layout.topMargin:Island.Design.gap.medium;title:translations.t("design.states")}
           RowLayout {

@@ -1,0 +1,10 @@
+{
+  "example.title": "Пример",
+  "example.summary": "Модуль на основе Island UI SDK.",
+  "example.description": "Счётчик общий для всех экранов; черновик хранится в этом представлении.",
+  "example.draft": "Локальный черновик",
+  "example.increment": "Увеличить счётчик",
+  "example.details": "Открыть детали",
+  "settings.group.example": "Пример",
+  "settings.exampleEnabled": "Включить пример"
+}

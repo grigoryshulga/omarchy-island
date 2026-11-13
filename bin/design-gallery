@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Open the isolated native component gallery; optionally capture it offscreen."""
 import argparse
+import json
 import os
 from pathlib import Path
 import shutil
@@ -10,6 +11,9 @@ import tempfile
 project=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--capture-dir',type=Path)
+parser.add_argument('--patterns',action='store_true',help='Show shared rows, data states and forms with existing controls')
+parser.add_argument('--language',choices=('en','ru'),help='Preview language without changing the shell')
+parser.add_argument('--sdk',action='store_true',help='Show the public UI SDK example')
 args=parser.parse_args()
 with tempfile.TemporaryDirectory(prefix='island-design-') as temporary:
     root=Path(temporary)
@@ -18,7 +22,20 @@ with tempfile.TemporaryDirectory(prefix='island-design-') as temporary:
     (root/'Island').symlink_to(project/'plugin')
     for name in ('shell.qml','Gallery.qml'):
         shutil.copyfile(project/'design'/name,root/name)
+    shutil.copyfile(project/'examples/ui-sdk/Components.qml',root/'Components.qml')
+    shutil.copyfile(project/'design/Patterns.qml',root/'Patterns.qml')
+    if args.patterns:
+        shutil.copyfile(project/'design/PatternsShell.qml',root/'shell.qml')
+    (root/'i18n').mkdir()
+    for locale in ('en','ru'):
+        translations=json.loads((project/f'plugin/i18n/{locale}.json').read_text())
+        translations.update(json.loads((project/f'templates/module/i18n/{locale}.json').read_text()))
+        (root/f'i18n/{locale}.json').write_text(json.dumps(translations,ensure_ascii=False))
     env=dict(os.environ)
+    if args.language:
+        (root/'language').write_text(args.language)
+        env['OMARCHY_LANGUAGE_FILE']=str(root/'language')
+    env['ISLAND_DESIGN_SDK']='1' if args.sdk else '0'
     if args.capture_dir:
         args.capture_dir.mkdir(parents=True,exist_ok=True)
         env.update(ISLAND_DESIGN_CAPTURE=str(args.capture_dir.resolve()),QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')

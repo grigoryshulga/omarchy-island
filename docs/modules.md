@@ -24,7 +24,7 @@ export default {
 
 Import it in `ModuleCatalog.mjs` and add it to `definitions`. Use a unique stable ID and globally unique setting names. Paths are relative to `plugin/`. Omit `state`, `overview` or `indicator` when unnecessary. `title` can supply a fixed proper name instead of `titleKey`. Optional `order` numbers for `overview`, `indicator` and `settings` preserve independent placement; lower numbers appear first, with registration order breaking ties.
 
-Add labels to both `plugin/i18n/en.json` and `ru.json`: `example.title`, `settings.group.example`, and `settings.exampleEnabled`. All styling comes from Island Design and live Omarchy tokens. Keep collectors in `plugin/bin/` and execute argument arrays; use the existing Security policy for external inputs and URLs.
+Add labels to both `plugin/i18n/en.json` and `ru.json`: `example.title`, `settings.group.example`, and `settings.exampleEnabled`. Use the [public UI SDK](ui-sdk.md) for live design tokens, styled controls and effects. The [module template](../templates/module/README.md) demonstrates the complete registration contract. Keep collectors in `plugin/bin/` and execute argument arrays; use the existing Security policy for external inputs and URLs.
 
 `choices` maps setting names to permitted values. `validators` maps names to pure QML-compatible validation functions for structured or numeric values. Other settings are booleans. `defaults`, `choices`, `validators` and settings `groups` are composed by `SettingsModel.mjs`; duplicate default keys fail immediately. Groups normally appear in Modules; `settingsSection` can target an existing section, as Notifications does for Alerts. Preserve existing setting names when migrating integrations. Do not perform I/O at module import time.
 
@@ -64,7 +64,7 @@ Overview and indicator QML roots extend `ModuleView`. `ModuleSlot` supplies `bac
 
 Overview context contains `strings`, `feedback`, `expanded`, `detail`, `active`, and `pageHeight`. Render summary and details in the same retained view, switching on `detail`; use `active` and reduced motion to stop invisible effects. The host owns the common detail heading and Back button, focus restoration, scroll restoration and popup geometry. An integration must not change the host's selected detail directly. Hover preview must remain read-only.
 
-Indicator context contains `vertical`, `barSize`, `barHeight`, `showAlert`, and `bar`. Retain a compact natural size for both orientations. Bind continuous effects to effective visibility and reduced motion.
+Indicator context contains `strings`, `vertical`, `barSize`, `barHeight`, `showAlert`, and `bar`. Retain a compact natural size for both orientations. Bind continuous effects to effective visibility and reduced motion.
 
 Views remain alive while hidden to preserve drafts and stable delegates. Temporary loss of content (`available: false`, for example T3 disconnecting) hides the view without abandoning its detail selection. The slot suppresses views of a disabled backend (`allowed: false`), and Overview returns to the summary. Popup state and focus remain separate on each monitor.
 

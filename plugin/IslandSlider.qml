@@ -6,6 +6,7 @@ import qs.Commons as Commons
 
 Item {
   id: root
+  opacity: enabled ? 1 : Design.disabledOpacity
   readonly property bool islandSpotlightSurface: true
 
   property bool islandHandlesHorizontalKeys:true

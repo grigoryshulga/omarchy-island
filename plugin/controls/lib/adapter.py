@@ -43,7 +43,7 @@ COPY_CHUNK_BYTES = 64 * 1024
 MAX_CACHED_ARTIFACTS = 8
 STALE_STAGING_SECONDS = 24 * 60 * 60
 MARKER_NAME = ".omarchy-island-adapted"
-HELPER_NAMES = ("IslandHost.qml", "IslandDisabledIpc.qml", "IslandHiddenBarButton.qml", "ControlKeyCatcher.qml", "ControlSwitch.qml", "ControlGap.qml", "ControlSectionHeader.qml", "ControlActionButton.qml")
+HELPER_NAMES = ("IslandHost.qml", "IslandDisabledIpc.qml", "IslandHiddenBarButton.qml", "ControlKeyCatcher.qml", "ControlSwitch.qml", "ControlFocus.js", "ControlGap.qml", "ControlSectionHeader.qml", "ControlActionButton.qml")
 # The compatibility shims ship with the plugin's QML; this module lives in lib/.
 DEFAULT_ADAPTER_DIR = Path(__file__).resolve().parents[1]
 VCS_ROOT_NAMES = frozenset((".git", ".hg", ".svn"))

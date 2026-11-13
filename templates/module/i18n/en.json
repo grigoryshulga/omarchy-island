@@ -1,0 +1,10 @@
+{
+  "example.title": "Example",
+  "example.summary": "A module built with the Island UI SDK.",
+  "example.description": "This counter is shared across monitors; the draft stays in this view.",
+  "example.draft": "Local draft",
+  "example.increment": "Increment counter",
+  "example.details": "Open details",
+  "settings.group.example": "Example",
+  "settings.exampleEnabled": "Enable example"
+}

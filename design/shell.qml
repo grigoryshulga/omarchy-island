@@ -9,7 +9,7 @@ ShellRoot {
     implicitWidth: 1100
     implicitHeight: Quickshell.env("ISLAND_DESIGN_CAPTURE") ? 1440 : 960
     color: "transparent"
-    Gallery {id:gallery;anchors.fill:parent}
+    Gallery {id:gallery;anchors.fill:parent;sdkExample:Quickshell.env("ISLAND_DESIGN_SDK")==="1"}
     property int captureIndex: 0
     Timer {
       id:capture

@@ -1,0 +1,19 @@
+# Public UI SDK 1.0. Only the API documented in docs/ui-sdk.md is supported.
+singleton Design 1.0 Design.qml
+singleton Motion 1.0 Motion.qml
+singleton Settings 1.0 Settings.qml
+Surface 1.0 ../Surface.qml
+PlainText 1.0 ../PlainText.qml
+SectionHeading 1.0 ../SectionHeading.qml
+FeedbackButton 1.0 ../FeedbackButton.qml
+ChoiceButton 1.0 ../ChoiceButton.qml
+DesignTextField 1.0 ../DesignTextField.qml
+DesignDropdown 1.0 ../DesignDropdown.qml
+IslandSlider 1.0 ../IslandSlider.qml
+BrailleGauge 1.0 ../BrailleGauge.qml
+Spinner 1.0 ../T3Spinner.qml
+ModuleView 1.0 ../ModuleView.qml
+ControlSwitch 1.0 ControlSwitch.qml
+ListRow 1.0 ListRow.qml
+DataState 1.0 DataState.qml
+FormField 1.0 FormField.qml

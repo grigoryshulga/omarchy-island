@@ -52,13 +52,9 @@ Item {
       visible:!root.spec.type
       x:Commons.I18n.rightToLeft ? 0 : content.width-width
       anchors.verticalCenter:parent.verticalCenter
-      activeFocusOnTab:true
       hasCursor:activeFocus
       checked:root.spec.fixed || Settings.get(root.settings,root.key)===true
       onToggled:root.settingRequested(root.key,!checked)
-      Keys.onReturnPressed:toggled()
-      Keys.onEnterPressed:toggled()
-      Keys.onSpacePressed:toggled()
     }
     PlainText {
       id:delayValue

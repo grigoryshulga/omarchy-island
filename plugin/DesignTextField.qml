@@ -4,6 +4,7 @@ import qs.Commons
 
 Ui.TextField {
   id: root
+  property bool invalid: false
   foreground: Design.text
   accent: Design.accent
   font.family: Design.fontFamily
@@ -21,7 +22,7 @@ Ui.TextField {
   background: Rectangle {
     color: Design.raised
     radius: Design.controlRadius
-    border.color: root.activeFocus ? Design.focusRing : Design.fieldBorder
+    border.color: root.activeFocus ? Design.focusRing : root.invalid ? Design.danger : Design.fieldBorder
     border.width: root.activeFocus ? 2 : 1
   }
   opacity: enabled ? 1 : Design.disabledOpacity

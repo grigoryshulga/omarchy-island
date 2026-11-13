@@ -242,6 +242,10 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. All detached Islan
 
 Island uses one live design system across Overview, notifications, downloads, T3, media, Calendar, Weather, Controls and settings. [Design specification](design/DESIGN.md) documents typography, spacing, surfaces, color sources, interaction states and component APIs.
 
+Module authors can use the **[public UI SDK 1.0](docs/ui-sdk.md)**: live read-only design tokens, styled components, host click feedback and motion policy. Start with the [copyable module template](templates/module/README.md) or run `bin/design-gallery --sdk` for the [component example](examples/ui-sdk/Components.qml). The SDK documents the supported API separately from internal implementation details.
+
+Run `bin/design-gallery --patterns --language ru` for interactive ListRow, DataState and FormField examples alongside the existing controls. The playground includes data states, validation, selection, themes, larger text, square corners and reduced motion; `--capture-dir` exports the state matrix from real QML. These components are also used in Calendar Sources and Agent Limits.
+
 - `plugin/DesignTokens.js` holds primitives and contrast calculations; `plugin/Design.qml` maps them to live Omarchy `Color` and `Style` values.
 - `PlainText` uses named roles (`caption`, `label`, `body`, `title`, `section`, `page`, `metric`, `hero`, `bar`). Buttons, choices, inputs and surfaces share geometry and focus treatment. System scaling and square corners remain supported.
 - Sections use spacing and typography instead of decorative dividers. Data cards have opaque, quiet surfaces; artwork stays behind them. Theme colors are corrected only when necessary for legibility.

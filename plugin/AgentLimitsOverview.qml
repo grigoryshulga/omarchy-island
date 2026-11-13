@@ -1,4 +1,5 @@
 import QtQuick
+import "sdk" 1.0 as UI
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import qs.Commons
@@ -72,10 +73,14 @@ Column {
       }
     }
   }
-  PlainText {
+  UI.DataState {
     visible:!root.centerOpen && !root.rows.length
-    width:parent.width;typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap
-    text:root.strings.t(root.backend && root.backend.error ? "limits.error" : root.backend && root.backend.busy ? "limits.loading" : "limits.quiet")
+    width:parent.width
+    kind:root.backend && root.backend.busy ? "loading" : root.backend && root.backend.error ? "error" : "empty"
+    title:root.strings.t(kind==="error" ? "limits.error" : kind==="loading" ? "limits.loading" : "limits.quiet")
+    feedback:root.feedback
+    actionText:kind==="error" && root.expanded ? root.strings.t("limits.refresh") : ""
+    onActionRequested:root.backend.refresh()
   }
   AgentLimitsCenter {
     width:parent.width

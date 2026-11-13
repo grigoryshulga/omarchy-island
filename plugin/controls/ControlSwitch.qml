@@ -2,10 +2,17 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import ".."
+import "ControlFocus.js" as Focus
 
 ToggleSwitch {
   id:root
   property bool effectsActive:true
+  opacity:enabled ? 1 : Design.disabledOpacity
+  onInteractiveChanged:Focus.sync(root,interactive)
+  Component.onCompleted:Focus.sync(root,interactive)
+  Keys.onSpacePressed:if(interactive && !busy) toggled()
+  Keys.onReturnPressed:if(interactive && !busy) toggled()
+  Keys.onEnterPressed:if(interactive && !busy) toggled()
   objectName:"controlPowerSwitch"
   foreground:Design.text
   accent:Design.accent
