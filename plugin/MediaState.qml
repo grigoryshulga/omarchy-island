@@ -9,13 +9,11 @@ Item {
   property bool allowed:true
   property string error:""
   property var audioCommand:["python3",String(Qt.resolvedUrl("bin/audio-envelope")).replace(/^file:\/\//,"")]
-  property var allowedPlayers: ["spotifast", "spotify", "strawberry", "clementine", "lollypop", "amberol", "audacious", "elisa", "tauon", "rhythmbox", "music"]
+  // An empty filter accepts every MPRIS source, including browsers and video.
+  property var allowedPlayers: []
   property string preferredPlayer: ""
-  readonly property var players: !allowed ? [] : (Mpris.players ? Mpris.players.values : []).filter(function(p) { return Model.musicPlayer(p, root.allowedPlayers) })
-  readonly property var player: {
-    var preferred = players.find(function(p) { return p.dbusName === root.preferredPlayer })
-    return preferred || players.find(function(p) { return p.isPlaying }) || players[0] || null
-  }
+  readonly property var players: !allowed ? [] : (Mpris.players ? Mpris.players.values : []).filter(function(p) { return Model.mediaPlayer(p, root.allowedPlayers) })
+  readonly property var player: Model.selectMediaPlayer(players, preferredPlayer, MprisPlaybackState.Stopped)
   readonly property bool playing: player !== null && player.isPlaying
   readonly property bool hasMedia: Model.hasMedia(player,MprisPlaybackState.Stopped)
   readonly property string track: player ? player.dbusName + ":" + player.trackTitle + ":" + player.trackArtist : ""
