@@ -10,9 +10,9 @@ function advance(samples, previous, point, now) {
   var last = next.length ? next[next.length - 1] : null
   var anchor = last || previous
   var dx = point.x - anchor.x, dy = point.y - anchor.y
-  if (dx * dx + dy * dy >= 1 && (!last || now - last.time >= 60)) {
+  if (dx * dx + dy * dy >= 1 && (!last || now - last.time >= 30)) {
     if (!last) next.push({x: previous.x, y: previous.y, time: now - 32})
     next.push({x: point.x, y: point.y, time: now})
   }
-  return next.slice(-12)
+  return next.slice(-24)
 }

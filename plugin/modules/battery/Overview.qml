@@ -12,6 +12,7 @@ Island.ModuleView {
   implicitHeight:content.implicitHeight
   Island.BatteryOverview {
     id:content;objectName:"islandBatteryOverview";width:parent.width
+    minimal:root.presentation.size==="minimal"
     power:root.backend;strings:root.presentation.strings
     active:root.presentation.active;externalFeedback:root.presentation.feedback
     onExpandRequested:root.expandRequested()

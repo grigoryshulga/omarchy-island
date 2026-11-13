@@ -8,11 +8,17 @@ Item {
   id:root
   required property var strings
   property var settings:({})
+  property var modules:({})
   property var feedback:null
   property bool active:true
   property int category:0
   property bool ownsKeys:false
   signal settingRequested(string key,var value)
+  function revealFocus(item) {
+    var at=item.mapToItem(body,0,0)
+    if(at.y<viewport.contentY) viewport.contentY=at.y
+    else if(at.y+item.height>viewport.contentY+viewport.height) viewport.contentY=at.y+item.height-viewport.height
+  }
   function focusContent() { if(tabs.itemAt(category)) tabs.itemAt(category).forceActiveFocus() }
   function revealTab(item) {
     var at=item.mapToItem(tabRow,0,0),x=tabViewport.contentX
@@ -107,6 +113,21 @@ Item {
               onSettingRequested:(key,value)=>root.settingRequested(key,value)
               onPopupChanged:root.updateOwnsKeys()
             }
+          }
+          ModuleSlot {
+            width:group.width
+            active:root.active
+            viewSource:group.modelData.view || ""
+            backend:root.modules[group.modelData.moduleId] || null
+            presentation:QtObject {
+              readonly property var strings:root.strings
+              readonly property var feedback:root.feedback
+              readonly property bool active:root.active
+              function revealFocus(item) {root.revealFocus(item)}
+            }
+            visible:!!item && item.available
+            height:visible ? item.implicitHeight : 0
+            onSettingRequested:(key,value)=>root.settingRequested(key,value)
           }
         }
       }

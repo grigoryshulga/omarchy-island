@@ -11,6 +11,7 @@ Item {
   required property var strings
   property var externalFeedback:null
   property bool active:false
+  property bool minimal:false
   property var power:null
   signal expandRequested()
   readonly property bool present:power && power.present
@@ -77,6 +78,7 @@ Item {
     }
     BatteryGauge {
       id:chargeGauge
+      visible:!root.minimal
       Layout.fillWidth:true
       fraction:root.power ? root.power.fraction : 0
       active:root.active

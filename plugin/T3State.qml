@@ -14,6 +14,13 @@ Item {
   property bool responsesEnabled:Preferences.get("t3Responses")
   property string status:"offline"
   property string environmentId:""
+  property string reason:""
+  property string stage:""
+  property string serverVersion:""
+  property string cliVersion:""
+  property string cliSource:""
+  property string cliPath:""
+  property double lastConnectedAt:0
   property bool canRespond:false
   property var rows:[]
   property var responses:({})
@@ -25,12 +32,27 @@ Item {
   readonly property int workingCount:connected ? rows.filter(function(r){return T3.busy(r) && !r.requestId}).length : 0
   function row(id) {return rows.find(function(r){return r.id===id}) || null}
   function response(id) {return responses[id] ? responses[id].status : ""}
+  function logDiagnostic(line) {
+    if(line.length>4096) return
+    try {
+      var event=JSON.parse(line)
+      if(event.type!=="diagnostic") return
+      console.warn("[Island T3]",JSON.stringify({reason:event.reason,stage:event.stage,serverVersion:event.serverVersion,cliVersion:event.cliVersion,cliSource:event.cliSource}))
+    } catch(e) {}
+  }
   function receive(line) {
     if(line.length>4194304) return
     var event
     try {event=JSON.parse(line)} catch(e) {return}
     if(event.type==="connection") {
       status=event.status
+      reason=typeof event.reason==="string" ? event.reason : ""
+      stage=typeof event.stage==="string" ? event.stage : ""
+      serverVersion=typeof event.serverVersion==="string" ? event.serverVersion : ""
+      cliVersion=typeof event.cliVersion==="string" ? event.cliVersion : ""
+      cliSource=typeof event.cliSource==="string" ? event.cliSource : ""
+      cliPath=typeof event.cliPath==="string" ? event.cliPath : ""
+      if(typeof event.lastConnectedAt==="number" && isFinite(event.lastConnectedAt) && event.lastConnectedAt>0) lastConnectedAt=event.lastConnectedAt
       canRespond=event.status==="connected" && event.canRespond===true
       if(event.environmentId) environmentId=event.environmentId
       if(status!=="connected") failPending()
@@ -75,7 +97,7 @@ Item {
     if(url && row(id)) openUrl(url)
   }
   function restart() {
-    canRespond=false;failPending()
+    canRespond=false;failPending();reason="";status=allowed ? "connecting" : "offline"
     if(reader.running) reader.running=false
     else if(allowed) retry.restart()
   }
@@ -90,7 +112,8 @@ Item {
     running:root.allowed
     stdinEnabled:true
     stdout:SplitParser {onRead:data=>root.receive(data)}
-    onExited:{root.status="offline";root.canRespond=false;root.failPending();if(root.allowed) retry.restart()}
+    stderr:SplitParser {onRead:data=>root.logDiagnostic(data)}
+    onExited:{root.status=root.allowed ? "connecting" : "offline";root.canRespond=false;root.failPending();if(root.allowed) retry.restart()}
   }
   Timer {id:retry;interval:2000;onTriggered:if(root.allowed) reader.running=true}
   Timer {

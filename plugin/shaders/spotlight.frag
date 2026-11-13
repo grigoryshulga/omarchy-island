@@ -30,6 +30,18 @@ layout(std140, binding = 0) uniform buf {
   vec4 trail9;
   vec4 trail10;
   vec4 trail11;
+  vec4 trail12;
+  vec4 trail13;
+  vec4 trail14;
+  vec4 trail15;
+  vec4 trail16;
+  vec4 trail17;
+  vec4 trail18;
+  vec4 trail19;
+  vec4 trail20;
+  vec4 trail21;
+  vec4 trail22;
+  vec4 trail23;
   vec4 edgeImpact;
   float edgeProgress;
   float edgeEnabled;
@@ -80,10 +92,10 @@ void main() {
   float a=noise(site,frame), b=noise(site,frame+1u);
   float blend=smoothstep(0.0,1.0,fract(clock));
   // Draw the actual recent path, with softly fading overlapping footprints.
-  vec4 samples[12]=vec4[12](trail0,trail1,trail2,trail3,trail4,trail5,trail6,trail7,trail8,trail9,trail10,trail11);
+  vec4 samples[24]=vec4[24](trail0,trail1,trail2,trail3,trail4,trail5,trail6,trail7,trail8,trail9,trail10,trail11,trail12,trail13,trail14,trail15,trail16,trail17,trail18,trail19,trail20,trail21,trail22,trail23);
   float wake=0.0;
   float wakeWidth=max(1.0,radius*0.42);
-  for(int i=0;i<12;i++) {
+  for(int i=0;i<24;i++) {
     vec2 offset=pixel-samples[i].xy;
     float footprint=exp(-dot(offset,offset)/(wakeWidth*wakeWidth));
     wake=max(wake,footprint*samples[i].z*0.85);

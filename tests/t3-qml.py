@@ -26,6 +26,7 @@ with tempfile.TemporaryDirectory(prefix='island-t3-qml-') as temporary:
     fake.write_text('#!'+sys.executable+'\n'+'''import sys,os,json
 row=json.load(open(os.environ['T3_FIXTURE']))
 def send(v):print(json.dumps(v),flush=True)
+print(json.dumps({'type':'diagnostic','reason':'cli_version','stage':'cli','serverVersion':'1.0.0','cliVersion':'2.0.0','cliSource':'path','raw':'TEST_SECRET'}),file=sys.stderr,flush=True)
 send({'type':'connection','status':'connected','canRespond':True,'environmentId':'env-1'})
 send({'type':'sessions','rows':[row]})
 for line in sys.stdin:
@@ -41,6 +42,12 @@ for line in sys.stdin:
     result=subprocess.run(['dbus-run-session','--','qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=24)
     print(result.stdout)
     assert 'T3_QML_PASS' in result.stdout and not any(s in result.stdout for s in ['FAIL!', 'T3_QML_FAIL','TypeError:','ReferenceError:','Binding loop','Cannot assign','Unable to assign']),result.stdout
+    assert '[Island T3]' in result.stdout and 'TEST_SECRET' not in result.stdout
     replies=[json.loads(line) for line in (root/'responses.jsonl').read_text().splitlines()]
     assert len(replies)==1,replies
     assert replies[0]=={'type':'respond','threadId':'thread-1','requestId':'request-2','revision':'revision-2','answers':{'q1':['literal $(touch /tmp/never); <b>']}},replies
+
+    (root/'shell.qml').write_text((project/'tests/T3Diagnostics.qml').read_text())
+    result=subprocess.run(['dbus-run-session','--','qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=12)
+    print(result.stdout)
+    assert 'T3_DIAGNOSTICS_PASS' in result.stdout and not any(s in result.stdout for s in ['FAIL!', 'T3_DIAGNOSTICS_FAIL','TypeError:','ReferenceError:','Binding loop','Cannot assign','Unable to assign']),result.stdout

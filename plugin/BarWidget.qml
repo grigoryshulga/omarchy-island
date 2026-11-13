@@ -133,7 +133,7 @@ BarWidget {
     if(!Settings.get(settings,"hoverPreview") || !Settings.get(settings,"overviewEnabled")) {hoverDelay.stop();hoverOpen=false}
     if(!Settings.get(settings,"trackAlerts") && alertKind==="media") {alertKind="";alertLife.stop()}
     if(pinned && Settings.pages(settings).indexOf(selectedPage)<0) openControls()
-    if(service && service.modules && service.modules.media && Array.isArray(setting("musicApps",null))) service.modules.media.allowedPlayers=setting("musicApps",[])
+    if(service && service.modules && service.modules.media) service.modules.media.allowedPlayers=Array.isArray(setting("musicApps",null)) ? setting("musicApps",[]) : []
   }
   function updateSetting(key,value) {
     if(key==="calendarWeekStart" && value!=="sunday" && value!=="monday") return

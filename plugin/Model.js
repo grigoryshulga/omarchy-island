@@ -1,10 +1,19 @@
 .pragma library
 
-function musicPlayer(p, allowed) {
+function mediaPlayer(p, allowed) {
+  if (!p) return false
+  if (!allowed || allowed.length === 0) return true
   var identity = String(p.identity || "") + " " + String(p.desktopEntry || "") + " " + String(p.dbusName || "")
   return allowed.some(function(name) {
     return identity.toLowerCase().indexOf(String(name).toLowerCase()) >= 0
   })
+}
+// Keep an explicit selection; otherwise prefer playback, then paused media.
+function selectMediaPlayer(players, preferred, stoppedState) {
+  return players.find(function(p) { return p.dbusName === preferred })
+    || players.find(function(p) { return p.isPlaying })
+    || players.find(function(p) { return hasMedia(p, stoppedState) })
+    || players[0] || null
 }
 function time(seconds) {
   var s = Math.max(0, Math.floor(Number(seconds) || 0))

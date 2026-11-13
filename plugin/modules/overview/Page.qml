@@ -11,8 +11,9 @@ Island.ModulePage {
   implicitHeight:content.implicitHeight
   toastIcon:content.toastIcon
   interactionHovered:content.musicHovered
-  function enter(){content.detailPage="";content.restoreSummary()}
+  function enter(){content.configuring=false;content.detailPage="";content.restoreSummary()}
   function back(){return content.back()}
+  function configure(returnTarget){content.configure(returnTarget)}
   Island.IslandContent {
     id:content;anchors.fill:parent
     settings:root.presentation.settings;service:root.presentation.service;strings:root.presentation.strings;bar:root.presentation.bar

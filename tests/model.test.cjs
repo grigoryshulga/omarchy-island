@@ -48,8 +48,29 @@ for(const text of ['Your code: 482913','Код AB12-CD34','482913']) {
  assert.ok(!persisted.includes('482913')&&!persisted.includes('AB12-CD34'),persisted);
  assert.ok(persisted.includes('redacted'));
 }
-assert.ok(Model.musicPlayer({identity:'Spotifast'},['spotifast']));
-assert.ok(!Model.musicPlayer({identity:'Chromium'},['spotifast','spotify']));
+assert.ok(Model.mediaPlayer({identity:'Spotifast'},['spotifast']));
+assert.ok(!Model.mediaPlayer({identity:'Chromium'},['spotifast','spotify']));
+// Default discovery accepts audio/video/browser sources without an app allowlist.
+for (const player of [
+ {identity:'Chromium',dbusName:'org.mpris.MediaPlayer2.chromium.instance1'},
+ {identity:'Firefox',desktopEntry:'firefox'}, {identity:'VLC media player'},
+ {identity:'mpv'}, {identity:'Podcasts'}, {identity:'Unknown player'}
+]) {
+ assert.ok(Model.mediaPlayer(player, []));
+ assert.ok(Model.mediaPlayer(player));
+}
+assert.equal(Model.mediaPlayer(null, []),false);
+assert.ok(Model.mediaPlayer({desktopEntry:'org.videolan.VLC'},['vlc']));
+assert.ok(Model.mediaPlayer({dbusName:'org.mpris.MediaPlayer2.firefox.instance1'},['Firefox']));
+const stoppedPlayer={dbusName:'music',playbackState:0,trackTitle:'Old song'};
+const pausedVideo={dbusName:'browser',playbackState:2,trackTitle:'Paused video'};
+const playingPodcast={dbusName:'podcast',playbackState:1,isPlaying:true,trackTitle:'Episode'};
+assert.equal(Model.selectMediaPlayer([], '', 0),null);
+assert.equal(Model.selectMediaPlayer([stoppedPlayer,pausedVideo], '', 0),pausedVideo);
+assert.equal(Model.selectMediaPlayer([pausedVideo,playingPodcast], '', 0),playingPodcast);
+assert.equal(Model.selectMediaPlayer([pausedVideo,playingPodcast], 'browser', 0),pausedVideo);
+assert.equal(Model.selectMediaPlayer([stoppedPlayer,pausedVideo], 'gone', 0),pausedVideo);
+assert.equal(Model.selectMediaPlayer([stoppedPlayer], '', 0),stoppedPlayer);
 assert.equal(Model.time(125),'2:05');
 const rows=Model.collect([{key:'one',ts:2},{key:'two',ts:3}],[{key:'one',ts:1}]);
 assert.equal(rows.length,2);assert.equal(rows[0].key,'two');
@@ -93,7 +114,7 @@ for(const tz of ['America/Santiago','America/Havana','Pacific/Apia']) {
  assert.equal(Calendar.stepMonth(2026,8,1).key,'2026-10-01');
  assert.equal(Calendar.isoWeek(2021,0,1),53,tz);
 }
-console.log('PASS: code detection, redaction, URL policy, music filtering, notification ordering.');
+console.log('PASS: code detection, redaction, URL policy, media discovery and selection, notification ordering.');
 const Weather=load('WeatherModel');
 for(const [code,kind] of [[0,0],[2,1],[3,2],[45,3],[53,4],[65,5],[75,6],[95,7],[99,7],[null,-1],[4,-1]]) assert.equal(Weather.kind(code),kind);
 assert.equal(Weather.coordinates({latitude:91,longitude:0}),null);

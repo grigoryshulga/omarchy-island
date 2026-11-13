@@ -4,7 +4,7 @@ const validators = {};
 // Settings accepted by the Island UI. Unknown shell-entry metadata is preserved.
 var defaults = {
   hoverPreview: true, hoverDelay: 140, openingPage: "overview",
-  panelAnimation: true, animationsEnabled: true,
+  panelAnimation: true, animationsEnabled: true, cursorEffectsEnabled: true,
   indicatorRecording: true, indicatorRemote: true, indicatorUpdate: true,
   indicatorMicrophone: true, indicatorDnd: true, indicatorNightLight: true, indicatorStayAwake: true,
   osdVolume: true, osdBrightness: true, osdKeyboard: true, osdLayout: true,
@@ -46,7 +46,7 @@ function osdAllowed(settings, kind) { var key = osdKey(kind); return !key || get
 var sections = [
   {id:"general",groups:[
     {id:"opening",rows:[{key:"hoverPreview"},{key:"hoverDelay",type:"delay",dependsOn:"hoverPreview"},{key:"openingPage",type:"choice"}]},
-    {id:"animations",rows:[{key:"panelAnimation"},{key:"animationsEnabled"}]}
+    {id:"animations",rows:[{key:"panelAnimation"},{key:"animationsEnabled"},{key:"cursorEffectsEnabled"}]}
   ]},
   {id:"panel",groups:[
     {id:"pages",rows:registeredPages().map(function(entry){return {key:entry.enabledSetting || entry.id+"Enabled",fixed:!entry.enabledSetting}})},

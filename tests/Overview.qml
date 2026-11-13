@@ -115,7 +115,7 @@ ShellRoot {
     id:window
     color:Island.Design.opaqueCanvas
     visible:true;implicitWidth:560;implicitHeight:660
-    Island.IslandContent {id:overview;anchors.fill:parent;anchors.margins:16;service:service;strings:strings;expanded:true}
+    Island.IslandContent {id:overview;anchors.fill:parent;anchors.margins:16;service:service;strings:strings;expanded:true;onSettingRequested:(key,value)=>{var settings=Object.assign({},Island.Preferences.values);settings[key]=value;Island.Preferences.values=settings}}
     Island.KeyboardNavigation {id:navigation;scope:overview;containers:[overview]}
     TestCase {
       id:test;when:false
@@ -206,6 +206,41 @@ ShellRoot {
         var position=notifications.mapToItem(scroll,0,0)
         verify(position.y>=0 && position.y+notifications.height<=scroll.height+1,"Keyboard did not reveal summary navigation")
         verify(scroll.contentItem.contentY>0,"Small summary is not scrollable")
+        // Customize through the real host controls; retain module instances and drafts.
+        var retainedPlayer=findChild(overview,"islandMediaPlayer")
+        var customize=findChild(overview,"notificationsOpenDetails")
+        customize.forceActiveFocus();overview.configure(customize);wait(30)
+        verify(overview.configuring && !retainedPlayer.visible)
+        verify(findChild(overview,"overviewVisible-battery").visible,"Unavailable module cannot be restored")
+        var hideMedia=findChild(overview,"overviewVisible-media")
+        hideMedia.clicked();wait(30)
+        compare(Island.Preferences.get("overviewLayout").find(function(row){return row.id==="media"}).visible,false)
+        findChild(overview,"overviewUp-notifications").clicked();wait(30)
+        compare(Island.Preferences.get("overviewLayout")[4].id,"notifications")
+        var mediaSize=findChild(overview,"overviewSize-media")
+        mediaSize.changed("large");wait(30)
+        verify(overview.back());wait(30)
+        verify(customize.activeFocus,"Customize did not restore focus")
+        verify(!retainedPlayer.visible,"Hidden module remains visible")
+        compare(findChild(overview,"islandMediaPlayer"),retainedPlayer,"Reordering recreated the module view")
+        overview.expanded=false;overview.alertKind="media";wait(30)
+        verify(retainedPlayer.visible,"Hidden Overview block suppressed the media toast")
+        overview.expanded=true;overview.alertKind="";wait(30)
+        overview.configure(customize);wait(30)
+        findChild(overview,"overviewVisible-media").clicked();wait(30)
+        overview.back();wait(30)
+        verify(retainedPlayer.visible)
+        verify(findChild(overview,"mediaSeek").visible,"Large media did not expose full controls")
+        overview.hovering=false;overview.expanded=false;overview.alertKind="media";wait(30)
+        verify(retainedPlayer.visible,"Layout preferences suppressed the media toast")
+        overview.expanded=true;overview.alertKind=""
+        for(var variant of ["minimal","compact","standard","large"]) {
+          overview.changeLayout("notifications",{size:variant},0);wait(30)
+          var notificationContent=findChild(overview,"notificationContent")
+          compare(notificationContent.notificationLimit,({minimal:0,compact:1,standard:3,large:6})[variant])
+          compare(findChild(overview,"notificationsScroll").visible,variant!=="minimal")
+        }
+        Island.Preferences.values={};wait(30)
         var originalFontSize=Commons.Style.fontBaseSize
         Commons.Style.fontBaseSize=originalFontSize*1.5;wait(40)
         for(var kind of ["attention","working","finished","failed","other"]) {

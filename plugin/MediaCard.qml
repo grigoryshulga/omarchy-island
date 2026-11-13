@@ -16,6 +16,7 @@ Item {
   readonly property bool hovered: hover.hovered
   property bool expanded: false
   property bool compactOverview: false
+  property string overviewSize:"standard"
   property bool active: true
   property bool radialBraille: true
   readonly property var player: service ? service.player : null
@@ -52,9 +53,9 @@ Item {
         Layout.fillWidth: true
         Layout.minimumWidth: 0
         spacing:Design.gap.tight
-        PlainText {visible:root.compactOverview;Layout.fillWidth:true;text:root.player ? root.player.identity : root.strings.t("media.title");typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
+        PlainText {visible:root.compactOverview && root.overviewSize==="standard";Layout.fillWidth:true;text:root.player ? root.player.identity : root.strings.t("media.title");typeRole:"caption";color:Design.secondaryText;elide:Text.ElideRight}
         PlainText { objectName: "mediaTitle"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackTitle || root.strings.t("untitled") : root.strings.t("noMusic"); typeRole: "section" }
-        PlainText { Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Design.accent : Design.secondaryText; typeRole:"caption" }
+        PlainText { visible:root.overviewSize!=="minimal"; Layout.fillWidth: true; Layout.minimumWidth: 0; text: root.player ? root.player.trackArtist || root.player.identity : root.strings.t("musicApps"); color: root.player ? Design.accent : Design.secondaryText; typeRole:"caption" }
       }
       RowLayout {
         objectName:"mediaTransport"
@@ -69,7 +70,7 @@ Item {
     }
     IslandSlider {
       objectName:"mediaCompactProgress"
-      visible:root.compactOverview && root.player && root.player.lengthSupported && root.player.positionSupported
+      visible:root.compactOverview && root.overviewSize==="standard" && root.player && root.player.lengthSupported && root.player.positionSupported
       Layout.fillWidth:true
       bar:root.bar
       fillColor:Design.accent
