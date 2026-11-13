@@ -49,6 +49,11 @@ function batteryFraction(device) {
   return device && device.isPresent ? Math.max(0, Math.min(1, device.percentage)) : 0
 }
 
+function lowBattery(device, onBattery) {
+  return !!device && device.isPresent && !!onBattery &&
+    isFinite(Number(device.percentage)) && batteryFraction(device) < 0.20
+}
+
 function chargeThresholdActive(device, onBattery, states) {
   var d = device || {}
   var s = states || {}
@@ -118,6 +123,7 @@ if (typeof module !== "undefined") {
     parseProfiles: parseProfiles,
     profileIcon: profileIcon,
     batteryFraction: batteryFraction,
+    lowBattery: lowBattery,
     chargeThresholdActive: chargeThresholdActive,
     batteryIcon: batteryIcon,
     modeLabel: modeLabel,

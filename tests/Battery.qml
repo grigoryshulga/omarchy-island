@@ -4,10 +4,20 @@ import Quickshell
 import Quickshell.Services.UPower
 import qs.Commons as Commons
 import "Island" as Island
+import "Island/modules/battery" as Battery
 
 ShellRoot {
   id:scene
   property var selected:[]
+  property int indicatorClicks:0
+  QtObject {
+    id:barPresentation
+    property bool vertical:false
+    property real barSize:36
+    property real barHeight:36
+    property var bar:null
+    property var strings:translations
+  }
   QtObject {
     id:fakePower
     property bool present:true
@@ -37,6 +47,12 @@ ShellRoot {
     visible:true;implicitWidth:480;implicitHeight:300
     Rectangle {
       anchors.fill:parent;color:Commons.Color.popups.background
+      Battery.Indicator {
+        id:indicator;backend:backend;presentation:barPresentation
+        visible:available;width:implicitWidth;height:implicitHeight
+        anchors.bottom:parent.bottom
+        onDetailsRequested:scene.indicatorClicks++
+      }
       Island.BatteryOverview {id:row;anchors.top:parent.top;anchors.topMargin:20;anchors.left:parent.left;anchors.right:parent.right;anchors.margins:16;height:implicitHeight;strings:translations;active:true;power:fakePower}
     }
   }
@@ -68,12 +84,19 @@ ShellRoot {
       wait(30)
       check(gauge.charging,"charging state was not reflected in gauge")
       var reducedMotion=Commons.Style.reduceMotion
+      Commons.Style.reduceMotion=false;wait(30)
+      check(gauge.animating && findChild(gauge,"batteryBrailleProgress").charging===1,"charging wave did not start")
+      var phase=gauge.pulse;wait(100)
+      check(gauge.pulse!==phase,"charging wave phase is frozen")
       Commons.Style.reduceMotion=true;wait(20)
       check(!gauge.animating && gauge.pulse===1,"reduced motion retained charging animation")
       Commons.Style.reduceMotion=reducedMotion
       row.active=false;wait(20)
       check(!gauge.animating && gauge.pulse===1,"hidden gauge retained charging animation")
       row.active=true
+      row.visible=false;wait(30)
+      check(!gauge.animating && gauge.pulse===1,"invisible gauge retained charging wave")
+      row.visible=Qt.binding(function(){return row.present})
       fakePower.device={isPresent:true,percentage:0.78,state:UPowerDeviceState.PendingCharge}
       wait(20)
       check(!gauge.charging && !gauge.animating,"charge threshold animates as charging")
@@ -97,6 +120,25 @@ ShellRoot {
       backend.onBattery=false;backend.setProfile("power-saver")
       tryVerify(function(){return !backend.busy && backend.error!==""},2500)
       check(backend.activeProfile==="performance","failed profile change overwrote current profile")
+      check(!indicator.available,"normal charge shows warning")
+      backend.onBattery=true
+      backend.device={isPresent:true,percentage:0.20};wait(20)
+      check(!indicator.available,"20 percent shows warning")
+      backend.device={isPresent:true,percentage:0.199};wait(20)
+      check(indicator.available && indicator.tooltip.indexOf("20%")>=0,"low charge indicator/tooltip missing")
+      var indicatorButton=findChild(indicator,"batteryIndicatorButton")
+      indicatorButton.forceActiveFocus();keyClick(Qt.Key_Return);wait(20)
+      check(scene.indicatorClicks===1,"battery indicator keyboard action did not open Overview")
+      barPresentation.vertical=true;wait(20)
+      check(indicator.implicitWidth<=barPresentation.barSize && indicatorButton.text.indexOf("\n")>=0,"vertical battery badge is not compact")
+      backend.onBattery=false;wait(20)
+      check(!indicator.available,"AC power retained low charge warning")
+      backend.onBattery=true;backend.allowed=false;wait(20)
+      check(!indicator.available,"disabled battery retained warning")
+      backend.allowed=true;backend.device={isPresent:false,percentage:0};wait(20)
+      check(!indicator.available,"missing battery retained warning")
+      backend.device={isPresent:true,percentage:0};wait(20)
+      check(indicator.available,"empty battery warning missing")
       backend.active=false
       var firstScreen={},secondScreen={}
       backend.watch(firstScreen,true);backend.watch(secondScreen,true)

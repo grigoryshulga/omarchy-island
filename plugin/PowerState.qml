@@ -16,6 +16,7 @@ Item {
   property var device:UPower.displayDevice
   property bool onBattery:UPower.onBattery
   readonly property bool present:!!device && device.isPresent
+  readonly property bool lowCharge:Model.lowBattery(device,onBattery)
   readonly property real fraction:Model.batteryFraction(device)
   readonly property string icon:Model.batteryIcon(device,onBattery,states)
   readonly property var states:({Charging:UPowerDeviceState.Charging,Discharging:UPowerDeviceState.Discharging,FullyCharged:UPowerDeviceState.FullyCharged,PendingCharge:UPowerDeviceState.PendingCharge})

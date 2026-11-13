@@ -22,6 +22,7 @@ BarWidget {
     }
     return tips.join(" · ")
   }
+  readonly property var moduleStrings:strings
   property var registeredIndicators: null
   readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
   property real osdShown:showOsd ? 1 : 0
@@ -222,6 +223,7 @@ BarWidget {
           viewSource:modelData.indicator || ""
           backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
           presentation:QtObject {
+            readonly property var strings:root.moduleStrings
             readonly property bool vertical:root.vertical
             readonly property real barSize:root.barSize
             readonly property real barHeight:trigger.height

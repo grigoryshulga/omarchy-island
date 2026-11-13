@@ -17,11 +17,10 @@ Item {
   implicitHeight:Style.space(10)
   onAnimatingChanged:if(!animating) pulse=1
 
-  SequentialAnimation on pulse {
+  NumberAnimation on pulse {
     running:root.animating
     loops:Animation.Infinite
-    NumberAnimation {from:1;to:0.45;duration:Preferences.duration(800);easing.type:Easing.InOutSine}
-    NumberAnimation {from:0.45;to:1;duration:Preferences.duration(800);easing.type:Easing.InOutSine}
+    from:0;to:1;duration:Preferences.duration(1800)
   }
   ShaderEffect {
     objectName:"batteryBrailleProgress"
@@ -29,9 +28,10 @@ Item {
     property vector2d size:Qt.vector2d(width,height)
     property real amount:Math.max(0,Math.min(1,root.fraction))
     property color accent:root.accent
-    opacity:root.pulse
+    property real phase:root.pulse
+    property real charging:root.animating ? 1 : 0
     transform:Scale {origin.x:root.width/2; xScale:Commons.I18n.rightToLeft ? -1 : 1}
-    vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
-    fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
+    vertexShader:Qt.resolvedUrl("shaders/battery-gauge.vert.qsb")
+    fragmentShader:Qt.resolvedUrl("shaders/battery-gauge.frag.qsb")
   }
 }

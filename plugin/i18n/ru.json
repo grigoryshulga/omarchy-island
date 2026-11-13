@@ -125,6 +125,7 @@
   "controls.stayAwakeShort": "Без сна",
   "controls.recordingShort": "Запись",
   "controls.remoteShort": "Удалённо",
+  "battery.lowCharge": "Низкий заряд батареи",
   "battery.profile": "Профиль питания",
   "battery.profileFailed": "Не удалось сменить профиль питания",
   "battery.hoursMinutes": "%1 ч %2 мин",

@@ -235,3 +235,18 @@ assert.equal(Downloads.retain([partialDownload],directory,now).length,0);
   assert.equal(gauge.leadingSegment(0, 20), 0)
   assert.equal(gauge.leadingSegment(1, 20), 19)
 }
+
+// Only present batteries below the warning boundary on battery power warn.
+{
+  const power = require('../plugin/PowerModel.js')
+  for (const [device, onBattery, expected] of [
+    [{isPresent:true,percentage:0.199},true,true],
+    [{isPresent:true,percentage:0},true,true],
+    [{isPresent:true,percentage:0.20},true,false],
+    [{isPresent:true,percentage:1},true,false],
+    [{isPresent:true,percentage:0.1},false,false],
+    [{isPresent:false,percentage:0},true,false],
+    [{isPresent:true,percentage:NaN},true,false],
+    [null,true,false]
+  ]) assert.equal(power.lowBattery(device,onBattery),expected)
+}

@@ -121,6 +121,7 @@
   "controls.stayAwakeShort": "Stay awake",
   "controls.recordingShort": "Recording",
   "controls.remoteShort": "Remote",
+  "battery.lowCharge": "Low battery",
   "battery.profile": "Power profile",
   "battery.profileFailed": "Could not change the power profile",
   "battery.hoursMinutes": "%1 h %2 min",
