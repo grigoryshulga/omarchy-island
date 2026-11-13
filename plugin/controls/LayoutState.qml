@@ -14,7 +14,8 @@ Item {
   function favorite(key){commit(Model.favorite(layout,key))}
   function toggle(key){commit(Model.toggle(layout,key))}
   function move(group,key,target){commit(Model.move(layout,group,key,target))}
-  function add(key){var next=Model.normalize(layout);if(next.main.indexOf(key)<0) next.main.push(key);next.hidden=next.hidden.filter(function(value){return value!==key});commit(next)}
+  function add(key){var next=Model.normalize(layout);if(next.main.indexOf(key)<0) next.main.push(key);if(next.order.indexOf(key)<0) next.order.push(key);next.hidden=next.hidden.filter(function(value){return value!==key});commit(next)}
+  function resize(key,width,height){commit(Model.resize(layout,key,width,height))}
   function reset(){commit({})}
   Island.ModuleStorage {
     id:storage;enabled:root.allowed

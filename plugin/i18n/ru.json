@@ -467,5 +467,11 @@
   "controls.resetLayout": "Сбросить расположение контролов",
   "controls.all": "Все контролы",
   "controls.favorite": "Показывать в избранном Overview",
-  "controls.favorites": "Избранное"
+  "controls.favorites": "Избранное",
+  "controls.editHint": "Перемещайте плитку за верхний маркер, меняйте размер за нижний угол. Shift+стрелки — размер, Ctrl+←/→ — порядок.",
+  "controls.searchPlugins": "Поиск контролов и плагинов",
+  "controls.noPlugins": "Нет доступных контролов для добавления",
+  "controls.fullRow": "Полная строка",
+  "controls.tileWidth": "Ширина плитки",
+  "controls.tileHeight": "Высота в строках"
 }
