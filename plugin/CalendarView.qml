@@ -302,7 +302,7 @@ Item {
     exit: Transition {NumberAnimation {property:"opacity";to:0;duration:Preferences.duration(100);easing.type:Easing.OutCubic}}
     background: BorderSurface {color:Design.canvas;borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)));radius:Design.cardRadius}
     onOpened: Qt.callLater(root.focusWeekStart)
-    onClosed: if(root.active && root.visible) settingsButton.forceActiveFocus()
+    onClosed: if(root.active && root.visible) {if(root.sourcesMode) sourcesPanel.focusEditor();else settingsButton.forceActiveFocus()}
     contentItem: Column {
       spacing:Design.gap.small
       PlainText {width:parent.width;text:root.strings.t("calendar.weekStartsOn");color:Design.secondaryText;typeRole:"caption";wrapMode:Text.Wrap}
@@ -330,7 +330,7 @@ Item {
         id:subscriptionsButton;objectName:"calendarSubscriptions"
         visible:!!root.subscriptions;width:parent.width
         text:root.strings.t("ics.sources");leftAlign:true;background:"transparent"
-        onClicked:{settingsMenu.close();root.sourcesMode=true;Qt.callLater(sourcesPanel.focusEditor)}
+        onClicked:{root.sourcesMode=true;settingsMenu.close()}
         Keys.onDownPressed:root.stepSetting(2,1)
         Keys.onUpPressed:root.stepSetting(2,-1)
         Keys.onTabPressed:root.stepSetting(2,1)
