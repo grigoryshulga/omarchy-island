@@ -5,10 +5,14 @@ Island.ModuleView {
   id:root
   readonly property bool toast:!presentation.expanded && !presentation.hovering && presentation.alertKind==="media"
   available:!!backend && backend.hasMedia && (presentation.expanded || presentation.hovering || toast)
-  implicitHeight:content.implicitHeight
+  readonly property real toastPadding: toast ? Island.Design.panelPadding : 0
+  implicitHeight:content.implicitHeight + 2 * toastPadding
   interactionHovered:card.hovered
   Column {
-    id:content;width:parent.width;spacing:Island.Design.gap.small
+    id:content
+    x:root.toastPadding; y:root.toastPadding
+    width:Math.max(0, parent.width - 2 * root.toastPadding)
+    spacing:Island.Design.gap.small
     Island.SectionHeading {
       objectName:"mediaSectionHeading";width:parent.width;visible:!root.toast && !card.compactOverview
       title:root.backend && root.backend.player && /spotify/i.test(root.backend.player.identity || "") ? "Spotify" : root.presentation.strings.t("media.title")

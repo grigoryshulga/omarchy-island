@@ -29,9 +29,11 @@ ShellRoot {
       Island.Preferences.values={agentLimitsEnabled:true,agentLimitsIndicator:"warning"}
       tryCompare(backend,"busy",false,3000)
       tryVerify(function(){return backend.rows.length===2},3000)
+      // Catalog loading can schedule a second sync after the first one finishes.
+      wait(300);tryCompare(backend,"busy",false,3000)
       check(backend.automatic.length===1 && backend.summary.length===1,"automatic low quota")
       check(backend.indicatorVisible && backend.tightest.remaining===8,"clock policy")
-      backend.error="invalid";wait(20)
+      backend.error="sync";wait(20)
       check(backend.rows[0].stale,"cache failure looks freshly measured")
       backend.error=""
       check(backend.catalog.length===2,"provider catalog")
@@ -39,14 +41,16 @@ ShellRoot {
       backend.change("codex","disable","","global")
       tryVerify(function(){return backend.catalog.length===2 && !backend.catalog[0].enabled},3000)
       tryCompare(backend,"busy",false,3000)
+      // Configuration also schedules a sync and an asynchronous snapshot reload.
+      wait(300);tryCompare(backend,"busy",false,3000)
       var summaryPin=findChild(overview,"limitPin")
       check(summaryPin && !summaryPin.visible,"compact summary still exposes pin editing")
       var forward=findChild(overview,"limitsExpand"),forwardIcon=forward.iconText
       forward.clicked();wait(30)
       var center=findChild(overview,"limitsCenterContent")
       var status=findChild(center.parent,"limitsCenterStatus")
-      check(!status.visible,"healthy center still shows a tagline")
-      backend.error="invalid";wait(20)
+      tryVerify(function(){return !status.visible},3000)
+      backend.error="sync";wait(20)
       check(status.visible && status.text===strings.t("limits.error"),"center lost its error status")
       backend.error="";wait(20)
       var detailGauge=findChild(center,"limitBrailleProgress")
