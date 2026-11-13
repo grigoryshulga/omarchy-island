@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls as Controls
 import Quickshell
 import qs.Commons
 import qs.Commons as Commons
@@ -22,6 +23,35 @@ Item {
   property bool favoritesInteractive:true
   signal sectionRequested(string key)
   signal allRequested()
+  property bool editing:false
+  property bool adding:false
+  readonly property alias addMenuContent:addPopup.contentItem
+  function configure() {
+    if(!layoutState || !layoutState.ready) return
+    editing=!editing;adding=false
+    if(editing) {
+      if(controlLayout.hidden.indexOf(editableGrid.selectedKey)>=0 || controlLayout.order.indexOf(editableGrid.selectedKey)<0) editableGrid.selectedKey=ControlLayout.tiles(controlLayout)[0].key
+      refreshCatalog()
+    } else editableGrid.focusTile(editableGrid.selectedKey)
+  }
+  function addControl(key) {
+    layoutState.add(key);editableGrid.selectedKey=key;adding=false
+    editableGrid.focusTile(key)
+  }
+  function showAdd() {adding=!adding;if(adding) {refreshCatalog();Qt.callLater(function(){pluginSearch.forceActiveFocus()})}}
+  function addableControls(query) {
+    var rows=controlLayout.hidden.map(function(key){return {key:key,name:root.controlTitle(key)}})
+    externalControls.forEach(function(row){if(root.controlLayout.order.indexOf(row.key)<0 && !rows.some(function(x){return x.key===row.key})) rows.push(row)})
+    query=String(query).toLowerCase().trim()
+    return rows.filter(function(row){return row.name.toLowerCase().indexOf(query)>=0 || row.key.toLowerCase().indexOf(query)>=0})
+  }
+  function enabledState(key) {
+    if(key==="dnd") return !!service && service.doNotDisturb
+    if(key==="microphone") return !!indicators && indicators.microphoneMuted
+    if(key==="remote") return !!indicators && indicators.remoteActive
+    if(["nightLight","stayAwake","recording"].indexOf(key)>=0) return !!indicators && !!indicators[key]
+    return !!controlState && controlState.enabledState(key)
+  }
   property string section:""
   property string error:""
   property bool changing:false
@@ -43,10 +73,6 @@ Item {
     }
     var shortKeys=["dnd","stayAwake","recording"]
     return strings.t(key==="nightLight" ? "indicator.nightLight" : "controls."+key+(shortKeys.indexOf(key)>=0 ? "Short" : ""))
-  }
-  function mainModel() {
-    var icons={audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓"}
-    return controlLayout.main.filter(function(key){return root.controlLayout.hidden.indexOf(key)<0}).map(function(key){return {key:key,icon:icons[key] || "󰒓"}})
   }
   function refreshCatalog() {
     if(!panelCommand.length || catalogBuilder.running) return
@@ -72,8 +98,10 @@ Item {
   implicitHeight:favoriteMode ? favorites.implicitHeight : section ? detailHeight : landing.implicitHeight
 
   function openSection(name) {
+    if(name==="customize") {configure();return}
     if(favoriteMode) {sectionRequested(name);return}
-    if(["audio","bluetooth","network","tailscale","monitors","settings","customize"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
+    if(["audio","bluetooth","network","tailscale","monitors","settings"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
+    editing=false;adding=false
     if(!section) detailHeight=landing.implicitHeight
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
@@ -81,7 +109,6 @@ Item {
     section=name;error=""
     changing=false
     if(name==="settings") Qt.callLater(function(){settingsPage.focusContent()})
-    else if(name==="customize") {refreshCatalog();Qt.callLater(function(){editor.forceActiveFocus()})}
     else requestPanel()
   }
   function launchExternalPanel(id,payload) {
@@ -90,6 +117,8 @@ Item {
     execute(["omarchy-shell","shell","summon",id,payload])
   }
   function back() {
+    if(adding) {adding=false;return}
+    if(editing) {configure();return}
     var previous=section
     settingsPage.closeEditors()
     changing=true
@@ -99,9 +128,7 @@ Item {
     changing=false
     Qt.callLater(function(){
       if(!root.active || root.section) return
-      for(var i=0;i<mainTiles.count;i++) {
-        if(mainTiles.model[i].key===previous) {mainTiles.itemAt(i).forceActiveFocus();break}
-      }
+      editableGrid.focusTile(previous)
     })
   }
   onFavoriteModeChanged:if(favoriteMode) back()
@@ -127,7 +154,7 @@ Item {
   property string buildOutput:""
   property string buildError:""
   function requestPanel() {
-    if(!active || !section || (section==="settings" || section==="customize") || panelBuilder.running) return
+    if(!active || !section || (section==="settings") || panelBuilder.running) return
     if(!panelCommand.length) {error=strings.t("controls.unavailable");return}
     buildingSection=section;buildOutput="";buildError=""
     panelBuilder.command=panelCommand.concat([section])
@@ -136,6 +163,7 @@ Item {
   onActiveChanged: {
     changing=true
     if(!active) {
+      editing=false;adding=false
       panelBuilder.running=false
       settingsPage.closeEditors()
       if(nativeLoader.item) nativeLoader.item.close()
@@ -239,143 +267,47 @@ Item {
     anchors.left:parent.left;anchors.right:parent.right
     visible:!root.section && !root.favoriteMode
     spacing:Design.gap.section
-    GridLayout {
-      objectName:"controlMainGrid"
-      Layout.fillWidth:true
-      columns:2
-      uniformCellWidths:true
-      columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
-      Repeater {
-        id:mainTiles
-        model:root.mainModel()
-        ControlTile {
-          effectsActive:root.active && !root.section
-          required property var modelData
-          objectName:"controlOpen-"+modelData.key
-          Layout.fillWidth:true
-          feedback:root.externalFeedback
-          title:root.controlTitle(modelData.key)
-          showLed:!!root.controlState && root.controlState.available(modelData.key)
-          selected:showLed && root.controlState.enabledState(modelData.key)
-          tooltipText:showLed ? root.strings.t("controls.rightClickToggle")+" · "+root.modeState(selected) : title
-          onRightClicked:if(root.controlState) root.controlState.toggle(modelData.key)
-          glyph:modelData.icon
-          drillDown:true
-          onClicked:root.openSection(modelData.key)
-        }
-      }
-    }
-
-    GridLayout {
-      objectName:"controlQuickGrid"
-      visible:quickTiles.count>0
-      Layout.fillWidth:true
-      columns:3
-      uniformCellWidths:true
-      columnSpacing:Design.gap.small;rowSpacing:Design.gap.small
-      Repeater {
-        id:quickTiles
-        model:root.controlLayout.quick.filter(function(key){return root.controlLayout.hidden.indexOf(key)<0})
-        Loader {
-          required property string modelData
-          Layout.fillWidth:true
-          Layout.preferredHeight:item ? item.implicitHeight : 0
-          sourceComponent:({microphone:quickmicrophone,dnd:quickdnd,nightLight:quicknightLight,stayAwake:quickstayAwake,recording:quickrecording,remote:quickremote})[modelData]
-        }
-      }
-    }
-    FeedbackButton {
-      objectName:"controlCustomize";text:root.strings.t("controls.customize");iconText:"󰒓"
-      focusable:true;feedback:root.externalFeedback
-      onClicked:root.openSection("customize")
-    }
+    EditableGrid {id:editableGrid;Layout.fillWidth:true;host:root}
 
     PlainText {Layout.fillWidth:true;visible:root.error!=="";text:root.error;color:Design.danger;wrapMode:Text.Wrap;typeRole:"caption"}
   }
-  Component {
-    id:quickmicrophone
-    ControlTile {
-      width:parent ? parent.width : implicitWidth
-      effectsActive:root.active && !root.section
-      compact:true
-      objectName:"controlMicrophone";feedback:root.externalFeedback
-      title:root.strings.t("controls.microphone");glyph:"󰍭"
-      tooltipText:root.microphone ? root.modeState(root.indicators.microphoneMuted) : root.strings.t("controls.noMicrophone")
-      selected:root.indicators && root.indicators.microphoneMuted
-      enabled:!!root.microphone
-      onRightClicked:clicked()
-      onClicked:root.toggleMode("microphone")
-    }
-  }
-  Component {
-    id:quickdnd
-    ControlTile {
-      width:parent ? parent.width : implicitWidth
-      effectsActive:root.active && !root.section
-      compact:true
-      objectName:"controlDnd";feedback:root.externalFeedback
-      title:root.strings.t("controls.dndShort");glyph:"󰂛"
-      tooltipText:root.modeState(root.service && root.service.doNotDisturb)
-      selected:root.service && root.service.doNotDisturb
-      onRightClicked:clicked()
-      onClicked:root.toggleMode("dnd")
-    }
-  }
-  Component {
-    id:quicknightLight
-    ControlTile {
-      width:parent ? parent.width : implicitWidth
-      effectsActive:root.active && !root.section
-      compact:true
-      objectName:"controlNightLight";feedback:root.externalFeedback
-      title:root.strings.t("indicator.nightLight");glyph:"󰔎"
-      tooltipText:root.modeState(root.indicators && root.indicators.nightLight)
-      selected:root.indicators && root.indicators.nightLight
-      onRightClicked:clicked()
-      onClicked:root.toggleMode("nightLight")
-    }
-  }
-  Component {
-    id:quickstayAwake
-    ControlTile {
-      width:parent ? parent.width : implicitWidth
-      effectsActive:root.active && !root.section
-      compact:true
-      objectName:"controlStayAwake";feedback:root.externalFeedback
-      title:root.strings.t("controls.stayAwakeShort");glyph:""
-      tooltipText:root.modeState(root.indicators && root.indicators.stayAwake)
-      selected:root.indicators && root.indicators.stayAwake
-      onRightClicked:clicked()
-      onClicked:root.toggleMode("stayAwake")
-    }
-  }
-  Component {
-    id:quickrecording
-    ControlTile {
-      width:parent ? parent.width : implicitWidth
-      effectsActive:root.active && !root.section
-      compact:true
-      objectName:"controlRecording";feedback:root.externalFeedback
-      title:root.strings.t("controls.recordingShort");glyph:"󰻂"
-      tooltipText:root.strings.t(root.indicators && root.indicators.recording ? "controls.stopRecording" : "controls.startRecording")
-      selected:root.indicators && root.indicators.recording
-      glyphColor:selected ? Design.danger : Design.text
-      onRightClicked:clicked()
-      onClicked:root.toggleMode("recording")
-    }
-  }
-  Component {
-    id:quickremote
-    ControlTile {
-      width:parent ? parent.width : implicitWidth
-      effectsActive:root.active && !root.section
-      compact:true
-      objectName:"controlRemote"
-      title:root.strings.t("controls.remoteShort");glyph:"󰢹"
-      tooltipText:root.strings.t(root.indicators && root.indicators.remoteActive ? "controls.connected" : "controls.noConnection")
-      selected:root.indicators && root.indicators.remoteActive
-      glyphColor:selected ? Design.accent : Design.secondaryText
-      enabled:false
+  Controls.Popup {
+    id:addPopup
+    parent:root
+    x:Math.max(0,root.width-width);y:0
+    width:Math.min(root.width,Style.space(360))
+    padding:Design.gap.small
+    visible:root.adding && root.editing && root.active
+    focus:true
+    closePolicy:Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
+    onClosed:{root.adding=false;editableGrid.focusTile(editableGrid.selectedKey)}
+    background:BorderSurface {color:Design.opaqueCanvas;radius:Design.controlRadius;borderSpec:Border.flat(Design.fieldBorder,1)}
+    contentItem:ColumnLayout {
+      DesignTextField {id:pluginSearch;objectName:"controlPluginSearch";Layout.fillWidth:true;placeholderText:root.strings.t("controls.searchPlugins");Accessible.name:placeholderText}
+      Flickable {
+        id:addViewport
+        Layout.fillWidth:true;implicitHeight:Math.min(Style.space(200),addRows.implicitHeight)
+        contentWidth:width;contentHeight:addRows.implicitHeight;clip:true
+        boundsBehavior:Flickable.StopAtBounds
+        ColumnLayout {
+          id:addRows;width:parent.width
+          Repeater {
+            model:root.addableControls(pluginSearch.text)
+            FeedbackButton {
+              required property var modelData
+              objectName:"controlAdd-"+modelData.key
+              Layout.fillWidth:true;text:modelData.name;iconText:"+";focusable:true;feedback:root.externalFeedback
+              onActiveFocusChanged:if(activeFocus) {
+                var at=mapToItem(addRows,0,0).y
+                if(at<addViewport.contentY) addViewport.contentY=at
+                else if(at+height>addViewport.contentY+addViewport.height) addViewport.contentY=at+height-addViewport.height
+              }
+              onClicked:root.addControl(modelData.key)
+            }
+          }
+          PlainText {visible:root.addableControls(pluginSearch.text).length===0;text:root.strings.t("controls.noPlugins");typeRole:"caption"}
+        }
+      }
     }
   }
   Loader {
@@ -384,7 +316,7 @@ Item {
     anchors.left:parent.left;anchors.right:parent.right
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
     anchors.topMargin:Design.gap.small
-    active:root.active && !!root.section && root.section!=="settings" && root.section!=="customize"
+    active:root.active && !!root.section && root.section!=="settings"
     visible:active
     onLoaded:{item.settings=Qt.binding(function(){return root.nativeSettings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
     onStatusChanged:if(status===Loader.Error) root.error=root.strings.t("controls.unavailable")
@@ -419,16 +351,6 @@ Item {
     modules:root.service && root.service.modules ? root.service.modules : ({})
     feedback:root.externalFeedback
     onSettingRequested:(key,value)=>root.settingRequested(key,value)
-  }
-  LayoutEditor {
-    id:editor
-    anchors.left:parent.left;anchors.right:parent.right
-    anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
-    anchors.topMargin:Design.gap.small
-    visible:root.section==="customize"
-    backend:root.layoutState;strings:root.strings;feedback:root.externalFeedback
-    catalog:root.externalControls
-    titleFor:root.controlTitle
   }
   Connections {
     target:nativeLoader.item

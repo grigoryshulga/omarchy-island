@@ -8,7 +8,7 @@ const initial = plain(model.normalize({}));
 assert.equal(initial.main[5], 'settings');
 assert.deepEqual(plain(model.normalize({main:['network','network','../bad','plugin:good.control'], hidden:['settings','network']})), {
   main:['network','plugin:good.control','audio','bluetooth','tailscale','monitors','settings'],
-  quick:initial.quick, hidden:['network'], favorites:initial.favorites
+  quick:initial.quick, order:["network","plugin:good.control","audio","bluetooth","tailscale","monitors","settings"].concat(initial.quick), sizes:{}, hidden:['network'], favorites:initial.favorites
 });
 assert.equal(model.move(initial, 'main', 'audio', 'network').main[2], 'audio');
 assert.equal(model.move(initial, 'main', 'settings', 'audio').main[0], 'settings');
@@ -24,3 +24,22 @@ assert.deepEqual(plain(model.favorite(model.favorite(initial, 'audio'), 'audio')
 
 assert.equal(model.move(initial, "favorites", "audio", "network").favorites[2], "audio");
 assert.deepEqual(plain(model.move(initial, "__proto__", "audio", "network")), initial);
+
+const resized=plain(model.resize(initial,'audio',1,3));
+assert.deepEqual(resized.sizes.audio,{width:1,height:3});
+assert.deepEqual(plain(model.resize(resized,'audio',8,-2)).sizes.audio,{width:4,height:1});
+assert.deepEqual(plain(model.resize(resized,'../bad',2,2)),resized);
+assert.deepEqual(plain(model.normalize({sizes:{audio:{width:'4',height:Infinity}}})).sizes.audio,{width:2,height:1});
+const spans=plain(model.resize(model.resize(initial,'audio',3,2),'bluetooth',1,1));
+const placed=plain(model.tiles(spans));
+const occupied=new Set();
+for(const tile of placed) {
+  assert.ok(tile.column+tile.width<=4);
+  for(let y=0;y<tile.height;y++) for(let x=0;x<tile.width;x++) {
+    const cell=(tile.row+y)*4+tile.column+x;
+    assert.ok(!occupied.has(cell),'overlapping tiles');occupied.add(cell);
+  }
+}
+assert.deepEqual(placed.map(p=>p.key),initial.order);
+assert.equal(model.move(initial,'order','audio','remote').order.at(-1),'audio');
+assert.ok(!model.tiles(model.toggle(initial,'audio')).some(p=>p.key==='audio'));

@@ -7,6 +7,7 @@ FeedbackButton {
   id:root
   property string title: ""
   property string glyph: ""
+  property bool iconOnly:false
   property bool drillDown: false
   property bool showLed: !drillDown
   property bool effectsActive: true
@@ -19,9 +20,10 @@ FeedbackButton {
   background:Design.surface
   RowLayout {
     anchors.fill:parent
-    anchors.leftMargin:Design.gap.medium;anchors.rightMargin:Design.gap.medium
+    anchors.leftMargin:root.iconOnly ? Design.gap.tight : Design.gap.medium;anchors.rightMargin:root.iconOnly ? Design.gap.tight : Design.gap.medium
     anchors.topMargin:Design.gap.tight;anchors.bottomMargin:Design.gap.tight
     spacing:Design.gap.small
+    Item {Layout.fillWidth:true;visible:root.iconOnly}
     PlainText {
       id:glyph
       text:root.glyph;font.pixelSize:root.compact ? Style.font.icon : Style.font.iconLarge;color:root.glyphColor
@@ -36,7 +38,8 @@ FeedbackButton {
       opacity:root.selected ? 1 : 0.35
       IndicatorGlow {anchors.centerIn:parent;active:root.effectsActive && root.selected && root.visible;accent:root.glyphColor;width:Style.space(34);height:width}
     }
-    PlainText {Layout.fillWidth:true;text:root.title;typeRole:"title";font.pixelSize:root.compact ? Design.type.label : Design.type.title;elide:Text.ElideRight}
-    PlainText {visible:root.drillDown;text:Commons.I18n.rightToLeft ? "󰅁" : "󰅂";color:Design.secondaryText;font.pixelSize:Style.font.iconSmall}
+    Item {Layout.fillWidth:true;visible:root.iconOnly}
+    PlainText {visible:!root.iconOnly;Layout.fillWidth:true;text:root.title;typeRole:"title";font.pixelSize:root.compact ? Design.type.label : Design.type.title;elide:Text.ElideRight}
+    PlainText {visible:root.drillDown && !root.iconOnly;text:Commons.I18n.rightToLeft ? "󰅁" : "󰅂";color:Design.secondaryText;font.pixelSize:Style.font.iconSmall}
   }
 }

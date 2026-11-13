@@ -463,5 +463,11 @@
   "controls.resetLayout": "Reset controls layout",
   "controls.all": "All controls",
   "controls.favorite": "Show in Overview favorites",
-  "controls.favorites": "Favorites"
+  "controls.favorites": "Favorites",
+  "controls.editHint": "Drag the top handle to move; drag the bottom corner to resize. Shift+arrows resize, Ctrl+Left/Right move.",
+  "controls.searchPlugins": "Search controls and plugins",
+  "controls.noPlugins": "No controls available to add",
+  "controls.fullRow": "Full row",
+  "controls.tileWidth": "Tile width",
+  "controls.tileHeight": "Height in rows"
 }

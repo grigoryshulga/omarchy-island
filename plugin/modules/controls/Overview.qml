@@ -6,6 +6,11 @@ Island.ModuleView {
   implicitHeight:presentation.detail ? Math.max(content.implicitHeight,presentation.pageHeight-Island.Design.controlHeight-Island.Design.gap.section) : content.implicitHeight
   navigationHidden:content.section==="settings"
   ownsKeys:content.settingsOwnKeys
+  readonly property bool editing:content.editing
+  readonly property bool inPanel:content.section!==""
+  readonly property bool adding:content.adding
+  function configure(){content.configure()}
+  function showAdd(){content.showAdd()}
   property var observedBackend:null
   readonly property bool observing:visible && !!presentation && presentation.active && content.section===""
   function sync(){
@@ -17,7 +22,7 @@ Island.ModuleView {
   onObservingChanged:sync()
   Component.onCompleted:sync()
   Component.onDestruction:if(observedBackend) observedBackend.watch(root,false)
-  function back(){if(content.section) {content.back();return true}return false}
+  function back(){if(content.section || content.editing || content.adding) {content.back();return true}return false}
   Island.ControlsView {
     id:content;objectName:"islandControls";anchors.fill:parent
     service:root.presentation.service;strings:root.presentation.strings;bar:root.presentation.bar
