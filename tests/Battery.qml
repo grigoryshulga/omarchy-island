@@ -49,8 +49,8 @@ ShellRoot {
       check(row.visible && row.height<=Commons.Style.space(50),"battery overview is not a compact block")
       check(findChild(row,"batteryPercentage").text.indexOf("78")>=0,"battery percentage is incorrect")
       var gauge=findChild(row,"batteryGauge")
-      check(gauge && findChild(gauge,"batterySegment-19"),"segmented gauge is missing")
-      check(Math.abs(findChild(gauge,"batterySegment-15").fill-0.6)<0.001,"partial segment lost charge precision")
+      check(gauge && findChild(gauge,"batteryBrailleProgress"),"braille gauge is missing")
+      check(Math.abs(findChild(gauge,"batteryBrailleProgress").amount-0.78)<0.001,"gauge lost charge precision")
       fakePower.fraction=0.20;wait(20)
       check(gauge.accent.toString()===Island.Design.accent.toString(),"20 percent should keep the theme accent")
       fakePower.fraction=0.199;wait(20)
@@ -59,9 +59,9 @@ ShellRoot {
       check(gauge.accent.toString()===gauge.lowChargeColor.toString(),"low charge lost its warning on AC")
       fakePower.onBattery=true
       fakePower.fraction=0;wait(20)
-      check(findChild(gauge,"batterySegment-0").fill===0,"empty battery shows charge")
+      check(findChild(gauge,"batteryBrailleProgress").amount===0,"empty battery shows charge")
       fakePower.fraction=1;wait(20)
-      check(findChild(gauge,"batterySegment-19").fill===1,"full battery has an empty last segment")
+      check(findChild(gauge,"batteryBrailleProgress").amount===1,"full battery has an empty last segment")
       fakePower.fraction=0.78
       fakePower.onBattery=false
       fakePower.device={isPresent:true,percentage:0.78,state:UPowerDeviceState.Charging,changeRate:10,timeToFull:3600}

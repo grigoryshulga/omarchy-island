@@ -13,7 +13,7 @@ Surface {
   property bool compact:false
   property var feedback:null
   property double now:Date.now()
-  Accessible.name:row.name+" · "+row.label
+  Accessible.name:Model.displayName(row)
   Accessible.description:strings.t(row.pendingReset ? "limits.awaitingReset" : row.stale ? "limits.cached" : "limits.remaining")
   signal pinRequested(string id)
   readonly property real padding:compact ? Design.gap.small : Design.gap.large
@@ -27,7 +27,7 @@ Surface {
     spacing:Design.gap.tight
     RowLayout {
       Layout.fillWidth:true
-      PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;typeRole:root.compact ? "body" : "title";text:root.row.name+" · "+root.row.label;elide:Text.ElideRight}
+      PlainText {Layout.fillWidth:true;Layout.minimumWidth:0;typeRole:root.compact ? "body" : "title";text:Model.displayName(root.row);elide:Text.ElideRight}
       ShaderEffect {
         objectName:"limitBrailleProgress"
         visible:root.compact && root.row.remaining!==null

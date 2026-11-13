@@ -1,8 +1,6 @@
 import QtQuick
-import QtQuick.Layouts
 import qs.Commons
 import qs.Commons as Commons
-import "BatteryGaugeModel.js" as Model
 
 Item {
   id:root
@@ -25,32 +23,15 @@ Item {
     NumberAnimation {from:1;to:0.45;duration:Preferences.duration(800);easing.type:Easing.InOutSine}
     NumberAnimation {from:0.45;to:1;duration:Preferences.duration(800);easing.type:Easing.InOutSine}
   }
-  RowLayout {
+  ShaderEffect {
+    objectName:"batteryBrailleProgress"
     anchors.fill:parent
-    spacing:Design.gap.tight
-    layoutDirection:Commons.I18n.rightToLeft ? Qt.RightToLeft : Qt.LeftToRight
-    Repeater {
-      model:20
-      Rectangle {
-        id:segment
-        required property int index
-        readonly property real fill:Model.segmentFill(root.fraction,index,20)
-        objectName:"batterySegment-"+index
-        Layout.fillWidth:true
-        Layout.fillHeight:true
-        radius:Math.min(Style.cornerRadius,Style.space(2))
-        color:Qt.rgba(root.accent.r,root.accent.g,root.accent.b,0.12)
-        Rectangle {
-          objectName:"batterySegmentFill"
-          anchors.top:parent.top
-          anchors.bottom:parent.bottom
-          x:Commons.I18n.rightToLeft ? parent.width-width : 0
-          width:parent.width*segment.fill
-          radius:parent.radius
-          color:root.accent
-          opacity:root.charging && segment.index===Model.leadingSegment(root.fraction,20) ? root.pulse : 1
-        }
-      }
-    }
+    property vector2d size:Qt.vector2d(width,height)
+    property real amount:Math.max(0,Math.min(1,root.fraction))
+    property color accent:root.accent
+    opacity:root.pulse
+    transform:Scale {origin.x:root.width/2; xScale:Commons.I18n.rightToLeft ? -1 : 1}
+    vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
+    fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
   }
 }

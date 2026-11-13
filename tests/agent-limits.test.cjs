@@ -42,3 +42,7 @@ assert.equal(countdown(60000,{pendingReset:true}),'Awaiting confirmed reset');
 assert.equal(countdown(60000,{resetsAt:0}),'');
 assert.equal(countdown(60000,{resetsAt:NaN}),'');
 assert.equal(M.resetCountdown({resetsAt:now+60000},now,resetStrings,v=>'['+v+']'),'Reset in [1] min');
+
+assert.equal(M.displayName({providerId:"codex",name:"ChatGPT / Codex",label:"Weekly (7-day)"}), "Codex Weekly");
+assert.equal(M.displayName({providerId:"codex",name:"Codex",label:"Weekly"}), "Codex Weekly");
+assert.equal(M.displayName({providerId:"claude",name:"Claude",label:"Weekly (7-day)"}), "Claude · Weekly (7-day)");

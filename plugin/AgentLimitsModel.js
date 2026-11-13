@@ -48,6 +48,10 @@ function resetCountdown(row,now,strings,formatNumber) {
   var duration=strings.t(key).replace(/%([1-3])/g,function(_,index){return formatNumber(values[Number(index)-1])})
   return strings.t("limits.resetIn").replace("%1",duration)
 }
+function displayName(row) {
+  if(row.providerId==="codex" && /^Weekly(?: \(7-day\))?$/.test(row.label)) return "Codex Weekly"
+  return row.name+" · "+row.label
+}
 function tightest(rows) {
   return rows.filter(function(r){return r.remaining!==null}).reduce(function(best,r){return !best || r.remaining<best.remaining ? r : best},null)
 }
@@ -70,4 +74,4 @@ function metrics(provider,range) {
   })
   return result
 }
-if(typeof module!=="undefined") module.exports={resetCountdown:resetCountdown,parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}
+if(typeof module!=="undefined") module.exports={displayName:displayName,resetCountdown:resetCountdown,parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}
