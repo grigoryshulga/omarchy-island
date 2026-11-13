@@ -10,6 +10,7 @@ Loader {
   signal closeRequested()
   signal expandRequested()
   signal detailsRequested()
+  signal customizeRequested()
   signal settingRequested(string key,var value)
   function loadView() {
     if(viewSource) setSource(Qt.resolvedUrl(viewSource), {
@@ -24,6 +25,7 @@ Loader {
     function onCloseRequested(){root.closeRequested()}
     function onExpandRequested(){root.expandRequested()}
     function onDetailsRequested(){root.detailsRequested()}
+    function onCustomizeRequested(){root.customizeRequested()}
     function onSettingRequested(key,value){root.settingRequested(key,value)}
   }
 }

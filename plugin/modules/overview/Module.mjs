@@ -1,1 +1,2 @@
-export default {id:"overview",titleKey:"tabs.overview",page:"modules/overview/Page.qml",enabledSetting:"overviewEnabled",pageIndex:1,tabObjectName:"islandTabOverview",defaults:{overviewEnabled:true}};
+import {valid} from "../../OverviewModel.mjs";
+export default {id:"overview",titleKey:"tabs.overview",page:"modules/overview/Page.qml",tab:"modules/overview/Tab.qml",enabledSetting:"overviewEnabled",pageIndex:1,tabObjectName:"islandTabOverview",defaults:{overviewEnabled:true,overviewLayout:[]},validators:{overviewLayout:valid}};

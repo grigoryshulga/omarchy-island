@@ -9,6 +9,7 @@ Island.ModuleView {
     id:content;width:parent.width
     service:root.backend;strings:root.presentation.strings
     expanded:root.presentation.expanded;hovering:root.presentation.hovering
+    overviewSize:root.presentation.size || "standard"
     detailOpen:root.presentation.detail;alertKind:root.presentation.alertKind
     radialBraille:root.presentation.radialBraille;externalFeedback:root.presentation.feedback
     pageHeight:root.presentation.pageHeight
