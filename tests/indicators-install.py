@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from session import ensure
+ensure()
 import json,os,shutil,subprocess,tempfile
 from pathlib import Path
 project=Path(__file__).resolve().parents[1]

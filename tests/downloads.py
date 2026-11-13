@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise real inotify events, including the recursive and rename paths."""
+from session import ensure
+ensure()
 import importlib.machinery
 import importlib.util
 from pathlib import Path

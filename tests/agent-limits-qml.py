@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Real QML state/collector contract and keyboard UI with isolated, aggregate-only fixtures."""
+from session import ensure
+ensure()
 import os, subprocess, tempfile
 from pathlib import Path
 project=Path(__file__).resolve().parents[1]

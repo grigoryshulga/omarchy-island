@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 """Opt-in integration check against the installed Island. Only touches its own test rows."""
+import sys
+if '--live-session' not in sys.argv:
+    raise SystemExit('This check changes the installed Island. Use --live-session explicitly; '
+                     'isolated notification coverage is in bin/test.')
+sys.argv.remove('--live-session')
 import dbus,json,subprocess,time
 
 def ipc(target,method,*args):

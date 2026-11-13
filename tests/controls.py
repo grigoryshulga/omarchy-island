@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise inline native panels without changing radios, devices or connections."""
+from session import ensure
+ensure()
 import os,subprocess,tempfile
 from pathlib import Path
 project=Path(__file__).resolve().parents[1]

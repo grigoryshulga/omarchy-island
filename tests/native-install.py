@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Validate and clone through Omarchy's real CLI, using an isolated home and IPC stub."""
+from session import ensure
+ensure()
 import json
 import os
 from pathlib import Path

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Real calendar and reminder service against an isolated native CLI substitute."""
+from session import ensure
+ensure()
 import json
 import os
 from pathlib import Path

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Wayland: check settings against an isolated fake shell; no session changes."""
+from session import ensure
+ensure()
 import os
 import subprocess
 import tempfile

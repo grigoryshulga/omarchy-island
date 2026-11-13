@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the real notification service on a private D-Bus, never the desktop bus."""
+from session import ensure
+ensure()
 import json
 import os
 from pathlib import Path

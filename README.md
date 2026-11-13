@@ -270,12 +270,23 @@ After editing fragment shaders, run `bin/build-shaders` with Qt `qsb` installed.
 bin/test
 ```
 
-The suite covers JS models, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js, Python, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`; QML interaction tests use offscreen rendering.
+The suite covers JS models, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js, Python, `dbus-run-session`, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`.
+
+`bin/test` runs through `bin/test-session`: disposable HOME, temporary files and runtime directory, a private D-Bus session, and offscreen Qt rendering. Desktop display/IPC variables are not inherited. Python checks also enter this session when invoked directly. The runner cleans up its process group and temporary files on exit. This separates tests from the desktop; it is not a filesystem or network security sandbox.
+
+Wayland checks automatically start a private headless Sway compositor (requires `sway`, with its pixman renderer). If it cannot start, checks fail without connecting to the user's compositor. For an explicit session command:
+
+```bash
+bin/test-session -- python3 tests/overview.py
+bin/test-session --wayland -- python3 tests/keyboard.py
+```
+
+The same commands are intended for CI images containing the dependencies above; a CI workflow/image is not included yet. See [test isolation and module requirements](docs/test-isolation.md).
 
 Additional checks for the affected feature:
 
 ```bash
-python3 tests/live-notifications.py        # Requires a running Island instance
+python3 tests/live-notifications.py --live-session # Explicitly changes the running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
 python3 tests/panel-layout.py              # Wayland panel orientation, edge slots, indicators and compact OSD
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
@@ -299,7 +310,7 @@ python3 tests/performance.py               # QML timings, delegate reuse, focus 
 ISLAND_TEST_GPU=1 python3 tests/weather-summary.py # Weather GPU, themes, layout and reduced motion
 ```
 
-Read scripts before running them: live checks may interact with the current session. Artwork rendering requires OpenGL 3.3, a C++ compiler, and Qt6Gui.
+Read scripts before running them. Only the explicit `--live-session` notification check intentionally uses the desktop. Artwork rendering requires OpenGL 3.3, a C++ compiler, and Qt6Gui. GPU checks need a separately provisioned virtual graphics environment; the default offscreen session does not provide an X server or hardware-GPU validation. Headless Sway support still needs verification on a machine with Sway installed.
 
 The [performance audit](docs/performance-audit.md) records measured bottlenecks and verification. Compare committed sources with `python3 tests/performance.py --baseline-ref <commit>` and the working tree with `--measure-only`; both use an isolated offscreen process. These timings measure synchronous QML work rather than GPU frame time.
 

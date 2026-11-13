@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Send real window key events through the four pages and native controls."""
+from session import ensure
+ensure()
 import os,subprocess,tempfile
 from pathlib import Path
 project=Path(__file__).resolve().parents[1]

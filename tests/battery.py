@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise battery UI and native command protocol without changing system power."""
+from session import ensure
+ensure()
 import os,subprocess,tempfile,json
 from pathlib import Path
 project=Path(__file__).resolve().parents[1]

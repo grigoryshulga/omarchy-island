@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from session import ensure
+ensure()
 import os
 import json
 from pathlib import Path

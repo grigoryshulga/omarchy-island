@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Check actual popup theme bindings without opening windows or sending input."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import subprocess

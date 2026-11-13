@@ -1,3 +1,5 @@
+from session import ensure
+ensure()
 import importlib.util
 import importlib.machinery
 import json

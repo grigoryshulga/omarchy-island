@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise calendar navigation in real QML; report timings and guard reuse/focus."""
+from session import ensure
+ensure()
 import argparse
 import io
 import os

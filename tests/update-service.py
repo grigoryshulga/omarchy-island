@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Check the native update probe's exit-code contract without checking packages."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import subprocess

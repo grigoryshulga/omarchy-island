@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Local fake T3 server: real HTTP/WebSocket, credentials, responses and reconnects."""
+from session import ensure
+ensure()
 import base64
 import copy
 import hashlib

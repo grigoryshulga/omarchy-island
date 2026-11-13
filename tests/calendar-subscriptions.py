@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """QML → stdin protocol → real storage/parser, with only HTTP replaced."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import subprocess

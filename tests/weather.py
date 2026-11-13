@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise weather HTTP and native location handling without live requests."""
+from session import ensure
+ensure()
 import importlib.machinery
 import json
 import os

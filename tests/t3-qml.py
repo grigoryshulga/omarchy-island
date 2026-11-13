@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Offscreen QML forms with a fake bridge; no access to the user's T3 server."""
+from session import ensure
+ensure()
 import json
 import os
 from pathlib import Path

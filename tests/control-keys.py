@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Verify display reorder key dispatch without changing any real displays."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import subprocess

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Verify real theme bindings and editor state in an isolated QML process."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import subprocess

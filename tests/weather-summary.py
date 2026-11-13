@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Check the weather layout in an isolated process; optionally capture GPU frames."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import shlex

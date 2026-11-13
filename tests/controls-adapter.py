@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Cache invalidation and source isolation for embedded system panels."""
+from session import ensure
+ensure()
 from pathlib import Path
 import sys
 import tempfile

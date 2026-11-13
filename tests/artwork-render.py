@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Compare actual shader frames, including a silent audio monitor."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import shlex
@@ -25,7 +27,6 @@ __attribute__((constructor)) static void format() {
     flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','--libs','Qt6Gui'],text=True))
     subprocess.run(['c++','-shared','-fPIC',str(source),'-o',str(library),*flags],check=True)
     env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='rhi',QSG_RHI_BACKEND='opengl',QSG_RENDER_LOOP='basic')
-    env.setdefault('DISPLAY',':0')
     env.setdefault('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}')
     env['LD_PRELOAD']=str(library)+((':'+env['LD_PRELOAD']) if env.get('LD_PRELOAD') else '')
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=8)

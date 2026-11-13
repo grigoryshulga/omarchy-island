@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from session import ensure
+ensure()
 import os,pathlib,subprocess,tempfile
 project=pathlib.Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix='island-motion-') as tmp:

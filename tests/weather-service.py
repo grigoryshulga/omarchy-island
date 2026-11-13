@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Real QML weather service with a deterministic provider and an isolated home."""
+from session import ensure
+ensure()
 import os
 from pathlib import Path
 import shutil

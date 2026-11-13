@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the real installer in temporary homes without touching the desktop."""
+from session import ensure
+ensure()
 import copy
 import json
 import os

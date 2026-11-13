@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Real ICS library, private storage and HTTP policy tests; no account/network."""
+from session import ensure
+ensure()
 import base64
 import datetime as dt
 import importlib.machinery
