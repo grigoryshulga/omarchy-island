@@ -417,5 +417,17 @@
   "patterns.rows": "Список / выбор",
   "patterns.switch": "Включить уведомления",
   "ics.sourcesLoading": "Загрузка календарей…",
-  "ics.sourcesEmpty": "Пока нет календарей"
+  "ics.sourcesEmpty": "Пока нет календарей",
+  "controls.customize": "Настроить контролы",
+  "controls.customizeHint": "Перетащите блок за ручку в пределах группы или используйте кнопки со стрелками. Нажмите на блок, чтобы скрыть или вернуть его.",
+  "controls.panels": "Панели",
+  "controls.quick": "Быстрые контролы",
+  "controls.plugins": "Внешние плагины",
+  "controls.pluginsHint": "Здесь можно добавить установленные плагины Omarchy со стандартной панелью. Код плагина выполняется внутри оболочки; добавляйте только доверенные плагины.",
+  "controls.moveUp": "Переместить вверх",
+  "controls.moveDown": "Переместить вниз",
+  "controls.resetLayout": "Сбросить расположение контролов",
+  "controls.all": "Все контролы",
+  "controls.favorite": "Показывать в избранном Overview",
+  "controls.favorites": "Избранное"
 }

@@ -23,7 +23,7 @@ ShellRoot {
     visible:true;implicitWidth:500;implicitHeight:600
     Island.ModuleSlot {
       id:slot;anchors.fill:parent
-      viewSource:"modules/controls/Page.qml"
+      viewSource:"modules/controls/Overview.qml"
       presentation:QtObject {
         readonly property var service:host
         readonly property var strings:strings
@@ -31,6 +31,10 @@ ShellRoot {
         readonly property var settings:({})
         readonly property var feedback:null
         readonly property bool active:true
+        readonly property bool expanded:true
+        readonly property bool hovering:false
+        readonly property bool detail:true
+        readonly property real pageHeight:600
       }
     }
   }

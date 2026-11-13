@@ -4,10 +4,13 @@ import Quickshell.Io
 import Quickshell.Bluetooth
 import Quickshell.Networking
 import Quickshell.Services.Pipewire
+import "controls"
 import qs.Commons
 
 Item {
   id:root
+  property alias layoutState:layoutState
+  LayoutState {id:layoutState;allowed:root.allowed}
   property bool active:false
   property bool allowed:true
   property var consumers:[]

@@ -1,1 +1,1 @@
-export default {id:"controls",titleKey:"tabs.controls",state:"ControlsState.qml",page:"modules/controls/Page.qml",pageIndex:0,tabObjectName:"islandTabControls"};
+export default {id:"controls",titleKey:"tabs.controls",state:"ControlsState.qml",overview:"modules/controls/Overview.qml",order:{overview:0},overviewShortcut:"Alt+1"};

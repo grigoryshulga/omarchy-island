@@ -21,9 +21,14 @@ ShellRoot {
   }
   QtObject {
     id:tileState
+    property var layoutState:actions.layoutState
     property bool on:true
     property bool known:true
     property var toggled:[]
+    property var panelCommand:actions.panelCommand
+    function watch(item,visible){}
+    function execute(argv){scene.commands=scene.commands.concat([argv])}
+    function systemCall(target,method,args){return {ran:true}}
     function available(key){return known && ["audio","bluetooth","network","tailscale"].indexOf(key)>=0}
     function enabledState(key){return on}
     function toggle(key){if(available(key)) {toggled=toggled.concat([key]);on=!on}}
@@ -39,6 +44,7 @@ ShellRoot {
   }
   QtObject {
     id:service
+    property var modules:({controls:tileState})
     property var indicators:states
     property bool doNotDisturb:false
     function setDoNotDisturb(value){doNotDisturb=value}
@@ -70,6 +76,11 @@ ShellRoot {
     // Offscreen windows need not apply implicit-size requests after creation.
     // Exercise responsive content directly within a stable window surface.
     property int testWidth:520
+    Island.PopupPages {
+      id:overviewPages;anchors.fill:parent;visible:false
+      expanded:true;service:service;strings:translations;bar:bar
+      onPageRequested:index=>selectedPage=index
+    }
     Island.ControlsView {
       id:view;anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;anchors.margins:16
       width:controlsWindow.testWidth-32
@@ -91,6 +102,12 @@ ShellRoot {
       Commons.Style.fontOverrides=({})
       Commons.Style.fontBaseSize=12
       wait(80)
+      tryVerify(function(){return actions.layoutState.ready},3000)
+      if(Quickshell.env("ISLAND_TEST_RESTORE")==="1") {
+        check(view.controlLayout.hidden.indexOf("microphone")>=0 && view.controlLayout.main[0]==="network","Controls layout did not survive restart")
+        check(!findChild(view,"controlMicrophone") && findChild(view,"controlOpen-settings"),"restored composition differs")
+        console.log("CONTROLS_PASS");Qt.quit();return
+      }
       check(view.section==="" && view.implicitHeight>0,"controls landing is empty")
       var loader=findChild(view,"islandNativeControl")
       if(Quickshell.env("ISLAND_TEST_MISSING_SYSTEM")==="1") {
@@ -184,7 +201,7 @@ ShellRoot {
       for(var category of ["panel","modules","alerts","general"]) {
         findChild(settingsView,"settingsTab-"+category).clicked();wait(20)
         check(view.implicitHeight===stableHeight,"settings category resized Controls")
-        if(category==="panel") check(!findChild(settingsView,"setting-controlsEnabled").enabled,"Controls can be disabled, losing Settings access")
+        if(category==="panel") check(!findChild(settingsView,"setting-overviewEnabled").enabled,"Overview can be disabled, losing Settings access")
         if(category==="modules") check(!findChild(settingsView,"setting-musicVisualizationStyle"),"placeholder style remains visible")
         if(category==="alerts") {
           var style=findChild(settingsView,"setting-notificationStyle")
@@ -258,6 +275,39 @@ ShellRoot {
         findChild(view,"controlBack").clicked();wait(30)
         check(view.section==="" && !loader.active,"back did not return to Controls or stop native backend")
       }
+      // Composition editor stays inside Controls and preserves detail geometry.
+      view.openSection("customize");wait(60)
+      var editor=findChild(view,"controlLayoutViewport")
+      check(editor && editor.contentHeight>editor.height,"layout editor does not scroll")
+      check(view.implicitHeight===stableHeight,"layout editor resized the surface")
+      check(!findChild(view,"controlVisibility-settings").enabled,"Settings can be hidden")
+      findChild(view,"controlVisibility-audio").clicked();wait(30)
+      check(!findChild(view,"controlOpen-audio"),"hidden panel still appears")
+      findChild(view,"controlVisibility-audio").clicked();wait(30)
+      check(findChild(view,"controlOpen-audio"),"panel was not restored")
+      findChild(view,"controlMoveDown-audio").clicked();wait(30)
+      check(view.controlLayout.main[1]==="audio","keyboard-accessible reorder failed")
+      check(findChild(view,"controlMoveDown-audio").activeFocus,"reorder lost the focused arrow")
+      actions.layoutState.reset();wait(30);editor.contentY=findChild(view,"controlDrag-audio").mapToItem(editor.contentItem,0,0).y;wait(20)
+      var grip=findChild(view,"controlDrag-audio"),target=findChild(view,"controlDrag-network")
+      var point=target.mapToItem(grip,target.width/2,target.height/2)
+      mousePress(grip,grip.width/2,grip.height/2)
+      mouseMove(grip,point.x,point.y,80)
+      mouseRelease(grip,point.x,point.y);wait(40)
+      check(view.controlLayout.main[2]==="audio","drag did not reorder panels")
+      actions.layoutState.reset();wait(30)
+      tryVerify(function(){return view.externalControls.length===1},3000)
+      check(view.externalControls[0].key==="plugin:fixture.control","catalog included incompatible plugins")
+      findChild(view,"controlAdd-plugin:fixture.control").clicked();wait(30)
+      view.back();wait(30)
+      check(findChild(view,"controlOpen-plugin:fixture.control"),"external plugin tile missing")
+      view.openSection("plugin:fixture.control")
+      tryVerify(function(){return loader.item && loader.item.opened},4000)
+      check(loader.item && loader.item.moduleName==="fixture.control" && !loader.item.manageIpc,"external panel contract differs")
+      check(loader.item.bar.pluginId==="fixture.control" && loader.item.settings.exampleValue===7 && loader.item.settings.recentMullvadRegions===undefined,"external panel received another module identity or settings")
+      view.back();wait(30)
+      check(!loader.item,"external panel remained alive after leaving")
+      actions.layoutState.reset();wait(30)
       // A helper finishing after navigation must not load its old section.
       view.openSection("audio");view.openSection("bluetooth");view.openSection("network")
       tryVerify(function(){return loader.item && loader.item.moduleName==="omarchy.network"},4000)
@@ -275,6 +325,33 @@ ShellRoot {
       view.active=true;tryVerify(function(){return loader.item && loader.item.opened},4000)
       check(loader.item && loader.item.opened,"native detail did not resume on reopen")
       view.back();wait(30)
+      view.active=false;view.visible=false;overviewPages.visible=true;wait(60)
+      check(!findChild(overviewPages,"islandTabControls"),"Controls still has a separate tab")
+      check(overviewPages.enabledPages.indexOf(0)<0,"Controls remains in page navigation")
+      var favorites=findChild(overviewPages,"controlFavorites")
+      check(favorites && favorites.visible && findChild(overviewPages,"controlFavorite-audio"),"Overview favorites strip is missing")
+      var previousDnd=service.doNotDisturb
+      findChild(overviewPages,"controlFavorite-dnd").clicked()
+      check(service.doNotDisturb!==previousDnd,"favorite quick control did not execute")
+      actions.layoutState.favorite("audio");wait(20)
+      check(!findChild(overviewPages,"controlFavorite-audio"),"favorite removal did not update Overview")
+      actions.layoutState.favorite("audio");wait(20)
+      findChild(overviewPages,"controlFavorite-audio").clicked();wait(50)
+      var overviewControl=findChild(overviewPages,"islandNativeControl")
+      tryVerify(function(){return overviewControl.item && overviewControl.item.opened},4000)
+      check(overviewPages.controls && overviewPages.selectedPage===1,"favorite panel did not open within Overview")
+      check(overviewPages.back(),"native detail did not handle Back")
+      check(overviewPages.controls,"Back skipped the full controls page")
+      check(overviewPages.back(),"Controls did not return to summary")
+      check(!overviewPages.controls && favorites.visible,"Controls did not restore Overview summary")
+      findChild(overviewPages,"controlAll").clicked();wait(30)
+      check(overviewPages.controls && findChild(overviewPages,"controlOpen-settings").visible,"All controls did not open full controls")
+      findChild(overviewPages,"controlOpen-settings").clicked();wait(30)
+      check(!findChild(overviewPages,"islandTabs").visible,"embedded settings did not hide main navigation")
+      overviewPages.back();overviewPages.back();wait(20)
+      actions.layoutState.move("main","network","audio")
+      actions.layoutState.toggle("microphone")
+      wait(50)
       console.log("CONTROLS_PASS");Qt.quit()
     }
   }

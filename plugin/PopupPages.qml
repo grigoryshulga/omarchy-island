@@ -23,7 +23,8 @@ Item {
   readonly property bool mediaToast:alertKind==="media" && !expanded && !hovering
   readonly property var notificationIcon: pageObject(1) ? pageObject(1).toastIcon : null
   property int selectedPage:1
-  readonly property bool controls:selectedPage===0
+  readonly property string detailPage:currentPage() && ("detailPage" in currentPage()) ? currentPage().detailPage : ""
+  readonly property bool controls:detailPage==="controls"
   readonly property bool calendar:selectedPage===2
   readonly property bool weather:selectedPage===3
   readonly property var pageDefinitions:Catalog.pages()
@@ -69,6 +70,7 @@ Item {
   function pageObject(index) {var holder=pageHolder(index);return holder ? holder.view.item : null}
   function currentPage() {return pageObject(selectedPage)}
   function enterPage(index) {var page=pageObject(index);if(page) page.enter()}
+  function openDetails(id) {var page=pageObject(1);if(page && typeof page.openDetails==="function") page.openDetails(id)}
   function showToday() {enterPage(2)}
   function back() {return currentPage() ? currentPage().back() : false}
   function updatePages() {
@@ -91,6 +93,7 @@ Item {
   function handleCalendarKey(event) {var page=pageObject(2);return page ? page.handleKey(event) : false}
   function keyboardPage(index) {
     if(!keyboardActive || enabledPages.indexOf(index)<0) return
+    enterPage(index)
     requestPage(index)
     Qt.callLater(function(){var page=root.currentPage();if(page && !page.focusPrimary()) navigation.first(page)})
   }
@@ -109,7 +112,14 @@ Item {
     return direction ? navigation.move(direction.x,direction.y) : false
   }
   KeyboardNavigation {id:navigation;scope:root;containers:[tabs,root.currentPage()]}
-  Shortcut {sequence:"Alt+1";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(0)}
+  Instantiator {
+    model:Catalog.ordered("overview").filter(function(entry){return !!entry.overviewShortcut})
+    delegate:Shortcut {
+      required property var modelData
+      sequence:modelData.overviewShortcut;context:Qt.WindowShortcut;enabled:root.keyboardActive
+      onActivated:{root.keyboardPage(1);root.openDetails(modelData.id)}
+    }
+  }
   Shortcut {sequence:"Alt+2";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(1)}
   Shortcut {sequence:"Alt+3";context:Qt.WindowShortcut;enabled:root.keyboardActive;onActivated:root.keyboardPage(2)}
   Shortcut {sequence:"Alt+4";context:Qt.WindowShortcut;enabled:root.keyboardActive && root.lastPage===3;onActivated:root.keyboardPage(3)}
@@ -174,6 +184,7 @@ Item {
   }
   function requestPage(index) {
     if(enabledPages.indexOf(index)<0) return
+    if(index===selectedPage) enterPage(index)
     wrapping=(pager.currentIndex===0 && index===enabledPages[enabledPages.length-1]) || (pager.currentIndex===enabledPages.length-1 && index===0)
     edgeTarget=-1
     gesturing=false
@@ -281,7 +292,7 @@ Item {
       var first=pager.itemAt(0),last=pager.itemAt(root.enabledPages.length-1)
       if(!first || !last) return
       var low=Math.min(first.x,last.x),high=Math.max(first.x,last.x),threshold=Style.space(40)
-      root.edgeTarget=view.contentX<low-threshold ? (first.x<last.x ? root.enabledPages[root.enabledPages.length-1] : 0) : view.contentX>high+threshold ? (first.x<last.x ? 0 : root.enabledPages[root.enabledPages.length-1]) : -1
+      root.edgeTarget=view.contentX<low-threshold ? (first.x<last.x ? root.enabledPages[root.enabledPages.length-1] : root.enabledPages[0]) : view.contentX>high+threshold ? (first.x<last.x ? root.enabledPages[0] : root.enabledPages[root.enabledPages.length-1]) : -1
     }
     function onMovementEnded() {root.finishGesture()}
     function onContentWidthChanged() {root.scheduleSync()}

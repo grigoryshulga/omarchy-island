@@ -11,7 +11,7 @@ var defaults = {
   osdMicrophone: true, osdModes: true
 }
 var choices = {
-  openingPage: ["overview", "controls", "last"],
+  openingPage: ["overview", "last"],
 }
 function valid(key, value) {
   if (!Object.prototype.hasOwnProperty.call(defaults, key)) return false
@@ -35,8 +35,8 @@ function nextPage(pages, current, step) {
 }
 function openingPage(settings, last) {
   var available = pages(settings), preferred = get(settings, "openingPage")
-  var target = preferred === "last" ? last : preferred === "controls" ? 0 : 1
-  return available.indexOf(target) >= 0 ? target : 0
+  var target = preferred === "last" ? last : 1
+  return available.indexOf(target) >= 0 ? target : 1
 }
 function osdKey(kind) {
   return ({volume:"osdVolume",brightness:"osdBrightness",keyboard:"osdKeyboard",layout:"osdLayout",microphone:"osdMicrophone",mode:"osdModes"})[kind] || ""

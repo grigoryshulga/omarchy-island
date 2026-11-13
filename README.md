@@ -9,7 +9,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 ## Features
 
 - **Overview:** a bounded summary with compact music controls, quota rows, T3 activity counts, and up to three recent notifications. Music has a seekable braille progress bar shared with battery charge and Agent Limits with no submenu. Open another block’s arrow for details in the same page; Back or Escape restores the summary and its keyboard focus. Long content scrolls inside the popup. Notification details include grouped notifications, sender actions, history, copyable verification codes, and per-source mute. MPRIS playback controls appear directly on the popup background (Spotify for Spotify players), with artwork behind the popup. Track-change toasts show only the music controls, without an outer container or section heading. They include seeking and volume when supported by the player, with elapsed and total time at the ends of the progress bar. Devices with a battery also show a braille charge gauge and power profiles. The gauge uses the theme danger role below 20% and shows a travelling pulse through its braille dots while charging (unless reduced motion is enabled). Below 20% while running on battery, a warning icon and percentage appear beside the clock; click to open Overview.
-- **Controls:** embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
+- **Controls in Overview:** a favorites strip with an arrow to the full Controls view, embedded Audio, Bluetooth, Network, Tailscale, and Monitors panels, Island settings, plus quick toggles for microphone mute, DND, night light, idle inhibition, and recording.
 - **Calendar and weather:** month/year navigation, read-only ICS subscriptions, native Omarchy reminders, ISO week numbers, configurable week start, current conditions, a seven-day forecast, city search, and °C / °F / K.
 - **Bar indicators and OSD:** recording, remote sessions, updates, microphone mute, DND, night light, and idle inhibition. Volume and brightness appear as temporary braille gauges; layout changes briefly replace the clock with the language name.
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder when clicked. Completed items remain for up to 30 minutes, capped at 30. File copies also trigger detection; the activity indicator does not represent a download percentage.
@@ -83,6 +83,46 @@ System panels are adapted from the installed Omarchy sources when opened, preser
 
 Control tiles show only an icon and title. Left-click opens a system panel; right-click toggles output audio mute, Bluetooth power, Wi-Fi, or an authorized Tailscale connection. Their LEDs light when sound or the connection is enabled. Quick toggles accept either mouse button; their LEDs show the active mode. Monitors and Settings have no toggle.
 
+Open **Overview → All controls (arrow) → Customize controls** to hide or restore built-in blocks and add installed external controls. Use the star buttons to choose the Overview favorites. Drag a block by its handle to reorder it within Favorites, Panels, or Quick controls; the up/down buttons provide the same operation with Tab and Enter/Space. Settings always remains available. Reset restores the original composition. Changes are shared across monitors and saved immediately in `~/.local/state/omarchy/island/controls.json` (directory `0700`, file `0600`), independently of Island settings.
+
+External controls are discovered through Omarchy's installed-plugin catalog when the editor opens. Controls accepts an `entryPoints.panel` or `entryPoints.barWidget` that implements the existing standard `qs.Ui.Panel` contract with exactly one `KeyboardPanel`, its `open` bound to the panel's `opened`, and a `focusTarget`. Extra Wayland windows are unsupported. Incompatible entries are omitted; a removed or subsequently incompatible plugin keeps its placement and shows an error when opened, so it can still be hidden or restored. Plugins execute trusted QML in the shell process. Controls does not enable plugins globally or change their bar placements.
+
+For a custom control, install a regular Omarchy plugin with a manifest such as:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "example.control",
+  "name": "Example control",
+  "version": "1.0.0",
+  "kinds": ["panel"],
+  "entryPoints": {"panel": "Panel.qml"}
+}
+```
+
+Its minimal `Panel.qml` can be:
+
+```qml
+import QtQuick
+import qs.Ui
+
+Panel {
+  id: root
+  moduleName: "example.control"
+  KeyboardPanel {
+    id: panel
+    open: root.opened
+    focusTarget: panel.loadedContent
+    content: Item {
+      implicitHeight: 100
+      // Add the control's UI and actions here.
+    }
+  }
+}
+```
+
+The existing adapter validates and caches a private copy, disables duplicate IPC and bar buttons, and releases the panel when leaving Controls. External control processes belong to that panel's lifecycle. The editor, layout model, storage, and discovery helpers live in `plugin/controls/`; no new shell-wide registry or settings fields are required.
+
 Cards and control tiles use a subtle fill without permanent outlines; nested action buttons stay transparent until interaction. Transparent page wrappers and grouped notification rows do not introduce additional spotlight boundaries.
 
 The cursor spotlight becomes tighter and brighter inside hovered cards, tiles, and buttons. A soft brightness falloff, inner-edge bloom, and a path trail that fades over 720 ms stay clipped to the hovered surface, including its corners. Nearby elements catch a soft inner-edge glow on the side facing the cursor, including across gaps; transparent wrappers do not gain outlines. This proximity glow remains static with reduced motion. Approaching an edge scatters a few pixels along its inner rim. Reduced motion disables the trail and edge scatter.
@@ -91,7 +131,7 @@ The popup follows the clock on top, bottom, left, and right panels, staying insi
 
 ### Keyboard
 
-In the pinned popup, **Alt+1–4** selects Controls, Overview, Calendar, or Weather. Disabled sections have no shortcut and are skipped by wheel and swipe navigation; the remaining shortcuts keep their numbers. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control. Escape returns from Overview details to the summary, or from Island settings to Controls, before closing the popup. Dropdowns handle their own selection keys and Escape.
+In the pinned popup, **Alt+1** opens the full Controls view inside Overview; **Alt+2–4** selects Overview, Calendar, or Weather. Calendar and Weather can be disabled and are skipped by wheel and swipe navigation; the remaining shortcuts keep their numbers. Controls has no separate tab. Back or Escape returns from a Controls section to all controls, then to the Overview summary. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control. Escape returns from Overview details to the summary, or from Island settings to Controls, before closing the popup. Dropdowns handle their own selection keys and Escape.
 
 In the calendar, arrows or Vim keys move the selected date, **Page Up / Page Down** changes months, and **Home** returns to today. Sliders use **Left / Right** or **H / L**. Embedded system panels retain their native navigation.
 
@@ -131,15 +171,15 @@ omarchy-shell island-update refresh|clear
 
 Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
 
-Open **Controls → Settings** (the sixth tile) for four categories: **General** (opening and animations), **Panel** (pages and bar indicators), **Alerts** (notifications and system events), and **Modules** (Music, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the main page tabs while open, keeping the popup surface size stable and using the freed space for the form. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Controls always remain available so settings cannot become inaccessible. Disabling Overview does not suppress incoming notifications. Disabling Weather also stops weather requests.
+Open **Overview → All controls → Settings** (the sixth tile in the default layout) for four categories: **General** (opening and animations), **Panel** (pages and bar indicators), **Alerts** (notifications and system events), and **Modules** (Music, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the main page tabs while open, keeping the popup surface size stable and using the freed space for the form. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Overview always remains available so Controls and settings cannot become inaccessible. Disabling Weather also stops weather requests.
 
 | Menu setting | Configuration and default |
 |---|---|
 | Preview on hover | `hoverPreview: true`; `hoverDelay: 140` ms, range `0`–`1000` |
-| Opening page | `openingPage: "overview"`; also `controls` or `last` (last page during this shell session); a disabled destination falls back to Controls |
+| Opening page | `openingPage: "overview"`; also `last` (last page during this shell session); a disabled destination falls back to Overview |
 | Bar animations | `panelAnimation: true`; controls bar artwork, beacon waves, and bar transitions |
 | Interface animations | `animationsEnabled: true`; system reduced motion always takes precedence; embedded system panels retain native Omarchy behavior |
-| Sections | `overviewEnabled`, `calendarEnabled`, `weatherEnabled`: all `true` |
+| Sections | `calendarEnabled`, `weatherEnabled`: both `true`; Overview is always available |
 | Track announcements | `trackAlerts: true` |
 | Music visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
 | Visualization style | `musicVisualizationStyle: "default"`; reserved configuration key, not shown in settings |
@@ -176,7 +216,7 @@ For a single dictation OSD, disable other dictation visualizers and the native V
 
 ### Agent limits
 
-Enable **Controls → Settings → Modules → Agent limits → Agent limits integration**. The integration is off by default and stops its collector when disabled or when Overview is disabled. It bundles the collector from [Agent Limits](https://github.com/grigoryshulga/omarchy-agent-limits); the standalone widget does not need to be installed.
+Enable **Overview → All controls → Settings → Modules → Agent limits → Agent limits integration**. The integration is off by default and stops its collector when disabled . It bundles the collector from [Agent Limits](https://github.com/grigoryshulga/omarchy-agent-limits); the standalone widget does not need to be installed.
 
 Overview shows **Automatic + pinned** windows by default. A window appears automatically at 20% remaining or less and stays until it exceeds 25% (five points of hysteresis). The warning threshold is configurable. The critical threshold defaults to 5%; its effective value cannot exceed the warning threshold. You can also choose automatic-only or pinned-only mode.
 
@@ -194,7 +234,7 @@ Presentation keys: `agentLimitsEnabled: false`, `agentLimitsMode: "combined"` (`
 
 Requires a running **local T3 Code server**, its `t3` CLI on the shell's `PATH`, and orchestration protocol **2**. Tested against `0.1.9-nightly.20261111.4515`. The bridge uses Python's standard library; Node.js and extra Python packages are not required.
 
-Enable **Controls → Settings → Modules → T3 Code → T3 Code sessions**. Sessions appear in a dedicated **T3 Code** section in **Overview**, above Notifications and History. The heading shows colored icon counters for requests, working, completed, failed, and other inactive sessions; zero counts are hidden and tooltips explain each icon. Working counters use the same braille spinner as session cards and stop when hidden or reduced motion is enabled. The summary includes compact rows for requests, failures, and at most two working sessions. There is no duplicate total or text summary; completed cards appear in the full T3 list. The arrow opens that list in place of the other Overview blocks; Back or Escape restores the summary. Full cards show the title, project, status, and elapsed time, with inline question forms. Sessions are grouped by status: needs input, completed (including other terminal states), then working, with stable order within each group. Hover previews show at most the first session when it needs attention or is working. The full list scrolls without growing the popup; returning to the summary preserves drafts. Project icons from the API support emoji, monograms, and bundled Lucide geometry, with a folder fallback. Named project colors retain the T3 palette with light/dark variants; icons without a color use the live theme accent. Status icons occupy a fixed-width slot aligned with the session title, so status changes do not shift titles or project icons. Status labels and icons use the live Omarchy blue (working), green (completed), yellow (input needed), and red (failed) palette roles, with readability adjustment. Named colors fall back to ANSI color1–4 and then native theme roles. The bar shows the number of pending requests, or a spinner and working-session count when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. Status changes show a single thread card for four seconds on the focused monitor without taking keyboard focus. The toast has no extra outer container or section heading; its own border and translucent background follow the system popup theme, and radial waves originate at its status icon. Preparatory run states are grouped; metadata updates and initial/reconnection snapshots stay quiet. DND, an open Island panel, and notification toasts suppress these popups. Simultaneous changes prioritize input requests and failures.
+Enable **Overview → All controls → Settings → Modules → T3 Code → T3 Code sessions**. Sessions appear in a dedicated **T3 Code** section in **Overview**, above Notifications and History. The heading shows colored icon counters for requests, working, completed, failed, and other inactive sessions; zero counts are hidden and tooltips explain each icon. Working counters use the same braille spinner as session cards and stop when hidden or reduced motion is enabled. The summary includes compact rows for requests, failures, and at most two working sessions. There is no duplicate total or text summary; completed cards appear in the full T3 list. The arrow opens that list in place of the other Overview blocks; Back or Escape restores the summary. Full cards show the title, project, status, and elapsed time, with inline question forms. Sessions are grouped by status: needs input, completed (including other terminal states), then working, with stable order within each group. Hover previews show at most the first session when it needs attention or is working. The full list scrolls without growing the popup; returning to the summary preserves drafts. Project icons from the API support emoji, monograms, and bundled Lucide geometry, with a folder fallback. Named project colors retain the T3 palette with light/dark variants; icons without a color use the live theme accent. Status icons occupy a fixed-width slot aligned with the session title, so status changes do not shift titles or project icons. Status labels and icons use the live Omarchy blue (working), green (completed), yellow (input needed), and red (failed) palette roles, with readability adjustment. Named colors fall back to ANSI color1–4 and then native theme roles. The bar shows the number of pending requests, or a spinner and working-session count when there are no requests; click the indicator to open Overview. Hover previews are read-only; pin the popup to answer. Status changes show a single thread card for four seconds on the focused monitor without taking keyboard focus. The toast has no extra outer container or section heading; its own border and translucent background follow the system popup theme, and radial waves originate at its status icon. Preparatory run states are grouped; metadata updates and initial/reconnection snapshots stay quiet. DND, an open Island panel, and notification toasts suppress these popups. Simultaneous changes prioritize input requests and failures.
 
 - Options use equal-width columns with complete, wrapping labels and descriptions; narrow cards use one column. Choose a single option, select several when permitted, or expand **Custom answer**. The send button shares the custom-answer row instead of taking its own row. Complete required questions, then choose **Send answer**. Tab / Shift+Tab navigates the form; typing and caret keys stay in the text field.
 - Session updates preserve drafts, focus, and card order within each status group. A replacement question resets its draft. Questions answered in another T3 client disappear after synchronization.
@@ -202,7 +242,7 @@ Enable **Controls → Settings → Modules → T3 Code → T3 Code sessions**. S
 - Permission approvals, secrets/authentication, non-resumable requests, and forms outside the supported bounds are handled in T3. Island never interprets request text as a command.
 - Braille spinners advance in discrete frames and stop on hidden pages, outside the visible list, and when reduced motion is enabled.
 - When T3 is disconnected or has no sessions, its entire section is hidden. Drafts stay in memory for reconnection, and responses remain disabled while disconnected. If no result arrives within 20 seconds, the card marks the send as unconfirmed instead of waiting indefinitely. An unconfirmed send is never retried automatically; check it in T3. Reconnection is automatic.
-- Up to 30 top-level sessions are shown, prioritizing pending requests and running work. Recently finished sessions remain for 30 minutes. Archived, explicitly settled, and child-agent threads are excluded. Overview must be enabled to use the cards.
+- Up to 30 top-level sessions are shown, prioritizing pending requests and running work. Recently finished sessions remain for 30 minutes. Archived, explicitly settled, and child-agent threads are excluded. Overview hosts the cards.
 
 Activity popups are suppressed while a T3 Code desktop window is focused. Focusing T3 Code also closes an existing activity popup. Session cards and the bar indicator keep updating; suppressed popups are not replayed when focus moves elsewhere.
 

@@ -11,6 +11,7 @@ Item {
   required property var service
   required property var strings
   property var bar: null
+  property var settings:({})
   property var externalFeedback: null
   readonly property bool musicHovered: {
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.visible && slot.item && slot.item.interactionHovered) return true}
@@ -33,6 +34,12 @@ Item {
   readonly property var detailDefinition:moduleDefinitions.find(function(entry){return entry.id===root.detailPage}) || null
   property real pageHeight: Style.space(520)
   readonly property bool detailOpen: detailPage!==""
+  readonly property var detailItem: {
+    for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.modelData.id===detailPage) return slot.item}
+    return null
+  }
+  readonly property bool navigationHidden:!!detailItem && detailItem.navigationHidden
+  readonly property bool ownsKeys:!!detailItem && detailItem.ownsKeys
   property var returnFocus: null
   property real summaryScrollY: 0
   KeyboardNavigation {id:detailNavigation;scope:root}
@@ -52,6 +59,7 @@ Item {
   }
   function back() {
     if(!detailOpen) return false
+    if(detailItem && detailItem.back()) return true
     detailPage=""
     restoreSummary()
     return true
@@ -105,6 +113,8 @@ Item {
       backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
       visible:available && (!root.detailOpen || root.detailPage===modelData.id)
       presentation:QtObject {
+        readonly property var service:root.service
+        readonly property var settings:root.settings
         readonly property var strings:root.strings
         readonly property var feedback:root.externalFeedback
         readonly property var bar:root.bar

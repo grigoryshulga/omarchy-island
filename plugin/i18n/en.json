@@ -413,5 +413,17 @@
   "patterns.rows": "List / selection",
   "patterns.switch": "Enable notifications",
   "ics.sourcesLoading": "Loading calendars…",
-  "ics.sourcesEmpty": "No calendars yet"
+  "ics.sourcesEmpty": "No calendars yet",
+  "controls.customize": "Customize controls",
+  "controls.customizeHint": "Drag a handle to reorder within a group, or use the arrow buttons. Select a block to hide or restore it.",
+  "controls.panels": "Panels",
+  "controls.quick": "Quick controls",
+  "controls.plugins": "External plugins",
+  "controls.pluginsHint": "Installed Omarchy plugins with a standard panel entry point can be added here. Plugin code runs inside the shell; add only plugins you trust.",
+  "controls.moveUp": "Move up",
+  "controls.moveDown": "Move down",
+  "controls.resetLayout": "Reset controls layout",
+  "controls.all": "All controls",
+  "controls.favorite": "Show in Overview favorites",
+  "controls.favorites": "Favorites"
 }
