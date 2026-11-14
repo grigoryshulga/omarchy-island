@@ -67,6 +67,8 @@ Item {
   readonly property var controlLayout:layoutState ? layoutState.layout : ControlLayout.normalize({})
   property var externalControls:[]
   function controlTitle(key) {
+    if(ControlLayout.sectionKey(key)) return (controlLayout.sections[key] || {}).title || strings.t("controls.section")
+    if(controlLayout.labels[key] && controlLayout.labels[key].title) return controlLayout.labels[key].title
     if(key.indexOf("plugin:")===0) {
       for(var i=0;i<externalControls.length;i++) if(externalControls[i].key===key) return externalControls[i].name
       return key.slice(7)
@@ -118,6 +120,7 @@ Item {
   }
   function back() {
     if(adding) {adding=false;return}
+    if(editableGrid.dismissEditor()) return
     if(editing) {configure();return}
     var previous=section
     settingsPage.closeEditors()
@@ -234,7 +237,7 @@ Item {
             required property string modelData
             objectName:"controlFavorite-"+modelData
             implicitWidth:Design.controlHeight;implicitHeight:Design.controlHeight
-            iconText:({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
+            iconText:(root.controlLayout.labels[modelData] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
             tooltipText:root.controlTitle(modelData);focusable:true;feedback:root.externalFeedback
             selected:root.controlState && root.controlState.enabledState(modelData)
               || modelData==="dnd" && root.service && root.service.doNotDisturb
@@ -283,6 +286,11 @@ Item {
     onClosed:{root.adding=false;editableGrid.focusTile(editableGrid.selectedKey)}
     background:BorderSurface {color:Design.opaqueCanvas;radius:Design.controlRadius;borderSpec:Border.flat(Design.fieldBorder,1)}
     contentItem:ColumnLayout {
+      FeedbackButton {
+        objectName:"controlAddSection";Layout.fillWidth:true;leftAlign:true
+        text:root.strings.t("controls.sectionItem");iconText:"󰉶";focusable:true;feedback:root.externalFeedback
+        onClicked:{root.adding=false;editableGrid.addSection(editableGrid.selectedKey)}
+      }
       DesignTextField {id:pluginSearch;objectName:"controlPluginSearch";Layout.fillWidth:true;placeholderText:root.strings.t("controls.searchPlugins");Accessible.name:placeholderText}
       Flickable {
         id:addViewport

@@ -107,6 +107,9 @@ ShellRoot {
         check(view.controlLayout.hidden.indexOf("microphone")>=0 && view.controlLayout.main[0]==="network","Controls layout did not survive restart")
         check(!findChild(view,"controlMicrophone") && findChild(view,"controlOpen-settings"),"restored composition differs")
         check(view.controlLayout.sizes.network.width===3 && view.controlLayout.sizes.network.height===2,"tile dimensions did not survive restart")
+        check(view.controlLayout.labels.network.title==="Connections" && view.controlLayout.labels.network.icon==="◎","tile metadata did not survive restart")
+        var savedSection=view.controlLayout.order.filter(function(k){return k.indexOf("section:")===0})[0]
+        check(savedSection && view.controlLayout.sections[savedSection].title==="Devices" && view.controlLayout.sections[savedSection].gap===1,"sections did not survive restart")
         console.log("CONTROLS_PASS");Qt.quit();return
       }
       check(view.section==="" && view.implicitHeight>0,"controls landing is empty")
@@ -276,8 +279,11 @@ ShellRoot {
         findChild(view,"controlBack").clicked();wait(30)
         check(view.section==="" && !loader.active,"back did not return to Controls or stop native backend")
       }
-      // Inline editing keeps the tiles present and does not open a native panel.
+      // Editing preserves the actual layout, without inserting a form or row toolbars.
+      var beforeEditWidth=findChild(view,"controlOpen-audio").width
+      var beforeEditHeight=view.implicitHeight
       view.configure();wait(60)
+      check(findChild(view,"controlOpen-audio").width===beforeEditWidth && view.implicitHeight===beforeEditHeight,"editing changed the layout geometry")
       check(view.editing && view.section==="" && !loader.active,"editing left the controls grid")
       check(findChild(view,"controlOpen-audio"),"editing hides actual tiles")
       check(!findChild(view,"controlHide").enabled || view.controlLayout.hidden.indexOf("settings")<0,"Settings was hidden")
@@ -291,6 +297,8 @@ ShellRoot {
       check(view.controlLayout.sizes.audio.height===2,"keyboard height resize failed")
       var resize=findChild(view,"controlResize-audio")
       mousePress(resize,resize.width/2,resize.height/2)
+      mouseMove(resize,resize.width/2+130,resize.height/2+55,30)
+      check(view.controlLayout.sizes.audio.width===1,"resize persisted before pointer release")
       mouseRelease(resize,resize.width/2+130,resize.height/2+55);wait(30)
       check(view.controlLayout.sizes.audio.width===2 && view.controlLayout.sizes.audio.height===3,"pointer resize did not snap to grid")
       var fontSize=findChild(view,"controlOpen-audio").fontSize
@@ -305,6 +313,44 @@ ShellRoot {
       mouseMove(grip,point.x,point.y,80)
       mouseRelease(grip,point.x,point.y);wait(40)
       check(view.controlLayout.order[2]==="audio","drag did not reorder panels")
+      actions.layoutState.reset();wait(30)
+      // The icon remains part of the drag surface; dragging must not open its editor.
+      grip=findChild(view,"controlDrag-audio");target=findChild(view,"controlDrag-network")
+      point=target.mapToItem(grip,target.width/2,target.height/2)
+      mousePress(grip,16,grip.height/2)
+      mouseMove(grip,point.x,point.y,80)
+      mouseRelease(grip,point.x,point.y);wait(30)
+      check(view.controlLayout.order[2]==="audio" && !findChild(view,"controlEdit-audio").visible,"dragging by icon opened the editor")
+      actions.layoutState.reset();wait(30)
+      // Edit names in place; Escape cancels without leaving the grid.
+      var audioGrip=findChild(view,"controlDrag-audio")
+      mouseDoubleClickSequence(audioGrip,audioGrip.width/2,audioGrip.height/2);wait(30)
+      var nameField=findChild(view,"controlEdit-audio")
+      check(nameField.visible && nameField.activeFocus,"inline name editor did not open")
+      nameField.text="Discard";keyClick(Qt.Key_Escape);wait(20)
+      check(view.editing && !nameField.visible && !view.controlLayout.labels.audio,"Escape did not cancel inline rename")
+      findChild(view,"controlOpen-audio").forceActiveFocus();keyClick(Qt.Key_F2);wait(20)
+      nameField.text="Speakers";keyClick(Qt.Key_Return);wait(20)
+      check(findChild(view,"controlOpen-audio").title==="Speakers","inline name was not applied")
+      audioGrip=findChild(view,"controlDrag-audio")
+      mouseClick(audioGrip,16,audioGrip.height/2);wait(20)
+      var iconField=findChild(view,"controlEdit-audio")
+      check(iconField.visible && iconField.maximumLength===16,"icon click did not open inline editor")
+      iconField.text="♪";keyClick(Qt.Key_Return);wait(20)
+      check(findChild(view,"controlOpen-audio").glyph==="♪","custom tile icon was not applied")
+      view.showAdd();wait(30)
+      findChild(view.addMenuContent,"controlAddSection").clicked();wait(30)
+      check(!view.adding,"adding a section left the add menu open")
+      var sectionKey=view.controlLayout.order[0]
+      check(sectionKey.indexOf("section:")===0,"section was not inserted before row")
+      nameField=findChild(view,"controlEdit-"+sectionKey)
+      check(nameField.visible && nameField.activeFocus,"new section did not begin inline rename")
+      nameField.text="Devices";keyClick(Qt.Key_Return);wait(20)
+      findChild(view,"controlMore-"+sectionKey).clicked();wait(20)
+      findChild(view,"controlGapMore").clicked();findChild(view,"controlGapMore").clicked();wait(20)
+      check(view.controlLayout.sections[sectionKey].title==="Devices" && view.controlLayout.sections[sectionKey].gap===2,"section title or spacing was not applied")
+      findChild(view,"controlHide").clicked();wait(20)
+      check(view.controlLayout.order.indexOf(sectionKey)<0 && findChild(view,"controlOpen-audio"),"deleting a heading deleted its tiles")
       actions.layoutState.reset();wait(30)
       tryVerify(function(){return view.externalControls.length===1},3000)
       check(view.externalControls[0].key==="plugin:fixture.control","catalog included incompatible plugins")
@@ -375,6 +421,9 @@ ShellRoot {
       actions.layoutState.move("main","network","audio")
       actions.layoutState.toggle("microphone")
       actions.layoutState.resize("network",3,2)
+      actions.layoutState.label("network","Connections","◎")
+      actions.layoutState.addSection("network","Devices")
+      actions.layoutState.section(view.controlLayout.order[0],"Devices",1)
       wait(50)
       console.log("CONTROLS_PASS");Qt.quit()
     }

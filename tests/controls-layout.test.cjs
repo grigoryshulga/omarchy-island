@@ -8,7 +8,7 @@ const initial = plain(model.normalize({}));
 assert.equal(initial.main[5], 'settings');
 assert.deepEqual(plain(model.normalize({main:['network','network','../bad','plugin:good.control'], hidden:['settings','network']})), {
   main:['network','plugin:good.control','audio','bluetooth','tailscale','monitors','settings'],
-  quick:initial.quick, order:["network","plugin:good.control","audio","bluetooth","tailscale","monitors","settings"].concat(initial.quick), sizes:{}, hidden:['network'], favorites:initial.favorites
+  quick:initial.quick, order:["network","plugin:good.control","audio","bluetooth","tailscale","monitors","settings"].concat(initial.quick), sizes:{}, labels:{}, sections:{}, hidden:['network'], favorites:initial.favorites
 });
 assert.equal(model.move(initial, 'main', 'audio', 'network').main[2], 'audio');
 assert.equal(model.move(initial, 'main', 'settings', 'audio').main[0], 'settings');
@@ -43,3 +43,21 @@ for(const tile of placed) {
 assert.deepEqual(placed.map(p=>p.key),initial.order);
 assert.equal(model.move(initial,'order','audio','remote').order.at(-1),'audio');
 assert.ok(!model.tiles(model.toggle(initial,'audio')).some(p=>p.key==='audio'));
+
+const labeled=model.label(initial,'audio',' Speakers ','🔊');
+assert.equal(model.normalize(labeled).labels.audio.title,'Speakers');
+assert.equal(model.normalize(labeled).labels.audio.icon,'🔊');
+assert.deepEqual(plain(model.label(initial,'__proto__','bad','bad')),initial);
+const grouped=model.addSection(spans,'network','Connections');
+const sectionKey=grouped.order.find(model.sectionKey);
+assert.equal(grouped.order.indexOf(sectionKey)+1,grouped.order.indexOf('network'));
+const spaced=model.section(grouped,sectionKey,'Network',2);
+const groupedTiles=plain(model.tiles(spaced));
+const header=groupedTiles.find(p=>p.section);
+assert.equal(header.row,4); // two-row audio, followed by two blank rows
+assert.equal(groupedTiles.find(p=>p.key==='network').row,5);
+assert.equal(model.normalize(spaced).sections[sectionKey].title,'Network');
+assert.ok(!model.move(spaced,'order',sectionKey,'audio').main.includes(sectionKey));
+assert.ok(!model.removeSection(spaced,sectionKey).order.includes(sectionKey));
+assert.equal(model.section(spaced,sectionKey,'x',999).sections[sectionKey].gap,4);
+assert.equal(model.label(initial,'audio','x'.repeat(100),'').labels.audio.title.length,80);

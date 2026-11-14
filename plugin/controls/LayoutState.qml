@@ -16,6 +16,10 @@ Item {
   function move(group,key,target){commit(Model.move(layout,group,key,target))}
   function add(key){var next=Model.normalize(layout);if(next.main.indexOf(key)<0) next.main.push(key);if(next.order.indexOf(key)<0) next.order.push(key);next.hidden=next.hidden.filter(function(value){return value!==key});commit(next)}
   function resize(key,width,height){commit(Model.resize(layout,key,width,height))}
+  function label(key,title,icon){commit(Model.label(layout,key,title,icon))}
+  function addSection(before,title){commit(Model.addSection(layout,before,title))}
+  function section(key,title,gap){commit(Model.section(layout,key,title,gap))}
+  function removeSection(key){commit(Model.removeSection(layout,key))}
   function reset(){commit({})}
   Island.ModuleStorage {
     id:storage;enabled:root.allowed
