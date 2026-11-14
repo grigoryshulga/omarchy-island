@@ -105,9 +105,9 @@ ShellRoot {
     property string error:""
     property double now:Date.now()
     property var pins:[]
-    property var cache:({providers:[]})
+    property var cache:({providers:[{id:"codex",name:"Codex"}]})
     property var catalog:[]
-    property var summary:[{id:"quota",name:"Codex",label:"Weekly",remaining:2,stale:true,pendingReset:false,resetsAt:0}]
+    property var summary:[{id:"quota",providerId:"codex",name:"Codex",label:"Weekly",remaining:2,stale:true,pendingReset:false,resetsAt:0}]
     property var rows:summary
     function loadCatalog() {}
     function refresh() {}
@@ -203,7 +203,7 @@ ShellRoot {
         var hostScroll=findChild(overview,"overviewScroll")
         verify(limitsContent.height>Commons.Style.space(300),"Limits list still has an internal height cap")
         verify(!limitsContent.clip,"Limits list must use the host clipping boundary")
-        var lastQuota=findChild(limitsContent,"limitRow-quota-11")
+        var lastQuota=findChild(limitsContent,"limitDetail-quota-11")
         var lastPin=findChild(lastQuota,"limitPin")
         navigation.focusItem(lastPin);wait(30)
         var lastPosition=lastPin.mapToItem(hostScroll,0,0)

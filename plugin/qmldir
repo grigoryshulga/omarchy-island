@@ -96,3 +96,7 @@ ClockLayoutEditor 1.0 ClockLayoutEditor.qml
 
 HerdrState 1.0 HerdrState.qml
 HerdrSessionCard 1.0 HerdrSessionCard.qml
+
+AgentLimitsList 1.0 AgentLimitsList.qml
+AgentLimitsProviderGroup 1.0 AgentLimitsProviderGroup.qml
+AgentLimitDetail 1.0 AgentLimitDetail.qml

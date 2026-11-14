@@ -46,3 +46,34 @@ assert.equal(M.resetCountdown({resetsAt:now+60000},now,resetStrings,v=>'['+v+']'
 assert.equal(M.displayName({providerId:"codex",name:"ChatGPT / Codex",label:"Weekly (7-day)"}), "Codex Weekly");
 assert.equal(M.displayName({providerId:"codex",name:"Codex",label:"Weekly"}), "Codex Weekly");
 assert.equal(M.displayName({providerId:"claude",name:"Claude",label:"Weekly (7-day)"}), "Claude · Weekly (7-day)");
+
+// Presentation semantics: do not claim freshness from absent or future timestamps.
+const freshnessStrings={t:key=>({
+  'limits.cached':'Cached','limits.checkedUnknown':'Unknown',
+  'limits.checkedNow':'Just now','limits.checkedMinutes':'%1 min ago',
+  'limits.window.weekly':'Weekly window','limits.window.session':'Session window'
+})[key]};
+assert.equal(M.freshness({checkedAt:now-180000},now,freshnessStrings,String),'3 min ago');
+assert.equal(M.freshness({checkedAt:now},now,freshnessStrings,String),'Just now');
+for(const checkedAt of [undefined,0,NaN,now+1])
+  assert.equal(M.freshness({checkedAt},now,freshnessStrings,String),'Unknown');
+assert.equal(M.freshness({checkedAt:now,stale:true},now,freshnessStrings,String),'Cached');
+assert.equal(M.windows({providers:[{...cache(20).providers[0],status:'error',limitsCheckedAt:now}]},now)[0].stale,true);
+assert.equal(M.windowLabel({label:'Weekly (7-day)'},freshnessStrings),'Weekly window');
+assert.equal(M.windowLabel({label:'Custom quota'},freshnessStrings),'Custom quota');
+assert.equal(M.windowLabel({label:'constructor'},freshnessStrings),'constructor');
+assert.equal(M.balances({balance:[{currency:'USD',total:0},{currency:'CNY',total:12.5},{currency:'USD',total:null}]},n=>n.toFixed(2)),'USD 0.00 · CNY 12.50');
+const pinIds=[id,M.key('claude','Session'),M.key('disabled','Weekly')];
+assert.deepEqual(M.movePin(pinIds,id,1),[pinIds[1],id,pinIds[2]]);
+for(const [target,step] of [[id,-1],[pinIds[2],1],['missing',1],[id,2]])
+  assert.deepEqual(M.movePin(pinIds,target,step),pinIds);
+assert.equal(pinIds[0],id,'moving pins mutated preferences');
+// A reordered snapshot must preserve surviving delegates, while removed windows disappear.
+const entries=[{id:'a'},{id:'b'}],first=entries[0];
+const list={get count(){return entries.length},get:i=>entries[i],remove:i=>entries.splice(i,1),append:item=>entries.push(item)};
+M.syncIdentities(list,['b','a','c'],'id');
+assert.deepEqual(entries.map(x=>x.id),['a','b','c']);
+assert.equal(entries[0],first);
+M.syncIdentities(list,['c','a'],'id');
+assert.deepEqual(entries.map(x=>x.id),['a','c']);
+console.log('PASS: Limits freshness, balances, pin ordering and stable identities.');

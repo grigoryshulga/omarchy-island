@@ -24,7 +24,7 @@ function windows(cache, now) {
       result.push({id:id,providerId:p.id,name:text(p.name) || p.id,label:text(limit.label,80),
         remaining:known ? (limit.exhausted ? 0 : 100-limit.percent) : null,
         exhausted:known && (limit.exhausted===true || limit.percent>=100),pendingReset:pending,
-        resetsAt:isFinite(reset) ? reset : 0,stale:!!p.stale || p.limitsSource==="record" || cache.state==="error" || (finite(p.limitsCheckedAt) && now-p.limitsCheckedAt>600000),
+        resetsAt:isFinite(reset) ? reset : 0,stale:!!p.stale || p.status==="error" || p.limitsSource==="record" || cache.state==="error" || (finite(p.limitsCheckedAt) && now-p.limitsCheckedAt>600000),
         checkedAt:finite(p.limitsCheckedAt) ? p.limitsCheckedAt : 0})
     })
   })
@@ -74,4 +74,47 @@ function metrics(provider,range) {
   })
   return result
 }
-if(typeof module!=="undefined") module.exports={displayName:displayName,resetCountdown:resetCountdown,parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}
+// Keep delegates (and keyboard focus) alive when measurements replace the snapshot.
+// Existing entries retain their order; new identities are appended.
+function syncIdentities(model, ids, role) {
+  for (var i = model.count - 1; i >= 0; i--)
+    if (ids.indexOf(model.get(i)[role]) < 0) model.remove(i)
+  ids.forEach(function(id) {
+    for (var j = 0; j < model.count; j++)
+      if (model.get(j)[role] === id) return
+    var item = {}
+    item[role] = id
+    model.append(item)
+  })
+}
+
+function movePin(pins, id, direction) {
+  var result = pins.slice(), from = result.indexOf(id), to = from + direction
+  if (from < 0 || to < 0 || to >= result.length || Math.abs(direction) !== 1) return result
+  result.splice(to, 0, result.splice(from, 1)[0])
+  return result
+}
+
+function windowLabel(row, strings) {
+  var labels = {"Weekly": "weekly", "Weekly (7-day)": "weekly", "Session": "session"}
+  return Object.prototype.hasOwnProperty.call(labels, row.label) ? strings.t("limits.window." + labels[row.label]) : row.label
+}
+
+function freshness(row, now, strings, formatNumber) {
+  if (row.stale) return strings.t("limits.cached")
+  if (!finite(row.checkedAt) || row.checkedAt <= 0 || row.checkedAt > now)
+    return strings.t("limits.checkedUnknown")
+  var minutes = Math.floor((now - row.checkedAt) / 60000)
+  return minutes < 1 ? strings.t("limits.checkedNow")
+    : strings.t("limits.checkedMinutes").replace("%1", formatNumber(minutes))
+}
+
+function balances(provider, formatNumber) {
+  return (Array.isArray(provider.balance) ? provider.balance : []).filter(function(balance) {
+    return balance && finite(balance.total) && typeof balance.currency === "string"
+  }).map(function(balance) {
+    return text(balance.currency, 12) + " " + formatNumber(balance.total, 2)
+  }).join(" · ")
+}
+
+if(typeof module!=="undefined") module.exports={syncIdentities:syncIdentities,movePin:movePin,windowLabel:windowLabel,freshness:freshness,balances:balances,displayName:displayName,resetCountdown:resetCountdown,parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}

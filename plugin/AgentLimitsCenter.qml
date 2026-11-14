@@ -16,14 +16,6 @@ Column {
   property var windows:backend ? backend.rows : []
   property var series:range==="today" ? Usage.hourly(backend ? backend.cache : {providers:[]},tab==="cost" ? "cost" : "tokens") : Usage.windowSeries(backend ? backend.cache : {providers:[]},tab==="cost" ? "cost" : "tokens",range)
   property real maximum:Math.max.apply(null,[1].concat(series.map(function(d){return d.value})))
-  ListModel {id:windowItems}
-  function syncWindows() {
-    var ids=windows.map(function(r){return r.id})
-    for(var i=windowItems.count-1;i>=0;i--) if(ids.indexOf(windowItems.get(i).windowId)<0) windowItems.remove(i)
-    ids.forEach(function(id){for(var j=0;j<windowItems.count;j++) if(windowItems.get(j).windowId===id) return;windowItems.append({windowId:id})})
-  }
-  onWindowsChanged:syncWindows()
-  Component.onCompleted:syncWindows()
   signal settingRequested(string key,var value)
   spacing:Design.gap.small
   onVisibleChanged:if(visible && backend) backend.loadCatalog()
@@ -46,32 +38,13 @@ Column {
     id:content
     objectName:"limitsCenterContent"
     width:parent.width;spacing:Design.gap.small
-    Column {
-      visible:root.tab==="limits";width:parent.width;spacing:Design.gap.small
-      Repeater {
-        model:windowItems
-        Column {
-          id:entry
-          required property string windowId
-          readonly property var modelData:root.windows.find(function(r){return r.id===windowId}) || ({id:windowId,name:"",label:"",remaining:null})
-          width:parent.width;spacing:Design.gap.micro
-          AgentLimitRow {width:parent.width;row:entry.modelData;strings:root.strings;feedback:root.feedback;now:root.backend.now;interactive:true;pinned:root.backend.pins.indexOf(row.id)>=0;onPinRequested:id=>root.settingRequested("agentLimitsPins",Model.toggle(root.backend.pins,id))}
-          Row {
-            visible:root.backend.pins.indexOf(entry.modelData.id)>=0
-            FeedbackButton {text:"↑";tooltipText:root.strings.t("limits.moveUp");compact:true;focusable:true;enabled:root.backend.pins.indexOf(entry.modelData.id)>0;onClicked:{var pins=root.backend.pins.slice(),i=pins.indexOf(entry.modelData.id),a=pins[i-1];pins[i-1]=pins[i];pins[i]=a;root.settingRequested("agentLimitsPins",pins)}}
-            FeedbackButton {text:"↓";tooltipText:root.strings.t("limits.moveDown");compact:true;focusable:true;enabled:root.backend.pins.indexOf(entry.modelData.id)<root.backend.pins.length-1;onClicked:{var pins=root.backend.pins.slice(),i=pins.indexOf(entry.modelData.id),a=pins[i+1];pins[i+1]=pins[i];pins[i]=a;root.settingRequested("agentLimitsPins",pins)}}
-          }
-        }
-      }
-      Repeater {
-        model:root.providers
-        PlainText {
-          required property var modelData
-          width:parent.width;typeRole:"caption";wrapMode:Text.Wrap;color:Design.secondaryText
-          text:modelData.name+" · "+((modelData.balance || []).length ? (modelData.balance || []).map(function(b){return String(b.currency)+" "+String(b.total)}).join(" · ") : (modelData.limits || []).length ? String(modelData.plan || "") : root.strings.t("limits.unavailable"))+(modelData.status==="error" ? " · "+root.strings.t("limits.providerError") : modelData.stale ? " · "+root.strings.t("limits.cached") : "")
-        }
-      }
-      PlainText {visible:!root.windows.length;width:parent.width;wrapMode:Text.Wrap;typeRole:"caption";text:root.strings.t("limits.noWindows")}
+    AgentLimitsList {
+      visible: root.tab === "limits"
+      width: parent.width
+      backend: root.backend
+      strings: root.strings
+      feedback: root.feedback
+      onSettingRequested: (key, value) => root.settingRequested(key, value)
     }
     Column {
       visible:root.tab==="usage" || root.tab==="cost";width:parent.width;spacing:Design.gap.small
