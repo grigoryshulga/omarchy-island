@@ -77,7 +77,8 @@ Rectangle {
   color: grouped ? "transparent" : Design.surface
   border.width: 0
   radius: Design.cardRadius
-  implicitHeight: content.implicitHeight + (grouped ? 0 : 2*Design.cardPadding) + (separated ? Design.gap.large : 0)
+  readonly property real verticalPadding:grouped ? 0 : Design.gap.medium
+  implicitHeight: Math.max(content.implicitHeight,footer.visible ? footer.implicitHeight : 0) + 2*verticalPadding + (separated ? Design.gap.large : 0)
   BorderSurface {anchors.fill:parent;color:"transparent";radius:Design.cardRadius;borderSpec:Border.controlSpec("focus",Design.text,Design.accent);visible:root.keyboardFocused}
 
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
@@ -88,8 +89,8 @@ Rectangle {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     anchors.margins: root.grouped ? 0 : Design.cardPadding
-    anchors.topMargin: root.separated ? Design.gap.large : root.grouped ? 0 : Design.cardPadding
-    spacing: root.compact ? Design.gap.tight : Design.gap.small
+    anchors.topMargin: root.separated ? Design.gap.large : root.verticalPadding
+    spacing:Design.gap.tight
     RowLayout {
       visible: !root.grouped
       Layout.fillWidth: true
@@ -117,33 +118,40 @@ Rectangle {
       FeedbackButton { id:rowDismiss; objectName:"notificationDismiss"; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
       }
     }
-    PlainText { objectName:"notificationBody"; Layout.fillWidth: true; visible: text !== ""; text: root.row.members ? root.row.body : Model.plain(root.row.body); typeRole:"caption"; color: Design.secondaryText; wrapMode: Text.Wrap; maximumLineCount: root.compact ? 1 : root.expanded ? 1000 : 2; elide: Text.ElideRight }
-    Item {
-      objectName:"notificationFooter"
-      Layout.fillWidth: true
-      property real reveal: !root.compact && (hover.hovered || root.keyboardFocused) ? 1 : 0
-      implicitHeight: actions.implicitHeight
-      visible: !root.compact && root.hasActions
-      clip: true
-      Behavior on reveal { NumberAnimation { duration: Preferences.duration(150); easing.type: Easing.OutCubic } }
-      Flow {
-        id: actions
-        anchors.right: parent.right
-        property real naturalWidth: {
-          var total=0, count=0
-          for(var i=0;i<children.length;i++) {
-            var child=children[i]
-            if(child.visible && child.implicitWidth>0) { total+=child.implicitWidth; count++ }
-          }
-          return total+Math.max(0,count-1)*spacing
+    PlainText { objectName:"notificationBody"; Layout.fillWidth:true; visible:text!==""; text:root.row.members ? root.row.body : Model.plain(root.row.body); typeRole:"caption"; color:Design.secondaryText; wrapMode:Text.Wrap; maximumLineCount:root.compact ? 1 : root.expanded ? 1000 : 2; elide:Text.ElideRight }
+  }
+  Item {
+    id:footer
+    objectName:"notificationFooter"
+    anchors.right:parent.right;anchors.bottom:parent.bottom
+    anchors.rightMargin:root.grouped ? 0 : Design.cardPadding
+    anchors.bottomMargin:root.verticalPadding
+    width:Math.max(0,Math.min(root.width-(root.grouped ? 0 : 2*Design.cardPadding),actions.naturalWidth+2*Design.gap.micro))
+    property real reveal:!root.compact && (hover.hovered || root.keyboardFocused) ? 1 : 0
+    implicitHeight:actions.implicitHeight+2*Design.gap.micro
+    visible:!root.compact && root.hasActions
+    opacity:reveal;enabled:reveal>0
+    clip:true
+    Behavior on reveal { NumberAnimation { duration: Preferences.duration(150); easing.type: Easing.OutCubic } }
+    Rectangle {anchors.fill:parent;radius:Design.controlRadius;color:Design.raised}
+    Flow {
+      id: actions
+      anchors.right:parent.right;anchors.top:parent.top;anchors.margins:Design.gap.micro
+      property real naturalWidth: {
+        var total=0, count=0
+        for(var i=0;i<children.length;i++) {
+          var child=children[i]
+          if(child.visible && child.implicitWidth>0) { total+=child.implicitWidth; count++ }
         }
-        width: Math.max(0,Math.min(parent.width,naturalWidth))
-        opacity: parent.reveal
-        enabled: parent.reveal>0
+        return total+Math.max(0,count-1)*spacing
+      }
+      width:Math.max(0,parent.width-2*Design.gap.micro)
       spacing:Design.gap.tight
       Repeater {
         model: JSON.parse(root.codeSchema)
         ActionButton {
+          width:Math.min(implicitWidth,actions.width)
+          implicitHeight:Design.inlineControlHeight;verticalPadding:0;horizontalPadding:Design.gap.small
           feedback: root.feedback
           required property string modelData
           objectName: "copyCode-" + modelData
@@ -155,6 +163,8 @@ Rectangle {
       Repeater {
         model: JSON.parse(root.linkSchema)
         ActionButton {
+          width:Math.min(implicitWidth,actions.width)
+          implicitHeight:Design.inlineControlHeight;verticalPadding:0;horizontalPadding:Design.gap.small
           feedback: root.feedback
           required property string modelData
           text: root.strings.t("openLink")
@@ -165,6 +175,8 @@ Rectangle {
       Repeater {
         model: JSON.parse(root.senderSchema)
         ActionButton {
+          width:Math.min(implicitWidth,actions.width)
+          implicitHeight:Design.inlineControlHeight;verticalPadding:0;horizontalPadding:Design.gap.small
           feedback: root.feedback
           required property var modelData
           objectName: "notificationAction-" + modelData.id
@@ -176,6 +188,8 @@ Rectangle {
       Repeater {
         model: JSON.parse(root.execSchema)
         ActionButton {
+          width:Math.min(implicitWidth,actions.width)
+          implicitHeight:Design.inlineControlHeight;verticalPadding:0;horizontalPadding:Design.gap.small
           feedback: root.feedback
           required property var modelData
           objectName: "notificationExecAction-" + modelData.index
@@ -185,6 +199,8 @@ Rectangle {
         }
       }
       ActionButton {
+        width:Math.min(implicitWidth,actions.width)
+        implicitHeight:Design.inlineControlHeight;verticalPadding:0;horizontalPadding:Design.gap.small
         feedback: root.feedback
         objectName: "muteSource"
         visible: !root.grouped
@@ -194,6 +210,5 @@ Rectangle {
         onClicked: root.service.mute(Model.source(root.row))
       }
     }
-  }
   }
 }

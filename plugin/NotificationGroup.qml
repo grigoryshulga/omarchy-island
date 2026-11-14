@@ -37,7 +37,8 @@ Rectangle {
   color: compact ? "transparent" : Design.surface
   border.width: 0
   radius: Design.cardRadius
-  implicitHeight: content.implicitHeight + (compact ? 2*Design.gap.micro : 2*Design.cardPadding)
+  readonly property real verticalPadding:compact ? Design.gap.micro : Design.gap.medium
+  implicitHeight: content.implicitHeight + 2*verticalPadding
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.expandRequested() } }
   HoverHandler { id: hover }
   BrailleFeedback { id: brailleFeedback; surface: root; effect: glow; hover: hover }
@@ -46,7 +47,8 @@ Rectangle {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     anchors.margins: root.compact ? Design.gap.micro : Design.cardPadding
-    spacing: root.compact ? Design.gap.tight : Design.gap.small
+    anchors.topMargin:root.verticalPadding
+    spacing:Design.gap.tight
     RowLayout {
       Layout.fillWidth: true
       Layout.preferredHeight:root.compact ? Design.lineHeight("caption") : Design.inlineControlHeight

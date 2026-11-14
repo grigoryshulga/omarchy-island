@@ -288,6 +288,29 @@ ShellRoot {
       check(singleStamp.mapToItem(single,0,0).x<idleStampX-Commons.Style.space(15),"timestamp did not make room for hover actions")
       console.log("COMPACT_SINGLE_NOTIFICATION_PASS",singleHeight)
       composed.expanded=true;composed.hovering=true
+      service.allEntries=[Object.assign({},service.allEntries[0],{execActions:JSON.stringify([{label:"Open",argv:["xdg-open","/tmp/shot.png"]},{label:"Edit",argv:["editor","/tmp/shot.png"]}])})];wait(40)
+      var overlayCard=findChild(single,"notification-single"),overlay=findChild(single,"notificationFooter")
+      check(single.implicitHeight===singleHeight,"Screenshot actions reserve a separate footer row")
+      check(overlay.parent===overlayCard && overlay.y+overlay.height<=overlayCard.height+1,"Actions are not overlaid inside the card")
+      mouseMove(win.contentItem,1,1);wait(180)
+      check(overlay.opacity<0.01 && !overlay.enabled,"Action overlay remains at rest")
+      mouseMove(overlayCard,overlayCard.width/2,overlayCard.height/2);wait(180)
+      check(overlay.opacity>0.99 && single.implicitHeight===singleHeight,"Hover moves notification content")
+      if(Quickshell.env("ISLAND_NOTIFICATION_CAPTURE")) {
+        single.grabToImage(function(result){result.saveToFile(Quickshell.env("ISLAND_NOTIFICATION_CAPTURE"))})
+        wait(60)
+      }
+      var editShot=findChild(overlayCard,"notificationExecAction-1")
+      mouseClick(editShot)
+      check(service.executedRow==="single:1","Overlay action did not execute")
+      mouseMove(win.contentItem,1,1);wait(180)
+      check(editShot.activeFocus && overlay.opacity>0.99,"Keyboard focus lost the overlay")
+      single.width=240;wait(40)
+      check(overlay.width<=overlayCard.width && overlay.y>=0,"Narrow notification clips its action overlay")
+      service.allEntries=[Object.assign({},service.allEntries[0],{execActions:JSON.stringify([{label:"Open the screenshot in the default image editor",argv:["editor","/tmp/shot.png"]}])})];wait(40)
+      var longAction=findChild(overlayCard,"notificationExecAction-0")
+      check(longAction.width<=overlay.width && overlay.y>=0,"Long action label overflows the overlay")
+      single.width=Qt.binding(function(){return single.parent.width});wait(30)
       service.allEntries=[{key:"new",app:"Test",summary:"Chat",body:"second",ts:3,codes:"222222"},{key:"different",app:"Test",summary:"Other chat",body:"other",ts:2},{key:"old",app:"Test",summary:"Chat",body:"first",ts:1,codes:"111111"}]
       service.actionRows=["new","old"]
       wait(40)
