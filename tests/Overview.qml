@@ -285,6 +285,11 @@ ShellRoot {
         compare(JSON.stringify(Island.Preferences.get("overviewLayout")),canceledOrder,"Canceled edge drag changed the layout")
         var keyboardDrag=findChild(overview,"overviewDrag-notifications")
         navigation.focusItem(keyboardDrag);keyClick(Qt.Key_Up,Qt.ControlModifier);wait(30)
+        verify(keyboardDrag.activeFocus && keyboardDrag.activeFocusOnTab,"Module heading lost keyboard focus after reordering")
+        compare(Commons.Border.left(keyboardDrag.borderSpec),0,"Module heading has a duplicate focus border")
+        var focusedFrame=keyboardDrag.parent
+        while(focusedFrame && !("entryKey" in focusedFrame)) focusedFrame=focusedFrame.parent
+        verify(focusedFrame && focusedFrame.border.width>0,"Focused module lost its outer focus border")
         compare(Island.Preferences.get("overviewLayout")[4].id,"notifications")
         var mediaSize=findChild(overview,"overviewSize-media")
         mediaSize.changed("large");wait(30)

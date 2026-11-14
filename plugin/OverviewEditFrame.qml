@@ -44,6 +44,8 @@ Rectangle {
         tooltipText:root.strings.t("overview.reorder").arg(root.title)
         Accessible.name:tooltipText
         focusable:true;feedback:root.feedback
+        // The module frame already indicates focus for this drag handle.
+        borderSpec:Border.none()
         hasCursor:handleDrag.containsMouse
         Keys.onPressed:event=>{
           if(event.modifiers & Qt.ControlModifier && (event.key===Qt.Key_Up || event.key===Qt.Key_Down)) {
