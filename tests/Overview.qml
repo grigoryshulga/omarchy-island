@@ -203,6 +203,7 @@ ShellRoot {
         var hostScroll=findChild(overview,"overviewScroll")
         verify(limitsContent.height>Commons.Style.space(300),"Limits list still has an internal height cap")
         verify(!limitsContent.clip,"Limits list must use the host clipping boundary")
+        findChild(overview,"limitsEdit").clicked();wait(20)
         var lastQuota=findChild(limitsContent,"limitDetail-quota-11")
         var lastPin=findChild(lastQuota,"limitPin")
         navigation.focusItem(lastPin);wait(30)
@@ -210,6 +211,7 @@ ShellRoot {
         verify(hostScroll.contentItem.contentY>0,"Quota navigation did not scroll the full host")
         verify(lastPosition.y>=0 && lastPosition.y+lastPin.height<=hostScroll.height+1,"Last quota remains clipped after keyboard navigation")
         compare(overview.implicitHeight,height)
+        verify(overview.back());wait(20)
         verify(overview.back());wait(50)
         bridge.rows=finished.concat([
           {id:"busy",title:"Working task",status:"running",requestId:""},

@@ -29,3 +29,7 @@ else:
     print(result.stdout)
     assert 'LIMITS_PASS' in result.stdout and not any(x in result.stdout for x in ['LIMITS_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign','FAIL!'])
     assert (root/'calls.jsonl').exists()
+
+from module_harness import ModuleHarness
+with ModuleHarness() as harness:
+    harness.run(project / 'tests/AgentLimitsEditing.qml', 'LIMITS_EDIT_PASS')

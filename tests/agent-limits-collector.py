@@ -660,6 +660,19 @@ class ProviderSettingsTests(unittest.TestCase):
         MODULE.configure_provider("zai", "down")
         self.assertEqual(MODULE.load_config()["providerOrder"], list(MODULE.PROVIDERS))
 
+    def test_drag_reorders_atomically_and_preserves_settings(self):
+        MODULE.atomic_json(MODULE.CONFIG, {"pricing": {"custom": {"input": 2}}})
+        MODULE.configure_provider("codex", "move", before="opencode-go")
+        self.assertEqual(MODULE.load_config()["providerOrder"][0], "codex")
+        MODULE.configure_provider("codex", "move")
+        self.assertEqual(MODULE.load_config()["providerOrder"][-1], "codex")
+        self.assertEqual(MODULE.read_json(MODULE.CONFIG, {})["pricing"], {"custom": {"input": 2}})
+        previous = MODULE.CONFIG.read_bytes()
+        for target in ("bad", "codex"):
+            with self.assertRaises(MODULE.SyncError):
+                MODULE.configure_provider("codex", "move", before=target)
+            self.assertEqual(MODULE.CONFIG.read_bytes(), previous)
+
     def test_disable_removes_cached_card_even_before_sync(self):
         MODULE.atomic_json(MODULE.CACHE, MODULE.empty_cache())
         MODULE.configure_provider("claude", "disable")

@@ -5,6 +5,11 @@ Island.ModuleView {
   id:root
   available:(presentation.expanded || presentation.hovering) && !!backend && backend.allowed
   implicitHeight:overview.implicitHeight
+  readonly property bool editing: overview.center.editing
+  readonly property bool adding: overview.center.adding
+  function configure() { overview.center.configure() }
+  function showAdd() { overview.center.showAdd() }
+  function back() { return overview.center.back() }
   Island.AgentLimitsOverview {
     id:overview
     width:parent.width

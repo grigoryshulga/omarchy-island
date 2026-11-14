@@ -8,14 +8,27 @@ Column {
   required property var backend
   required property var strings
   property var feedback:null
+  property bool embedded: false
+  property bool adding: false
+  property string providerId: ""
+  signal providerChosen(string id)
+  function prepareProvider() {
+    if (!embedded || adding || !providerId || editingId === providerId || !backend) return
+    var provider = backend.catalog.find(function(p) { return p.id === providerId })
+    if (provider && provider.secretName) {
+      editingId = providerId; secretDraft = provider.secretName; regionDraft = provider.region
+    }
+  }
+  onProviderIdChanged: { editingId = ""; prepareProvider() }
+  onVisibleChanged: if (visible) prepareProvider()
   property string editingId:""
   property string secretDraft:""
   readonly property bool secretDraftValid:/^[A-Za-z_][A-Za-z0-9_.-]{0,99}$/.test(secretDraft)
   property string regionDraft:"global"
   spacing:Design.gap.small
-  PlainText {width:parent.width;wrapMode:Text.Wrap;typeRole:"caption";color:Design.secondaryText;text:root.strings.t("limits.provider.description")}
+  PlainText {visible:!root.embedded;width:parent.width;wrapMode:Text.Wrap;typeRole:"caption";color:Design.secondaryText;text:root.strings.t("limits.provider.description")}
   Repeater {
-    model:root.backend ? root.backend.catalog : []
+    model:root.backend ? root.backend.catalog.filter(function(p) { return !root.embedded || (root.adding ? !p.enabled : p.id === root.providerId) }) : []
     Surface {
       id:card
       required property var modelData
@@ -23,9 +36,22 @@ Column {
       width:root.width;implicitHeight:body.implicitHeight+2*Design.gap.large
       ColumnLayout {
         id:body;x:Design.gap.large;y:Design.gap.large;width:parent.width-2*Design.gap.large;spacing:Design.gap.small
-        PlainText {Layout.fillWidth:true;typeRole:"title";text:card.modelData.name;elide:Text.ElideRight}
-        PlainText {Layout.fillWidth:true;typeRole:"caption";wrapMode:Text.Wrap;color:Design.secondaryText;text:root.strings.t("limits.provider.connect."+card.modelData.id)}
         RowLayout {
+          Layout.fillWidth: true
+          AgentProviderIcon { providerId: card.modelData.id }
+          PlainText {Layout.fillWidth:true;typeRole:"title";text:card.modelData.name;elide:Text.ElideRight}
+          FeedbackButton {
+            objectName: "limitsChooseProvider-" + card.modelData.id
+            visible: root.adding
+            text: "+"; tooltipText: root.strings.t("limits.addProvider")
+            Accessible.name: tooltipText + " · " + card.modelData.name
+            compact: true; focusable: true; feedback: root.feedback
+            onClicked: root.providerChosen(card.modelData.id)
+          }
+        }
+        PlainText {visible:!root.adding || root.editingId===card.modelData.id;Layout.fillWidth:true;typeRole:"caption";wrapMode:Text.Wrap;color:Design.secondaryText;text:root.strings.t("limits.provider.connect."+card.modelData.id)}
+        RowLayout {
+          visible: !root.adding
           Layout.fillWidth:true
           FeedbackButton {
             Layout.fillWidth:true
@@ -35,11 +61,11 @@ Column {
           }
           FeedbackButton {
             objectName:"agentProviderConnect-"+card.modelData.id;text:"󰒓";tooltipText:root.strings.t("limits.provider.connection");focusable:true;compact:true
-            visible:!!card.modelData.secretName;enabled:root.backend && !root.backend.busy
+            visible:!!card.modelData.secretName && !root.embedded;enabled:root.backend && !root.backend.busy
             onClicked:{root.editingId=card.modelData.id;root.secretDraft=card.modelData.secretName;root.regionDraft=card.modelData.region}
           }
-          FeedbackButton {text:"↑";tooltipText:root.strings.t("limits.moveUp");focusable:true;compact:true;enabled:card.index>0 && root.backend && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"up","","global")}
-          FeedbackButton {text:"↓";tooltipText:root.strings.t("limits.moveDown");focusable:true;compact:true;enabled:root.backend && card.index<root.backend.catalog.length-1 && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"down","","global")}
+          FeedbackButton {visible:!root.embedded;text:"↑";tooltipText:root.strings.t("limits.moveUp");focusable:true;compact:true;enabled:card.index>0 && root.backend && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"up","","global")}
+          FeedbackButton {visible:!root.embedded;text:"↓";tooltipText:root.strings.t("limits.moveDown");focusable:true;compact:true;enabled:root.backend && card.index<root.backend.catalog.length-1 && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"down","","global")}
         }
         ColumnLayout {
           visible:root.editingId===card.modelData.id

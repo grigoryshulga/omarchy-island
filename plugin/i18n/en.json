@@ -318,6 +318,8 @@
   "ics.error.unavailable": "Calendar service did not respond. Try refreshing.",
   "ics.sourceList": "Sources",
   "limits.title": "Agent limits",
+  "limits.edit": "Edit",
+  "limits.addProvider": "Add provider",
   "limits.editPins": "Pin order",
   "limits.finishPins": "Done",
   "limits.pinOrderHelp": "Arrows change the overview order. Positions include temporarily unavailable pins.",

@@ -21,17 +21,6 @@ ColumnLayout {
     : row.remaining <= Preferences.get("agentLimitsWarning") ? Design.warning : Design.text
   signal pinsRequested(var pins)
 
-  function movePin(direction) {
-    var button = direction < 0 ? moveUp : moveDown
-    var restoreFocus = button.activeFocus
-    pinsRequested(Model.movePin(pins, row.id, direction))
-    // At a list boundary the activated arrow becomes disabled. Keep navigation
-    // in this window by handing focus to the opposite arrow.
-    if (restoreFocus) Qt.callLater(function() {
-      if (!button.enabled) (direction < 0 ? moveDown : moveUp).forceActiveFocus()
-    })
-  }
-
   objectName: "limitDetail-" + row.id
   spacing: Design.gap.tight
 
@@ -64,6 +53,7 @@ ColumnLayout {
     }
     FeedbackButton {
       objectName: "limitPin"
+      visible: root.editingPins
       compact: true
       focusable: true
       selected: root.pinIndex >= 0
@@ -125,39 +115,6 @@ ColumnLayout {
       wrapMode: Text.Wrap
       color: root.row.stale ? Design.warning : Design.secondaryText
       text: Model.freshness(root.row, root.now, root.strings, Commons.I18n.formatNumber)
-    }
-  }
-  RowLayout {
-    visible: root.editingPins && root.pinIndex >= 0
-    Layout.fillWidth: true
-    PlainText {
-      Layout.fillWidth: true
-      typeRole: "caption"
-      text: root.strings.t("limits.pinPosition").arg(Commons.I18n.formatNumber(root.pinIndex + 1))
-    }
-    FeedbackButton {
-      id: moveUp
-      objectName: "limitMoveUp"
-      text: "↑"
-      tooltipText: root.strings.t("limits.moveUp")
-      Accessible.name: tooltipText + " · " + Model.displayName(root.row)
-      compact: true
-      focusable: true
-      enabled: root.pinIndex > 0
-      feedback: root.feedback
-      onClicked: root.movePin(-1)
-    }
-    FeedbackButton {
-      id: moveDown
-      objectName: "limitMoveDown"
-      text: "↓"
-      tooltipText: root.strings.t("limits.moveDown")
-      Accessible.name: tooltipText + " · " + Model.displayName(root.row)
-      compact: true
-      focusable: true
-      enabled: root.pinIndex >= 0 && root.pinIndex < root.pins.length - 1
-      feedback: root.feedback
-      onClicked: root.movePin(1)
     }
   }
 }

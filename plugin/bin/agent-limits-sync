@@ -196,13 +196,15 @@ def provider_settings() -> dict[str, Any]:
                           for p in provider_order(config)]}
 
 
-def configure_provider(provider_id: str, action: str, secret_name: str | None = None, region: str = "global") -> dict[str, Any]:
-    if provider_id not in PROVIDERS or action not in ("enable", "disable", "up", "down", "connect"):
+def configure_provider(provider_id: str, action: str, secret_name: str | None = None, region: str = "global", before: str = "") -> dict[str, Any]:
+    if provider_id not in PROVIDERS or action not in ("enable", "disable", "up", "down", "connect", "move"):
         raise SyncError("unknown provider or settings action")
     if action == "connect" and (provider_id not in SECRET_DEFAULTS or not secret_name
                                 or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.-]{0,99}", secret_name)
                                 or region not in ("global", "cn")):
         raise SyncError("invalid connection settings")
+    if action == "move" and (before and before not in PROVIDERS or before == provider_id):
+        raise SyncError("invalid reorder target")
     # Do not materialize defaults/pricing or discard unrelated user settings.
     # Refuse malformed files rather than overwriting a configuration we cannot read.
     raw = read_json(CONFIG, None) if CONFIG.exists() else {}
@@ -215,6 +217,9 @@ def configure_provider(provider_id: str, action: str, secret_name: str | None = 
     if action == "connect":
         entry = entries.setdefault(provider_id, {})
         entry.update({"enabled": True, "secretKey": secret_name, "region": region})
+    elif action == "move":
+        order.remove(provider_id)
+        order.insert(order.index(before) if before else len(order), provider_id)
     elif action in ("enable", "disable"):
         entries.setdefault(provider_id, {})["enabled"] = action == "enable"
     else:
@@ -1567,7 +1572,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", nargs="?", default="sync", choices=("sync", "snapshot", "providers", "configure"))
     parser.add_argument("provider", nargs="?", choices=PROVIDERS)
-    parser.add_argument("action", nargs="?", choices=("enable", "disable", "up", "down", "connect"))
+    parser.add_argument("action", nargs="?", choices=("enable", "disable", "up", "down", "connect", "move"))
+    parser.add_argument("--before", default="")
     parser.add_argument("--secret-name")
     parser.add_argument("--region", choices=("global", "cn"), default="global")
     args = parser.parse_args()
@@ -1589,7 +1595,7 @@ def main() -> int:
             return 0
         if args.command == "configure":
             try:
-                result = configure_provider(args.provider, args.action, args.secret_name, args.region)
+                result = configure_provider(args.provider, args.action, args.secret_name, args.region, args.before)
             except Exception:
                 print("could not save provider settings", file=sys.stderr)
                 return 1

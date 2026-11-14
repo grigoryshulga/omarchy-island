@@ -14,6 +14,9 @@ Column {
   property bool editingPins: false
   readonly property string balanceText: Model.balances(provider, Commons.I18n.formatNumber)
   signal pinsRequested(var pins)
+  function focusEditor() { editor.forceActiveFocus() }
+  signal editRequested()
+  signal moveRequested(int direction)
 
   objectName: "limitsProvider-" + provider.id
   spacing: Design.gap.small
@@ -29,12 +32,28 @@ Column {
   RowLayout {
     width: parent.width
     spacing: Design.gap.small
+    AgentProviderIcon { providerId: root.provider.id }
     PlainText {
       objectName: "limitsProviderName"
       Layout.fillWidth: true
       Layout.minimumWidth: 0
       typeRole: "section"
       text: Model.text(root.provider.name) || root.provider.id
+    }
+    FeedbackButton {
+      id: editor
+      objectName: "limitsProviderEdit-" + root.provider.id
+      visible: root.editingPins
+      iconText: "󰒓"
+      tooltipText: root.strings.t("limits.provider.connection")
+      compact: true; focusable: true; feedback: root.feedback
+      onClicked: root.editRequested()
+      Keys.onPressed: event => {
+        if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
+          root.moveRequested(event.key === Qt.Key_Up ? -1 : 1)
+          event.accepted = true
+        }
+      }
     }
     PlainText {
       Layout.maximumWidth: root.width * 0.5

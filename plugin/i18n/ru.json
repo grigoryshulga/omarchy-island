@@ -322,6 +322,8 @@
   "ics.error.unavailable": "Сервис календаря не ответил. Попробуйте обновить.",
   "ics.sourceList": "Источники",
   "limits.title": "Лимиты агентов",
+  "limits.edit": "Редактировать",
+  "limits.addProvider": "Добавить провайдера",
   "limits.editPins": "Порядок закреплений",
   "limits.finishPins": "Готово",
   "limits.pinOrderHelp": "Стрелки меняют порядок в обзоре. Номера учитывают и временно недоступные закрепления.",

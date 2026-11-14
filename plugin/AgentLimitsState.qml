@@ -24,6 +24,12 @@ Item {
   Connections {target:Preferences;function onValuesChanged(){root.automatic=Model.attention(root.rows,root.automatic,Preferences.get("agentLimitsWarning"))}}
   function refresh() {if(allowed && !busy) sync.running=true}
   function loadCatalog() {if(allowed && !configure.running) {configure.command=[collector,"providers"];configure.running=true}}
+  function moveProvider(id, before) {
+    if (!allowed || busy || !catalog.some(function(p) { return p.id === id })
+        || (before && !catalog.some(function(p) { return p.id === before })) || id === before) return
+    configure.command = [collector, "configure", id, "move", "--before", before]
+    configure.running = true
+  }
   function change(id,action,secret,region) {
     if(!allowed || busy || !catalog.some(function(p){return p.id===id}) || ["enable","disable","up","down","connect"].indexOf(action)<0) return
     if(action==="connect" && (!/^[A-Za-z_][A-Za-z0-9_.-]{0,99}$/.test(secret) || ["global","cn"].indexOf(region)<0)) return

@@ -12,6 +12,7 @@ Column {
   required property var backend
   required property var strings
   property bool expanded:false
+  property alias center: center
   property bool centerOpen:false
   property bool compact:false
   property bool showHeader:!compact
@@ -80,6 +81,7 @@ Column {
     onActionRequested:root.backend.refresh()
   }
   AgentLimitsCenter {
+    id: center
     width:parent.width
     visible:root.centerOpen && root.expanded
     backend:root.backend;strings:root.strings;feedback:root.feedback

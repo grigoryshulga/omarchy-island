@@ -93,7 +93,11 @@ Item {
     }
     if(configuring) {configuring=false;restoreSummary();return true}
     if(!detailOpen) return false
-    if(detailItem && detailItem.back()) return true
+    if(detailItem && detailItem.back()) {
+      if (detailPage === "agentLimits" && !detailItem.editing)
+        Qt.callLater(function() { detailNavigation.focusItem(limitsEditButton) })
+      return true
+    }
     detailPage=""
     restoreSummary()
     return true
@@ -166,6 +170,22 @@ Item {
     visible:root.detailPage!=="" && !(root.detailPage==="controls" && root.detailItem && root.detailItem.inPanel)
     Layout.fillWidth:true
     SectionHeading {Layout.fillWidth:true;title:root.detailDefinition ? (root.detailDefinition.title || root.strings.t(root.detailDefinition.titleKey)) : root.strings.t("notifications.active")}
+    FeedbackButton {
+      objectName: "limitsAddProvider"
+      visible: root.detailPage === "agentLimits" && !!root.detailItem && root.detailItem.editing
+      text: "+"; tooltipText: root.strings.t("limits.addProvider")
+      compact: true; focusable: true; feedback: root.externalFeedback
+      onClicked: root.detailItem.showAdd()
+    }
+    FeedbackButton {
+      id: limitsEditButton
+      objectName: "limitsEdit"
+      visible: root.detailPage === "agentLimits"
+      text: root.strings.t(root.detailItem && root.detailItem.editing ? "limits.finishPins" : "limits.edit")
+      selected: !!(root.detailItem && root.detailItem.editing)
+      compact: true; focusable: true; feedback: root.externalFeedback
+      onClicked: root.detailItem.configure()
+    }
     FeedbackButton {objectName:"overviewBack";implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
     FeedbackButton {objectName:"controlCustomize";visible:root.detailPage==="controls";iconText:"󰒓";tooltipText:root.strings.t("controls.customize");selected:root.detailItem && root.detailItem.editing || false;focusable:true;compact:true;feedback:root.externalFeedback;onClicked:if(root.detailItem) root.detailItem.configure()}
     FeedbackButton {objectName:"controlAddMenu";visible:root.detailPage==="controls" && root.detailItem && root.detailItem.editing || false;iconText:"+";tooltipText:root.strings.t("controls.plugins");selected:root.detailItem && root.detailItem.adding || false;focusable:true;compact:true;feedback:root.externalFeedback;onClicked:if(root.detailItem) root.detailItem.showAdd()}

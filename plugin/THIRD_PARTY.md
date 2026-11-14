@@ -54,4 +54,8 @@ SOFTWARE.
 
 ## Agent Limits
 
-`bin/agent-limits-sync`, `vendor/agent-limits/defaults.json`, the pure JS usage helpers, provider connection descriptions, and the collector tests are adapted from Grigory Shulga's [omarchy-agent-limits](https://github.com/grigoryshulga/omarchy-agent-limits), revision `06aea198476a0ff4fadb656ed5ac2b0439852a5a` (MIT). Island changes the defaults path and propagates unpriced token counts through aggregate buckets and enforces private cache permissions. UI components are implemented with Island's own design system. No provider brand assets are copied. See [license](vendor/agent-limits/LICENSE).
+`bin/agent-limits-sync`, `vendor/agent-limits/defaults.json`, the pure JS usage helpers, provider connection descriptions, and the collector tests are adapted from Grigory Shulga's [omarchy-agent-limits](https://github.com/grigoryshulga/omarchy-agent-limits), revision `06aea198476a0ff4fadb656ed5ac2b0439852a5a` (MIT). Island changes the defaults path and propagates unpriced token counts through aggregate buckets and enforces private cache permissions. UI components are implemented with Island's own design system. Provider logos are attributed separately below. See [license](vendor/agent-limits/LICENSE).
+
+## Lobe Icons
+
+`vendor/lobe-icons/*.svg` contains the unmodified monochrome OpenAI, Claude, OpenCode, Z.ai, DeepSeek, OpenRouter, Kimi, Moonshot, MiniMax and Gemini icons from [Lobe Icons](https://github.com/lobehub/lobe-icons), revision `a177c1e817204f8ddc0c8993610ca674fc6d9767` (MIT). Island replaces `currentColor` with the live text color when rendering. Brand marks belong to their respective owners. See [license](vendor/lobe-icons/LICENSE).

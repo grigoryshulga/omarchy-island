@@ -11,18 +11,34 @@ Column {
   required property var strings
   property var feedback:null
   property string tab:"limits"
+  property bool editing: false
+  property bool adding: false
+  property string selectedProvider: ""
+  function configure() {
+    editing = !editing
+    adding = false
+    selectedProvider = ""
+    tab = "limits"
+  }
+  function showAdd() { adding = !adding; selectedProvider = ""; tab = "limits" }
+  function back() {
+    if (limitsList.cancelDrag()) return true
+    if (adding || selectedProvider) { var id = selectedProvider; adding = false; selectedProvider = ""; Qt.callLater(function() { limitsList.focusProvider(id) }); return true }
+    if (editing) { editing = false; return true }
+    return false
+  }
+  onEditingChanged: if (!editing) { adding = false; selectedProvider = "" }
   property string range:"week"
   property var providers:backend ? backend.cache.providers : []
-  property var windows:backend ? backend.rows : []
   property var series:range==="today" ? Usage.hourly(backend ? backend.cache : {providers:[]},tab==="cost" ? "cost" : "tokens") : Usage.windowSeries(backend ? backend.cache : {providers:[]},tab==="cost" ? "cost" : "tokens",range)
   property real maximum:Math.max.apply(null,[1].concat(series.map(function(d){return d.value})))
   signal settingRequested(string key,var value)
   spacing:Design.gap.small
-  onVisibleChanged:if(visible && backend) backend.loadCatalog()
+  onVisibleChanged: { if (visible && backend) backend.loadCatalog(); if (!visible) editing = false }
   RowLayout {
     width:parent.width;spacing:Design.gap.micro
     Repeater {
-      model:["limits","usage","cost","providers"]
+      model:["limits","usage","cost"]
       TabButton {required property string modelData;Layout.fillWidth:true;label:root.strings.t("limits.tab."+modelData);tabActive:root.tab===modelData;focusable:true;feedback:root.feedback;onClicked:root.tab=modelData}
     }
     FeedbackButton {text:"󰑐";tooltipText:root.strings.t("limits.refresh");compact:true;focusable:true;enabled:root.backend && !root.backend.busy;onClicked:root.backend.refresh()}
@@ -39,7 +55,10 @@ Column {
     objectName:"limitsCenterContent"
     width:parent.width;spacing:Design.gap.small
     AgentLimitsList {
-      visible: root.tab === "limits"
+      id: limitsList
+      visible: root.tab === "limits" && !root.adding && !root.selectedProvider
+      editing: root.editing
+      onEditProvider: id => root.selectedProvider = id
       width: parent.width
       backend: root.backend
       strings: root.strings
@@ -94,6 +113,14 @@ Column {
         }
       }
     }
-    AgentLimitsProviders {visible:root.tab==="providers";width:parent.width;backend:root.backend;strings:root.strings;feedback:root.feedback}
+    AgentLimitsProviders {
+      visible: root.editing && (root.adding || root.selectedProvider !== "")
+      width: parent.width
+      backend: root.backend; strings: root.strings; feedback: root.feedback
+      embedded: true
+      adding: root.adding
+      providerId: root.selectedProvider
+      onProviderChosen: id => { root.adding = false; root.selectedProvider = id }
+    }
   }
 }
