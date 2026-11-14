@@ -91,6 +91,7 @@ Item {
   readonly property var hasMedia:mediaState ? mediaState.hasMedia : false
   readonly property var track:mediaState ? mediaState.track : ""
   readonly property var visualPhase:mediaState ? mediaState.visualPhase : 0
+  readonly property var visualImpulses:mediaState ? mediaState.visualImpulses : null
   readonly property var audioLevel:mediaState ? mediaState.audioLevel : 0
   readonly property var audioBass:mediaState ? mediaState.audioBass : 0
   readonly property var audioTreble:mediaState ? mediaState.audioTreble : 0

@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
 import "Model.js" as Model
+import "MusicVisual.js" as MusicVisual
 
 Item {
   id:root
@@ -24,6 +25,8 @@ Item {
     running: root.samplingAudio
     from: 0; to: 86400; duration: 86400000; loops: Animation.Infinite
   }
+  property var visualImpulses: MusicVisual.empty()
+  onSamplingAudioChanged: visualImpulses = MusicVisual.empty()
   property real audioLevel: 0
   property real audioBass: 0
   property real audioTreble: 0
@@ -32,7 +35,7 @@ Item {
   Behavior on audioBass { NumberAnimation { duration: Preferences.duration(90) } }
   Behavior on audioTreble { NumberAnimation { duration: Preferences.duration(90) } }
   onPlayingChanged: if (!playing) { audioLevel = 0; audioBass = 0; audioTreble = 0 }
-  onTrackChanged: audioFailed = false
+  onTrackChanged: { audioFailed = false; visualImpulses = MusicVisual.empty() }
   Process {
     running: root.samplingAudio && !root.audioFailed
     command:root.audioCommand
@@ -41,6 +44,7 @@ Item {
         try {
           var values = JSON.parse(data)
           if (Array.isArray(values) && values.length === 3) {
+            root.visualImpulses = MusicVisual.sample(root.visualImpulses, root.visualPhase, Number(values[0]) || 0, Number(values[1]) || 0)
             root.audioLevel = Math.max(0,Math.min(1,Number(values[0]) || 0))
             root.audioBass = Math.max(0,Math.min(1,Number(values[1]) || 0))
             root.audioTreble = Math.max(0,Math.min(1,Number(values[2]) || 0))

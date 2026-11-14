@@ -191,7 +191,8 @@ Open **Overview → All controls → Settings** (the sixth tile in the default l
 | Sections | `calendarEnabled`, `weatherEnabled`: both `true`; Overview is always available |
 | Track announcements | `trackAlerts: true` |
 | Media visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
-| Visualization style | `musicVisualizationStyle: "default"`; reserved configuration key, not shown in settings |
+| Visualization style | `musicVisualizationStyle: "default"` (Shimmer); also `ripple`, `flow`, `embers`, `constellations`, or `echo`; choose under Modules → Music, applied immediately to the bar and popup |
+| Visualization background | `musicVisualizationBackground: "artwork"`; also `aurora`, `tide`, or `plasma`: animated gradients from the live system palette, independently combined with any visualization style |
 | Notification style | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
 | T3 Code sessions | `t3Enabled: false`; opt in under Modules → T3 Code to connect to the local T3 server |
 | Answer T3 questions from Island | `t3Responses: true`; when disabled, the T3 connection is read-only |
@@ -220,6 +221,8 @@ omarchy bar set gshulga.island weatherEnabled false --json
 Click the weather city to search or choose automatic location; Enter confirms and Escape cancels. The location is shared with the native weather widget through `~/.local/state/omarchy/settings/weather.json`. Double-click the temperature unit, or focus it and press Enter / Space, to cycle °C → °F → K. The calendar gear selects the first day of the week.
 
 Weather uses a summary layout: current temperature and conditions beside a theme-colored braille illustration, followed by feels-like temperature, wind, and humidity. The next seven days share one temperature-range scale, with highs above and lows below each bar. Sunrise and sunset use the selected city's local time; unavailable solar times show a dash. Only the current-condition illustration animates; forecast illustrations remain still, and reduced motion stops animation.
+
+Visualization style controls the dot motion; background controls its colors. Shimmer preserves the original effect. Ripples expand from audio attacks, Flow lights curved streams, Embers retain local heat, Constellations reveal small groups, and Echo holds fading impressions. Aurora, Tide and Plasma replace the cover colors with flowing system-theme gradients while keeping the dot grid. Both choices save immediately and work together. Reduced motion freezes the field; hiding all visualizations stops audio analysis.
 
 For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
 
@@ -369,7 +372,8 @@ python3 tests/indicators.py                # Wayland indicators and native OSD
 ISLAND_T3_ONLY=1 python3 tests/indicators.py # T3 count, spinner, reduced motion and clock alignment
 python3 tests/dictation.py                 # Dictation states and reduced motion
 ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
-python3 tests/artwork-render.py            # GPU artwork frames and reduced motion
+python3 tests/music-visualization.py       # Offscreen style/background combinations and audio-consumer lifecycle
+python3 tests/artwork-render.py            # GPU artwork frames, styles, backgrounds and reduced motion
 python3 tests/performance.py               # QML timings, delegate reuse, focus and inactive-page work
 ISLAND_TEST_GPU=1 python3 tests/weather-summary.py # Weather GPU, themes, layout and reduced motion
 ```

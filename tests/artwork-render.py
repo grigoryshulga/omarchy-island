@@ -29,6 +29,6 @@ __attribute__((constructor)) static void format() {
     env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='rhi',QSG_RHI_BACKEND='opengl',QSG_RENDER_LOOP='basic')
     env.setdefault('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}')
     env['LD_PRELOAD']=str(library)+((':'+env['LD_PRELOAD']) if env.get('LD_PRELOAD') else '')
-    result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=8)
+    result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=25)
     print(result.stdout)
     if 'ARTWORK_FRAMES_PASS' not in result.stdout or any(x in result.stdout for x in ['ARTWORK_FRAMES_FAIL','ReferenceError:','TypeError:','Failed to build graphics pipeline']):raise SystemExit(1)

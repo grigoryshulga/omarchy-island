@@ -34,7 +34,7 @@ Item {
     active: !root.externalFeedback && hover.hovered
     pointer: hover.point.position
     adaptive: root.radialBraille
-    artworkUrl: root.player ? root.player.trackArtUrl : ""
+    artworkUrl: Preferences.get("musicVisualizationBackground")==="artwork" && root.player ? root.player.trackArtUrl : ""
   }
   Timer {
     interval: 500

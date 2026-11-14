@@ -431,7 +431,7 @@ BarWidget {
       active: preview.containsMouse && preview.visible
       pointer: Qt.point(preview.hoverPosition.x+(preview.layoutWidth-preview.drawnWidth)/2,preview.hoverPosition.y)
       adaptive: root.setting("radialBraille",true)
-      artworkUrl: root.service && root.service.player ? root.service.player.trackArtUrl : ""
+      artworkUrl: Preferences.get("musicVisualizationBackground")==="artwork" && root.service && root.service.player ? root.service.player.trackArtUrl : ""
       artworkStrength: previewContent.musicHovered ? 1 : 0
     }
     BrailleFeedback {id:panelFeedback;surface:panelGlow;effect:panelGlow;hover:null}

@@ -24,15 +24,28 @@ assert.equal(settings.valid('notificationStyle', 'invalid'), false);
 assert.equal(settings.valid('notificationStyle', 'bar'), true);
 assert.equal(settings.valid('notificationStyle', 'card'), true);
 assert.equal(settings.valid('musicVisualizationStyle', 'future'), false);
+assert.deepEqual(settings.choices.musicVisualizationStyle,
+  ['default', 'ripple', 'flow', 'embers', 'constellations', 'echo']);
+for (const style of settings.choices.musicVisualizationStyle) {
+  assert.equal(settings.get({musicVisualizationStyle: style}, 'musicVisualizationStyle'), style);
+  for (const lang of ['en', 'ru']) assert.ok(require(`../plugin/i18n/${lang}.json`)[`settings.option.${style}`]);
+}
+assert.equal(settings.get({musicVisualizationStyle: 'future'}, 'musicVisualizationStyle'), 'default');
+assert.deepEqual(settings.choices.musicVisualizationBackground, ['artwork', 'aurora', 'tide', 'plasma']);
+for (const background of settings.choices.musicVisualizationBackground) {
+  assert.equal(settings.get({musicVisualizationBackground: background}, 'musicVisualizationBackground'), background);
+  for (const lang of ['en', 'ru']) assert.ok(require(`../plugin/i18n/${lang}.json`)[`settings.option.${background}`]);
+}
+assert.equal(settings.get({musicVisualizationBackground: 'unknown'}, 'musicVisualizationBackground'), 'artwork');
 assert.equal(settings.osdAllowed({osdVolume:false}, 'volume'), false);
 assert.equal(settings.osdAllowed({osdVolume:false}, 'download'), true);
 assert.equal(settings.osdAllowed({osdModes:false}, osd.parse(JSON.stringify({icon:'󰂛', message:'DND'})).kind), false);
-// Contextual editors own pins and Overview layout; the style key is reserved.
+// Contextual editors own pins and Overview layout.
 assert.deepEqual(settings.sections.map(section => section.id), ['general', 'panel', 'alerts', 'modules']);
 const rows = settings.sections.flatMap(section => section.groups.flatMap(group => group.rows));
 assert.equal(new Set(rows.map(row => row.key)).size, rows.length);
 assert.deepEqual(rows.filter(row => !row.fixed).map(row => row.key).sort(),
-  Object.keys(settings.defaults).filter(key => !['musicVisualizationStyle', 'agentLimitsPins', 'overviewEnabled', 'overviewLayout'].includes(key)).sort());
+  Object.keys(settings.defaults).filter(key => !['agentLimitsPins', 'overviewEnabled', 'overviewLayout'].includes(key)).sort());
 assert.deepEqual(rows.filter(row => row.dependsOn).map(row => [row.key, row.dependsOn]),
   [['hoverDelay', 'hoverPreview'], ['t3Responses', 't3Enabled']]);
 for (const lang of ['en', 'ru']) {

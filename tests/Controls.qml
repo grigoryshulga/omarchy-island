@@ -206,7 +206,20 @@ ShellRoot {
         findChild(settingsView,"settingsTab-"+category).clicked();wait(20)
         check(view.implicitHeight===stableHeight,"settings category resized Controls")
         if(category==="panel") check(!findChild(settingsView,"setting-overviewEnabled").enabled,"Overview can be disabled, losing Settings access")
-        if(category==="modules") check(!findChild(settingsView,"setting-musicVisualizationStyle"),"placeholder style remains visible")
+        if(category==="modules") {
+          var musicBackground=findChild(settingsView,"setting-musicVisualizationBackground")
+          check(musicBackground && musicBackground.options.length===4,"music backgrounds are missing")
+          for(var background of musicBackground.options) {
+            musicBackground.changed(background.value)
+            check(scene.preferences[0]==="musicVisualizationBackground" && scene.preferences[1]===background.value,"music background did not persist: "+background.value)
+          }
+          var musicStyle=findChild(settingsView,"setting-musicVisualizationStyle")
+          check(musicStyle && musicStyle.options.length===6,"music styles are missing")
+          for(var option of musicStyle.options) {
+            musicStyle.changed(option.value)
+            check(scene.preferences[0]==="musicVisualizationStyle" && scene.preferences[1]===option.value,"music style did not persist: "+option.value)
+          }
+        }
         if(category==="alerts") {
           var style=findChild(settingsView,"setting-notificationStyle")
           style.changed("bar")

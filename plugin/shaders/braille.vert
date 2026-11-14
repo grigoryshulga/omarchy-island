@@ -14,6 +14,13 @@ layout(std140, binding = 0) uniform buf {
     vec4 accent;
     float monochrome;
     float reveal;
+    float style;
+    vec4 impulseTimes;
+    vec4 impulseStrengths;
+    float backgroundStyle;
+    vec4 paletteBlue;
+    vec4 paletteGreen;
+    vec4 paletteYellow;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

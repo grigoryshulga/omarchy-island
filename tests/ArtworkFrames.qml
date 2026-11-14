@@ -13,6 +13,7 @@ ShellRoot {
     property real audioLevel: 0
     property real audioBass: 0
     property real audioTreble: 0
+    property var visualImpulses: ({times:[0.05,-10,-10,-10],strengths:[0.8,0,0,0]})
     property var player: null
   }
   FloatingWindow {
@@ -90,6 +91,66 @@ ShellRoot {
       artwork.reveal=1;wait(320)
       check(fullCover.equals(grabImage(artwork)),"album art did not reassemble the same field")
       console.log("ARTWORK_DITHER_PASS")
+      var styleFrames=[]
+      for(var style of ["default","ripple","flow","embers","constellations","echo"]) {
+        Island.Preferences.values=({musicVisualizationStyle:style})
+        service.visualPhase=0.4;service.audioLevel=0.4;service.audioBass=0.5;service.audioTreble=0.3
+        wait(60)
+        var frame=grabImage(artwork)
+        for(var previous of styleFrames) check(!frame.equals(previous),"styles render identically: "+style)
+        styleFrames.push(frame)
+        service.visualPhase=1.2;wait(60)
+        check(!frame.equals(grabImage(artwork)),"style does not animate: "+style)
+        Commons.Style.reduceMotion=true;wait(60)
+        var reduced=grabImage(artwork)
+        service.visualPhase=2.1;service.audioLevel=0.9;service.audioBass=0.9;service.audioTreble=0.9
+        wait(60)
+        check(reduced.equals(grabImage(artwork)),"style moves with reduced motion: "+style)
+        Commons.Style.reduceMotion=false
+      }
+      Island.Preferences.values=({musicVisualizationStyle:"echo"})
+      service.audioLevel=0;service.audioBass=0;service.audioTreble=0
+      service.visualPhase=0.6;wait(60)
+      var echoTail=grabImage(artwork)
+      service.visualImpulses=({times:[-10,-10,-10,-10],strengths:[0,0,0,0]});wait(60)
+      var emptyEcho=grabImage(artwork)
+      check(!echoTail.equals(emptyEcho),"echo loses its memory in silence")
+      service.visualImpulses=({times:[0.05,-10,-10,-10],strengths:[0.8,0,0,0]})
+      service.visualPhase=30;wait(60)
+      check(emptyEcho.equals(grabImage(artwork)),"old echo does not fade away")
+      artwork.visible=false;wait(40)
+      check(Island.Preferences.visualizers.length===0,"hidden artwork keeps audio sampling registered")
+      artwork.visible=true
+      Island.Preferences.values=({})
+      console.log("MUSIC_STYLES_FRAMES_PASS")
+      Island.ThemePalette.values=({blue:"#327ad5",green:"#5ab97a",yellow:"#dcba60"})
+      var backgroundFrames=[]
+      for(var background of ["aurora","tide","plasma"]) {
+        for(var style of ["default","ripple","flow","embers","constellations","echo"]) {
+          Island.Preferences.values=({musicVisualizationStyle:style,musicVisualizationBackground:background})
+          service.visualPhase=0.6;wait(50)
+          var colored=grabImage(artwork)
+          service.visualPhase=2.0;wait(50)
+          check(!colored.equals(grabImage(artwork)),"gradient does not move: "+background+"/"+style)
+          if(style==="default") {
+            for(var previous of backgroundFrames) check(!colored.equals(previous),"gradient backgrounds render identically")
+            backgroundFrames.push(colored)
+          }
+          Commons.Style.reduceMotion=true;wait(40)
+          var staticGradient=grabImage(artwork)
+          service.visualPhase=3.5;wait(40)
+          check(staticGradient.equals(grabImage(artwork)),"gradient ignores reduced motion")
+          Commons.Style.reduceMotion=false
+        }
+      }
+      Island.Preferences.values=({musicVisualizationBackground:"plasma"})
+      service.visualPhase=1;wait(50)
+      var originalPalette=grabImage(artwork),oldAccent=Commons.Color.accent
+      Commons.Color.accent="#d0ff20";wait(50)
+      check(!originalPalette.equals(grabImage(artwork)),"gradient does not follow live system colors")
+      Commons.Color.accent=oldAccent
+      Island.Preferences.values=({})
+      console.log("MUSIC_BACKGROUNDS_FRAMES_PASS")
       var field=findChild(gauge,"brailleGaugeField")
       var thin=grabImage(gauge)
       gauge.value=0.9;wait(80)

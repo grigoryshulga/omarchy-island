@@ -12,6 +12,13 @@ layout(std140, binding = 0) uniform buf {
     vec4 accent;
     float monochrome;
     float reveal;
+    float style;
+    vec4 impulseTimes;
+    vec4 impulseStrengths;
+    float backgroundStyle;
+    vec4 paletteBlue;
+    vec4 paletteGreen;
+    vec4 paletteYellow;
 };
 layout(binding = 1) uniform sampler2D source;
 // Integer avalanche hashing avoids the precision stripes and small spatial
@@ -33,6 +40,33 @@ void main() {
     vec2 center = vec2(1.5)+dotIndex*3.0;
     vec2 sampleAt = (cell*vec2(6.0,12.0)+center)/size;
     vec4 cover = texture(source,clamp(sampleAt,vec2(0.01),vec2(0.99)));
+    if (backgroundStyle > 0.5) {
+        // Theme colors stay live. The same phase and audio envelope drive the
+        // color field and dots, with no second timer, texture or audio process.
+        vec2 p = sampleAt;
+        float t = phase*0.18;
+        float blendA;
+        float blendB;
+        if (backgroundStyle < 1.5) {
+            // Aurora: elongated, gently folding curtains.
+            float fold = p.y*3.0 + sin(p.x*5.0+t)*0.7 + sin(p.x*9.0-t*0.7)*0.2;
+            blendA = 0.5+0.5*sin(fold*2.5+t);
+            blendB = 0.5+0.5*cos(p.x*4.0+fold+t*0.6);
+        } else if (backgroundStyle < 2.5) {
+            // Tide: broad diagonal washes rolling past each other.
+            blendA = 0.5+0.5*sin(p.x*3.0+p.y*4.0-t*1.3+bass*0.35);
+            blendB = 0.5+0.5*sin(p.x*2.0-p.y*3.0+t*0.8);
+        } else {
+            // Plasma: soft interference lobes, no harsh color boundaries.
+            vec2 q = (p-0.5)*4.0;
+            float field = sin(q.x+t)+sin(q.y-t*1.2)+sin(length(q)*2.0-t*1.5);
+            blendA = 0.5+0.5*sin(field+level*0.4);
+            blendB = 0.5+0.5*cos(field*0.7+t);
+        }
+        vec3 cool = mix(paletteBlue.rgb,paletteGreen.rgb,blendA);
+        vec3 warm = mix(accent.rgb,paletteYellow.rgb,blendB*0.65);
+        cover = vec4(mix(cool,warm,blendB*0.7),1.0);
+    }
     float luminance = mix(dot(cover.rgb,vec3(0.2126,0.7152,0.0722)),0.5,monochrome);
     // Unicode braille bit order: 1 4 / 2 5 / 3 6 / 7 8. Changing these
     // eight bits changes the glyph, while its location and color stay put.
@@ -52,6 +86,76 @@ void main() {
     float dots = mix(stableGlyph,glyph,mix(0.32,1.0,smoothstep(0.015,0.25,audio)));
     // Rare bright bits crossfade into new braille characters like glitter.
     float sparkle = mix(pow(a,18.0),pow(b,18.0),transition)*audio;
+    // All styles light the same fixed dot lattice and sample the same cover.
+    // Coordinates are isotropic in both the narrow clock and the popup.
+    vec2 point = (cell*vec2(6.0,12.0)+center)/max(min(size.x,size.y),24.0);
+    vec2 uv = sampleAt;
+    float grain = noise(dotPosition,0u);
+    if (style > 0.5) {
+        float ink = 0.0;
+        sparkle = 0.0;
+        if (style < 1.5 || style > 4.5) {
+            // Ripple: narrow traveling wavefronts. Echo: broad, lingering
+            // impressions, whose centers and birth times belong to real attacks.
+            ink = 0.11 + stableGlyph*0.16;
+            for (int i=0;i<4;i++) {
+                float age = phase-impulseTimes[i];
+                uint seed = uint(max(0.0,impulseTimes[i])*1000.0);
+                vec2 origin = vec2(0.15)+0.7*vec2(noise(uvec2(seed,7u),0u),noise(uvec2(seed,19u),0u));
+                float distance = length((uv-origin)*size/max(min(size.x,size.y),24.0));
+                float valid = step(0.0,age)*impulseStrengths[i];
+                if (style < 1.5) {
+                    float radius = age*0.65;
+                    float edge = (distance-radius)/(0.045+treble*0.035);
+                    ink += exp(-edge*edge)*exp(-max(age,0.0)*0.85)*valid*1.6;
+                } else {
+                    float radius = 0.12+age*0.13;
+                    float edge = (distance-radius)/0.19;
+                    float imprint = exp(-edge*edge)+0.35*exp(-distance*distance/0.12);
+                    ink += imprint*exp(-max(age,0.0)*0.48)*valid;
+                }
+            }
+            dots = clamp(ink,0.0,1.0);
+        } else if (style < 2.5) {
+            // Flow: curved lanes of light travel through stationary grains.
+            float bend = sin(point.x*1.8+phase*0.32)*0.8 + sin(point.x*0.65-phase*0.21)*0.6;
+            float lane = 0.5+0.5*sin(point.y*7.0+bend*3.0-phase*0.65);
+            float current = 0.5+0.5*sin(point.x*3.0-point.y*1.5-phase*0.8+bass*0.3);
+            dots = 0.12+pow(lane,5.0)*(0.28+current*0.6)*(0.5+audio*0.5);
+            dots *= 0.55+grain*0.45;
+        } else if (style < 3.5) {
+            // Embers: localized heat blooms cool slowly after an attack.
+            float heat = 0.0;
+            for (int i=0;i<6;i++) {
+                vec2 origin = vec2(noise(uvec2(i,31u),0u),noise(uvec2(i,61u),0u));
+                vec2 delta = (uv-origin)*vec2(size.x/max(size.y,24.0),1.0);
+                float breath = 0.5+0.5*sin(phase*0.7+float(i)*2.3);
+                heat += exp(-dot(delta,delta)*22.0)*(0.14+breath*0.24+bass*0.5);
+            }
+            for (int i=0;i<4;i++) {
+                float age = max(0.0,phase-impulseTimes[i]);
+                uint seed = uint(max(0.0,impulseTimes[i])*1000.0);
+                vec2 origin = vec2(noise(uvec2(seed,7u),0u),noise(uvec2(seed,19u),0u));
+                vec2 delta = (uv-origin)*vec2(size.x/max(size.y,24.0),1.0);
+                heat += exp(-dot(delta,delta)*15.0)*impulseStrengths[i]*exp(-age*0.55);
+            }
+            dots = clamp(0.08+heat*(0.35+grain*0.65),0.0,1.0);
+            sparkle = pow(grain,24.0)*treble*heat*0.65;
+        } else {
+            // Constellations: small arcs cohere and loosen together. No lines
+            // or moving particles; the grouping is expressed only by dot light.
+            vec2 group = floor(point*1.8);
+            vec2 localGroup = fract(point*1.8)-0.5;
+            float seed = noise(uvec2(group),0u);
+            float angle = seed*6.28318;
+            float arc = abs(length(localGroup+vec2(sin(angle),cos(angle))*0.2)-0.33);
+            float coherence = 0.5+0.5*sin(phase*0.55+seed*6.28318);
+            float stars = smoothstep(0.72,0.95,grain);
+            float chain = exp(-arc*arc*600.0)*smoothstep(0.25,0.65,grain);
+            dots = 0.08+stars*0.25+chain*(0.2+coherence*0.4+audio*0.35);
+            sparkle = stars*treble*coherence*0.35;
+        }
+    }
     // Each dot has a fixed disappearance threshold, independent of the music
     // shimmer. Reversing a tab gesture rebuilds the same field without noise
     // tiles or a new random pattern on every frame.
