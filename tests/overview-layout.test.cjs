@@ -23,4 +23,13 @@ for(const invalid of [null, {}, [{id:'media',visible:'false',size:'standard'}], 
   assert.deepEqual(model.layout(defs, invalid), defaults);
 }
 assert.deepEqual(model.supported({overviewSizes:['large','invented','minimal']}), ['minimal','standard','large']);
+assert.equal(model.move(defs,defaults,'notifications','controls')[0].id,'notifications');
+assert.equal(model.move(defs,defaults,'controls','').at(-1).id,'controls');
+assert.deepEqual(model.move(defs,defaults,'controls','media'),defaults);
+assert.deepEqual(model.move(defs,[future],'controls','').at(-1),future);
+const geometry=[{id:'a',y:0,height:40},{id:'b',y:52,height:140},{id:'c',y:204,height:80}];
+assert.equal(model.dropBefore(geometry,'b',10),'a');
+assert.equal(model.dropBefore(geometry,'a',100),'b');
+assert.equal(model.dropBefore(geometry,'a',160),'c');
+assert.equal(model.dropBefore(geometry,'a',300),'');
 console.log('Overview layout checks passed');

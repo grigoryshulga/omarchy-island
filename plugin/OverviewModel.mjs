@@ -33,3 +33,14 @@ export function update(definitions, saved, id, patch, step) {
   if(to!==at) rows.splice(to,0,rows.splice(at,1)[0]);
   return rows.concat((valid(saved) ? saved : []).filter(function(row){return !definitions.some(function(entry){return entry.overview && entry.id===row.id})}));
 }
+export function move(definitions,saved,id,beforeId) {
+  var rows=layout(definitions,saved),from=rows.findIndex(function(row){return row.id===id});
+  var to=beforeId ? rows.findIndex(function(row){return row.id===beforeId}) : rows.length;
+  if(from<0 || to<0 || from===to) return update(definitions,saved,id,{},0);
+  if(from<to) to--;
+  return update(definitions,saved,id,{},to-from);
+}
+export function dropBefore(rows,id,y) {
+  for(var i=0;i<rows.length;i++) if(rows[i].id!==id && y<rows[i].y+rows[i].height/2) return rows[i].id;
+  return "";
+}

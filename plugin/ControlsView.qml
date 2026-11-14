@@ -58,6 +58,8 @@ Item {
   property string error:""
   property bool changing:false
   property real detailHeight:0
+  property bool sectionFromSummary:false
+  signal summaryRequested()
   readonly property bool settingsOwnKeys:section==="settings" && settingsPage.ownsKeys
   readonly property var indicators:service && ("indicators" in service) ? service.indicators : null
   readonly property var microphone:indicators ? indicators.microphone : null
@@ -101,12 +103,12 @@ Item {
   signal settingRequested(string key, var value)
   implicitHeight:favoriteMode ? favorites.implicitHeight : section ? detailHeight : landing.implicitHeight
 
-  function openSection(name) {
+  function openSection(name,fromSummary) {
     if(name==="customize") {configure();return}
     if(favoriteMode) {sectionRequested(name);return}
     if(["audio","bluetooth","network","tailscale","monitors","settings"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
     editing=false;adding=false
-    if(!section) detailHeight=landing.implicitHeight
+    if(!section) {detailHeight=landing.implicitHeight;sectionFromSummary=!!fromSummary}
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
     nativeLoader.source=""
@@ -125,12 +127,15 @@ Item {
     if(editableGrid.dismissEditor()) return
     if(editing) {configure();return}
     var previous=section
+    var returnToSummary=previous!=="" && sectionFromSummary
+    sectionFromSummary=false
     settingsPage.closeEditors()
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
     nativeLoader.source=""
     section="";error=""
     changing=false
+    if(returnToSummary) {summaryRequested();return}
     Qt.callLater(function(){
       if(!root.active || root.section) return
       editableGrid.focusTile(previous)

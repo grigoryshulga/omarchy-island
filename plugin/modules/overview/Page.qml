@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 import "../.." as Island
 Island.ModulePage {
   id:root
@@ -19,6 +20,7 @@ Island.ModulePage {
     id:content;anchors.fill:parent
     settings:root.presentation.settings;service:root.presentation.service;strings:root.presentation.strings;bar:root.presentation.bar
     pageHeight:root.presentation.pageHeight;overviewActive:root.presentation.selected
+    maximumOverviewHeight:root.presentation.maximumOverviewHeight || Style.space(640)
     externalFeedback:root.presentation.feedback
     expanded:root.presentation.expanded;hovering:root.presentation.hovering;alertKind:root.presentation.alertKind
     radialBraille:root.presentation.radialBraille

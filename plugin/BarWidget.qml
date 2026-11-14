@@ -436,6 +436,7 @@ BarWidget {
       id: previewContent
       onImplicitHeightChanged:Qt.callLater(function(){root.hoverContentAvailable=previewContent.implicitHeight>0})
       objectName:"islandPopupPages"
+      maximumOverviewHeight:Math.max(1,Math.min(Style.space(640),preview.availableHeight-preview.insetTop-preview.insetBottom))
       keyboardActive:root.pinned && preview.open
       settings: root.settings
       onSettingRequested:(key,value)=>root.updateSetting(key,value)

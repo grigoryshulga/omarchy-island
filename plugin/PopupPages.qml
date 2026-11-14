@@ -55,12 +55,13 @@ Item {
   readonly property bool settingsOpen:!!currentPage() && currentPage().navigationHidden
   readonly property real navigationHeight:0
   readonly property real contentTop:0
+  property real maximumOverviewHeight:Style.space(640)
   readonly property real calendarWeatherHeight: {
     var result=0
     for(var i=0;i<pageDefinitions.length;i++) {var page=pageObject(pageDefinitions[i].pageIndex);if(page) result=Math.max(result,page.stableHeight)}
     return result
   }
-  implicitHeight:navigationHeight+Math.max(root.expanded ? calendarWeatherHeight : 0,currentPage() ? currentPage().implicitHeight : 0)
+  implicitHeight:navigationHeight+Math.max(root.expanded && selectedPage!==1 ? calendarWeatherHeight : 0,currentPage() ? currentPage().implicitHeight : 0)
   clip:true
   function pageHolder(index) {
     for(var i=0;i<pageHolders.count;i++) {var holder=pageHolders.objectAt(i);if(holder && holder.pageIndex===index) return holder}
@@ -255,6 +256,7 @@ Item {
           readonly property string alertKind:root.alertKind
           readonly property bool radialBraille:root.radialBraille
           readonly property real pageHeight:root.calendarWeatherHeight
+          readonly property real maximumOverviewHeight:root.maximumOverviewHeight
         }
         onCloseRequested:root.dismissRequested()
         onExpandRequested:root.expandRequested()

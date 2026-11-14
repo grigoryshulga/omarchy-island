@@ -105,11 +105,13 @@ ShellRoot {
   FloatingWindow {
     id: calendarWin
     visible: false
-    implicitWidth: 450; implicitHeight: calendarSurface.testPages ? pages.implicitHeight+24 : 440
+    // Like IslandPopup, keep the native surface large enough while its content resizes.
+    implicitWidth:450;implicitHeight:700
     color: Commons.Color.popups.background
     Item {
       id: calendarSurface
-      anchors.fill: parent
+      anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top
+      height:testPages ? pages.implicitHeight+24 : 440
       Rectangle { anchors.fill: parent; color: Commons.Color.popups.background }
       property bool testPages: false
       property bool dismissed:false
@@ -496,7 +498,8 @@ ShellRoot {
       findChild(pages,"weatherBack").clicked()
       wait(350)
       check(!pages.weather && !pages.calendar,"weather back did not return to inbox")
-      check(Math.abs(pages.implicitHeight-calendarPageHeight)<1,"minimal Overview does not match Calendar/Weather height")
+      var overviewPageHeight=pages.implicitHeight
+      check(overviewPageHeight>0 && overviewPageHeight<calendarPageHeight,"Short Overview retains the Calendar minimum height")
       check(Math.abs(findChild(pages,"islandMediaPlayer").mapToItem(pager,0,0).x)<1,"overview tab did not move contents into view")
       mouseWheel(pager,pager.width/2,pager.height/2,0,-120,Qt.NoButton,Qt.ShiftModifier)
       wait(350)
@@ -517,7 +520,7 @@ ShellRoot {
       mouseWheel(pager,pager.width/2,pager.height/2,120,0,Qt.NoButton);wait(350)
       check(pages.weather,"scroll before Overview did not wrap to Weather")
       pages.requestPage(1);wait(350)
-      check(Math.abs(pages.implicitHeight-calendarPageHeight)<1,"Overview does not match Calendar/Weather height")
+      check(Math.abs(pages.implicitHeight-overviewPageHeight)<1,"Returning to Overview did not restore its content height")
       mouseDrag(pager,pager.width/2,30,pager.width*0.35,0,Qt.LeftButton)
       tryVerify(function(){return pages.weather},1200)
       check(pages.weather,"edge swipe did not wrap tabs")

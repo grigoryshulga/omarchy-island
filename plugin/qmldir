@@ -28,6 +28,8 @@ FeedbackButton 1.0 FeedbackButton.qml
 IndicatorGlow 1.0 IndicatorGlow.qml
 IndicatorState 1.0 IndicatorState.qml
 IslandContent 1.0 IslandContent.qml
+OverviewDrag 1.0 OverviewDrag.qml
+OverviewEditFrame 1.0 OverviewEditFrame.qml
 IslandPopup 1.0 IslandPopup.qml
 IslandSlider 1.0 IslandSlider.qml
 KeyboardLayoutState 1.0 KeyboardLayoutState.qml

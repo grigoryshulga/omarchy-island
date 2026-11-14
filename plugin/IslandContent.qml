@@ -30,7 +30,7 @@ Item {
   property date currentDate:new Date()
   function focusSummary(target) {(target==="calendarOpen" ? dateButton : weatherButton).forceActiveFocus()}
   Timer {interval:60000;repeat:true;running:root.visible && root.overviewActive && (root.expanded || root.hovering);onTriggered:root.currentDate=new Date()}
-  onOverviewActiveChanged:if(overviewActive) currentDate=new Date()
+  onOverviewActiveChanged:{if(overviewActive) currentDate=new Date();else overviewDrag.cancel()}
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   signal settingRequested(string key,var value)
   signal expandRequested()
@@ -52,11 +52,12 @@ Item {
     detailPage=""
     configuring=true
     overviewScroll.contentItem.contentY=0
-    Qt.callLater(function(){detailNavigation.first(editor)})
+    Qt.callLater(function(){detailNavigation.first(body)})
   }
   function changeLayout(id,patch,step) {settingRequested("overviewLayout",Overview.update(moduleDefinitions,Preferences.get("overviewLayout"),id,patch,step))}
   readonly property var detailDefinition:moduleDefinitions.find(function(entry){return entry.id===root.detailPage}) || null
   property real pageHeight: Style.space(520)
+  property real maximumOverviewHeight:Style.space(640)
   readonly property bool detailOpen: detailPage!==""
   readonly property var detailItem: {
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.modelData.id===detailPage) return slot.item}
@@ -82,6 +83,7 @@ Item {
     })
   }
   function back() {
+    if(overviewDrag.dragging) {overviewDrag.cancel();return true}
     if(configuring) {configuring=false;restoreSummary();return true}
     if(!detailOpen) return false
     if(detailItem && detailItem.back()) return true
@@ -97,8 +99,17 @@ Item {
     return null
   }
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
-  implicitHeight: expanded ? pageHeight : body.implicitHeight
+  implicitHeight:expanded ? (detailOpen || configuring ? pageHeight : Math.min(maximumOverviewHeight,body.implicitHeight)) : body.implicitHeight
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
+  OverviewDrag {
+    id:overviewDrag;objectName:"overviewDragController"
+    anchors.fill:parent;z:100
+    editing:root.configuring;entries:moduleSections;content:body;viewport:overviewScroll.contentItem
+    onMoved:(key,beforeKey)=>{
+      root.settingRequested("overviewLayout",Overview.move(root.moduleDefinitions,Preferences.get("overviewLayout"),key,beforeKey))
+      Qt.callLater(function(){for(var i=0;i<moduleSections.count;i++) {var frame=moduleSections.itemAt(i);if(frame.entryKey===key) {detailNavigation.focusItem(frame.handleItem);break}}})
+    }
+  }
   Controls.ScrollView {
     id:overviewScroll
     objectName:"overviewScroll"
@@ -113,7 +124,7 @@ Item {
   ColumnLayout {
     id: body
     width: overviewScroll.availableWidth
-    spacing: root.compactNotifications ? Design.gap.tight : Design.gap.section
+    spacing:root.configuring ? Design.gap.medium : root.compactNotifications ? Design.gap.tight : Design.gap.section
   RowLayout {
     objectName:"overviewHeader"
     visible:(root.expanded || root.hovering) && !root.detailOpen && !root.configuring
@@ -161,41 +172,6 @@ Item {
       onClicked:root.back()
     }
   }
-  ColumnLayout {
-    id:editor
-    visible:root.configuring && root.expanded
-    Layout.fillWidth:true
-    spacing:Design.gap.large
-    PlainText {Layout.fillWidth:true;text:root.strings.t("overview.customizeHint");wrapMode:Text.Wrap;color:Design.secondaryText}
-    Repeater {
-      model:sectionOrder
-      ColumnLayout {
-        id:editRow
-        required property string entryKey
-        required property int index
-        readonly property var definition:root.moduleDefinitions.find(function(entry){return entry.id===entryKey})
-        readonly property var config:root.overviewLayout.find(function(row){return row.id===entryKey})
-        Layout.fillWidth:true
-        spacing:Design.gap.small
-        RowLayout {
-          Layout.fillWidth:true
-          PlainText {Layout.fillWidth:true;text:editRow.definition.title || root.strings.t(editRow.definition.titleKey);wrapMode:Text.Wrap}
-          FeedbackButton {objectName:"overviewVisible-"+editRow.entryKey;text:root.strings.t(editRow.config.visible ? "overview.hide" : "overview.show");selected:editRow.config.visible;focusable:true;compact:true;onClicked:root.changeLayout(editRow.entryKey,{visible:!editRow.config.visible},0)}
-          FeedbackButton {objectName:"overviewUp-"+editRow.entryKey;iconText:"↑";tooltipText:root.strings.t("overview.moveUp");enabled:editRow.index>0;focusable:true;compact:true;onClicked:root.changeLayout(editRow.entryKey,{},-1)}
-          FeedbackButton {objectName:"overviewDown-"+editRow.entryKey;iconText:"↓";tooltipText:root.strings.t("overview.moveDown");enabled:editRow.index<sectionOrder.count-1;focusable:true;compact:true;onClicked:root.changeLayout(editRow.entryKey,{},1)}
-        }
-        DesignDropdown {
-          objectName:"overviewSize-"+editRow.entryKey
-          Layout.fillWidth:true
-          visible:Overview.supported(editRow.definition).length>1
-          showLabel:false
-          value:editRow.config.size
-          options:Overview.supported(editRow.definition).map(function(size){return {value:size,label:root.strings.t("overview.size."+size)}})
-          onChanged:value=>root.changeLayout(editRow.entryKey,{size:value},0)
-        }
-      }
-    }
-  }
   T3SessionCard {
     id:t3Toast
     objectName:"t3ActivityToast"
@@ -211,39 +187,53 @@ Item {
   Repeater {
     id:moduleSections
     model:sectionOrder
-    ModuleSlot {
-      id:moduleSection
-      required property string entryKey
-      readonly property var modelData:root.moduleDefinitions.find(function(entry){return entry.id===entryKey})
-      readonly property var config:root.overviewLayout.find(function(row){return row.id===entryKey})
+    OverviewEditFrame {
+      id:moduleFrame
+      required property int index
+      readonly property var modelData:definition
+      readonly property var item:moduleSection.item
+      definition:root.moduleDefinitions.find(function(entry){return entry.id===entryKey})
+      config:root.overviewLayout.find(function(row){return row.id===entryKey})
+      strings:root.strings;feedback:root.externalFeedback
+      controller:overviewDrag;editing:root.configuring
+      viewItem:moduleSection;available:moduleSection.available
       Layout.fillWidth:true
-      viewSource:modelData.overview || ""
-      backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
-      visible:available && !root.configuring && (!(root.expanded || root.hovering) || config.visible || root.detailPage===modelData.id) && (!root.detailOpen || root.detailPage===modelData.id)
-      presentation:QtObject {
-        readonly property var service:root.service
-        readonly property var settings:root.settings
-        readonly property var strings:root.strings
-        readonly property var feedback:root.externalFeedback
-        readonly property var bar:root.bar
-        readonly property bool hovering:root.hovering
-        readonly property string alertKind:root.alertKind
-        readonly property var alert:root.service && root.service.latest ? root.service.latest : null
-        readonly property bool radialBraille:root.radialBraille
-        readonly property bool expanded:root.expanded
-        readonly property string size:(root.expanded || root.hovering) && moduleSection.config ? moduleSection.config.size : "standard"
-        readonly property bool detail:root.detailPage===moduleSection.modelData.id
-        readonly property bool active:root.overviewActive && root.visible && moduleSection.visible
-        readonly property real pageHeight:root.height
+      visible:root.configuring || (moduleSection.available && (!(root.expanded || root.hovering) || config.visible || root.detailPage===entryKey) && (!root.detailOpen || root.detailPage===entryKey))
+      onChanged:patch=>root.changeLayout(entryKey,patch,0)
+      onStepped:delta=>{root.changeLayout(entryKey,{},delta);Qt.callLater(function(){detailNavigation.focusItem(moduleFrame.handleItem)})}
+      ModuleSlot {
+        id:moduleSection
+        parent:moduleFrame.contentItem;width:parent.width
+        enabled:!root.configuring
+        viewSource:moduleFrame.definition.overview || ""
+        backend:root.service && root.service.modules ? root.service.modules[moduleFrame.entryKey] || null : null
+        visible:available && (!(root.expanded || root.hovering) || moduleFrame.config.visible || root.detailPage===moduleFrame.entryKey) && (!root.detailOpen || root.detailPage===moduleFrame.entryKey)
+        presentation:QtObject {
+          readonly property var service:root.service
+          readonly property var settings:root.settings
+          readonly property var strings:root.strings
+          readonly property var feedback:root.externalFeedback
+          readonly property var bar:root.bar
+          readonly property bool hovering:root.hovering
+          readonly property string alertKind:root.alertKind
+          readonly property var alert:root.service && root.service.latest ? root.service.latest : null
+          readonly property bool radialBraille:root.radialBraille
+          readonly property bool expanded:root.expanded
+          readonly property string size:(root.expanded || root.hovering) && moduleFrame.config ? moduleFrame.config.size : "standard"
+          readonly property bool detail:root.detailPage===moduleFrame.entryKey
+          readonly property bool active:root.overviewActive && root.visible && moduleSection.visible
+          readonly property real pageHeight:root.height
+        }
+        readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
+        onModuleEnabledChanged:if(!moduleEnabled && root.detailPage===moduleFrame.entryKey) root.back()
+        onDetailsRequested:root.detailPage===moduleFrame.entryKey ? root.back() : root.openDetails(moduleFrame.entryKey)
+        onCloseRequested:root.closeRequested()
+        onExpandRequested:root.expandRequested()
+        onSettingRequested:(key,value)=>root.settingRequested(key,value)
       }
-      readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
-      onModuleEnabledChanged:if(!moduleEnabled && root.detailPage===modelData.id) root.back()
-      onDetailsRequested:root.detailPage===modelData.id ? root.back() : root.openDetails(modelData.id)
-      onCloseRequested:root.closeRequested()
-      onExpandRequested:root.expandRequested()
-      onSettingRequested:(key,value)=>root.settingRequested(key,value)
     }
   }
+  Item {visible:root.configuring;Layout.fillWidth:true;implicitHeight:Design.gap.small}
 
   PlainText {Layout.fillWidth:true;visible:!root.compactNotifications && root.service && root.service.error!==undefined && root.service.error!=="";text:root.strings.t("error").arg(root.service && root.service.error ? root.service.error : "");color:Design.danger;wrapMode:Text.Wrap}
 
