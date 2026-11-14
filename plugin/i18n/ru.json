@@ -515,5 +515,18 @@
   "clock.space": "Пробел",
   "clock.format": "Формат времени",
   "settings.group.calendar": "Календарь",
-  "settings.group.weather": "Погода"
+  "settings.group.weather": "Погода",
+  "settings.group.herdr": "Herdr",
+  "settings.herdrEnabled": "Сессии Herdr",
+  "settings.herdrRemote": "Отслеживать сохранённые SSH-машины",
+  "herdr.unavailable": "Недоступно",
+  "herdr.empty": "Нет агентов",
+  "herdr.help": "Наблюдение за запущенными локальными сессиями. Удалённый опрос использует включённые SSH-машины Herdr и требует CLI с поддержкой --machine. Авторизация выполняется в Herdr.",
+  "herdr.status.working": "Работает",
+  "herdr.status.blocked": "Нужен ввод",
+  "herdr.status.done": "Завершено",
+  "herdr.status.idle": "Ожидает",
+  "herdr.status.unknown": "Неизвестно",
+  "herdr.details": "Подробности сессии",
+  "herdr.expand": "Открыть обзор"
 }

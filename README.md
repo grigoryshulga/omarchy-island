@@ -187,7 +187,7 @@ omarchy-shell island-update refresh|clear
 
 Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
 
-Open **Overview → Customize → Settings** for four categories: **General** (opening and animations), **Panel** (clock widget builder), **Alerts** (notifications and system events), and **Modules** (Calendar, Weather, Media, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the customization previews, keeping the popup surface size stable. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Overview always remains available so Controls and settings cannot become inaccessible. Disabling Weather also stops weather requests.
+Open **Overview → Customize → Settings** for four categories: **General** (opening and animations), **Panel** (clock widget builder), **Alerts** (notifications and system events), and **Modules** (Calendar, Weather, Media, T3 Code, Herdr, and Agent limits). Changes apply and save immediately. Settings replace the customization previews, keeping the popup surface size stable. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Overview always remains available so Controls and settings cannot become inaccessible. Disabling Weather also stops weather requests.
 
 | Menu setting | Configuration and default |
 |---|---|
@@ -275,6 +275,16 @@ At every connection, Island reads the server version and first checks `$T3CODE_H
 When enabled, the bridge uses `t3 auth session issue` to obtain a one-hour token with `orchestration:read` and, if answers are enabled, `orchestration:operate`. The latter is T3's general orchestration permission; Island exposes only validated answers to pending questions. Tokens are held in memory, rotated before expiry, and revoked on normal disconnect or shutdown. Turning off the integration stops the bridge. Session text and drafts are never added to notification history or written to disk by Island.
 
 The integration follows T3's client protocol, rather than a version-independent SDK. Unsupported protocol versions show an error and do not obtain a token. See the upstream [HTTP contract](https://github.com/pingdotgg/t3code/blob/d2c25950b4d9183ea342d5d5fc14c326b9e0172a/packages/contracts/src/environmentHttp.ts) and [orchestration contract](https://github.com/pingdotgg/t3code/blob/d2c25950b4d9183ea342d5d5fc14c326b9e0172a/packages/contracts/src/orchestrationV2.ts).
+
+### Herdr sessions
+
+Enable **Overview → Customize → Settings → Modules → Herdr → Herdr sessions** (`herdrEnabled: false` by default). Island polls running local Herdr sessions every five seconds and shows each recognized agent's name, pane, source and lifecycle state. Cards share T3's compact summary and full detail layout: a fixed status-icon slot, bold elided title, and a source/status metadata row in details and activity toasts. Working agents use the same braille spinner, blocked agents a question icon, and completed agents a checkmark. Spinners stop when hidden, outside the viewport, or reduced motion is enabled. Polling and switching between summary and details retain card instances and keyboard focus. The heading or a compact card opens the full list; the summary shows up to three agents per source. The clock indicator counts agents needing input, or working agents when none need input. It opens Overview.
+
+**Monitor saved SSH machines** (`herdrRemote: false`) also polls enabled profiles from `herdr machine list --json`. This requires a local CLI and remote server supporting `--machine`; older installations can still use local monitoring. Configure machines and complete SSH authentication in Herdr first. Island never installs or starts servers, prompts for credentials, reads terminal contents, or sends input to agents. Each source is queried independently with a six-second timeout and up to eight concurrent requests. Slow sources can lengthen the refresh cycle; unavailable sources are shown explicitly and their stale agents are removed. Monitoring is limited to 32 local sessions and 32 saved machines, with 256 agents per source.
+
+A transition to blocked, done, or working → idle shows a four-second activity card on the focused monitor. Initial snapshots, reconnections, unknown states and metadata-only updates are quiet. DND, open Island panels and notification toasts suppress activity cards. Session metadata stays in memory and is never added to notification history. Disabling the module stops its polling and clears its state. Hover previews remain read-only; use Herdr to answer or control an agent.
+
+The collector follows the upstream [Herdr CLI contract](https://github.com/herdrdev/herdr/blob/ee5bfb5041bb3e4a49d591c72308aae3c81ecdde/docs/next/website/src/content/docs/cli-reference.mdx), using argument arrays and explicit source selectors. CLI fixture tests cover both local and remote routing without contacting live sessions.
 
 ### Optional Hyprland blur
 
@@ -369,6 +379,8 @@ python3 tests/agent-limits-qml.py          # Isolated limits collector, pins, fo
 python3 tests/modules.py                   # Shared fake host, registration, navigation and collector lifecycle
 python3 tests/module-storage.py            # Independent stores, legacy migration, restart and private permissions
 python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/WebSocket server; no live T3 changes
+python3 tests/herdr-qml.py                 # Offscreen Herdr views and disabled-state cleanup
+python3 tests/herdr-collector.py           # Local/remote CLI fixtures; no live sessions
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/calendar-reminders.py        # Native reminder CLI fixture, calendar forms and year navigation

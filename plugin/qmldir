@@ -93,3 +93,6 @@ singleton CornerStyle 1.0 CornerStyle.qml
 
 ClockIndicatorStrip 1.0 ClockIndicatorStrip.qml
 ClockLayoutEditor 1.0 ClockLayoutEditor.qml
+
+HerdrState 1.0 HerdrState.qml
+HerdrSessionCard 1.0 HerdrSessionCard.qml

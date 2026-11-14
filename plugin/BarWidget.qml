@@ -62,7 +62,7 @@ BarWidget {
   property date now: new Date()
   readonly property bool opened: pinned
   readonly property string screenName: root.QsWindow.window && root.QsWindow.window.screen ? root.QsWindow.window.screen.name : ""
-  readonly property bool alertOnScreen: !service || !(alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) || (alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) === screenName
+  readonly property bool alertOnScreen: !service || !(alertKind==="herdr" ? service.herdrTargetScreen : alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) || (alertKind==="herdr" ? service.herdrTargetScreen : alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) === screenName
   readonly property bool showAlert: alertKind !== "" && alertOnScreen
   readonly property bool notificationToast: alertKind==="notification" && !pinned && !hoverOpen
   readonly property real displayScale: root.QsWindow.window ? root.QsWindow.window.devicePixelRatio : 1
@@ -80,7 +80,7 @@ BarWidget {
     var index=selectedPage
     previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
-  readonly property string barText: showAlert && alertKind!=="t3" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
+  readonly property string barText: showAlert && alertKind!=="t3" && alertKind!=="herdr" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
@@ -119,6 +119,12 @@ BarWidget {
     contentExpanded=false;selectedPage=1
     alertKind="t3";alertLife.interval=4000;alertLife.restart()
   }
+  function showHerdrActivity() {
+    if(!service || !service.latestHerdr || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
+    if(service.herdrTargetScreen && service.herdrTargetScreen!==screenName) return
+    contentExpanded=false;selectedPage=1
+    alertKind="herdr";alertLife.interval=4000;alertLife.restart()
+  }
   function showNotification() {
     if (!service || !service.latest || (service.targetScreen && service.targetScreen!==screenName) || pinned) return
     contentExpanded = false; alertKind = "notification"; alertLife.interval = Number(setting("notificationDuration",5000)); alertLife.restart()
@@ -154,7 +160,7 @@ BarWidget {
   onServiceChanged: syncSettings()
   onSettingsChanged: syncSettings()
   onSignatureChanged: {
-    if (Settings.get(settings,"trackAlerts") && service && service.playing && !pinned && alertKind !== "notification" && alertKind !== "t3") {
+    if (Settings.get(settings,"trackAlerts") && service && service.playing && !pinned && alertKind !== "notification" && alertKind !== "t3" && alertKind !== "herdr") {
       alertKind = "media"; alertLife.interval = 3000; alertLife.restart()
     }
   }
@@ -166,7 +172,7 @@ BarWidget {
   implicitHeight: vertical ? Math.max(Style.space(80),clockMeasure.implicitHeight+leftIndicators.implicitHeight+rightIndicators.implicitHeight+Style.space(24)) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
-  Connections { target: root.service; ignoreUnknownSignals:true; function onT3Arrival() {root.showT3Activity()} function onLatestT3Changed() { if (root.service && !root.service.latestT3 && root.alertKind === "t3") { root.alertKind = ""; alertLife.stop() } } function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
+  Connections { target: root.service; ignoreUnknownSignals:true; function onHerdrArrival() {root.showHerdrActivity()} function onLatestHerdrChanged() {if(root.service && !root.service.latestHerdr && root.alertKind==="herdr") {root.alertKind="";alertLife.stop()}} function onT3Arrival() {root.showT3Activity()} function onLatestT3Changed() { if (root.service && !root.service.latestT3 && root.alertKind === "t3") { root.alertKind = ""; alertLife.stop() } } function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
   // Epoch scheduling follows Omarchy's WallClock and remains positive across
   // DST folds. Only formats displaying seconds need second-by-second work.
   Timer {
@@ -328,7 +334,7 @@ BarWidget {
     alignmentItem: clockLabel
     open: root.pinned || (root.hoverOpen && root.hoverContentAvailable) || (root.showAlert && !root.stripNotification)
     frameless: root.notificationToast || bareCard
-    bareCard: (root.alertKind==="t3" || root.alertKind==="media") && !root.pinned && !root.hoverOpen
+    bareCard: (root.alertKind==="t3" || root.alertKind==="herdr" || root.alertKind==="media") && !root.pinned && !root.hoverOpen
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
     onVisibleChanged: if (!visible) Qt.callLater(function(){
       if(!preview.visible && !preview.open) {root.contentExpanded=false;root.selectedPage=1}

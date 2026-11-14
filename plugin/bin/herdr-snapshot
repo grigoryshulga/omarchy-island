@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Read-only Herdr snapshot. No terminal output, prompts or credentials are collected."""
+import concurrent.futures
+import json
+import os
+import re
+import subprocess
+import sys
+import signal
+import threading
+
+LIMIT = 2 * 1024 * 1024
+
+
+processes = set()
+process_lock = threading.RLock()
+stopping = threading.Event()
+
+
+def stop(*_):
+    stopping.set()
+    with process_lock:
+        for process in processes:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+    raise SystemExit(0)
+
+
+def query(args):
+    env = {k: v for k, v in os.environ.items() if not k.startswith('HERDR_')}
+    with process_lock:
+        if stopping.is_set():
+            raise OSError("stopped")
+        process = subprocess.Popen(['herdr', *args], stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                                   start_new_session=True, env=env)
+        processes.add(process)
+    expired = threading.Event()
+
+    def expire():
+        expired.set()
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    deadline = threading.Timer(6, expire)
+    deadline.start()
+    try:
+        output = process.stdout.read(LIMIT + 1)
+        if len(output) > LIMIT:
+            raise ValueError('limit')
+        process.wait()
+        if expired.is_set() or process.returncode:
+            raise ValueError('unavailable')
+        return json.loads(output)
+    finally:
+        deadline.cancel()
+        if process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait()
+        process.stdout.close()
+        with process_lock:
+            processes.discard(process)
+
+
+def text(value, limit=256):
+    return ''.join(c for c in value if c.isprintable())[:limit] if isinstance(value, str) else ''
+
+
+def collect(source):
+    source = dict(source)
+    try:
+        payload = query(source.pop('args') + ['agent', 'list'])
+        agents = payload['result']['agents']
+        if not isinstance(agents, list):
+            raise ValueError('protocol')
+        rows = []
+        for agent in agents[:256]:
+            if not isinstance(agent, dict):
+                continue
+            pane = text(agent.get('pane_id'))
+            if not pane:
+                continue
+            status = agent.get('agent_status')
+            rows.append({'id': source['id'] + '/' + pane, 'sourceId': source['id'],
+                         'title': text(agent.get('name') or agent.get('title') or agent.get('agent')) or pane,
+                         'pane': pane, 'source': source['label'],
+                         'status': status if status in ('idle', 'working', 'blocked', 'done') else 'unknown'})
+        source.update(status='connected', rows=rows)
+    except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired):
+        source.pop('args', None)
+        source.update(status='unavailable', rows=[])
+    return source
+
+
+def snapshot(remote=False):
+    sources, errors = [], []
+    try:
+        sessions = query(['session', 'list', '--json'])['sessions']
+        if not isinstance(sessions, list):
+            raise ValueError('protocol')
+        for session in sessions[:32]:
+            name = session.get('name')
+            if session.get('running') is True and isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,64}', name):
+                sources.append({'id': 'local/' + name, 'label': name, 'args': ['--session', name]})
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, subprocess.TimeoutExpired):
+        errors.append({'id': 'local', 'label': 'Herdr', 'status': 'unavailable', 'rows': []})
+    if remote:
+        try:
+            machines = query(['machine', 'list', '--json'])
+            if not isinstance(machines, list):
+                raise ValueError('protocol')
+            for machine in machines[:32]:
+                identifier = machine.get('id')
+                if machine.get('enabled') is True and isinstance(identifier, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,128}', identifier):
+                    sources.append({'id': 'remote/' + identifier,
+                                    'label': text(machine.get('label')) + ' / ' + text(machine.get('session')),
+                                    'args': ['--machine', identifier]})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, subprocess.TimeoutExpired):
+            errors.append({'id': 'remote', 'label': 'SSH', 'status': 'unavailable', 'rows': []})
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        return {'sources': list(pool.map(collect, sources)) + errors}
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    print(json.dumps(snapshot('--remote' in sys.argv), ensure_ascii=True))

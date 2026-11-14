@@ -47,7 +47,7 @@ assert.equal(new Set(rows.map(row => row.key)).size, rows.length);
 assert.deepEqual(rows.filter(row => !row.fixed).map(row => row.key).sort(),
   Object.keys(settings.defaults).filter(key => !key.startsWith('indicator') && !['agentLimitsPins', 'overviewEnabled', 'overviewLayout', 'clockLayout'].includes(key)).sort());
 assert.deepEqual(rows.filter(row => row.dependsOn).map(row => [row.key, row.dependsOn]),
-  [['hoverDelay', 'hoverPreview'], ['t3Responses', 't3Enabled']]);
+  [['hoverDelay', 'hoverPreview'], ['t3Responses', 't3Enabled'], ['herdrRemote', 'herdrEnabled']]);
 for (const lang of ['en', 'ru']) {
   const strings = require(`../plugin/i18n/${lang}.json`);
   for (const section of settings.sections) {

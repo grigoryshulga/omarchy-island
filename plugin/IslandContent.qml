@@ -105,7 +105,7 @@ Item {
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.visible && slot.item && slot.item.toastIcon) return slot.item.toastIcon}
     return null
   }
-  readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : notificationIcon
+  readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : alertKind==="herdr" ? herdrToast.statusIcon : notificationIcon
   implicitHeight:expanded ? (detailOpen || configuring ? pageHeight : Math.min(maximumOverviewHeight,body.implicitHeight)) : body.implicitHeight
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   OverviewDrag {
@@ -197,6 +197,18 @@ Item {
     bridge:root.t3;strings:root.strings;active:visible && root.visible
     feedback:root.externalFeedback
     onExpandRequested:root.expandRequested()
+  }
+  HerdrSessionCard {
+    id:herdrToast
+    active:visible && root.visible
+    feedback:root.externalFeedback
+    onExpandRequested:root.expandRequested()
+    objectName:"herdrActivityToast"
+    Layout.fillWidth:true
+    visible:root.alertKind==="herdr" && !root.expanded && !root.hovering && !!root.service && !!root.service.latestHerdr
+    color:"transparent"
+    row:root.service && root.service.latestHerdr ? root.service.latestHerdr : ({title:"",source:"",pane:"",status:"idle"})
+    strings:root.strings
   }
   Repeater {
     id:moduleSections

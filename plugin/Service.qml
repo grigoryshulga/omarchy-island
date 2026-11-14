@@ -26,6 +26,20 @@ Item {
       root.t3Arrival()
     }
   }
+  readonly property var herdr:modules.herdr || null
+  property var latestHerdr:null
+  property string herdrTargetScreen:""
+  signal herdrArrival()
+  Connections {
+    target:root.herdr
+    function onActivityChanged(session) {
+      if(root.doNotDisturb) return
+      root.herdrTargetScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+      root.latestHerdr=session
+      root.herdrArrival()
+    }
+    function onAllowedChanged() {if(!root.herdr.allowed) root.latestHerdr=null}
+  }
   readonly property alias indicators: indicatorState
   IndicatorState {id:indicatorState;downloading:root.activeDownloads>0}
   DictationState {id:dictationState;active:indicatorState.consumers.length>0}
@@ -63,7 +77,7 @@ Item {
     target:root.notifications
     function onArrivalChanged(){root.downloadAlert=false;root.latestDownload=null;root.arrival++}
   }
-  onDoNotDisturbChanged:if(doNotDisturb) latestDownload=null
+  onDoNotDisturbChanged:if(doNotDisturb) {latestDownload=null;latestHerdr=null}
   readonly property var mediaState:modules.media || null
   readonly property var weather:modules.weather || null
   readonly property var calendars:modules.calendar ? modules.calendar.calendars : null

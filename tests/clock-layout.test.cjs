@@ -5,7 +5,7 @@ const settings = require('../plugin/SettingsModel.mjs');
 const entries = layout.catalog(catalog.ordered('indicator'));
 const defaults = layout.layout(entries);
 assert.deepEqual(defaults.filter(r => r.side === 'left').map(r => r.id),
-  ['module:battery', 'module:t3', 'module:agentLimits', 'recording', 'remote']);
+  ['module:battery', 'module:t3', 'module:herdr', 'module:agentLimits', 'recording', 'remote']);
 assert.equal(layout.valid(defaults), true);
 assert.equal(entries.find(e => e.id === "module:weather").pageIndex, 3);
 assert.ok(!defaults.some(r => r.id === "module:weather"));

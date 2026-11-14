@@ -511,5 +511,18 @@
   "clock.space": "Space",
   "clock.format": "Time format",
   "settings.group.calendar": "Calendar",
-  "settings.group.weather": "Weather"
+  "settings.group.weather": "Weather",
+  "settings.group.herdr": "Herdr",
+  "settings.herdrEnabled": "Herdr sessions",
+  "settings.herdrRemote": "Monitor saved SSH machines",
+  "herdr.unavailable": "Unavailable",
+  "herdr.empty": "No agents",
+  "herdr.help": "Read-only monitoring of running local sessions. Remote monitoring uses enabled saved Herdr SSH machines and requires a CLI with --machine support. Authentication stays in Herdr.",
+  "herdr.status.working": "Working",
+  "herdr.status.blocked": "Input needed",
+  "herdr.status.done": "Done",
+  "herdr.status.idle": "Idle",
+  "herdr.status.unknown": "Unknown",
+  "herdr.details": "Session details",
+  "herdr.expand": "Open Overview"
 }

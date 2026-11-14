@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const {transitions,statusRole}=require('../plugin/HerdrModel.js');
+assert.deepEqual(['working','blocked','done','idle','unknown'].map(statusRole),['info','warning','success','secondaryText','secondaryText']);
+const row=(status,id='local/default/w1:p1')=>({id,status});
+const source=(rows,status='connected',id='local/default')=>({id,status,rows});
+let result=transitions({},[source([row('working')])]);
+assert.equal(result.alerts.length,0);
+result=transitions(result.baseline,[source([row('blocked')])]);
+assert.equal(result.alerts[0].status,'blocked');
+assert.equal(transitions(result.baseline,[source([row('blocked')])]).alerts.length,0);
+result=transitions(result.baseline,[source([],'unavailable')]);
+assert.equal(transitions(result.baseline,[source([row('done')])]).alerts.length,0);
+for(const state of ['done','idle']) assert.equal(transitions({'local/default':[row('working')]},[source([row(state)])]).alerts.length,1);
+assert.equal(transitions({'local/default':[row('working')]},[source([row('unknown')])]).alerts.length,0);
+assert.equal(transitions({'local/default':[row('working')]},[source([row('done','another-pane')])]).alerts.length,0);
+assert.equal(transitions({'local/default':[]},[source([row('blocked')])]).alerts.length,1);
+console.log('PASS: Herdr transitions, completion, blocked state and quiet reconnects');

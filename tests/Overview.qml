@@ -53,6 +53,7 @@ ShellRoot {
     id: service
     // The real service always provides a bridge, even when T3 is disabled.
     readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
+    property var latestHerdr:null
     property var t3: bridge
     property var agentLimits: limits
     property var weather: fakeWeather
@@ -305,13 +306,14 @@ ShellRoot {
         overview.back();mouseRelease(scroll,scroll.width/2,scroll.height-2);wait(30)
         compare(JSON.stringify(Island.Preferences.get("overviewLayout")),canceledOrder,"Canceled edge drag changed the layout")
         var keyboardDrag=findChild(overview,"overviewDrag-notifications")
+        var notificationPosition=Island.Preferences.get("overviewLayout").findIndex(function(row){return row.id==="notifications"})
         navigation.focusItem(keyboardDrag);keyClick(Qt.Key_Up,Qt.ControlModifier);wait(30)
         verify(keyboardDrag.activeFocus && keyboardDrag.activeFocusOnTab,"Module heading lost keyboard focus after reordering")
         compare(Commons.Border.left(keyboardDrag.borderSpec),0,"Module heading has a duplicate focus border")
         var focusedFrame=keyboardDrag.parent
         while(focusedFrame && !("entryKey" in focusedFrame)) focusedFrame=focusedFrame.parent
         verify(focusedFrame && focusedFrame.border.width>0,"Focused module lost its outer focus border")
-        compare(Island.Preferences.get("overviewLayout")[4].id,"notifications")
+        compare(Island.Preferences.get("overviewLayout")[notificationPosition-1].id,"notifications")
         var mediaSize=findChild(overview,"overviewSize-media")
         mediaSize.changed("large");wait(30)
         verify(overview.back());wait(30)
@@ -320,6 +322,13 @@ ShellRoot {
         compare(findChild(overview,"islandMediaPlayer"),retainedPlayer,"Reordering recreated the module view")
         overview.expanded=false;overview.alertKind="media";wait(30)
         verify(retainedPlayer.visible,"Hidden Overview block suppressed the media toast")
+        service.latestHerdr={title:"Remote agent",source:"Build / default",pane:"w1:p1",status:"blocked"}
+        overview.alertKind="herdr";wait(30)
+        verify(findChild(overview,"herdrActivityToast").visible,"Herdr activity toast is hidden")
+        compare(overview.toastIcon,findChild(overview,"herdrActivityToast").statusIcon,"Herdr toast waves lost their status origin")
+        verify(!retainedPlayer.visible,"Media leaked into the Herdr toast")
+        service.latestHerdr=null;wait(30)
+        verify(!findChild(overview,"herdrActivityToast").visible,"Cleared Herdr activity toast remains visible")
         overview.expanded=true;overview.alertKind="";wait(30)
         overview.configure(customize);wait(30)
         findChild(overview,"overviewVisible-media").clicked();wait(30)
