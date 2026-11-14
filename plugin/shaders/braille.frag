@@ -142,17 +142,22 @@ void main() {
             dots = clamp(0.08+heat*(0.35+grain*0.65),0.0,1.0);
             sparkle = pow(grain,24.0)*treble*heat*0.65;
         } else {
-            // Constellations: small arcs cohere and loosen together. No lines
-            // or moving particles; the grouping is expressed only by dot light.
+            // Constellations assemble and dissolve on the fixed dot lattice.
+            // Both membership and arc orientation evolve; changing only a faint
+            // arc's gain leaves the dominant stars looking completely static.
             vec2 group = floor(point*1.8);
             vec2 localGroup = fract(point*1.8)-0.5;
             float seed = noise(uvec2(group),0u);
-            float angle = seed*6.28318;
+            float angle = seed*6.28318+phase*(0.35+seed*0.2)+bass*0.2;
             float arc = abs(length(localGroup+vec2(sin(angle),cos(angle))*0.2)-0.33);
-            float coherence = 0.5+0.5*sin(phase*0.55+seed*6.28318);
-            float stars = smoothstep(0.72,0.95,grain);
+            float coherence = 0.5+0.5*sin(phase*1.1+seed*6.28318);
+            float starClock = phase*0.85+seed*3.0;
+            uint starTick = uint(floor(starClock));
+            float starBlend = smoothstep(0.0,1.0,fract(starClock));
+            float starNoise = mix(noise(dotPosition,starTick+101u),noise(dotPosition,starTick+102u),starBlend);
+            float stars = smoothstep(0.42,0.78,starNoise);
             float chain = exp(-arc*arc*600.0)*smoothstep(0.25,0.65,grain);
-            dots = 0.08+stars*0.25+chain*(0.2+coherence*0.4+audio*0.35);
+            dots = clamp(0.04+stars*(0.22+coherence*0.5)+chain*(0.25+coherence*0.4+audio*0.2),0.0,1.0);
             sparkle = stars*treble*coherence*0.35;
         }
     }
