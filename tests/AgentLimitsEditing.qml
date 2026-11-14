@@ -42,6 +42,9 @@ ShellRoot {
     TestCase {
       id: test; when: false
       function run() {
+        center.tab="usage";wait(30)
+        var usage=findChild(center,"agentUsageTotal")
+        verify(usage && usage.visible,"usage summary missing")
         center.configure();wait(40)
         var first=findChild(center,"limitsProvider-codex"),second=findChild(center,"limitsProvider-claude")
         var logo=findChild(first,"agentProviderLogo")

@@ -17,6 +17,23 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ProviderParsingTests(unittest.TestCase):
+    def test_model_periods_are_bounded_merged_and_published(self):
+        now = MODULE.dt.datetime.now().replace(hour=12)
+        ledger = MODULE.empty_harness_ledger()
+        metrics = MODULE.metrics_from_usage({"inputTokens": 100}, requests=1)
+        MODULE.add_turn(ledger, "test-model", metrics, now, {"test-model": {"input": 2}})
+        old = MODULE.empty_harness_ledger()
+        MODULE.add_turn(old, "old-model", MODULE.metrics_from_usage({"inputTokens": 900}), now - MODULE.dt.timedelta(days=40), {})
+        MODULE.merge_ledger(ledger, old)
+        provider = MODULE.empty_provider("codex")
+        MODULE.apply_ledger(provider, ledger)
+        today = now.date().isoformat()
+        self.assertEqual(list(provider["modelDays"]), [today])
+        self.assertEqual(provider["modelDays"][today][0]["tokens"], 100)
+        self.assertEqual(provider["modelHours"]["12"][0]["name"], "test-model")
+        self.assertEqual(provider["total"]["tokens"], 1000)
+        self.assertEqual(provider["usageDay"], today)
+
     def test_opencode_percent_and_exhaustion_status(self):
         payload = {"usage": {"rolling": {"status": "rate-limited", "percent": 99, "resetsAt": "2026-10-24T18:00:00Z"},
                              "weekly": {"status": "ok", "percent": 42, "resetsAt": None}}}

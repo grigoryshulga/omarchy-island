@@ -12,6 +12,7 @@ Column {
   required property var backend
   required property var strings
   property bool expanded:false
+  property real availableHeight: 500
   property alias center: center
   property bool centerOpen:false
   property bool compact:false
@@ -82,6 +83,7 @@ Column {
   }
   AgentLimitsCenter {
     id: center
+    availableHeight: root.availableHeight
     width:parent.width
     visible:root.centerOpen && root.expanded
     backend:root.backend;strings:root.strings;feedback:root.feedback

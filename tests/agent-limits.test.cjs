@@ -77,3 +77,25 @@ assert.equal(entries[0],first);
 M.syncIdentities(list,['c','a'],'id');
 assert.deepEqual(entries.map(x=>x.id),['a','c']);
 console.log('PASS: Limits freshness, balances, pin ordering and stable identities.');
+
+const U=require('../plugin/AgentUsageModel.js');
+const usageNow=new Date(2026,10,14,12).getTime();
+const usageCache={providers:[
+ {id:'a',name:'A',total:{tokens:1000},usageDay:'2026-11-14',days:[{date:'2026-11-14',tokens:100,cost:1,requests:2,priced:true}],hours:[{hour:2,tokens:100,cost:1,requests:2,priced:true}],modelDays:{'2026-11-14':[{name:'m',tokens:60,cost:0.6,priced:true}]},modelHours:{'2':[{name:'m',tokens:60,cost:0.6,priced:true}]}},
+ {id:'b',name:'B',days:[{date:'2026-11-13',tokens:50,cost:0,requests:1,priced:false},{date:'2026-10-01',tokens:999}]},
+ {id:'c',name:'C',days:[]}
+]};
+let report=U.analyze(usageCache,'week','','',usageNow);
+assert.equal(report.total.tokens,150);
+assert.equal(report.series.find(p=>p.key==='2026-11-13').totals.tokens,50);
+assert.equal(report.series.find(p=>p.key==='2026-11-14').totals.tokens,100);
+assert.equal(report.models[0].totals.tokens,60);
+assert.equal(report.unattributed.tokens,90);
+assert.equal(report.total.unpricedTokens,50);
+assert.deepEqual(report.missing,['C']);
+assert.equal(U.analyze(usageCache,'week','a','2026-11-13',usageNow).total.tokens,0);
+assert.equal(U.analyze(usageCache,'today','','2',usageNow).models[0].totals.tokens,60);
+assert.equal(U.analyze(usageCache,'today','','',usageNow).total.tokens,100);
+assert.equal(U.analyze(usageCache,'today','','2',usageNow+86400000).total.tokens,0,'yesterday hours leaked into today');
+assert.deepEqual(U.periodKeys('week',new Date(2026,0,2,12)),['2025-12-27','2025-12-28','2025-12-29','2025-12-30','2025-12-31','2026-01-01','2026-01-02']);
+console.log('PASS: usage date joins, model attribution, filters, partial pricing and midnight rollover.');

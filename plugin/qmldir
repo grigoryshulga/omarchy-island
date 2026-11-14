@@ -101,3 +101,4 @@ AgentLimitsList 1.0 AgentLimitsList.qml
 AgentLimitsProviderGroup 1.0 AgentLimitsProviderGroup.qml
 AgentLimitDetail 1.0 AgentLimitDetail.qml
 AgentProviderIcon 1.0 AgentProviderIcon.qml
+AgentUsage 1.0 AgentUsage.qml

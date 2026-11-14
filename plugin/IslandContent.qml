@@ -54,7 +54,7 @@ Item {
     detailPage=""
     configuring=true
     overviewScroll.contentItem.contentY=0
-    Qt.callLater(function(){detailNavigation.first(body)})
+    Qt.callLater(function(){detailNavigation.first(detailHeader.visible ? detailHeader : body)})
   }
   function changeLayout(id,patch,step) {settingRequested("overviewLayout",Overview.update(moduleDefinitions,Preferences.get("overviewLayout"),id,patch,step))}
   readonly property var detailDefinition:moduleDefinitions.find(function(entry){return entry.id===root.detailPage}) || null
@@ -76,7 +76,7 @@ Item {
     summaryScrollY=overviewScroll.contentItem.contentY
     detailPage=page
     overviewScroll.contentItem.contentY=0
-    Qt.callLater(function(){detailNavigation.first(body)})
+    Qt.callLater(function(){detailNavigation.first(detailHeader.visible ? detailHeader : body)})
   }
   function restoreSummary() {
     Qt.callLater(function(){
@@ -121,12 +121,38 @@ Item {
       Qt.callLater(function(){for(var i=0;i<moduleSections.count;i++) {var frame=moduleSections.itemAt(i);if(frame.entryKey===key) {detailNavigation.focusItem(frame.handleItem);break}}})
     }
   }
+  RowLayout {
+    id: detailHeader
+    visible:root.detailPage!=="" && !(root.detailPage==="controls" && root.detailItem && root.detailItem.inPanel)
+    width: parent.width
+    SectionHeading {Layout.fillWidth:true;title:root.detailDefinition ? (root.detailDefinition.title || root.strings.t(root.detailDefinition.titleKey)) : root.strings.t("notifications.active")}
+    FeedbackButton {
+      objectName: "limitsAddProvider"
+      visible: root.detailPage === "agentLimits" && !!root.detailItem && root.detailItem.editing
+      text: "+"; tooltipText: root.strings.t("limits.addProvider")
+      compact: true; focusable: true; feedback: root.externalFeedback
+      onClicked: root.detailItem.showAdd()
+    }
+    FeedbackButton {
+      id: limitsEditButton
+      objectName: "limitsEdit"
+      visible: root.detailPage === "agentLimits"
+      text: root.strings.t(root.detailItem && root.detailItem.editing ? "limits.finishPins" : "limits.edit")
+      selected: !!(root.detailItem && root.detailItem.editing)
+      compact: true; focusable: true; feedback: root.externalFeedback
+      onClicked: root.detailItem.configure()
+    }
+    FeedbackButton {objectName:"overviewBack";implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
+    FeedbackButton {objectName:"controlCustomize";visible:root.detailPage==="controls";iconText:"󰒓";tooltipText:root.strings.t("controls.customize");selected:root.detailItem && root.detailItem.editing || false;focusable:true;compact:true;feedback:root.externalFeedback;onClicked:if(root.detailItem) root.detailItem.configure()}
+    FeedbackButton {objectName:"controlAddMenu";visible:root.detailPage==="controls" && root.detailItem && root.detailItem.editing || false;iconText:"+";tooltipText:root.strings.t("controls.plugins");selected:root.detailItem && root.detailItem.adding || false;focusable:true;compact:true;feedback:root.externalFeedback;onClicked:if(root.detailItem) root.detailItem.showAdd()}
+  }
   Controls.ScrollView {
     id:overviewScroll
     objectName:"overviewScroll"
     visible:!root.settingsOpen
     width:parent.width
-    height:root.expanded ? root.height : Math.min(root.height,root.implicitHeight)
+    y: detailHeader.visible ? detailHeader.height + Design.gap.small : 0
+    height:Math.max(0,(root.expanded ? root.height : Math.min(root.height,root.implicitHeight)) - y)
     clip:true;contentWidth:availableWidth
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
     Controls.ScrollBar.vertical:Controls.ScrollBar {
@@ -165,30 +191,6 @@ Item {
       tooltipText:root.strings.t("overview.customize");feedback:root.externalFeedback
       onClicked:root.configure(customizeButton)
     }
-  }
-  RowLayout {
-    visible:root.detailPage!=="" && !(root.detailPage==="controls" && root.detailItem && root.detailItem.inPanel)
-    Layout.fillWidth:true
-    SectionHeading {Layout.fillWidth:true;title:root.detailDefinition ? (root.detailDefinition.title || root.strings.t(root.detailDefinition.titleKey)) : root.strings.t("notifications.active")}
-    FeedbackButton {
-      objectName: "limitsAddProvider"
-      visible: root.detailPage === "agentLimits" && !!root.detailItem && root.detailItem.editing
-      text: "+"; tooltipText: root.strings.t("limits.addProvider")
-      compact: true; focusable: true; feedback: root.externalFeedback
-      onClicked: root.detailItem.showAdd()
-    }
-    FeedbackButton {
-      id: limitsEditButton
-      objectName: "limitsEdit"
-      visible: root.detailPage === "agentLimits"
-      text: root.strings.t(root.detailItem && root.detailItem.editing ? "limits.finishPins" : "limits.edit")
-      selected: !!(root.detailItem && root.detailItem.editing)
-      compact: true; focusable: true; feedback: root.externalFeedback
-      onClicked: root.detailItem.configure()
-    }
-    FeedbackButton {objectName:"overviewBack";implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍";tooltipText:root.strings.t("overview.back");compact:true;focusable:true;feedback:root.externalFeedback;onClicked:root.back()}
-    FeedbackButton {objectName:"controlCustomize";visible:root.detailPage==="controls";iconText:"󰒓";tooltipText:root.strings.t("controls.customize");selected:root.detailItem && root.detailItem.editing || false;focusable:true;compact:true;feedback:root.externalFeedback;onClicked:if(root.detailItem) root.detailItem.configure()}
-    FeedbackButton {objectName:"controlAddMenu";visible:root.detailPage==="controls" && root.detailItem && root.detailItem.editing || false;iconText:"+";tooltipText:root.strings.t("controls.plugins");selected:root.detailItem && root.detailItem.adding || false;focusable:true;compact:true;feedback:root.externalFeedback;onClicked:if(root.detailItem) root.detailItem.showAdd()}
   }
   RowLayout {
     visible:root.expanded && root.configuring
@@ -268,7 +270,7 @@ Item {
           readonly property string size:(root.expanded || root.hovering) && moduleFrame.config ? moduleFrame.config.size : "standard"
           readonly property bool detail:root.detailPage===moduleFrame.entryKey
           readonly property bool active:root.overviewActive && root.visible && !root.settingsOpen && moduleSection.visible
-          readonly property real pageHeight:root.height
+          readonly property real pageHeight:overviewScroll.height
         }
         readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
         onModuleEnabledChanged:if(!moduleEnabled && root.detailPage===moduleFrame.entryKey) root.back()

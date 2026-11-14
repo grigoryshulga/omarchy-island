@@ -209,6 +209,7 @@ ShellRoot {
         navigation.focusItem(lastPin);wait(30)
         var lastPosition=lastPin.mapToItem(hostScroll,0,0)
         verify(hostScroll.contentItem.contentY>0,"Quota navigation did not scroll the full host")
+        verify(findChild(overview,"overviewBack").mapToItem(overview,0,0).y>=0,"detail header scrolled out of view")
         verify(lastPosition.y>=0 && lastPosition.y+lastPin.height<=hostScroll.height+1,"Last quota remains clipped after keyboard navigation")
         compare(overview.implicitHeight,height)
         verify(overview.back());wait(20)

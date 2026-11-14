@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='island-limits-') as temporary:
     (root/'shell.qml').write_text((project/'tests/AgentLimits.qml').read_text())
     helper=root/'collector'
     helper.write_text('''#!/usr/bin/env python3
-import sys,json,os
+import sys,json,os,datetime
 from pathlib import Path
 with open(os.environ['ISLAND_LIMITS_LOG'],'a') as out:out.write(json.dumps(sys.argv[1:])+'\\n')
 providers=[{'id':'codex','name':'Codex','enabled':True,'secretName':'','region':'global'},{'id':'claude','name':'Claude','enabled':True,'secretName':'','region':'global'}]
@@ -20,7 +20,7 @@ if sys.argv[1] in ('providers','configure'):
  if sys.argv[1]=='configure':providers[0]['enabled']=sys.argv[3]!='disable'
  print(json.dumps({'providers':providers}))
 else:
- data={'schemaVersion':1,'state':'ready','syncedAt':1,'providers':[{'id':'codex','name':'Codex','limits':[{'label':'Weekly','percent':92},{'label':'Session','percent':10}],'days':[{'date':'2026-11-12','tokens':100,'cost':0.2,'priced':True,'requests':2}],'models':[{'name':'example','tokens':100,'priced':True,'cost':0.2}]}]}
+ data={'schemaVersion':1,'state':'ready','syncedAt':1,'providers':[{'id':'codex','name':'Codex','limits':[{'label':'Weekly','percent':92},{'label':'Session','percent':10}],'days':[{'date':datetime.date.today().isoformat(),'tokens':100,'cost':0.2,'priced':True,'requests':2}],'models':[{'name':'example','tokens':100,'priced':True,'cost':0.2}]}]}
  Path(os.environ['ISLAND_LIMITS_CACHE']).write_text(json.dumps(data))
 ''')
     helper.chmod(0o700)
@@ -33,3 +33,5 @@ else:
 from module_harness import ModuleHarness
 with ModuleHarness() as harness:
     harness.run(project / 'tests/AgentLimitsEditing.qml', 'LIMITS_EDIT_PASS')
+with ModuleHarness() as harness:
+    harness.run(project / 'tests/AgentUsage.qml', 'USAGE_PASS')

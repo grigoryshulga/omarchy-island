@@ -12,6 +12,7 @@ Island.ModuleView {
   function back() { return overview.center.back() }
   Island.AgentLimitsOverview {
     id:overview
+    availableHeight: root.presentation ? root.presentation.pageHeight : 500
     width:parent.width
     backend:root.backend
     strings:root.presentation ? root.presentation.strings : null

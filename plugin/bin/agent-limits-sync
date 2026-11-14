@@ -291,6 +291,17 @@ def day_from_ms(value: Any) -> str:
         return ""
 
 
+def record_model_period(bucket: dict[str, Any], model: str, metrics: dict[str, Any], moment: dt.datetime) -> None:
+    # Persist aggregate-only attribution for the visible retention window.
+    if not dt.date.today() - dt.timedelta(days=29) <= moment.date() <= dt.date.today():
+        return
+    models = bucket.setdefault("modelDays", {}).setdefault(moment.date().isoformat(), {})
+    merge_metrics(models.setdefault(model, empty_metrics()), metrics)
+    if moment.date() == dt.date.today():
+        models = bucket.setdefault("modelHours", {}).setdefault(moment.hour, {})
+        merge_metrics(models.setdefault(model, empty_metrics()), metrics)
+
+
 def hours_series(hours: dict[int, dict[str, Any]] | None) -> list[dict[str, Any]]:
     """24 buckets for the current local day, so the chart can show today hourly."""
     result = []
@@ -814,6 +825,7 @@ def opencode_ledger(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
             if not day:
                 continue
             bucket = result[provider_id]
+            record_model_period(bucket, model, metrics, dt.datetime.fromtimestamp(integer(created_ms) / 1000.0))
             if day not in bucket["days"]:
                 bucket["days"][day] = empty_metrics()
             merge_metrics(bucket["days"][day], metrics)
@@ -869,6 +881,7 @@ def add_turn(bucket: dict[str, Any], model: str, metrics: dict[str, Any], moment
     cost = recorded if recorded > 0 else price_model(model, normalised, pricing)
     price_metrics(metrics, cost)
     day = moment.date().isoformat()
+    record_model_period(bucket, model, metrics, moment)
     merge_metrics(bucket["days"].setdefault(day, empty_metrics()), metrics)
     merge_metrics(bucket["models"].setdefault(model, empty_metrics()), metrics)
     merge_metrics(bucket["total"], metrics)
@@ -1056,6 +1069,11 @@ def merge_ledger(target: dict[str, Any], source: dict[str, Any]) -> None:
         merge_metrics(target["days"].setdefault(date, empty_metrics()), metrics)
     for model, metrics in (source.get("models") or {}).items():
         merge_metrics(target["models"].setdefault(model, empty_metrics()), metrics)
+    for section in ("modelDays", "modelHours"):
+        for period, models in source.get(section, {}).items():
+            destination = target.setdefault(section, {}).setdefault(period, {})
+            for model, metrics in models.items():
+                merge_metrics(destination.setdefault(model, empty_metrics()), metrics)
     merge_metrics(target["total"], source.get("total") or empty_metrics())
     for hour, metrics in (source.get("hours") or {}).items():
         if hour not in target["hours"]:
@@ -1070,6 +1088,9 @@ def apply_ledger(provider: dict[str, Any], ledger: dict[str, Any]) -> None:
     # A harness ledger counts sessions per file; the day reconstruction cannot.
     total["sessions"] = integer(ledger["total"].get("sessions")) or integer(provider["total"].get("sessions"))
     provider["total"] = total
+    provider["modelDays"] = {day: model_rows(models) for day, models in ledger.get("modelDays", {}).items()}
+    provider["modelHours"] = {str(hour): model_rows(models) for hour, models in ledger.get("modelHours", {}).items()}
+    provider["usageDay"] = dt.date.today().isoformat()
     provider["scope"] = "local"
 
 
