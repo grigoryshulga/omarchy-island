@@ -8,6 +8,12 @@ function power(value) {
 function effectiveRadius(rounding, exponent, width, height) {
   return Math.max(0,Math.min(rounding*power(exponent)/2,width/2,height/2))
 }
+function parseBorderWidth(raw, previous) {
+  try {
+    var value=JSON.parse(raw).int
+    return typeof value === "number" && isFinite(value) && value>=0 && Math.floor(value)===value ? value : previous
+  } catch(e) { return previous }
+}
 function parsePower(raw, previous) {
   try {
     var value=JSON.parse(raw).float

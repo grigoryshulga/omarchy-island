@@ -61,7 +61,13 @@ QtObject {
 
   // Color owns parsing colors.toml, shell.toml, user overrides and live updates.
   // Island reads it; it never writes the system palette or a private theme file.
-  readonly property var popupBorder: Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)))
+  readonly property var popupBorder: {
+    var spec=Border.surfaceSpec("popups","border",Commons.Color.popups.border,CornerStyle.borderWidth)
+    var width=CornerStyle.borderWidth
+    // Keep theme paint, but match the compositor's layout-pixel width on all
+    // sides. Legacy popup width overrides must not mask Hyprland updates.
+    return {color:spec.color,gradient:spec.gradient,widths:{top:width,right:width,bottom:width,left:width}}
+  }
   readonly property color canvas: Commons.Color.popups.background
   readonly property color opaqueCanvas: color(Tokens.opaque(canvas,Commons.Color.background))
   readonly property color surface: color(Tokens.mix(opaqueCanvas,Commons.Color.popups.text,0.045))

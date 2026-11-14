@@ -15,6 +15,9 @@ assert.equal(model.effectiveRadius(20,2,400,200),20);
 assert.equal(model.effectiveRadius(20,1,400,200),10);
 assert.equal(model.effectiveRadius(20,4,60,40),20,'clamp after normalization');
 assert.equal(model.effectiveRadius(0,4,400,200),0);
+for(const width of [0,1,3,20]) assert.equal(model.parseBorderWidth(JSON.stringify({int:width}),2),width);
+for(const invalid of ['invalid','{}','{"int":null}','{"int":-1}','{"int":1.5}','{"int":"3"}'])
+  assert.equal(model.parseBorderWidth(invalid,3),3,'failed reads preserve the last known width');
 function points(path) {return [...path.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m=>({x:+m[1],y:+m[2]}));}
 for(const power of [1,2,4,10]) {
   const outline=points(model.contour(160,100,20,power));

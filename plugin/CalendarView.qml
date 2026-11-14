@@ -301,7 +301,7 @@ Item {
     closePolicy: Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
     enter: Transition {NumberAnimation {property:"opacity";from:0;to:1;duration:Preferences.duration(160);easing.type:Easing.OutCubic}}
     exit: Transition {NumberAnimation {property:"opacity";to:0;duration:Preferences.duration(100);easing.type:Easing.OutCubic}}
-    background: BorderSurface {color:Design.canvas;borderSpec:Border.surfaceSpec("popups","border",Commons.Color.popups.border,Math.max(1,Style.space(2)));radius:Design.cardRadius}
+    background: BorderSurface {color:Design.canvas;borderSpec:Design.popupBorder;radius:Design.cardRadius}
     onOpened: Qt.callLater(root.focusWeekStart)
     onClosed: if(root.active && root.visible) {if(root.sourcesMode) sourcesPanel.focusEditor();else settingsButton.forceActiveFocus()}
     contentItem: Column {
