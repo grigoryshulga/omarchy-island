@@ -9,7 +9,14 @@ function statusRole(row) {
   if(busy(row)) return "info"
   return "secondaryText"
 }
-function statusRank(row) {return row && row.requestId ? 0 : busy(row) ? 2 : 1}
+function statusGroup(row) {
+  if(row && row.requestId) return "attention"
+  if(busy(row)) return "working"
+  if(row && row.status==="completed") return "completed"
+  if(row && row.status==="failed") return "failed"
+  return "inactive"
+}
+function statusRank(row) {return ["attention","completed","failed","inactive","working"].indexOf(statusGroup(row))}
 function overviewRows(rows) {
   var working=0
   return rows.filter(function(row){
@@ -59,4 +66,4 @@ function transitions(previous, next) {
     return state!=="idle" && (old ? alertState(old)!==state : !!row.requestId || busy(row))
   })
 }
-if(typeof module!=="undefined") module.exports={overviewRows:overviewRows,counts:counts,statusRole:statusRole,statusRank:statusRank,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}
+if(typeof module!=="undefined") module.exports={overviewRows:overviewRows,counts:counts,statusRole:statusRole,statusRank:statusRank,statusGroup:statusGroup,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}

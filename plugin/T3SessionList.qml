@@ -42,8 +42,10 @@ Column {
     for(var j=0;j<ids.length;j++) {
       var index=-1
       for(var k=j;k<items.count;k++) if(items.get(k).sessionId===ids[j]) {index=k;break}
-      if(index<0) items.insert(j,{sessionId:ids[j]})
+      if(index<0) items.insert(j,{sessionId:ids[j],groupKey:T3.statusGroup(ordered[j]),groupStart:false})
       else if(index!==j) items.move(index,j,1)
+      items.setProperty(j,"groupKey",T3.statusGroup(ordered[j]))
+      items.setProperty(j,"groupStart",j===0 || T3.statusGroup(ordered[j-1])!==T3.statusGroup(ordered[j]))
     }
   }
   onRowsChanged:sync()
@@ -113,18 +115,35 @@ Column {
       spacing:Design.gap.small
       Repeater {
         model:items
-        T3SessionCard {
-          id:card
+        Column {
+          id:groupRow
           required property string sessionId
+          required property string groupKey
+          required property bool groupStart
           required property int index
           width:cards.width
-          row:root.bridge.row(sessionId) || ({id:sessionId,title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
-          bridge:root.bridge;strings:root.strings;expanded:root.expanded;feedback:root.feedback
-          compactOverview:root.summaryMode
-          active:root.active && visible && y+height>viewport.contentItem.contentY && y<viewport.contentItem.contentY+viewport.availableHeight
+          spacing:Design.gap.small
           visible:root.summaryMode ? root.summaryIds.indexOf(sessionId)>=0 && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
-          onExpandRequested:root.expandRequested()
-          onOverviewDetailsRequested:root.detailsRequested()
+          PlainText {
+            objectName:"t3Group-"+groupRow.sessionId
+            width:parent.width
+            visible:!root.summaryMode && root.expanded && groupRow.groupStart
+            text:root.strings.t("t3.group."+groupRow.groupKey)
+            typeRole:"caption"
+            color:Design.secondaryText
+          }
+          T3SessionCard {
+            id:card
+            readonly property string sessionId:groupRow.sessionId
+            readonly property int index:groupRow.index
+            width:groupRow.width
+            row:root.bridge.row(sessionId) || ({id:sessionId,title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
+            bridge:root.bridge;strings:root.strings;expanded:root.expanded;feedback:root.feedback
+            compactOverview:root.summaryMode
+            active:root.active && visible && groupRow.y+y+height>viewport.contentItem.contentY && groupRow.y+y<viewport.contentItem.contentY+viewport.availableHeight
+            onExpandRequested:root.expandRequested()
+            onOverviewDetailsRequested:root.detailsRequested()
+          }
         }
       }
     }

@@ -70,9 +70,9 @@ ShellRoot {
         compare(field.text,draft)
         verify(field.activeFocus,"Progress must retain input focus")
         var second=Object.assign({},row,{id:"thread-2",title:"Проверка сборки",requestId:"",requestKind:"",request:null})
-        var originalY=card.y
+        var originalY=card.mapToItem(pages,0,0).y
         snapshot([second,row]);wait(50)
-        compare(card.y,originalY,"Incoming sessions must not reorder a focused card")
+        compare(card.mapToItem(pages,0,0).y,originalY,"Incoming sessions must not reorder a focused card")
         var workingCard=findChild(pages,"t3Session-thread-2"),spinner=findChild(workingCard,"t3SessionSpinner")
         verify(workingCard.height<=Commons.Style.space(88),"Working session must be a compact row")
         verify(spinner.animating,"Working session spinner is stopped")
@@ -104,9 +104,12 @@ ShellRoot {
         snapshot(many);wait(50)
         var sixth=findChild(pages,"t3Session-thread-6")
         verify(sixth.visible,"Details must reveal every session")
+        verify(findChild(section,"t3Group-thread-2").visible,"Working group has no heading")
+        verify(!findChild(section,"t3Group-thread-6").visible,"Repeated status duplicated its heading")
         compare(findChild(card,"t3Answer-q1").text,draft,"Opening details discarded draft")
         verify(pages.back(),"Back did not return to summary");wait(50)
         verify(!sixth.visible && workingCard.visible,"Summary must cap working rows")
+        verify(!findChild(section,"t3Group-thread-1").visible,"Group headings leaked into summary")
         verify(threadAction.activeFocus,"Back lost thread-row focus")
         verify(pages.implicitHeight>summaryHeight && pages.implicitHeight<=pages.maximumOverviewHeight,"Summary did not adapt to the additional visible threads")
         openDetails.clicked();wait(50)
@@ -120,7 +123,12 @@ ShellRoot {
         var done=Object.assign({},second,{id:"thread-done",status:"completed"})
         snapshot([second,done,row]);wait(50)
         var doneCard=findChild(pages,"t3Session-thread-done")
-        verify(card.y<doneCard.y && doneCard.y<workingCard.y,"Threads must sort as needs input, completed, working")
+        verify(card.parent.y<doneCard.parent.y && doneCard.parent.y<workingCard.parent.y,"Threads must sort as needs input, completed, working")
+        for(var entry of [[row,"attention"],[done,"completed"],[second,"working"]]) {
+          var heading=findChild(section,"t3Group-"+entry[0].id)
+          verify(heading.visible,"Missing status subheading")
+          compare(heading.text,strings.t("t3.group."+entry[1]))
+        }
         compare(findChild(card,"t3Answer-q1"),field,"Sorting replaced the input form")
         compare(field.text,draft,"Sorting discarded the input draft")
         row.projectIcon={kind:"lucide",name:"folder-code",color:"red"}
