@@ -27,6 +27,13 @@ ShaderEffect {
     nearbySurfaces.length>1 ? nearbySurfaces[1].radius : 0,
     nearbySurfaces.length>2 ? nearbySurfaces[2].radius : 0,
     nearbySurfaces.length>3 ? nearbySurfaces[3].radius : 0)
+  readonly property vector4d neighborPowers: Qt.vector4d(
+    nearbySurfaces.length>0 ? nearbySurfaces[0].power : 2,
+    nearbySurfaces.length>1 ? nearbySurfaces[1].power : 2,
+    nearbySurfaces.length>2 ? nearbySurfaces[2].power : 2,
+    nearbySurfaces.length>3 ? nearbySurfaces[3].power : 2)
+  readonly property real cornerPower: surfaceRoot ? Spotlight.power(surfaceRoot) : 2
+  readonly property real focusPower: hoveredSurface ? Spotlight.power(hoveredSurface) : cornerPower
   readonly property real focused: hoveredSurface ? 1 : 0
   readonly property vector4d focusRect: {
     if (!hoveredSurface) return Qt.vector4d(0,0,width,height)
@@ -75,7 +82,7 @@ ShaderEffect {
   function collide(previous, point) {
     if(!hoveredSurface || Preferences.reduceMotion) return
     var rect={x:focusRect.x,y:focusRect.y,width:focusRect.z,height:focusRect.w}
-    var hit=Spotlight.collision(previous,point,rect,focusRadius,spotRadius*0.32)
+    var hit=Spotlight.collision(previous,point,rect,focusRadius,spotRadius*0.32,focusPower)
     if(!hit) return
     edgeImpact=Qt.vector4d(hit.x,hit.y,hit.nx,hit.ny)
     edgeBurst.restart()

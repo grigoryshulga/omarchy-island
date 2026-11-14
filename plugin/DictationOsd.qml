@@ -37,7 +37,7 @@ Item {
     WlrLayershell.layer:WlrLayer.Overlay
     WlrLayershell.keyboardFocus:WlrKeyboardFocus.None
     mask:Region {}
-    BorderSurface {
+    ContainerSurface {
       id:card
       objectName:"islandDictationOsd"
       readonly property bool vertical:root.position==="left" || root.position==="right"

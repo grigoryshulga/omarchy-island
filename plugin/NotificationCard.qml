@@ -7,7 +7,7 @@ import qs.Ui
 import "Model.js" as Model
 import "Security.js" as Security
 
-Rectangle {
+ContainerSurface {
   id: root
   readonly property bool islandSpotlightSurface: !grouped
   objectName: "notification-" + row.key
@@ -79,7 +79,7 @@ Rectangle {
   radius: Design.cardRadius
   readonly property real verticalPadding:grouped ? 0 : Design.gap.medium
   implicitHeight: Math.max(content.implicitHeight,footer.visible ? footer.implicitHeight : 0) + 2*verticalPadding + (separated ? Design.gap.large : 0)
-  BorderSurface {anchors.fill:parent;color:"transparent";radius:Design.cardRadius;borderSpec:Border.controlSpec("focus",Design.text,Design.accent);visible:root.keyboardFocused}
+  ContainerSurface {anchors.fill:parent;color:"transparent";radius:Design.cardRadius;borderSpec:Border.controlSpec("focus",Design.text,Design.accent);visible:root.keyboardFocused}
 
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
   HoverHandler { id: hover }

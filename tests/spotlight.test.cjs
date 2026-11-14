@@ -115,3 +115,11 @@ leafButton.children = [button];
 assert.equal(model.pick(leafButton, null, {x: 50, y: 30}), button,
   'composite controls may opt back into descendant picking');
 console.log('PASS: leaf controls skip decorative subtrees while composite controls retain nested picking.');
+const squircle = item({radius:20, roundingPower:4});
+assert.equal(model.contains(squircle,{x:5,y:5},true),true,'squircle corners accept the extra filled area');
+squircle.roundingPower=2;
+assert.equal(model.contains(squircle,{x:5,y:5},true),false,'circular corners leave that area empty');
+const diagonal=20/Math.pow(2,1/4);
+const edge=model.edgeAt({x:20-diagonal,y:20-diagonal},{x:0,y:0,width:100,height:60},20,4);
+assert.ok(Math.abs(edge.distance)<1e-8,'spotlight rim matches the superellipse contour');
+assert.ok(Math.abs(edge.nx+Math.SQRT1_2)<1e-8 && Math.abs(edge.ny+Math.SQRT1_2)<1e-8);

@@ -6,7 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
-Rectangle {
+ContainerSurface {
   id: root
   readonly property bool islandSpotlightSurface: !compact
   required property var group

@@ -46,7 +46,7 @@ Item {
     seedHeight: Style.space(20)
     fallDistance: Style.space(8)
   }
-  BorderSurface {
+  ContainerSurface {
     id: flyout
     objectName: "mediaVolumePopover"
     readonly property real shown: reveal.shown

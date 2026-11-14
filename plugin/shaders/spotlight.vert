@@ -52,6 +52,9 @@ layout(std140, binding = 0) uniform buf {
   vec4 neighbor2;
   vec4 neighbor3;
   vec4 neighborRadii;
+  vec4 neighborPowers;
+  float cornerPower;
+  float focusPower;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

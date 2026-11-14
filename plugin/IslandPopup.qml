@@ -158,7 +158,7 @@ PanelWindow {
         root.close()
       }
     }
-    BorderSurface {
+    ContainerSurface {
       id: card
       objectName: "islandPopupCard"
       x: root.cardOrigin.x + (Geometry.vertical(root.position) ? (root.position === "right" ? -1 : 1)*reveal.offsetY : 0)

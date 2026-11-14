@@ -1,7 +1,7 @@
 import QtQuick
 
 // Surfaces group content by fill and spacing, never by decorative outlines.
-Rectangle {
+ContainerSurface {
   property bool raised: false
   readonly property bool islandSpotlightSurface: true
   color: raised ? Design.raised : Design.surface

@@ -5,7 +5,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "Downloads.js" as Downloads
 
-Rectangle {
+ContainerSurface {
   id:root
   readonly property bool islandSpotlightSurface: true
   required property var row

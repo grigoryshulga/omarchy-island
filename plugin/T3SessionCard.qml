@@ -5,7 +5,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "T3Model.js" as T3
 
-Rectangle {
+ContainerSurface {
   id:root
   required property var row
   required property var bridge

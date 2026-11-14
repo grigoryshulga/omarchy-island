@@ -301,6 +301,7 @@ Run `bin/design-gallery --patterns --language ru` for interactive ListRow, DataS
 
 - `plugin/DesignTokens.js` holds primitives and contrast calculations; `plugin/Design.qml` maps them to live Omarchy `Color` and `Style` values.
 - `PlainText` uses named roles (`caption`, `label`, `body`, `title`, `section`, `page`, `metric`, `hero`, `bar`). Buttons, choices, inputs and surfaces share geometry and focus treatment. System scaling and square corners remain supported.
+- Container corners follow Hyprland `decoration:rounding` and `decoration:rounding_power`, refreshed on config reload. Power `2` uses circular corners; `4` uses a squircle. Zero radius stays square, and unavailable power defaults to `2`. Buttons and native system controls retain Omarchy geometry.
 - Sections use spacing and typography instead of decorative dividers. Data cards have opaque, quiet surfaces; artwork stays behind them. Theme colors are corrected only when necessary for legibility.
 - Native system panels receive the same typography and adapted controls in the generated cache. Their device logic, keyboard behavior and installed source files are preserved.
 

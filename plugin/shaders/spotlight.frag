@@ -50,6 +50,9 @@ layout(std140, binding = 0) uniform buf {
   vec4 neighbor2;
   vec4 neighbor3;
   vec4 neighborRadii;
+  vec4 neighborPowers;
+  float cornerPower;
+  float focusPower;
 };
 layout(binding = 1) uniform sampler2D source;
 uint mixBits(uint v) {
@@ -69,11 +72,15 @@ float dots(vec2 local,float core,float a,float b,float blend) {
   float pattern=mix(step(1.0-coverage,a),step(1.0-coverage,b),blend);
   return (1.0-smoothstep(radius,radius+softness,length(local)))*pattern;
 }
-float roundedDistance(vec2 pixel, vec4 rect, float radius) {
+float roundedDistance(vec2 pixel, vec4 rect, float radius, float power) {
   vec2 halfSize=rect.zw*0.5;
   float r=clamp(radius,0.0,min(halfSize.x,halfSize.y));
   vec2 box=abs(pixel-rect.xy-halfSize)-(halfSize-vec2(r));
-  return length(max(box,vec2(0.0)))+min(max(box.x,box.y),0.0)-r;
+  if(power==2.0) return length(max(box,vec2(0.0)))+min(max(box.x,box.y),0.0)-r;
+  vec2 q=max(box,vec2(0.0));
+  float scale=max(q.x,q.y);
+  float norm=scale>0.0 ? scale*pow(pow(q.x/scale,power)+pow(q.y/scale,power),1.0/power) : 0.0;
+  return norm+min(max(box.x,box.y),0.0)-r;
 }
 void main() {
   vec2 pixel=qt_TexCoord0*size;
@@ -101,7 +108,7 @@ void main() {
     wake=max(wake,footprint*samples[i].z*0.85);
   }
   float field=falloff+wake*(1.0-falloff);
-  float boundary=roundedDistance(pixel,focusRect,focusRadius);
+  float boundary=roundedDistance(pixel,focusRect,focusRadius,focusPower);
   float depth=max(0.0,-boundary);
   float rim=exp(-depth*depth/32.0)*focused;
   float ink=dots(local,max(core,wake),a,b,blend);
@@ -133,10 +140,10 @@ void main() {
       float along=direction*(6.0+seed*40.0)*travel;
       float inward=2.0+noise(uvec2(uint(i),31u),9u)*9.0*sin(edgeProgress*3.14159);
       vec2 particle=edgeImpact.xy+tangent*along-normal*inward;
-      float d=roundedDistance(particle,focusRect,focusRadius);
+      float d=roundedDistance(particle,focusRect,focusRadius,focusPower);
       vec2 gradient=vec2(
-        roundedDistance(particle+vec2(0.5,0.0),focusRect,focusRadius)-roundedDistance(particle-vec2(0.5,0.0),focusRect,focusRadius),
-        roundedDistance(particle+vec2(0.0,0.5),focusRect,focusRadius)-roundedDistance(particle-vec2(0.0,0.5),focusRect,focusRadius));
+        roundedDistance(particle+vec2(0.5,0.0),focusRect,focusRadius,focusPower)-roundedDistance(particle-vec2(0.5,0.0),focusRect,focusRadius,focusPower),
+        roundedDistance(particle+vec2(0.0,0.5),focusRect,focusRadius,focusPower)-roundedDistance(particle-vec2(0.0,0.5),focusRect,focusRadius,focusPower));
       particle-=gradient/max(length(gradient),0.001)*max(0.0,d+2.0);
       vec2 offset=pixel-particle;
       float square=1.0-smoothstep(0.65+seed*0.60,1.45+seed*0.60,max(abs(offset.x),abs(offset.y)));
@@ -145,7 +152,7 @@ void main() {
     }
   }
 
-  float distanceToEdge=roundedDistance(pixel,vec4(0.0,0.0,size),cornerRadius);
+  float distanceToEdge=roundedDistance(pixel,vec4(0.0,0.0,size),cornerRadius,cornerPower);
   float mask=1.0-smoothstep(-1.0,0.0,distanceToEdge);
   // The antialias band is entirely inside the surface, including square corners.
   mask*=mix(1.0,1.0-smoothstep(-1.0,0.0,boundary),focused);
@@ -158,7 +165,7 @@ void main() {
   float proximity=1.0-smoothstep(0.0,neighborReach,length(delta));
   for(int i=0;i<4;i++) {
     if(neighbors[i].z<=0.0 || neighbors[i].w<=0.0) continue;
-    float d=roundedDistance(pixel,neighbors[i],neighborRadii[i]);
+    float d=roundedDistance(pixel,neighbors[i],neighborRadii[i],neighborPowers[i]);
     float innerMask=1.0-smoothstep(-1.0,0.0,d);
     float bloom=exp(-d*d/18.0)*innerMask;
     sharedGlow=max(sharedGlow,bloom*proximity*(0.28+ink*0.35));

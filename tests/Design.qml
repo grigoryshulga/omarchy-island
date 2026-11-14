@@ -22,6 +22,7 @@ ShellRoot {
       Item {Layout.fillHeight:true}
     }
     Island.BrailleSpotlight {id:spot; width:200;height:100;active:true}
+    Island.ContainerSurface {id:cornerProbe;x:500;y:500;width:100;height:100;radius:20;color:"#ff0000";borderSpec:Commons.Border.flat("#00ff00",2)}
     TestCase {
       id:test;when:false
       function test_design() {
@@ -57,6 +58,28 @@ ShellRoot {
         Commons.Style.fontBaseSize=originalSize*1.5;wait(30)
         verify(title.font.pixelSize>before && input.implicitHeight>height,"Typography and controls must scale together")
         compare(input.text,draft)
+        Commons.Style.cornerRadius=16
+        Island.CornerStyle.applyPowerJson('{"float":4}')
+        wait(30)
+        compare(surface.roundingPower,4)
+        verify(surface.customCorners,"Squircle renderer must follow Hyprland power")
+        wait(40)
+        var squircleImage=grabImage(cornerProbe)
+        compare(squircleImage.pixel(5,5),Qt.rgba(1,0,0,1),"Squircle must fill beyond the circular arc")
+        compare(squircleImage.pixel(50,0),Qt.rgba(0,1,0,1),"Squircle must preserve the themed border")
+        Commons.Color.shellValues=Object.assign({},Commons.Color.shellValues,{
+          "popups.border":"#00ff00 #0000ff 0deg","popups.border-width":"2 3 4 5"})
+        cornerProbe.borderSpec=Commons.Border.surfaceSpec("popups","border","#00ff00",2)
+        wait(40)
+        var gradientImage=grabImage(cornerProbe)
+        verify(gradientImage.green(1,50)>200,"Gradient border lost its left side")
+        verify(gradientImage.blue(98,50)>200,"Gradient border lost its right side")
+        compare(gradientImage.pixel(50,50),Qt.rgba(1,0,0,1),"Border must not cover the fill")
+        Island.CornerStyle.applyPowerJson('invalid')
+        compare(surface.roundingPower,4,"Failed reads must preserve the last profile")
+        Island.CornerStyle.applyPowerJson('{"float":2}')
+        wait(30)
+        verify(!surface.customCorners,"Circular corners must use the native surface")
         Commons.Style.cornerRadius=0
         compare(surface.radius,0);compare(selectedButton.radius,0);compare(input.background.radius,0)
         Commons.Style.cornerRadius=16
