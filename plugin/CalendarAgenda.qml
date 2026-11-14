@@ -31,6 +31,7 @@ ColumnLayout {
     implicitHeight:Math.min(list.implicitHeight,Design.fieldHeight*5)
     clip:true;contentWidth:availableWidth
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
+    Controls.ScrollBar.vertical.policy:Controls.ScrollBar.AlwaysOff
     Column {
       id:list;width:scroll.availableWidth;spacing:Design.gap.small
       Repeater {

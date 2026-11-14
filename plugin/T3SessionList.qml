@@ -51,14 +51,14 @@ Column {
   Item {
     visible:!root.allSessions
     width:parent.width
-    implicitHeight:Math.max(headingContent.implicitHeight,openDetails.implicitHeight)
-    SectionHeading {id:sectionTitle;anchors.left:parent.left;width:root.summaryMode ? implicitWidth : parent.width;title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length);height:Design.compactControlHeight}
+    implicitHeight:Math.max(headingContent.implicitHeight,sectionTitle.implicitHeight)
+    SectionLink {id:sectionTitle;objectName:"t3OpenDetails";focusable:root.expanded && root.summaryMode;feedback:root.feedback;onClicked:root.expanded ? root.detailsRequested() : root.expandRequested();anchors.left:parent.left;width:root.summaryMode ? implicitWidth : parent.width;title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length);height:Design.compactControlHeight}
     Flow {
       id:headingContent
       objectName:"t3SummaryHeading"
-      anchors.right:openDetails.left
+      anchors.right:parent.right
       anchors.rightMargin:Design.gap.small
-      width:Math.max(0,parent.width-sectionTitle.width-openDetails.width-2*Design.gap.small)
+      width:Math.max(0,parent.width-sectionTitle.width-Design.gap.small)
       layoutDirection:Qt.RightToLeft
       spacing:Design.gap.small
       Repeater {
@@ -87,7 +87,6 @@ Column {
         }
       }
     }
-    FeedbackButton {id:openDetails;objectName:"t3OpenDetails";anchors.right:parent.right;anchors.top:parent.top;implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight;horizontalPadding:0;verticalPadding:0;iconSize:Style.font.iconLarge;visible:root.summaryMode;iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔";tooltipText:root.strings.t("overview.t3Details");compact:true;focusable:root.expanded;feedback:root.feedback;onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()}
   }
   ListModel {id:items}
   Controls.ScrollView {
@@ -99,6 +98,7 @@ Column {
     contentWidth:availableWidth
     clip:true
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
+    Controls.ScrollBar.vertical.policy:Controls.ScrollBar.AlwaysOff
     Column {
       id:cards
       width:viewport.availableWidth

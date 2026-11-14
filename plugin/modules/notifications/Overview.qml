@@ -2,7 +2,7 @@ import QtQuick
 import "../.." as Island
 Island.ModuleView {
   id:root
-  available:!!backend && (presentation.expanded || (presentation.hovering && backend.activeEntries.length>0) || (presentation.alertKind==="notification" && !!presentation.alert && !presentation.alert.downloadPath))
+  available:!!backend && ((presentation.expanded && (presentation.detail || backend.activeEntries.length>0)) || (presentation.hovering && backend.activeEntries.length>0) || (presentation.alertKind==="notification" && !!presentation.alert && !presentation.alert.downloadPath))
   implicitHeight:content.implicitHeight
   toastIcon:content.notificationIcon
   Island.NotificationContent {

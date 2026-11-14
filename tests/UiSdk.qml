@@ -125,6 +125,8 @@ ShellRoot {
         var dots = findChild(slider, "sliderBrailleProgress")
         verify(dots.visible); verify(!findChild(slider, "sliderKnob").visible)
         compare(dots.amount, slider.progress)
+        verify(dots.trackOpacity>0 && dots.trackOpacity<1,"Full-range track must be translucent")
+        verify(Math.abs(dots.trackColor.r-dots.trackColor.g)<0.001 && Math.abs(dots.trackColor.g-dots.trackColor.b)<0.001,"Full-range track must stay neutral")
         var progress = findChild(components, "sdkProgress")
         progress.value = -1; compare(progress.amount, 0)
         progress.value = 2; compare(progress.amount, 1)

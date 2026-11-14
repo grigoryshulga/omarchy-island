@@ -225,6 +225,21 @@ ShellRoot {
       }
       check(mirroredRight>mirroredLeft*3,"shared progress did not mirror")
       wait(60);check(mirrored.equals(grabImage(progressProbe)),"static progress kept animating")
+      progressProbe.mirrored=false;progressProbe.value=0
+      progressProbe.accent="#ff0000";progressProbe.trackColor="#808080";wait(40)
+      var emptyTrack=grabImage(progressProbe),trackInk=0
+      for(var y=0;y<emptyTrack.height;y++) for(var x=0;x<emptyTrack.width;x++) {
+        trackInk+=emptyTrack.red(x,y)
+        check(Math.abs(emptyTrack.red(x,y)-emptyTrack.green(x,y))<=1 && Math.abs(emptyTrack.green(x,y)-emptyTrack.blue(x,y))<=1,"empty track is tinted by progress color")
+      }
+      check(trackInk>0,"zero progress hides the full-length gray track")
+      progressProbe.value=0.5;wait(40)
+      var halfTrack=grabImage(progressProbe),redFill=0,grayFill=0
+      for(var y=0;y<halfTrack.height;y++) for(var x=0;x<halfTrack.width;x++) {
+        if(x<halfTrack.width*0.45) {redFill+=halfTrack.red(x,y);grayFill+=halfTrack.green(x,y)}
+        if(x>halfTrack.width*0.55) check(halfTrack.red(x,y)===emptyTrack.red(x,y) && halfTrack.green(x,y)===emptyTrack.green(x,y),"progress changed the unfilled track")
+      }
+      check(redFill>grayFill*3,"colored fill does not stand out from the gray track")
       console.log("BRAILLE_PROGRESS_FRAMES_PASS")
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()

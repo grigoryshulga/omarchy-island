@@ -123,6 +123,7 @@ ShellRoot {
         var finished=[]
         for(var i=0;i<30;i++) finished.push({id:"done-"+i,title:"Completed task "+i,project:"Island",status:"completed",requestId:"",summary:""})
         bridge.rows=finished;wait(80)
+        compare(findChild(overview,"overviewScroll").height,overview.height,"Summary clips content above unused window space")
         compare(overview.implicitHeight,overview.pageHeight,"Many finished tasks resized Overview")
         verify(!findChild(overview,"t3Session-done-0").visible,"Completed cards leaked into summary")
         compare(findChild(overview,"t3Count-finished").count,30,"Completed indicator missed tasks")
@@ -137,7 +138,7 @@ ShellRoot {
         var braille=findChild(overview,"limitBrailleProgress")
         verify(braille.visible && braille.width>Commons.Style.space(104),"Quota braille field is not full width")
         var notificationsArrow=findChild(overview,"notificationsOpenDetails"),bell=findChild(overview,"overviewDnd")
-        verify(bell.x<notificationsArrow.x,"Bell must precede the navigation arrow")
+        verify(notificationsArrow.width>bell.width && bell.x>notificationsArrow.x,"Notification heading must be the navigation target; DND stays separate")
         verify(!findChild(overview,"mediaSeek").visible,"Summary still shows full playback controls")
         verify(findChild(overview,"mediaSectionHeading")===null,"Media still has an outer source heading")
         verify(findChild(overview,"limitRemaining").text.indexOf("·")>=0,"Cached quota lost its marker")
@@ -147,10 +148,15 @@ ShellRoot {
         var t3Button=findChild(overview,"t3OpenDetails")
         var limitsButton=findChild(overview,"limitsExpand")
         compare(t3Button.mapToItem(overview,0,0).x,limitsButton.mapToItem(overview,0,0).x,"T3 and limits navigation are not aligned")
-        compare(t3Button.width,limitsButton.width,"T3 and limits arrows have different sizes")
+        verify(t3Button.title==="T3 Code" && limitsButton.title.length>0 && !t3Button.iconText && !limitsButton.iconText,"Module headings still use navigation arrows")
+        notificationsArrow.forceActiveFocus();wait(20)
+        var underline=findChild(notificationsArrow,"sectionFocusUnderline")
+        verify(underline.visible && underline.height<=Commons.Style.space(2) && underline.width<notificationsArrow.width,"heading focus is not a compact underline")
+        var threadAction=findChild(findChild(overview,"t3Session-done-0"),"t3Details")
+        verify(threadAction.iconText==="","thread still has a navigation arrow")
         t3Button.forceActiveFocus();t3Button.clicked();wait(50)
         verify(!findChild(overview,"islandMediaPlayer").visible,"T3 details did not replace music")
-        compare(findChild(overview,"overviewBack").mapToItem(overview,0,0).x,t3Button.mapToItem(overview,0,0).x,"Back arrow is not aligned to the right")
+        verify(findChild(overview,"overviewBack").visible,"Detail view has no Back action")
         verify(findChild(overview,"t3Session-done-29").visible,"Full T3 list is incomplete")
         compare(overview.implicitHeight,height,"Full T3 list grew the panel")
         verify(overview.back());wait(50)
@@ -248,6 +254,12 @@ ShellRoot {
           compare(findChild(overview,"notificationsScroll").visible,variant!=="minimal")
         }
         Island.Preferences.values={};wait(30)
+        var savedNotifications=service.allEntries
+        service.allEntries=[];wait(30)
+        verify(!findChild(overview,"notificationContent").visible,"Empty notification block remains in summary")
+        verify(findChild(overview,"overviewHeader").visible,"Empty notifications hid date/weather")
+        service.allEntries=savedNotifications;wait(30)
+        verify(findChild(overview,"notificationsOpenDetails").visible,"New notifications did not restore the heading")
         var originalFontSize=Commons.Style.fontBaseSize
         Commons.Style.fontBaseSize=originalFontSize*1.5;wait(40)
         for(var kind of ["attention","working","finished","failed","other"]) {
@@ -255,6 +267,14 @@ ShellRoot {
           verify(badge.x+badge.width<=heading.width+1 && badge.y+badge.height<=heading.height+1,"Large counters overflow instead of wrapping")
         }
         Commons.Style.fontBaseSize=originalFontSize;wait(30)
+        var bottomMargin=overview.anchors.bottomMargin
+        overview.anchors.bottomMargin=200;wait(30)
+        compare(scroll.height,overview.height,"Small popup exceeds its allocated height")
+        verify(!findChild(overview,"overviewScrollBar").visible,"Overflow shows a scrollbar")
+        var beforeScroll=scroll.contentItem.contentY
+        mouseWheel(scroll,scroll.width/2,scroll.height/2,0,-120);wait(80)
+        verify(scroll.contentItem.contentY>beforeScroll,"Hidden scrollbar disabled wheel scrolling")
+        overview.anchors.bottomMargin=bottomMargin;wait(30)
         if(Quickshell.env("ISLAND_OVERVIEW_CAPTURE")) {
           overview.anchors.fill=window.contentItem;Commons.Style.cornerRadius=12;scroll.contentItem.contentY=0;wait(80)
           grabImage(window.contentItem).save(Quickshell.env("ISLAND_OVERVIEW_CAPTURE"))

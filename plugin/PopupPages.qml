@@ -53,9 +53,8 @@ Item {
   signal pageRequested(int index)
   readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (selectedPage!==1 ? 1 : 0)
   readonly property bool settingsOpen:!!currentPage() && currentPage().navigationHidden
-  // Keep the popup surface size while Settings uses the space of the hidden tabs.
-  readonly property real navigationHeight: expanded && visible ? tabs.implicitHeight+Design.gap.section : 0
-  readonly property real contentTop: tabs.visible ? navigationHeight : 0
+  readonly property real navigationHeight:0
+  readonly property real contentTop:0
   readonly property real calendarWeatherHeight: {
     var result=0
     for(var i=0;i<pageDefinitions.length;i++) {var page=pageObject(pageDefinitions[i].pageIndex);if(page) result=Math.max(result,page.stableHeight)}
@@ -72,7 +71,16 @@ Item {
   function enterPage(index) {var page=pageObject(index);if(page) page.enter()}
   function openDetails(id) {var page=pageObject(1);if(page && typeof page.openDetails==="function") page.openDetails(id)}
   function showToday() {enterPage(2)}
-  function back() {return currentPage() ? currentPage().back() : false}
+  function back() {
+    if(currentPage() && currentPage().back()) return true
+    if(selectedPage!==1) {
+      var target=selectedPage===2 ? "calendarOpen" : "weatherOpen"
+      requestPage(1)
+      Qt.callLater(function(){var page=root.pageObject(1);if(page) page.focusSummary(target)})
+      return true
+    }
+    return false
+  }
   function updatePages() {
     if(!ready) return
     if(enabledPages.indexOf(selectedPage)<0) pageRequested(enabledPages[0])
@@ -111,7 +119,7 @@ Item {
     if(page && page.handleKey(direction ? {key:direction.key} : event)) return true
     return direction ? navigation.move(direction.x,direction.y) : false
   }
-  KeyboardNavigation {id:navigation;scope:root;containers:[tabs,root.currentPage()]}
+  KeyboardNavigation {id:navigation;scope:root;containers:[root.currentPage()]}
   Instantiator {
     model:Catalog.ordered("overview").filter(function(entry){return !!entry.overviewShortcut})
     delegate:Shortcut {
@@ -202,42 +210,10 @@ Item {
   onEnabledPagesChanged:Qt.callLater(updatePages)
   Component.onCompleted: { ready = true; updatePages(); scheduleSync() }
 
-  RowLayout {
-    id: tabs
-    objectName: "islandTabs"
-    anchors.left: parent.left; anchors.right: parent.right
-    visible: root.expanded && !root.settingsOpen
-    spacing:Design.gap.tight
-    uniformCellSizes: true
-    Repeater {
-      model:root.pageDefinitions
-      ModuleSlot {
-        id:tabSlot
-        required property var modelData
-        Layout.fillWidth:true;Layout.fillHeight:true;Layout.preferredWidth:1;Layout.minimumWidth:0
-        visible:root.enabledPages.indexOf(modelData.pageIndex)>=0
-        viewSource:modelData.tab || "ModuleTab.qml"
-        backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
-        presentation:QtObject {
-          readonly property string title:tabSlot.modelData.title || root.strings.t(tabSlot.modelData.titleKey)
-          readonly property string objectName:tabSlot.modelData.tabObjectName || "moduleTab-"+tabSlot.modelData.id
-          readonly property bool selected:root.selectedPage===tabSlot.modelData.pageIndex
-          readonly property var feedback:root.externalFeedback
-          readonly property var strings:root.strings
-        }
-        onDetailsRequested:root.requestPage(modelData.pageIndex)
-        onCustomizeRequested:{
-          var page=root.pageObject(tabSlot.modelData.pageIndex)
-          if(root.expanded && root.selectedPage===tabSlot.modelData.pageIndex && page && typeof page.configure==="function") page.configure(tabSlot.item.focusTarget)
-        }
-      }
-    }
-  }
-
   Controls.SwipeView {
     id: pager
     objectName: "islandPageSwipe"
-    currentIndex: 1
+    currentIndex: 0
     x: 0; y: root.contentTop
     width: parent.width; height: Math.max(0,parent.height-y)
     interactive: root.expanded
@@ -264,6 +240,8 @@ Item {
         viewSource:holder.modelData.page
         backend:root.service && root.service.modules ? root.service.modules[holder.modelData.id] || null : null
         presentation:QtObject {
+          function openPage(index) {root.enterPage(index);root.requestPage(index)}
+          function goBack() {root.back()}
           readonly property var service:root.service
           readonly property var strings:root.strings
           readonly property var bar:root.bar

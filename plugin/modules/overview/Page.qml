@@ -13,6 +13,7 @@ Island.ModulePage {
   interactionHovered:content.musicHovered
   function enter(){content.configuring=false;content.detailPage="";content.restoreSummary()}
   function back(){return content.back()}
+  function focusSummary(target){content.focusSummary(target)}
   function configure(returnTarget){content.configure(returnTarget)}
   Island.IslandContent {
     id:content;anchors.fill:parent
@@ -21,6 +22,8 @@ Island.ModulePage {
     externalFeedback:root.presentation.feedback
     expanded:root.presentation.expanded;hovering:root.presentation.hovering;alertKind:root.presentation.alertKind
     radialBraille:root.presentation.radialBraille
+    onCalendarRequested:root.presentation.openPage(2)
+    onWeatherRequested:root.presentation.openPage(3)
     onCloseRequested:root.closeRequested()
     onExpandRequested:root.expandRequested()
     onSettingRequested:(key,value)=>root.settingRequested(key,value)

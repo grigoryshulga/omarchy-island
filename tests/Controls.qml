@@ -416,7 +416,7 @@ ShellRoot {
       check(findChild(overviewPages,"controlAddMenu").visible,"editing has no add button beside the gear")
       check(overviewPages.back() && overviewPages.controls,"Back did not exit inline editing before leaving Controls")
       findChild(overviewPages,"controlOpen-settings").clicked();wait(30)
-      check(!findChild(overviewPages,"islandTabs").visible,"embedded settings did not hide main navigation")
+      check(!findChild(overviewPages,"islandTabs"),"embedded settings did not hide main navigation")
       overviewPages.back();overviewPages.back();wait(20)
       actions.layoutState.move("main","network","audio")
       actions.layoutState.toggle("microphone")

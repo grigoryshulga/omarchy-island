@@ -45,19 +45,13 @@ ColumnLayout {
   RowLayout {
     Layout.fillWidth:true
     visible:(root.expanded || (root.hovering && root.overviewSize==="minimal")) && !root.detailOpen
-    SectionHeading {Layout.fillWidth:true;title:root.strings.t("notifications.active");detail:Commons.I18n.formatNumber(root.rows.length)}
-    FeedbackButton {objectName:"overviewDnd";visible:root.expanded;iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
-    FeedbackButton {
-      objectName:"notificationsOpenDetails"
-      visible:root.expanded
-      iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔"
-      iconSize:Style.font.iconLarge
-      implicitWidth:Design.compactControlHeight;implicitHeight:Design.compactControlHeight
-      horizontalPadding:0;verticalPadding:0
-      tooltipText:root.strings.t("notifications.active")
-      compact:true;focusable:true;feedback:root.externalFeedback
-      onClicked:root.detailsRequested()
+    SectionLink {
+      objectName:"notificationsOpenDetails";Layout.fillWidth:true
+      title:root.strings.t("notifications.active");detail:Commons.I18n.formatNumber(root.rows.length)
+      focusable:root.expanded;feedback:root.externalFeedback
+      onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()
     }
+    FeedbackButton {objectName:"overviewDnd";visible:root.expanded;iconText:root.service && root.service.doNotDisturb ? "󰂛" : "󰂚";selected:root.service && root.service.doNotDisturb;tooltipText:root.strings.t("dnd");compact:true;focusable:true;onClicked:root.service.setDoNotDisturb(!root.service.doNotDisturb)}
   }
   RowLayout {
     Layout.fillWidth: true
@@ -95,6 +89,7 @@ ColumnLayout {
     clip: true
     contentWidth: availableWidth
     Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+    Controls.ScrollBar.vertical.policy:Controls.ScrollBar.AlwaysOff
     Column {
       id: cards
       width: scroll.availableWidth

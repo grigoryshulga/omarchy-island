@@ -123,6 +123,7 @@ Item {
     objectName:"calendarScroll"
     anchors.fill:parent;clip:true;contentWidth:availableWidth
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
+    Controls.ScrollBar.vertical.policy:Controls.ScrollBar.AlwaysOff
   ColumnLayout {
     id: body
     width: calendarScroll.availableWidth

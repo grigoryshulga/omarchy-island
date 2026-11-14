@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import "SettingsModel.mjs" as Settings
@@ -78,7 +77,6 @@ Item {
     anchors.topMargin:Design.gap.section
     contentWidth:width;contentHeight:body.implicitHeight
     clip:true;boundsBehavior:Flickable.StopAtBounds
-    Controls.ScrollBar.vertical:Controls.ScrollBar {policy:Controls.ScrollBar.AsNeeded}
     Column {
       id:body
       width:viewport.width

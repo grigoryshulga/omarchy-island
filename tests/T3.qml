@@ -37,7 +37,9 @@ ShellRoot {
         var summaryHeight=pages.implicitHeight
         var openDetails=findChild(pages,"t3OpenDetails")
         verify(openDetails.visible,"T3 summary has no details navigation")
-        openDetails.forceActiveFocus();keyClick(Qt.Key_Return);wait(80)
+        var threadAction=findChild(findChild(pages,"t3Session-thread-1"),"t3Details")
+        verify(threadAction.visible && threadAction.iconText==="","thread header still has an arrow")
+        threadAction.forceActiveFocus();keyClick(Qt.Key_Return);wait(80)
         compare(pages.implicitHeight,summaryHeight,"Details must preserve popup height")
         var card=findChild(pages,"t3Session-thread-1")
         verify(card!==null)
@@ -84,6 +86,10 @@ ShellRoot {
           compare(title.mapToItem(workingCard,0,0).x,titleX,"Status moved the title")
           compare(projectIcon.mapToItem(workingCard,0,0).x,projectX,"Status moved the project icon")
           var icon=workingCard.statusIcon
+          if(variant.status==="failed") {
+            compare(icon.text,"󰅙","Failed session must show an error icon")
+            compare(icon.font.pixelSize,Commons.Style.font.iconLarge,"Error icon must use the full icon size")
+          }
           verify(Math.abs(icon.mapToItem(workingCard,icon.width/2,icon.height/2).y-title.mapToItem(workingCard,0,title.height/2).y)<1,"Status icon is not aligned with the title")
           compare(findChild(workingCard,"t3StatusLabel").color.toString(),workingCard.statusColor.toString(),"Status label missed its semantic color")
           verify(Tokens.contrast(findChild(workingCard,"t3StatusLabel").color,workingCard.color)>=4.5,"Status text became unreadable with theme-file colors")
@@ -100,7 +106,7 @@ ShellRoot {
         compare(findChild(card,"t3Answer-q1").text,draft,"Opening details discarded draft")
         verify(pages.back(),"Back did not return to summary");wait(50)
         verify(!sixth.visible && workingCard.visible,"Summary must cap working rows")
-        verify(openDetails.activeFocus,"Back lost summary focus")
+        verify(threadAction.activeFocus,"Back lost thread-row focus")
         compare(pages.implicitHeight,summaryHeight,"Summary resized after returning")
         openDetails.clicked();wait(50)
         compare(findChild(card,"t3Answer-q1").text,draft,"Returning to details lost the draft")

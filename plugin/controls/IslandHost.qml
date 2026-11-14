@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls as Controls
 
 // KeyboardPanel's content contract, hosted in Island's existing surface.
 Item {
@@ -50,7 +49,6 @@ Item {
       flickableDirection: Flickable.VerticalFlick
       boundsBehavior: Flickable.StopAtBounds
       clip: true
-      Controls.ScrollBar.vertical: Controls.ScrollBar { policy: Controls.ScrollBar.AsNeeded }
       Loader {
         id: loader
         width: viewport.width

@@ -5,6 +5,7 @@ Island.ModulePage {
   available:!!backend && backend.allowed
   implicitHeight:content.implicitHeight
   stableHeight:presentation.selected ? content.implicitHeight : content.monthImplicitHeight
+  function back(){if(content.sourcesMode) {content.sourcesMode=false;return true};if(content.yearMode) {content.yearMode=false;return true};return false}
   function enter(){content.showToday()}
   function focusPrimary(){content.focusSelectedDay();return true}
   function handleKey(event){var item=presentation.focusedItem;return !!item && "islandCalendarDay" in item && content.handleKey(event)}
@@ -13,9 +14,10 @@ Island.ModulePage {
     subscriptions:root.backend ? root.backend.calendars : null
     reminders:root.backend ? root.backend.reminders : null
     strings:root.presentation.strings;externalFeedback:root.presentation.feedback
-    showBack:false;active:root.presentation.active
+    showBack:true;active:root.presentation.active
     weekStart:String(root.presentation.settings.calendarWeekStart || "")
     radialBraille:root.presentation.radialBraille
+    onBackRequested:root.presentation.goBack()
     onWeekStartRequested:value=>root.settingRequested("calendarWeekStart",value)
   }
 }

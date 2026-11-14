@@ -7,7 +7,12 @@ Island.ModuleView {
   implicitHeight:content.implicitHeight
   Column {
     id:content;width:parent.width;objectName:"islandDownloads";spacing:Island.Design.gap.small
-    Island.SectionHeading {width:parent.width;visible:root.presentation.expanded || root.presentation.hovering;title:root.presentation.strings.t("downloads.title")}
+    Island.SectionLink {
+      objectName:"downloadsOpenDetails";width:parent.width
+      visible:(root.presentation.expanded || root.presentation.hovering) && !root.presentation.detail
+      title:root.presentation.strings.t("downloads.title");focusable:root.presentation.expanded;feedback:root.presentation.feedback
+      onClicked:root.presentation.expanded ? root.detailsRequested() : root.expandRequested()
+    }
     Island.DownloadList {
       width:parent.width
       active:root.presentation.active

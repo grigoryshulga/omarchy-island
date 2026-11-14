@@ -9,6 +9,8 @@ layout(std140,binding=0) uniform buf {
   vec2 size;
   float amount;
   vec4 accent;
+  vec4 trackColor;
+  float trackOpacity;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

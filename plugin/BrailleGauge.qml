@@ -69,6 +69,8 @@ Item {
       property vector2d size:Qt.vector2d(width,height)
       property real amount:root.progress
       property color accent:Design.accent
+      property color trackColor:Design.progressTrack
+      property real trackOpacity:0.32
       vertexShader:Qt.resolvedUrl("shaders/gauge.vert.qsb")
       fragmentShader:Qt.resolvedUrl("shaders/gauge.frag.qsb")
     }

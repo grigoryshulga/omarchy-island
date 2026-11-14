@@ -68,6 +68,8 @@ QtObject {
   readonly property color raised: color(Tokens.mix(opaqueCanvas,Commons.Color.popups.text,0.08))
   readonly property color text: color(Tokens.readable(Commons.Color.popups.text,raised,7))
   readonly property color secondaryText: color(Tokens.readable(Commons.Color.muted,raised,4.5))
+  readonly property real progressTrackTone:secondaryText.r*0.2126+secondaryText.g*0.7152+secondaryText.b*0.0722
+  readonly property color progressTrack:Qt.rgba(progressTrackTone,progressTrackTone,progressTrackTone,1)
   readonly property color accent: color(Tokens.readable(Commons.Color.accent,raised,4.5))
   readonly property color info: color(Tokens.readable(ThemePalette.blue,raised,4.5))
   readonly property color success: color(Tokens.readable(ThemePalette.green,raised,4.5))

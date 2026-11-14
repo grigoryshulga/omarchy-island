@@ -6,6 +6,8 @@ ShaderEffect {
   id: root
   property real value: 0
   property color accent: Design.accent
+  property color trackColor: Design.progressTrack
+  property real trackOpacity: 0.32
   property bool mirrored: LayoutMirroring.enabled
   // Internal charging-wave inputs; static consumers start no animation.
   property real phase: 1

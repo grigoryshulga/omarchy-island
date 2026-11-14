@@ -39,6 +39,7 @@ ColumnLayout {
     visible:!!root.reminders && root.reminders.count>0
     clip:true;contentWidth:availableWidth
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
+    Controls.ScrollBar.vertical.policy:Controls.ScrollBar.AlwaysOff
     Column {
       id:list;width:reminderScroll.availableWidth;spacing:Design.gap.small
       Repeater {

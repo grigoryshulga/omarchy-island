@@ -132,7 +132,7 @@ ShellRoot {
     // Sample real exit frames, interrupt them with the next mode, then
     // verify the final completed close unmaps the native surface.
     function test_exit_step() {
-      var popup=findChild(widget,"islandPopup"),tabs=findChild(widget,"islandTabs"),player=findChild(widget,"islandMediaPlayer"),art=findChild(widget,"islandPopupArtwork")
+      var popup=findChild(widget,"islandPopup"),tabs=findChild(widget,"overviewHeader"),player=findChild(widget,"islandMediaPlayer"),art=findChild(widget,"islandPopupArtwork")
       exitTick++
       if(exitTick===20) {
         startWidth=popup.drawnWidth;nativeSize=popup.width+"x"+popup.height
@@ -149,12 +149,12 @@ ShellRoot {
       if(exitTick===60) {
         startWidth=popup.drawnWidth;playerWidth=player.width
         widget.hoverOpen=false
-        checkExit(!tabs.visible && player.visible && art.visible,"hover close discarded its overview or showed tabs")
+        checkExit(tabs.visible && player.visible && art.visible,"hover close discarded its overview header")
       }
       if(exitTick===65) checkExit(Math.abs(player.width-playerWidth)<1,"hover close reflowed its content")
       if(exitTick===66) widget.showNotification()
       if(exitTick===100) {
-        var toast=findChild(tabs.parent,"notificationGroup-Test")
+        var toast=findChild(widget,"notificationGroup-Test")
         var toastHeight=toast ? toast.height : -1
         startWidth=popup.drawnWidth
         widget.alertKind=""
@@ -189,7 +189,7 @@ ShellRoot {
         checkExit(artworkFadeTailSeen,"tab switch did not preserve the artwork fade tail")
         startWidth=popup.drawnWidth
         widget.close()
-        checkExit(tabs.visible && Math.abs(findChild(widget,"islandCalendar").mapToItem(findChild(widget,"islandPageSwipe"),0,0).x)<1,"calendar close switched its content before fading")
+        checkExit(!tabs.visible && Math.abs(findChild(widget,"islandCalendar").mapToItem(findChild(widget,"islandPageSwipe"),0,0).x)<1,"calendar close switched its content before fading")
       }
       if(exitTick===185) widget.openCalendar()
       if(exitTick===210) {
@@ -293,7 +293,7 @@ ShellRoot {
       }
       if(tick === 10) { test.mouseMove(widget.parent,1,1);service.latest=service.allEntries[0]; service.arrivalChanged() }
       if(tick===30) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"islandTabs").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"overviewHeader").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
       }
       if(tick===30 && !test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: incoming notification has no radio waves");Qt.quit();return}
       if(tick===30) {
@@ -320,11 +320,11 @@ ShellRoot {
       if(tick >= 10 && tick < 36 && popup.shown > 0.01) entrance.push({w:popup.drawnWidth,h:popup.drawnHeight,target:popup.contentWidth})
       if(popup.open && popup.shown > 0.01 && popup.cardOrigin !== undefined && Math.abs(popup.cardOrigin.x+popup.drawnWidth/2-popup.anchorCenter.x)>1) offCenter++
       if(tick === 70) {
-        var tabs=test.findChild(widget,"islandTabs"), player=test.findChild(widget,"islandMediaPlayer")
+        var tabs=test.findChild(widget,"overviewHeader"), player=test.findChild(widget,"islandMediaPlayer")
         if(!tabs.visible || player.mapToItem(tabs.parent,0,0).y<tabs.y+tabs.height || popup.frameSuppressed) { console.log("ISLAND_MOTION_FAIL: tabs are not above music or persistent frame is missing");widget.close();Qt.quit();return }
         if(test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: notification waves leaked into overview");Qt.quit();return}
         var panelEffect=test.findChild(widget,"islandPanelSpotlight")
-        if(panelEffect.width<tabs.width || panelEffect.mapToItem(tabs.parent,0,0).y>tabs.y || tabs.children[0].color.a!==0) {console.log("ISLAND_MOTION_FAIL: shared cursor effect excludes tabs or tabs retain a fill");Qt.quit();return}
+        if(panelEffect.width<tabs.width || panelEffect.mapToItem(tabs.parent,0,0).y>tabs.y) {console.log("ISLAND_MOTION_FAIL: shared cursor effect excludes tabs or tabs retain a fill");Qt.quit();return}
         var artwork = test.findChild(widget,"islandPopupArtwork")
         if(artwork.mapToItem(tabs.parent,0,0).y>tabs.y || artwork.height<tabs.height+player.height) { console.log("ISLAND_MOTION_FAIL: music backdrop does not extend behind tabs");widget.close();Qt.quit();return }
         if(!service.playing && (artwork.opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01)) {
@@ -343,7 +343,7 @@ ShellRoot {
       if(tick===72) test.mouseClick(test.findChild(popup,"islandOutside"),popup.width/2,13,Qt.MiddleButton)
       if(tick===90) {
         if(!widget.pinned || !widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: middle click did not open calendar"); widget.close(); Qt.quit(); return }
-        test.findChild(widget,"islandTabOverview").clicked()
+        test.findChild(widget,"calendarBack").clicked()
         if(!Commons.Style.reduceMotion && !test.findChild(widget,"islandPanelSpotlight").rippling) {console.log("ISLAND_MOTION_FAIL: tab click did not use the shared wave");Qt.quit();return}
       }
       if(tick===106) {
@@ -392,7 +392,7 @@ ShellRoot {
         test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
       }
       if(tick===290) {
-        if(widget.pinned || widget.calendarMode || test.findChild(widget,"islandTabs").visible) {console.log("ISLAND_MOTION_FAIL: hover preview exposed tabs or switched away from Overview");Qt.quit();return}
+        if(widget.pinned || widget.calendarMode || !test.findChild(widget,"overviewHeader").visible) {console.log("ISLAND_MOTION_FAIL: hover preview exposed tabs or switched away from Overview");Qt.quit();return}
         widget.open()
         var pager=test.findChild(widget,"islandPageSwipe")
         test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)

@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "ModuleCatalog.mjs" as Catalog
+import "SettingsModel.mjs" as Settings
 import "OverviewModel.mjs" as Overview
 import "Model.js" as Model
 
@@ -25,6 +26,11 @@ Item {
   property bool hovering: false
   property string alertKind: ""
   property var weather: null
+  readonly property var summaryWeather:weather || (service && ("weather" in service) ? service.weather : null)
+  property date currentDate:new Date()
+  function focusSummary(target) {(target==="calendarOpen" ? dateButton : weatherButton).forceActiveFocus()}
+  Timer {interval:60000;repeat:true;running:root.visible && root.overviewActive && (root.expanded || root.hovering);onTriggered:root.currentDate=new Date()}
+  onOverviewActiveChanged:if(overviewActive) currentDate=new Date()
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   signal settingRequested(string key,var value)
   signal expandRequested()
@@ -83,7 +89,8 @@ Item {
     restoreSummary()
     return true
   }
-  onExpandedChanged:if(!expanded) {detailPage="";configuring=false}
+  onExpandedChanged:{currentDate=new Date();if(!expanded) {detailPage="";configuring=false}}
+  onHoveringChanged:if(hovering) currentDate=new Date()
   readonly property var t3:service && service.t3 ? service.t3 : null
   readonly property var notificationIcon: {
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.visible && slot.item && slot.item.toastIcon) return slot.item.toastIcon}
@@ -96,13 +103,46 @@ Item {
     id:overviewScroll
     objectName:"overviewScroll"
     width:parent.width
-    height:Math.min(root.height,root.implicitHeight)
+    height:root.expanded ? root.height : Math.min(root.height,root.implicitHeight)
     clip:true;contentWidth:availableWidth
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
+    Controls.ScrollBar.vertical:Controls.ScrollBar {
+      objectName:"overviewScrollBar"
+      policy:Controls.ScrollBar.AlwaysOff
+    }
   ColumnLayout {
     id: body
     width: overviewScroll.availableWidth
     spacing: root.compactNotifications ? Design.gap.tight : Design.gap.section
+  RowLayout {
+    objectName:"overviewHeader"
+    visible:(root.expanded || root.hovering) && !root.detailOpen && !root.configuring
+    Layout.fillWidth:true;spacing:Design.gap.small
+    FeedbackButton {
+      id:dateButton;objectName:"calendarOpen"
+      Layout.fillWidth:true;Layout.minimumWidth:0
+      text:root.currentDate.toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd, d MMMM")
+      fontSize:Design.type.title;leftAlign:true;horizontalPadding:0
+      focusable:root.expanded && Settings.get(root.settings,"calendarEnabled")
+      enabled:focusable;opacity:1
+      tooltipText:root.strings.t("calendar.open")
+      feedback:root.externalFeedback
+      onClicked:root.calendarRequested()
+    }
+    WeatherChip {
+      id:weatherButton;objectName:"weatherOpen"
+      visible:Settings.get(root.settings,"weatherEnabled") && !!root.summaryWeather && root.summaryWeather.allowed
+      weather:root.summaryWeather;strings:root.strings;feedback:root.externalFeedback
+      enabled:root.expanded;focusable:enabled;opacity:1
+      onClicked:root.weatherRequested()
+    }
+    FeedbackButton {
+      id:customizeButton;objectName:"overviewCustomize"
+      visible:root.expanded;iconText:"󰒓";compact:true;focusable:true
+      tooltipText:root.strings.t("overview.customize");feedback:root.externalFeedback
+      onClicked:root.configure(customizeButton)
+    }
+  }
   RowLayout {
     visible:root.detailPage!=="" && !(root.detailPage==="controls" && root.detailItem && root.detailItem.inPanel)
     Layout.fillWidth:true

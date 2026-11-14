@@ -217,12 +217,17 @@ Item {
     _moduleWidgets:function(id){return root.bar && typeof root.bar.moduleWidgets==="function" ? root.bar.moduleWidgets(id) : []}
     _run:function(command){if(root.bar) root.bar.run(command)}
   }
-  RowLayout {
+  ColumnLayout {
     id:favorites
     objectName:"controlFavorites"
     anchors.left:parent.left;anchors.right:parent.right
     visible:root.favoriteMode
     spacing:Design.gap.tight
+    SectionLink {
+      objectName:"controlAll";Layout.fillWidth:true;title:root.strings.t("tabs.controls")
+      focusable:root.favoritesInteractive;feedback:root.externalFeedback
+      onClicked:root.allRequested()
+    }
     Flickable {
       Layout.fillWidth:true
       implicitHeight:Design.controlHeight
@@ -258,12 +263,7 @@ Item {
         }
       }
     }
-    FeedbackButton {
-      objectName:"controlAll"
-      iconText:Commons.I18n.rightToLeft ? "󰅁" : "󰅂"
-      tooltipText:root.strings.t("controls.all");focusable:true;feedback:root.externalFeedback
-      onClicked:root.allRequested()
-    }
+
   }
   ColumnLayout {
     id:landing

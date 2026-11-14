@@ -3,6 +3,7 @@ singleton Design 1.0 Design.qml
 DesignTextField 1.0 DesignTextField.qml
 DesignDropdown 1.0 DesignDropdown.qml
 SectionHeading 1.0 SectionHeading.qml
+SectionLink 1.0 SectionLink.qml
 Surface 1.0 Surface.qml
 ArtworkBackground 1.0 ArtworkBackground.qml
 BarWidget 1.0 BarWidget.qml

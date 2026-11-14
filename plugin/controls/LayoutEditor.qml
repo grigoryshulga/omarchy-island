@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls as Controls
 import ".." as Island
 
 FocusScope {
@@ -77,7 +76,6 @@ FocusScope {
     anchors.fill:parent;clip:true
     contentWidth:width;contentHeight:content.implicitHeight
     boundsBehavior:Flickable.StopAtBounds
-    Controls.ScrollBar.vertical:Controls.ScrollBar {}
     ColumnLayout {
       id:content;width:viewport.width;spacing:Island.Design.gap.small
       Island.PlainText {Layout.fillWidth:true;text:root.strings.t("controls.customizeHint");wrapMode:Text.Wrap;typeRole:"caption"}
