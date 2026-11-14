@@ -45,7 +45,7 @@ assert.deepEqual(settings.sections.map(section => section.id), ['general', 'pane
 const rows = settings.sections.flatMap(section => section.groups.flatMap(group => group.rows));
 assert.equal(new Set(rows.map(row => row.key)).size, rows.length);
 assert.deepEqual(rows.filter(row => !row.fixed).map(row => row.key).sort(),
-  Object.keys(settings.defaults).filter(key => !['agentLimitsPins', 'overviewEnabled', 'overviewLayout'].includes(key)).sort());
+  Object.keys(settings.defaults).filter(key => !key.startsWith('indicator') && !['agentLimitsPins', 'overviewEnabled', 'overviewLayout', 'clockLayout'].includes(key)).sort());
 assert.deepEqual(rows.filter(row => row.dependsOn).map(row => [row.key, row.dependsOn]),
   [['hoverDelay', 'hoverPreview'], ['t3Responses', 't3Enabled']]);
 for (const lang of ['en', 'ru']) {

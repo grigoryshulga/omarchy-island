@@ -137,6 +137,14 @@ Media and Notifications support **Minimal**, **Compact**, **Standard**, and **La
 
 Visibility and order affect the Overview summary and hover preview. Notification and activity toasts, bar indicators, and background integrations retain their behavior. Preferences are stored in `overviewLayout` as an ordered array of `{id, visible, size}` records in the Island shell entry. Missing modules retain their saved preferences; newly registered blocks are appended in catalog order. Without saved preferences, the existing order and appearance are used.
 
+### Clock widget builder
+
+Open **Settings → Panel** to edit the clock directly in its preview. Select an indicator, drag it to reorder or move it across the clock, or use the arrow actions. **+ Add element** offers module indicators, separators and fixed spaces. Remove an element with **×** or Delete; Ctrl+arrow keys reorder the selection. Select the time to choose a format by its rendered example; **…** opens the custom format field (`\n` inserts a line break). The orientation button previews horizontal or vertical panels. On side panels, the two sides stack above and below the clock. Reset restores the default composition, including existing legacy visibility preferences.
+
+The optional Weather indicator shows the current condition and temperature, opens Weather on click, follows the selected temperature unit, and marks stale readings with a dot. Add it through the builder; it reuses the shared weather service. Calendar and Weather enable switches live under **Settings → Modules**.
+
+The preview uses the real indicator components. Inactive indicators have muted placeholders so they remain selectable; editing never invokes their system actions. Module enable switches and activity conditions still control when an indicator appears on the bar. Changes save immediately in `clockLayout` and apply across monitors. This composition controls placement and visibility without changing system state. Missing modules keep their placement; new modules are offered in the add menu. Without a saved composition, the original order and legacy `indicator*` switches remain in effect. Time stays in the center and retains its existing popup, hover, mouse and OSD behavior.
+
 ### Keyboard
 
 In the pinned popup, **Alt+1** opens the full Controls view inside Overview; **Alt+2–4** opens the main summary, Calendar, or Weather. Calendar and Weather can be disabled and are skipped by wheel and swipe navigation; the remaining shortcuts keep their numbers. There is no tab strip. Click the date or current weather in the main header to open the corresponding page; Back or Escape returns to that header and restores focus. Back or Escape from a panel opened through an Overview favorite returns directly to the summary and restores the favorite focus. When opened from All controls, it returns to that list first. **Tab / Shift+Tab** moves focus; **arrow keys / H J K L** select neighboring controls; **Enter / Space** activates the focused item. Text fields retain normal typing and caret movement. Space also toggles playback in Overview when not handled by a focused control. Escape returns along the same entry route before closing the popup. Dropdowns handle their own selection keys and Escape.
@@ -179,7 +187,7 @@ omarchy-shell island-update refresh|clear
 
 Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
 
-Open **Overview → Customize → Settings** for four categories: **General** (opening and animations), **Panel** (pages and bar indicators), **Alerts** (notifications and system events), and **Modules** (Media, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the customization previews, keeping the popup surface size stable. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Overview always remains available so Controls and settings cannot become inaccessible. Disabling Weather also stops weather requests.
+Open **Overview → Customize → Settings** for four categories: **General** (opening and animations), **Panel** (clock widget builder), **Alerts** (notifications and system events), and **Modules** (Calendar, Weather, Media, T3 Code, and Agent limits). Changes apply and save immediately. Settings replace the customization previews, keeping the popup surface size stable. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Overview always remains available so Controls and settings cannot become inaccessible. Disabling Weather also stops weather requests.
 
 | Menu setting | Configuration and default |
 |---|---|
@@ -196,7 +204,7 @@ Open **Overview → Customize → Settings** for four categories: **General** (o
 | Notification style | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
 | T3 Code sessions | `t3Enabled: false`; opt in under Modules → T3 Code to connect to the local T3 server |
 | Answer T3 questions from Island | `t3Responses: true`; when disabled, the T3 connection is read-only |
-| Indicators | `indicatorDnd`, `indicatorMicrophone`, `indicatorRecording`, `indicatorRemote`, `indicatorNightLight`, `indicatorStayAwake`, `indicatorUpdate`: all `true`; visibility only, without changing system state |
+| Legacy indicators | `indicatorDnd`, `indicatorMicrophone`, `indicatorRecording`, `indicatorRemote`, `indicatorNightLight`, `indicatorStayAwake`, `indicatorUpdate`: all `true`; used until a custom `clockLayout` is saved |
 | System events | `osdVolume`, `osdBrightness`, `osdKeyboard`, `osdLayout`, `osdMicrophone`, `osdModes`: all `true`; disabled events are suppressed without invoking the native OSD fallback |
 
 Other settings and existing contextual controls:
@@ -355,6 +363,7 @@ python3 tests/live-notifications.py --live-session # Explicitly changes the runn
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
 python3 tests/panel-layout.py              # Wayland panel orientation, edge slots, indicators and compact OSD
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
+python3 tests/clock-layout.py              # Offscreen clock builder, dragging, focus and indicator lifecycle
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
 python3 tests/agent-limits-qml.py          # Isolated limits collector, pins, focus, center and failure policy
 python3 tests/modules.py                   # Shared fake host, registration, navigation and collector lifecycle

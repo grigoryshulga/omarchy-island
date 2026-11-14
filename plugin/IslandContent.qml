@@ -273,6 +273,7 @@ Item {
       Layout.fillWidth:true;Layout.fillHeight:true
       active:root.overviewActive && root.visible && root.settingsOpen
       settings:root.settings;strings:root.strings
+      service:root.service;bar:root.bar
       modules:root.service && root.service.modules ? root.service.modules : ({})
       feedback:root.externalFeedback
       onSettingRequested:(key,value)=>root.settingRequested(key,value)

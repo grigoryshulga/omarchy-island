@@ -90,3 +90,6 @@ BrailleProgress 1.0 BrailleProgress.qml
 
 ContainerSurface 1.0 ContainerSurface.qml
 singleton CornerStyle 1.0 CornerStyle.qml
+
+ClockIndicatorStrip 1.0 ClockIndicatorStrip.qml
+ClockLayoutEditor 1.0 ClockLayoutEditor.qml

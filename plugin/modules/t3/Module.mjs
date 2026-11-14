@@ -1,4 +1,5 @@
 export default {
+  indicatorIcon:"󰋗",
   order:{overview:20,indicator:10,settings:10},
   id: "t3", title: "T3 Code", state: "T3State.qml",
   overview: "modules/t3/Overview.qml", indicator: "modules/t3/Indicator.qml",

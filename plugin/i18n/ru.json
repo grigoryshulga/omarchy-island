@@ -499,5 +499,21 @@
   "controls.lessSpacing": "Уменьшить отступ",
   "controls.moreSpacing": "Увеличить отступ",
   "controls.deleteSection": "Удалить секцию",
-  "controls.sectionItem": "Секция"
+  "controls.sectionItem": "Секция",
+  "clock.title": "Виджет часов",
+  "clock.time": "Время",
+  "clock.reminders": "Напоминания",
+  "clock.reset": "Сбросить композицию",
+  "clock.horizontal": "Горизонтальная панель",
+  "clock.vertical": "Вертикальная панель",
+  "clock.previous": "Переместить назад",
+  "clock.next": "Переместить вперёд",
+  "clock.switchSide": "На другую сторону",
+  "clock.remove": "Убрать",
+  "clock.add": "+ Добавить элемент",
+  "clock.separator": "Разделитель",
+  "clock.space": "Пробел",
+  "clock.format": "Формат времени",
+  "settings.group.calendar": "Календарь",
+  "settings.group.weather": "Погода"
 }

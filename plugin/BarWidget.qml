@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import qs.Commons
 import qs.Commons as Commons
@@ -8,6 +7,7 @@ import "Model.js" as Model
 import "ClockModel.js" as Clock
 import "CornerGeometry.js" as Corners
 import "ModuleCatalog.mjs" as Catalog
+import "ClockLayout.mjs" as ClockLayout
 import "SettingsModel.mjs" as Settings
 
 BarWidget {
@@ -15,15 +15,9 @@ BarWidget {
   moduleName: "gshulga.island"
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
-  readonly property string moduleTooltips: {
-    var tips=[]
-    for(var i=0;i<moduleIndicators.count;i++) {
-      var slot=moduleIndicators.itemAt(i)
-      if(slot && slot.available && slot.tooltip) tips.push(slot.tooltip)
-    }
-    return tips.join(" · ")
-  }
+  readonly property string moduleTooltips: [leftIndicators.tooltips,rightIndicators.tooltips].filter(Boolean).join(" · ")
   readonly property var moduleStrings:strings
+  readonly property var clockLayout:ClockLayout.layout(ClockLayout.catalog(Catalog.ordered("indicator")),Settings.get(settings,"clockLayout"),settings)
   property var registeredIndicators: null
   readonly property bool showOsd: indicators && indicators.osdActive && (!indicators.osdScreen || indicators.osdScreen===screenName)
   property real osdShown:showOsd ? 1 : 0
@@ -199,7 +193,7 @@ BarWidget {
     fixedWidth: root.implicitWidth
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
-    tooltipText: [root.moduleTooltips,root.indicators && root.indicators.recording ? strings.t("indicator.recording") : "",root.indicators && root.indicators.remoteActive ? strings.t("indicator.remote") : "",root.indicators && root.indicators.microphoneMuted ? strings.t("indicator.microphoneMuted") : "",root.service && root.service.doNotDisturb ? strings.t("dnd") : "",root.indicators && root.indicators.nightLight ? strings.t("indicator.nightLight") : "",root.indicators && root.indicators.stayAwake ? strings.t("indicator.stayAwake") : "",root.indicators && root.indicators.updateAvailable ? strings.t("indicator.updateAvailable") : ""].filter(function(s){return s!==""}).join(" · ")
+    tooltipText:root.moduleTooltips
     onPressed: button => { if (button === Qt.RightButton) root.cycleClockFormat(); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     onWheelMoved: delta => {if(delta) root.cyclePage(delta<0 ? 1 : -1)}
     ArtworkBackground {
@@ -213,37 +207,21 @@ BarWidget {
       monochrome: true
       horizontalFade: true
     }
-    GridLayout {
-      columns: root.vertical ? 1 : -1
-      rows: root.vertical ? -1 : 1
+    ClockIndicatorStrip {
       id:leftIndicators
-      Repeater {
-        id:moduleIndicators
-        model:Catalog.ordered("indicator")
-        ModuleSlot {
-          required property var modelData
-          viewSource:modelData.indicator || ""
-          backend:root.service && root.service.modules ? root.service.modules[modelData.id] || null : null
-          presentation:QtObject {
-            readonly property var strings:root.moduleStrings
-            readonly property bool vertical:root.vertical
-            readonly property real barSize:root.barSize
-            readonly property real barHeight:trigger.height
-            readonly property bool showAlert:root.showAlert
-            readonly property var bar:root.bar
-          }
-          visible:available
-          onDetailsRequested:root.openOverview()
-        }
-      }
+      elements:root.clockLayout.filter(function(row){return row.side==="left"})
+      service:root.service;settings:root.settings;strings:root.moduleStrings
+      vertical:root.vertical;barSize:root.barSize;barHeight:trigger.height
+      bar:root.bar;showAlert:root.showAlert;foreground:clockLabel.color
+      waveSpan:trigger.width
+      z:1
       objectName:"islandLeftIndicators"
       x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2-centerContent.indicatorSpan/2-Style.space(11-5*root.osdShown)-width
       y: root.vertical ? Style.space(6) : (parent.height-height)/2
-      z:1
-      columnSpacing:Style.space(5)
-      rowSpacing:Style.space(5)
-      StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("recording")} Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;visible:Preferences.get("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,trigger.width-leftIndicators.x-recordingBeacon.x)}
-      StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height;visible:Preferences.get("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:Design.barAccent;waveWidth:root.vertical ? 0 : Math.max(0,trigger.width-leftIndicators.x-remoteBeacon.x)}
+      onActivate:mode=>root.activateIndicator(mode)
+      onPageRequested:index=>root.openPage(index)
+      onDetailsRequested:root.openOverview()
+      onCalendarRequested:root.openCalendar()
     }
     Item {
       id:centerContent
@@ -305,43 +283,21 @@ BarWidget {
         valueText:root.indicators && ("osdProgressText" in root.indicators) ? root.indicators.osdProgressText : ""
       }
     }
-    GridLayout {
-      columns: root.vertical ? 1 : -1
-      rows: root.vertical ? -1 : 1
+    ClockIndicatorStrip {
       id:rightIndicators
-      FeedbackButton {
-        objectName:"islandReminderIndicator"
-        readonly property var reminders:root.service && ("reminders" in root.service) ? root.service.reminders : null
-        visible:Settings.get(root.settings,"calendarEnabled") && !!reminders && reminders.count>0
-        text:reminders ? "󰢌"+(root.vertical ? "\n" : " ")+Commons.I18n.formatNumber(reminders.count) : ""
-        foreground:clockLabel.color;variant:"soft";fontSize:Design.type.bar
-        Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : Infinity
-        implicitHeight:root.vertical ? fontSize*2.7 : trigger.height
-        horizontalPadding:root.vertical ? 0 : Design.gap.small;verticalPadding:0
-        tooltipText:reminders && reminders.count ? reminders.rows[0].label+" · "+new Date(reminders.rows[0].at*1000).toLocaleString(Qt.locale(Commons.I18n.formatLocale),"d MMM HH:mm") : ""
-        onClicked:root.openCalendar()
-      }
+      elements:root.clockLayout.filter(function(row){return row.side==="right"})
+      service:root.service;settings:root.settings;strings:root.moduleStrings
+      vertical:root.vertical;barSize:root.barSize;barHeight:trigger.height
+      bar:root.bar;showAlert:root.showAlert;foreground:clockLabel.color
+      waveSpan:trigger.width
+      z:1
       objectName:"islandRightIndicators"
       x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2+centerContent.indicatorSpan/2+Style.space(11-5*root.osdShown)
       y: root.vertical ? parent.height-height-Style.space(6) : (parent.height-height)/2
-      columnSpacing:Style.space(5)
-      rowSpacing:Style.space(5)
-      z:1
-      StatusBeacon {
-        id:updateBeacon
-        objectName:"islandUpdateIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("update")}
-        Layout.preferredHeight:root.vertical ? Style.space(18) : trigger.height
-        visible:Preferences.get("indicatorUpdate") && !!root.indicators && !!root.indicators.updateAvailable
-        tint:Commons.Color.foreground
-        glyph:""
-        bidirectional:true
-        waveWidth:root.vertical ? 0 : trigger.width
-        waveOffset:-rightIndicators.x-updateBeacon.x
-      }
-      PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("microphone")} visible:Preferences.get("indicatorMicrophone") && root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("dnd")} visible:Preferences.get("indicatorDnd") && root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("nightLight")} visible:Preferences.get("indicatorNightLight") && root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
-      PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activateIndicator("stayAwake")} visible:Preferences.get("indicatorStayAwake") && root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:clockLabel.color}
+      onActivate:mode=>root.activateIndicator(mode)
+      onPageRequested:index=>root.openPage(index)
+      onDetailsRequested:root.openOverview()
+      onCalendarRequested:root.openCalendar()
     }
   }
   Loader {

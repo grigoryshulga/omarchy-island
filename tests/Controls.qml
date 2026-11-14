@@ -215,7 +215,7 @@ ShellRoot {
       for(var category of ["panel","modules","alerts","general"]) {
         findChild(settingsView,"settingsTab-"+category).clicked();wait(20)
         check(settingsHost.implicitHeight===settingsHeight,"settings category resized the popup")
-        if(category==="panel") check(!findChild(settingsView,"setting-overviewEnabled").enabled,"Overview can be disabled, losing Settings access")
+        if(category==="panel") check(findChild(settingsView,"clockAdd") && !findChild(settingsView,"setting-overviewEnabled"),"Panel should contain the clock builder without Island pages")
         if(category==="modules") {
           var musicBackground=findChild(settingsView,"setting-musicVisualizationBackground")
           check(musicBackground && musicBackground.options.length===4,"music backgrounds are missing")
@@ -257,11 +257,12 @@ ShellRoot {
         check(at.x>=-1 && at.x+tab.width<=settingsView.width+1,"large text tab cannot be reached")
       }
       Commons.Style.fontBaseSize=fontSize;controlsWindow.testWidth=520;wait(40)
-      findChild(settingsView,"settingsTab-panel").clicked();wait(20)
+      findChild(settingsView,"settingsTab-modules").clicked();wait(20)
       check(viewport.contentHeight>viewport.height,"long settings category is not scrollable")
       viewport.contentY=viewport.contentHeight-viewport.height
-      findChild(settingsView,"settingsTab-modules").clicked();wait(20)
+      findChild(settingsView,"settingsTab-panel").clicked();wait(20)
       check(viewport.contentY===0,"category switch retained previous scroll position")
+      findChild(settingsView,"settingsTab-modules").clicked();wait(20)
       var warning=findChild(settingsView,"setting-agentLimitsWarning"),critical=findChild(settingsView,"setting-agentLimitsCritical")
       check(warning && critical && warning.maximum===100 && warning.step===5 && critical.value===5,"agent limit thresholds were lost during regrouping")
       warning.moved(35)

@@ -1,8 +1,10 @@
 import {definitions,ordered,pages as registeredPages} from "./ModuleCatalog.mjs";
-const validators = {};
+import * as ClockLayout from "./ClockLayout.mjs";
+const validators = {clockLayout:ClockLayout.valid};
 
 // Settings accepted by the Island UI. Unknown shell-entry metadata is preserved.
 var defaults = {
+  clockLayout: null,
   hoverPreview: true, hoverDelay: 140, openingPage: "overview",
   panelAnimation: true, animationsEnabled: true, cursorEffectsEnabled: true,
   indicatorRecording: true, indicatorRemote: true, indicatorUpdate: true,
@@ -48,10 +50,7 @@ var sections = [
     {id:"opening",rows:[{key:"hoverPreview"},{key:"hoverDelay",type:"delay",dependsOn:"hoverPreview"},{key:"openingPage",type:"choice"}]},
     {id:"animations",rows:[{key:"panelAnimation"},{key:"animationsEnabled"},{key:"cursorEffectsEnabled"}]}
   ]},
-  {id:"panel",groups:[
-    {id:"pages",rows:registeredPages().map(function(entry){return {key:entry.enabledSetting || entry.id+"Enabled",fixed:!entry.enabledSetting}})},
-    {id:"indicators",description:true,rows:[{key:"indicatorDnd"},{key:"indicatorMicrophone"},{key:"indicatorRecording"},{key:"indicatorRemote"},{key:"indicatorNightLight"},{key:"indicatorStayAwake"},{key:"indicatorUpdate"}]}
-  ]},
+  {id:"panel",groups:[]},
   {id:"alerts",groups:[
     {id:"events",description:true,rows:[{key:"osdVolume"},{key:"osdBrightness"},{key:"osdKeyboard"},{key:"osdLayout"},{key:"osdMicrophone"},{key:"osdModes"}]}
   ]},

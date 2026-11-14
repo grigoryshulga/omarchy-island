@@ -7,6 +7,8 @@ Item {
   id:root
   required property var strings
   property var settings:({})
+  property var service:null
+  property var bar:null
   property var modules:({})
   property var feedback:null
   property bool active:true
@@ -27,10 +29,11 @@ Item {
   }
   function closeEditors() {
     for(var i=0;i<groups.count;i++) groups.itemAt(i).closeEditors()
+    if(clockEditor.item) clockEditor.item.closeEditors()
     ownsKeys=false
   }
   function updateOwnsKeys() {
-    var open=false
+    var open=!!clockEditor.item && clockEditor.item.ownsKeys
     for(var i=0;i<groups.count;i++) open=open || groups.itemAt(i).hasOpenEditor()
     ownsKeys=open
   }
@@ -81,6 +84,19 @@ Item {
       id:body
       width:viewport.width
       spacing:Design.gap.section
+      Loader {
+        id:clockEditor
+        width:body.width-Design.gap.small
+        active:root.visible && root.active && Settings.sections[root.category].id==="panel"
+        visible:active
+        sourceComponent:ClockLayoutEditor {
+          settings:root.settings;service:root.service;bar:root.bar;strings:root.strings;active:root.active
+          onSettingRequested:(key,value)=>root.settingRequested(key,value)
+          onRevealFocus:item=>root.revealFocus(item)
+          onOwnsKeysChanged:root.updateOwnsKeys()
+        }
+        onItemChanged:root.updateOwnsKeys()
+      }
       Repeater {
         id:groups
         model:Settings.sections[root.category].groups

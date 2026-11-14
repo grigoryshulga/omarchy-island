@@ -1,1 +1,1 @@
-export default {id:"calendar",titleKey:"calendar.open",state:"modules/calendar/State.qml",page:"modules/calendar/Page.qml",enabledSetting:"calendarEnabled",pageIndex:2,tabObjectName:"calendarOpen",defaults:{calendarEnabled:true}};
+export default {groups:[{id:"calendar",rows:[{key:"calendarEnabled"}]}],id:"calendar",titleKey:"calendar.open",state:"modules/calendar/State.qml",page:"modules/calendar/Page.qml",enabledSetting:"calendarEnabled",pageIndex:2,tabObjectName:"calendarOpen",defaults:{calendarEnabled:true}};

@@ -495,5 +495,21 @@
   "controls.lessSpacing": "Less spacing",
   "controls.moreSpacing": "More spacing",
   "controls.deleteSection": "Delete section",
-  "controls.sectionItem": "Section"
+  "controls.sectionItem": "Section",
+  "clock.title": "Clock widget",
+  "clock.time": "Time",
+  "clock.reminders": "Reminders",
+  "clock.reset": "Reset composition",
+  "clock.horizontal": "Horizontal panel",
+  "clock.vertical": "Vertical panel",
+  "clock.previous": "Move earlier",
+  "clock.next": "Move later",
+  "clock.switchSide": "Move to the other side",
+  "clock.remove": "Remove",
+  "clock.add": "+ Add element",
+  "clock.separator": "Separator",
+  "clock.space": "Space",
+  "clock.format": "Time format",
+  "settings.group.calendar": "Calendar",
+  "settings.group.weather": "Weather"
 }

@@ -7,6 +7,7 @@ function validPins(value) {
   }) && new Set(value).size===value.length
 }
 export default {
+  indicatorIcon:"󰧑",
   order:{overview:10,indicator:20,settings:20},
   id: "agentLimits", titleKey: "limits.title", state: "AgentLimitsState.qml",
   overview: "modules/agent-limits/Overview.qml", indicator: "modules/agent-limits/Indicator.qml",
