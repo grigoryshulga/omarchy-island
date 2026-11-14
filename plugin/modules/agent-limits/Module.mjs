@@ -10,6 +10,7 @@ export default {
   order:{overview:10,indicator:20,settings:20},
   id: "agentLimits", titleKey: "limits.title", state: "AgentLimitsState.qml",
   overview: "modules/agent-limits/Overview.qml", indicator: "modules/agent-limits/Indicator.qml",
+  overviewSizes: ["compact", "standard"],
   defaults: {agentLimitsEnabled:false, agentLimitsPins:[], agentLimitsMode:"combined",
     agentLimitsIndicator:"off", agentLimitsWarning:20, agentLimitsCritical:5},
   choices: {agentLimitsMode:["combined","auto","pinned"],agentLimitsIndicator:["off","warning","always"]},

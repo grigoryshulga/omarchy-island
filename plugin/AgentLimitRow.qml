@@ -11,15 +11,36 @@ Item {
   required property var strings
   property bool pinned:false
   property bool interactive:false
+  property bool clickable:false
   property var feedback:null
   property double now:Date.now()
   Accessible.name:Model.displayName(row)
   Accessible.description:strings.t(row.pendingReset ? "limits.awaitingReset" : row.stale ? "limits.cached" : "limits.remaining")
   signal pinRequested(string id)
+  signal activated()
   readonly property color gaugeColor:row.remaining===null ? Design.accent : row.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.danger : row.remaining<=Preferences.get("agentLimitsWarning") ? Design.warning : Design.accent
   implicitHeight:body.implicitHeight
   LayoutMirroring.enabled:Commons.I18n.rightToLeft
   LayoutMirroring.childrenInherit:true
+  FeedbackButton {
+    id:openButton
+    objectName:"limitOpen"
+    anchors.fill:parent
+    visible:root.clickable
+    enabled:root.clickable
+    focusable:true
+    feedback:root.feedback
+    tooltipText:root.strings.t("limits.title")
+    Accessible.name:Model.displayName(root.row)+" · "+tooltipText
+    borderSpec:Border.none()
+    color:hot || activeFocus ? Design.hover : "transparent"
+    onClicked:root.activated()
+    Rectangle {
+      anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom
+      height:Math.max(1,Style.space(1));color:Design.focusRing
+      visible:openButton.activeFocus
+    }
+  }
   ColumnLayout {
     id:body
     width:parent.width

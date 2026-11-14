@@ -175,6 +175,24 @@ ShellRoot {
         verify(findChild(overview,"notificationsHistory").visible,"History is missing from notification details")
         compare(overview.implicitHeight,height)
         verify(overview.back());wait(50)
+        var limitsSection=findChild(overview,"agentLimitsSection"),standardLimitsHeight=limitsSection.height
+        limits.pins=["quota"]
+        overview.changeLayout("agentLimits",{size:"compact"},0);wait(50)
+        var limitOpen=findChild(limitsSection,"limitOpen")
+        verify(!limitsButton.visible && limitOpen.visible,"Compact limits must replace the heading with row navigation")
+        verify(limitsSection.height<standardLimitsHeight,"Compact limits retained heading space")
+        mouseClick(braille,braille.width/2,braille.height/2);wait(50)
+        compare(overview.detailPage,"agentLimits","Clicking the compact gauge did not open limits")
+        verify(overview.back());wait(50)
+        verify(limitOpen.activeFocus,"Back did not restore the compact limit focus")
+        keyClick(Qt.Key_Return);wait(50)
+        compare(overview.detailPage,"agentLimits","Compact limit cannot open with the keyboard")
+        verify(overview.back());wait(50)
+        overview.hovering=true;overview.expanded=false;wait(30)
+        verify(limitsSection.visible && !limitOpen.visible && !limitOpen.enabled,"Hover limits must remain read-only")
+        overview.expanded=true;overview.hovering=false;wait(30)
+        overview.changeLayout("agentLimits",{size:"standard"},0);wait(50)
+        verify(limitsButton.visible && !limitOpen.visible,"Standard limits lost heading navigation")
         var manyQuotas=[]
         for(var q=0;q<12;q++) manyQuotas.push(Object.assign({},limits.summary[0],{id:"quota-"+q,label:"Window "+q}))
         limits.rows=manyQuotas

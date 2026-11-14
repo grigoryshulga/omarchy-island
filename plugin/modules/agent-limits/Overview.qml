@@ -11,7 +11,8 @@ Island.ModuleView {
     backend:root.backend
     strings:root.presentation ? root.presentation.strings : null
     expanded:!!root.presentation && root.presentation.expanded
-    showHeader:!centerOpen
+    compact:!!root.presentation && root.presentation.size==="compact"
+    showHeader:!centerOpen && !compact
     centerOpen:!!root.presentation && root.presentation.detail
     feedback:root.presentation ? root.presentation.feedback : null
     onDetailsRequested:root.detailsRequested()

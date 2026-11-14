@@ -13,7 +13,8 @@ Column {
   required property var strings
   property bool expanded:false
   property bool centerOpen:false
-  property bool showHeader:true
+  property bool compact:false
+  property bool showHeader:!compact
   property var feedback:null
   property var rows:backend ? backend.summary : []
   signal settingRequested(string key,var value)
@@ -61,7 +62,9 @@ Column {
           row:root.rows.find(function(r){return r.id===windowId}) || ({id:windowId,name:"",label:"",remaining:null})
           strings:root.strings;feedback:root.feedback
           pinned:root.backend.pins.indexOf(windowId)>=0;interactive:false
+          clickable:root.compact && root.expanded
           now:root.backend.now
+          onActivated:root.detailsRequested()
           onPinRequested:id=>root.pin(id)
         }
       }
