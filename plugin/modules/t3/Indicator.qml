@@ -20,7 +20,7 @@ Island.ModuleView {
     anchors.centerIn:parent
     width:parent.width
     columnSpacing:Style.space(4);rowSpacing:Style.space(4)
-    T3Spinner {objectName:"islandT3Spinner";tint:root.color;visible:!root.waiting;active:root.visible && root.available;implicitWidth:t3Count.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter}
+    T3Spinner {objectName:"islandT3Spinner";tint:root.color;visible:!root.waiting;active:root.visible && root.available;implicitWidth:t3Count.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter;transform:Translate {y:Style.space(1)}}
     PlainText {visible:root.waiting;text:"󰋗";color:root.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
     PlainText {id:t3Count;objectName:"islandT3Count";Layout.maximumWidth:root.presentation.vertical ? root.presentation.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:root.text;color:root.color;typeRole:"bar";font.family:root.presentation.bar ? root.presentation.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.presentation.vertical ? Style.space(18) : root.presentation.barHeight;verticalAlignment:Text.AlignVCenter}
   }

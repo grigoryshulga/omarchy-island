@@ -218,6 +218,7 @@ ShellRoot {
       check(Math.abs(count.mapToItem(clock,0,count.baselineOffset).y-label.mapToItem(clock,0,label.baselineOffset).y)<1,"T3 count and clock baselines differ")
       var spinner=findChild(widget,"islandT3Spinner"),glyph=findChild(spinner,"t3SpinnerGlyph")
       check(Math.abs(spinner.width-count.font.pixelSize*0.75)<1,"T3 spinner must scale with the count font")
+      check(Math.abs(spinner.mapToItem(count,0,spinner.height/2).y-count.height/2-Commons.Style.space(1))<1,"T3 spinner optical offset differs from count center")
       check(spinner.animating,"T3 bar spinner is not running")
       check(spinner.tint===label.color && count.color===label.color,"T3 indicator must follow the clock color")
       var frame=glyph.text;wait(120)
