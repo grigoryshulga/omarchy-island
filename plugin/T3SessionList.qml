@@ -12,6 +12,11 @@ Column {
   LayoutMirroring.childrenInherit:true
   required property var bridge
   required property var strings
+  property string title:"T3 Code"
+  property string provider:"t3"
+  property Component sessionActions:null
+  property bool titleOpensDetails:false
+  property bool showAllSummary:false
   property bool expanded:false
   property bool active:false
   property bool listExpanded:false
@@ -60,7 +65,7 @@ Column {
       anchors.fill:parent
       focusable:root.expanded && root.summaryMode;feedback:root.feedback
       hasCursor:headerHover.hovered
-      title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length)
+      title:root.title;detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length)
       onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()
     }
     Flow {
@@ -123,7 +128,7 @@ Column {
           required property int index
           width:cards.width
           spacing:Design.gap.small
-          visible:root.summaryMode ? root.summaryIds.indexOf(sessionId)>=0 && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
+          visible:root.summaryMode ? (root.showAllSummary && !root.summaryIds.length ? index<2 : root.summaryIds.indexOf(sessionId)>=0) && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
           PlainText {
             objectName:"t3Group-"+groupRow.sessionId
             width:parent.width
@@ -138,6 +143,7 @@ Column {
             readonly property int index:groupRow.index
             width:groupRow.width
             row:root.bridge.row(sessionId) || ({id:sessionId,title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
+            provider:root.provider;actionsComponent:root.sessionActions;titleOpensDetails:root.titleOpensDetails
             bridge:root.bridge;strings:root.strings;expanded:root.expanded;feedback:root.feedback
             compactOverview:root.summaryMode
             active:root.active && visible && groupRow.y+y+height>viewport.contentItem.contentY && groupRow.y+y<viewport.contentItem.contentY+viewport.availableHeight

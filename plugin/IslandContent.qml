@@ -216,7 +216,7 @@ Item {
     compactToast:true
     color:"transparent"
     row:root.service && root.service.latestT3 ? root.service.latestT3 : ({id:"",title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
-    bridge:root.t3;strings:root.strings;active:visible && root.visible
+    bridge:root.service && root.service.latestAgentBridge ? root.service.latestAgentBridge : root.t3;strings:root.strings;active:visible && root.visible
     feedback:root.externalFeedback
     onExpandRequested:root.expandRequested()
   }

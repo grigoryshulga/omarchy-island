@@ -1,0 +1,319 @@
+#!/usr/bin/env python3
+"""Local shared Codex daemon client. JSONL in/out; automatically subscribe to loaded sessions; turns require explicit UI actions."""
+import argparse
+import json
+import os
+import selectors
+import sys
+import time
+import uuid
+
+from codex_transport import CodexSocket
+from t3_transport import TransportError
+from codex_model import row, text, apply_turn, attention, question_request, validate_answers
+
+LIMIT = 4 * 1024 * 1024
+
+
+def emit(value):
+    print(json.dumps(value, ensure_ascii=False, separators=(',', ':')), flush=True)
+
+
+class Bridge:
+    def __init__(self, readonly=False):
+        self.readonly = readonly
+        self.rows = {}
+        self.pending = {}
+        self.requests = {}
+        self.serial = 0
+        self.generation = uuid.uuid4().hex
+        self.ready = False
+        self.refresh_at = 0
+        self.transport = None
+        self.retry_at = {}
+        self.retry_count = {}
+        self.stale = set()
+
+    def write(self, message):
+        self.transport.send(message)
+
+    def rpc(self, method, params, action=None):
+        self.serial += 1
+        key = 'island-' + str(self.serial)
+        self.pending[key] = (method, params, action, time.monotonic())
+        self.write(dict(id=key, method=method, params=params))
+
+    def attaching(self, tid):
+        return any(p[0] == 'thread/resume' and p[1].get('threadId') == tid for p in self.pending.values())
+
+    def auto_attach(self, now=None):
+        if self.readonly or not self.ready:
+            return
+        now = time.monotonic() if now is None else now
+        available = 4 - sum(p[0] == 'thread/resume' for p in self.pending.values())
+        for tid, current in self.rows.items():
+            if available <= 0:
+                break
+            if current.get('attached') or current['status'] == 'unloaded' or self.attaching(tid) or now < self.retry_at.get(tid, 0):
+                continue
+            current['attachState'] = 'connecting'
+            self.rpc('thread/resume', dict(threadId=tid, excludeTurns=True))
+            available -= 1
+
+    def refresh(self):
+        if any(p[0] in ('thread/list', 'thread/loaded/list', 'thread/read') for p in self.pending.values()):
+            return
+        self.rpc('thread/list', dict(limit=30, sortKey='updated_at', sourceKinds=['cli', 'vscode', 'appServer'], archived=False))
+        # Metadata discovery is also useful in read-only mode; only auto_attach subscribes.
+        self.rpc('thread/loaded/list', dict(limit=30))
+
+    def keep_row(self, value):
+        tid = value['id']
+        if tid not in self.rows and len(self.rows) >= 30:
+            victim = next((k for k,v in reversed(list(self.rows.items())) if not v.get('attached') and not self.attaching(k)), None)
+            if victim is None:
+                return False
+            del self.rows[victim]
+        self.rows[tid] = value
+        return True
+
+    def publish(self):
+        emit(dict(type='sessions', rows=list(self.rows.values())[:30]))
+
+    def action_result(self, action, status):
+        if action:
+            emit(dict(type='action', actionId=action['actionId'], status=status))
+
+    def clear_requests(self, tid):
+        for key, request in list(self.requests.items()):
+            if request['params'].get('threadId') == tid:
+                del self.requests[key]
+        self.show_request(tid)
+
+    def show_request(self, tid):
+        if tid not in self.rows:
+            return
+        requests = [r for r in self.requests.values() if r['params'].get('threadId') == tid]
+        request = requests[0]['view'] if requests else None
+        self.rows[tid].update(request=request, requestId=request['id'] if request else '', requestKind=request['kind'] if request else '')
+        attention(self.rows[tid])
+
+    def receive(self, message):
+        if not isinstance(message, dict):
+            return
+        method = message.get('method')
+        params = message.get('params') or {}
+        if not method and message.get('id') in self.pending:
+            method, sent, action, _ = self.pending.pop(message['id'])
+            if message['id'] in self.stale:
+                self.stale.discard(message['id'])
+                self.action_result(action, 'failed')
+                return
+            if 'error' in message:
+                if method in ('initialize', 'thread/list'):
+                    raise RuntimeError('protocol')
+                if method == 'thread/resume' and sent['threadId'] in self.rows:
+                    tid = sent['threadId']
+                    count = min(5, self.retry_count.get(tid, 0) + 1)
+                    self.retry_count[tid] = count
+                    self.retry_at[tid] = time.monotonic() + min(60, 5 * 2 ** (count - 1))
+                    self.rows[tid]['attachState'] = 'retrying'
+                self.action_result(action, 'failed')
+                self.publish()
+                return
+            result = message.get('result') or {}
+            if method == 'initialize':
+                self.write(dict(method='initialized'))
+                self.ready = True
+                emit(dict(type='connection', status='connected', canRespond=not self.readonly))
+            elif method == 'thread/list':
+                next_rows = {}
+                for thread in result.get('data', [])[:30]:
+                    value = row(thread, self.rows.get(thread.get('id')))
+                    if value:
+                        next_rows[value['id']] = value
+                # Retain attached work even if newer history pushes it off the first page.
+                attached = {k:v for k,v in self.rows.items() if v.get('attached') or self.attaching(k) or (v['status'] != 'unloaded' and v.get('attachState') == 'retrying')}
+                attached.update(next_rows)
+                self.rows = dict(list(attached.items())[:30])
+                self.retry_at = {k:v for k,v in self.retry_at.items() if k in self.rows}
+                self.retry_count = {k:v for k,v in self.retry_count.items() if k in self.rows}
+            elif method == 'thread/loaded/list':
+                loaded = dict.fromkeys(result.get('data', [])[:30])
+                for tid, current in self.rows.items():
+                    if current.get('attachState') == 'retrying' and not self.attaching(tid) and tid not in loaded:
+                        current.update(status='unloaded', attachState='')
+                        self.retry_at.pop(tid, None)
+                        self.retry_count.pop(tid, None)
+                for tid in loaded:
+                    if isinstance(tid, str) and (tid not in self.rows or self.rows[tid]['status'] == 'unloaded') and not any(p[0] == 'thread/read' and p[1].get('threadId') == tid for p in self.pending.values()):
+                        self.rpc('thread/read', dict(threadId=tid, includeTurns=False))
+            elif method == 'thread/read':
+                value = row(result.get('thread', {}), self.rows.get(sent['threadId']))
+                if value and value['status'] != 'unloaded':
+                    self.keep_row(value)
+            elif method in ('thread/resume', 'thread/start'):
+                value = row(result.get('thread', {}), self.rows.get(sent.get('threadId')))
+                if not value or (method == 'thread/resume' and value['id'] != sent['threadId']):
+                    raise RuntimeError('protocol')
+                if value:
+                    value['attached'] = True
+                    value['attachState'] = ''
+                    self.retry_at.pop(value['id'], None)
+                    self.retry_count.pop(value['id'], None)
+                    self.keep_row(value)
+                    if method == 'thread/resume':
+                        self.rpc('thread/turns/list', dict(threadId=value['id'], limit=1, sortDirection='desc', itemsView='summary'))
+                    if method == 'thread/start':
+                        self.rpc('turn/start', dict(threadId=value['id'], input=[dict(type='text', text=action['text'])]), action)
+                        action = None
+            elif method == 'thread/turns/list':
+                current = self.rows.get(sent['threadId'])
+                for turn in result.get('data', [])[:1]:
+                    if current and not current.get('turnId'):
+                        apply_turn(current, turn)
+                        for item in turn.get('items', []):
+                            if item.get('type') == 'agentMessage':
+                                current['summary'] = text(item.get('text'))
+            elif method == 'turn/start':
+                if sent['threadId'] in self.rows:
+                    apply_turn(self.rows[sent['threadId']], result.get('turn', {}))
+            self.action_result(action, 'sent')
+            self.auto_attach()
+            self.publish()
+            return
+        if not isinstance(params, dict):
+            return
+        tid = params.get('threadId')
+        if 'id' in message and method:
+            # Requests may arrive while an automatic subscription is being established.
+            if tid not in self.rows or not (self.rows[tid].get('attached') or self.attaching(tid)):
+                return
+            key = self.generation + ':' + json.dumps(message['id'])
+            if method == 'item/tool/requestUserInput':
+                view = question_request(key, params, not self.readonly)
+            else:
+                # Approval/authentication schemas vary; the owning Codex client handles them.
+                view = dict(id=key, revision=key, kind='external', canRespond=False, questions=[])
+            if len(self.requests) >= 60:
+                raise RuntimeError('protocol')
+            self.requests[key] = dict(id=message['id'], params=params, view=view)
+            self.show_request(tid)
+        elif method == 'thread/status/changed' and tid in self.rows:
+            value = self.rows[tid]
+            state = params.get('status', {}).get('type')
+            value['pendingHint'] = state == 'active' and bool(params.get('status', {}).get('activeFlags'))
+            attention(value)
+            if state == 'active':
+                value['status'] = 'running'
+            elif state == 'systemError':
+                value['status'] = 'failed'
+            elif state == 'notLoaded':
+                value.update(status='unloaded', attached=False, attachState='')
+                self.clear_requests(tid)
+        elif method in ('turn/started', 'turn/completed') and tid in self.rows:
+            apply_turn(self.rows[tid], params.get('turn', {}))
+            if method == 'turn/completed':
+                self.clear_requests(tid)
+        elif method == 'item/completed' and tid in self.rows:
+            item = params.get('item', {})
+            if item.get('type') == 'agentMessage':
+                self.rows[tid]['summary'] = text(item.get('text'))
+        elif method == 'serverRequest/resolved':
+            key = self.generation + ':' + json.dumps(params.get('requestId'))
+            self.requests.pop(key, None)
+            self.show_request(tid)
+        elif method in ('thread/archived', 'thread/closed'):
+            self.clear_requests(tid)
+            self.stale.update(k for k,p in self.pending.items() if p[1].get('threadId') == tid)
+            self.rows.pop(tid, None)
+        else:
+            return
+        self.publish()
+
+    def command(self, command):
+        if not isinstance(command, dict) or self.readonly or not self.ready:
+            return
+        kind = command.get('type')
+        tid = command.get('threadId')
+        current = self.rows.get(tid)
+        if kind == 'respond':
+            key = command.get('requestId')
+            request = self.requests.get(key)
+            if not request or request.get('sent') or request['params'].get('threadId') != tid or command.get('revision') != key or not validate_answers(request['view'], command.get('answers')):
+                emit(dict(type='response', requestId=key, status='failed'))
+                return
+            request['sent'] = True
+            self.write(dict(id=request['id'], result=dict(answers={k:dict(answers=v) for k,v in command['answers'].items()})))
+            # A JSON-RPC response has no acknowledgement: wait for serverRequest/resolved.
+            return
+        if kind != 'action' or not isinstance(command.get('actionId'), str) or len(command['actionId']) > 100:
+            return
+        operation = command.get('operation')
+        if any(p[2] and p[2].get('threadId') == tid for p in self.pending.values()):
+            self.action_result(command, 'failed')
+            return
+        if operation == 'attach' and current and not current.get('attached') and not self.attaching(tid) and len([r for r in self.rows.values() if r.get('attached')]) < 30:
+            self.rpc('thread/resume', dict(threadId=tid, excludeTurns=True), command)
+        elif operation == 'message' and current and current.get('attached') and current['status'] not in ('running', 'unloaded') and not current['requestId'] and isinstance(command.get('text'), str) and 0 < len(command['text'].strip()) <= 16000:
+            self.rpc('turn/start', dict(threadId=tid, input=[dict(type='text', text=command['text'])]), command)
+        elif operation == 'interrupt' and current and current.get('attached') and current.get('turnId') and current['status'] == 'running':
+            self.rpc('turn/interrupt', dict(threadId=tid, turnId=current['turnId']), command)
+        elif operation == 'create' and sum(bool(r.get('attached')) or self.attaching(k) for k,r in self.rows.items()) < 30 and isinstance(command.get('cwd'), str) and os.path.isabs(command['cwd']) and '\x00' not in command['cwd'] and len(command['cwd']) <= 4096 and os.path.isdir(command['cwd']) and isinstance(command.get('text'), str) and 0 < len(command['text'].strip()) <= 16000:
+            self.rpc('thread/start', dict(cwd=command['cwd']), command)
+        else:
+            self.action_result(command, 'failed')
+
+    def run(self):
+        emit(dict(type='connection', status='connecting', canRespond=False))
+        try:
+            self.transport = CodexSocket()
+            self.rpc('initialize', dict(clientInfo=dict(name='omarchy_island', version='1.0.0'), capabilities=dict(experimentalApi=True)))
+            selector = selectors.DefaultSelector()
+            selector.register(sys.stdin.buffer, selectors.EVENT_READ, 'ui')
+            selector.register(self.transport.socket, selectors.EVENT_READ, 'codex')
+            buffers = {'ui': b''}
+            while True:
+                now = time.monotonic()
+                if self.ready and now >= self.refresh_at and not any(p[0] == 'thread/list' for p in self.pending.values()):
+                    self.refresh()
+                    self.refresh_at = now + 5
+                self.auto_attach(now)
+                if any(now-p[3] > 15 for p in self.pending.values()):
+                    raise RuntimeError('timeout')
+                if self.transport.buffer:
+                    value = self.transport.receive()
+                    if value is not None:
+                        self.receive(value)
+                for key, _ in selector.select(0 if self.transport.buffer else .25):
+                    channel = key.data
+                    if channel == 'codex':
+                        value = self.transport.receive()
+                        if value is not None:
+                            self.receive(value)
+                        continue
+                    chunk = os.read(key.fileobj.fileno(), 65536)
+                    if not chunk:
+                        return
+                    buffers[channel] += chunk
+                    if len(buffers[channel]) > LIMIT:
+                        raise RuntimeError('protocol')
+                    while b'\n' in buffers[channel]:
+                        line, buffers[channel] = buffers[channel].split(b'\n', 1)
+                        try:
+                            value = json.loads(line)
+                        except (ValueError, UnicodeError):
+                            continue
+                        self.command(value)
+        except (TransportError, OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError) as error:
+            reason = str(error) if isinstance(error, RuntimeError) else 'unavailable'
+            emit(dict(type='connection', status='offline', reason=reason, canRespond=False))
+        finally:
+            if self.transport:
+                self.transport.close()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--read-only', action='store_true')
+    Bridge(parser.parse_args().read_only).run()

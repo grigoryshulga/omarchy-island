@@ -286,6 +286,20 @@ A transition to blocked, done, or working → idle shows a four-second activity 
 
 The collector follows the upstream [Herdr CLI contract](https://github.com/herdrdev/herdr/blob/ee5bfb5041bb3e4a49d591c72308aae3c81ecdde/docs/next/website/src/content/docs/cli-reference.mdx), using argument arrays and explicit source selectors. CLI fixture tests cover both local and remote routing without contacting live sessions.
 
+### Codex sessions (experimental)
+
+Enable **Overview → Customize → Settings → Modules → Codex → Codex sessions**. Requires a local Codex app-server daemon and a same-user Unix control socket. The protocol adapter targets **Codex 0.169.0**. Start the daemon yourself with `codex app-server daemon start`; Island only starts/stops its socket connection, never the daemon or your running turns. Discovery uses `$CODEX_HOME/app-server-control/app-server-control.sock` (default `~/.codex/app-server-control/app-server-control.sock`); `CODEX_HOME`, if used, must be available in the shell environment. Socket ownership and peer credentials must match the current user. Authentication and model configuration stay in Codex. Changing this integration does not install hooks or modify Codex configuration.
+
+The **Codex** heading opens session details and a new-session form. Enter an absolute project directory and a message to start work. Island automatically subscribes to top-level sessions already loaded on this server, preserving their saved policy and model settings. No per-session connection button is needed for live sessions. Saved, unloaded history has a separate **Resume session** action. Once connected, cards show the latest available assistant message, accept ordinary non-secret questions, send a new message while idle, and stop a running turn. Titles expand card details. The optional Codex clock indicator can be added in **Settings → Panel**. Status-change toasts share Island's focused-monitor, DND, hover/pinning and reduced-motion behavior. Unlike T3 desktop toasts, Codex toasts are not suppressed based on terminal focus: Island cannot reliably identify which terminal owns a session.
+
+Discovery combines recent non-archived history with up to 30 currently loaded session IDs, reading metadata for loaded work outside the recent-history page. It displays at most 30 top-level sessions, prioritizing existing connections over unloaded history. Metadata refreshes every five seconds; connected session events arrive over the socket. Only the most recent turn's summary is hydrated on attachment. **Not loaded on this server** is not proof that a session is idle elsewhere. Connecting history does not take control of an independently running CLI process. For shared control, the other client must use this same app server. After reconnecting or restarting Island, it discovers loaded sessions again and restores subscriptions automatically. New loaded sessions are picked up on the next refresh. At most four automatic subscriptions are established concurrently; rejected subscriptions retry after 5, 10, 20, 40, then 60 seconds. A completely empty new session may not have saved history yet; it remains pending and is retried once Codex can resume it. Automatic subscription never sends a message, starts a turn, or changes model/permission settings. If the Codex server itself restarts and a session is no longer loaded, its saved history remains available through **Resume session**.
+
+**Allow session actions and answers** can be disabled for metadata-only monitoring. Hover previews never submit actions. Question drafts survive ordinary updates; replacement/closed questions clear their forms. Actions and answers are validated again by the bridge. After a disconnect or timeout, a pending operation becomes **unconfirmed** and is never retried automatically. Check it in Codex before further work; unconfirmed action controls remain blocked for the lifetime of that Island backend.
+
+This first adapter supports ordinary question forms only. Command/file/permission approvals, secret input, authentication, and other unsupported requests must be handled by another Codex client connected to the same server; Island shows the pending request and permits stopping the turn when its ID is available. It does not approve them automatically. New sessions can therefore require the main Codex client to continue. Claude Code and OpenCode adapters are not included yet.
+
+Island keeps session content and drafts in memory, outside notification history. Codex retains its own normal session history. Raw server errors are not logged by Island. The **Codex** settings group shows connection state and offers **Reconnect**; an unavailable or incompatible daemon leaves the integration offline and retries the connection.
+
 ### Optional Hyprland blur
 
 Copy the included [layer rule](hyprland/island.lua):
@@ -382,6 +396,8 @@ python3 tests/t3-bridge.py                 # QML → real bridge → fake HTTP/W
 python3 tests/herdr-qml.py                 # Offscreen Herdr views and disabled-state cleanup
 python3 tests/herdr-collector.py           # Local/remote CLI fixtures; no live sessions
 python3 tests/t3-qml.py                    # Offscreen forms, keyboard, drafts and connection state
+python3 tests/codex.py                     # QML → real Codex bridge → fake Unix WebSocket server, answers/actions and validation
+python3 tests/codex-protocol.py /path/to/codex # Optional real CLI, private home/socket, no credentials or turns
 python3 tests/controls-adapter.py          # Panel generation, cache refresh, source integrity
 python3 tests/calendar-reminders.py        # Native reminder CLI fixture, calendar forms and year navigation
 python3 tests/calendar-ics.py              # ICS recurrence, DST, network policy, private cache and failures

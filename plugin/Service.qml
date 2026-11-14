@@ -11,17 +11,19 @@ Item {
   readonly property var modules:moduleRegistry.backends
   // Existing activity/IPC consumers retain their established names.
   readonly property var t3:modules.t3 || null
+  property var latestAgentBridge:t3
   property var latestT3:null
   property string t3TargetScreen:""
   property string activeAppId:ToplevelManager.activeToplevel ? ToplevelManager.activeToplevel.appId : ""
   readonly property bool t3Focused:activeAppId.toLowerCase()==="com.t3tools.t3code"
-  onT3FocusedChanged:if(t3Focused) latestT3=null
+  onT3FocusedChanged:if(t3Focused && latestAgentBridge===t3) latestT3=null
   signal t3Arrival()
   Connections {
     target:root.t3
     function onActivityChanged(session) {
       if(root.doNotDisturb || root.t3Focused) return
       root.t3TargetScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+      root.latestAgentBridge=root.t3
       root.latestT3=session
       root.t3Arrival()
     }
@@ -39,6 +41,19 @@ Item {
       root.herdrArrival()
     }
     function onAllowedChanged() {if(!root.herdr.allowed) root.latestHerdr=null}
+  }
+  Connections {
+    target:root.modules.codex || null
+    function onActivityChanged(session) {
+      if(root.doNotDisturb) return
+      root.t3TargetScreen=Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+      root.latestAgentBridge=root.modules.codex
+      root.latestT3=session
+      root.t3Arrival()
+    }
+    function onAllowedChanged() {
+      if(!root.modules.codex.allowed && root.latestAgentBridge===root.modules.codex) root.latestT3=null
+    }
   }
   readonly property alias indicators: indicatorState
   IndicatorState {id:indicatorState;downloading:root.activeDownloads>0}
