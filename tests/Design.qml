@@ -63,9 +63,16 @@ ShellRoot {
         wait(30)
         compare(surface.roundingPower,4)
         verify(surface.customCorners,"Squircle renderer must follow Hyprland power")
+        cornerProbe.radius=20
+        compare(cornerProbe.effectiveRadius,40,"Hyprland normalizes rounding by power/2")
+        wait(40)
+        var normalizedImage=grabImage(cornerProbe)
+        compare(normalizedImage.pixel(5,5),Island.Design.opaqueCanvas,"20/4 corner must match the compositor, not raw radius 20")
+        compare(normalizedImage.pixel(10,10),Qt.rgba(1,0,0,1))
+        cornerProbe.radius=32
         wait(40)
         var squircleImage=grabImage(cornerProbe)
-        compare(squircleImage.pixel(5,5),Qt.rgba(1,0,0,1),"Squircle must fill beyond the circular arc")
+        compare(squircleImage.pixel(12,12),Qt.rgba(1,0,0,1),"Squircle must preserve its fill")
         compare(squircleImage.pixel(50,0),Qt.rgba(0,1,0,1),"Squircle must preserve the themed border")
         Commons.Color.shellValues=Object.assign({},Commons.Color.shellValues,{
           "popups.border":"#00ff00 #0000ff 0deg","popups.border-width":"2 3 4 5"})

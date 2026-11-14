@@ -1,6 +1,6 @@
 // QML-compatible surface picking. No pointer handlers: input stays with the UI.
 function radius(item) {
-  return Math.max(0, Math.min(typeof item.radius === "number" ? item.radius : 0,
+  return Math.max(0, Math.min(typeof item.effectiveRadius === "number" ? item.effectiveRadius : typeof item.radius === "number" ? item.radius : 0,
                               item.width / 2, item.height / 2))
 }
 function power(item) {

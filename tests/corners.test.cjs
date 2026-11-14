@@ -10,6 +10,11 @@ assert.equal(model.parsePower('{"float":null}',4),4);
 assert.equal(model.power(NaN),2);
 assert.equal(model.power(100),10);
 assert.equal(model.power(0),1);
+assert.equal(model.effectiveRadius(20,4,400,200),40,'match Hyprland perceived-roundness normalization');
+assert.equal(model.effectiveRadius(20,2,400,200),20);
+assert.equal(model.effectiveRadius(20,1,400,200),10);
+assert.equal(model.effectiveRadius(20,4,60,40),20,'clamp after normalization');
+assert.equal(model.effectiveRadius(0,4,400,200),0);
 function points(path) {return [...path.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m=>({x:+m[1],y:+m[2]}));}
 for(const power of [1,2,4,10]) {
   const outline=points(model.contour(160,100,20,power));

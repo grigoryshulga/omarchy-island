@@ -11,6 +11,7 @@ Item {
   property color color:"transparent"
   property real radius:0
   property real roundingPower:CornerStyle.roundingPower
+  readonly property real effectiveRadius:Geometry.effectiveRadius(radius,roundingPower,width,height)
   property var borderSpec:Border.flat(border.color,border.width)
   component BorderProperties:QtObject {property real width:0;property color color:"transparent"}
   property BorderProperties border:BorderProperties {}
@@ -39,8 +40,8 @@ Item {
     active:root.customCorners
     sourceComponent:Item {
       id:profile
-      readonly property string outline:Geometry.contour(width,height,root.radius,root.roundingPower)
-      readonly property string inner:Geometry.contour(width,height,root.radius,root.roundingPower,{top:root.borderTop,right:root.borderRight,bottom:root.borderBottom,left:root.borderLeft})
+      readonly property string outline:Geometry.contour(width,height,root.effectiveRadius,root.roundingPower)
+      readonly property string inner:Geometry.contour(width,height,root.effectiveRadius,root.roundingPower,{top:root.borderTop,right:root.borderRight,bottom:root.borderBottom,left:root.borderLeft})
       readonly property var gradient:root.borderSpec.gradient
       readonly property var colors:gradient && gradient.enabled ? gradient.colors : [Border.color(root.borderSpec)]
       readonly property var endpoints:Geometry.endpoints(width,height,gradient ? gradient.angle : 0)

@@ -168,7 +168,7 @@ PanelWindow {
       color: Design.canvas
       Behavior on color { enabled: root.paintOpen && root.shown>0.99; ColorAnimation {duration: Preferences.duration(120)} }
       borderSpec: root.borderSpec
-      radius: Math.min(Style.cornerRadius,width/2,height/2)
+      radius: Design.cardRadius
       opacity: root.shown
       clip: true
       // Empty parts of the card should never count as an outside click.

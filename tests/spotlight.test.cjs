@@ -123,3 +123,8 @@ const diagonal=20/Math.pow(2,1/4);
 const edge=model.edgeAt({x:20-diagonal,y:20-diagonal},{x:0,y:0,width:100,height:60},20,4);
 assert.ok(Math.abs(edge.distance)<1e-8,'spotlight rim matches the superellipse contour');
 assert.ok(Math.abs(edge.nx+Math.SQRT1_2)<1e-8 && Math.abs(edge.ny+Math.SQRT1_2)<1e-8);
+
+const normalized=item({radius:20,effectiveRadius:40,roundingPower:4,width:100,height:100});
+assert.equal(model.radius(normalized),40,'rim picking uses the painted radius');
+assert.equal(model.contains(normalized,{x:5,y:5},true),false,'normalized 20/4 corner must remain empty');
+assert.equal(model.contains(normalized,{x:10,y:10},true),true);

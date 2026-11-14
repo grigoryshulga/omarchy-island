@@ -3,6 +3,11 @@
 function power(value) {
   return typeof value === "number" && isFinite(value) ? Math.max(1,Math.min(10,value)) : 2
 }
+// Hyprland CWindow::rounding normalizes the configured radius to keep
+// perceived roundness consistent across powers. Clamp after normalization.
+function effectiveRadius(rounding, exponent, width, height) {
+  return Math.max(0,Math.min(rounding*power(exponent)/2,width/2,height/2))
+}
 function parsePower(raw, previous) {
   try {
     var value=JSON.parse(raw).float

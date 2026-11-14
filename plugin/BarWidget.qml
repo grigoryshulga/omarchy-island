@@ -6,6 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 import "ClockModel.js" as Clock
+import "CornerGeometry.js" as Corners
 import "ModuleCatalog.mjs" as Catalog
 import "SettingsModel.mjs" as Settings
 
@@ -422,6 +423,8 @@ BarWidget {
       id: panelGlow
       surfaceRoot: previewContent
       objectName: "islandPanelSpotlight"
+      cornerPower: CornerStyle.roundingPower
+      cornerRadius: Corners.effectiveRadius(Style.cornerRadius,cornerPower,width,height)
       x: -preview.insetLeft; y: -preview.insetTop
       width: preview.layoutWidth; height: preview.layoutHeight
       z: 10

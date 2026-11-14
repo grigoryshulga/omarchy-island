@@ -32,7 +32,7 @@ ShaderEffect {
     nearbySurfaces.length>1 ? nearbySurfaces[1].power : 2,
     nearbySurfaces.length>2 ? nearbySurfaces[2].power : 2,
     nearbySurfaces.length>3 ? nearbySurfaces[3].power : 2)
-  readonly property real cornerPower: surfaceRoot ? Spotlight.power(surfaceRoot) : 2
+  property real cornerPower: surfaceRoot ? Spotlight.power(surfaceRoot) : 2
   readonly property real focusPower: hoveredSurface ? Spotlight.power(hoveredSurface) : cornerPower
   readonly property real focused: hoveredSurface ? 1 : 0
   readonly property vector4d focusRect: {
@@ -121,7 +121,7 @@ ShaderEffect {
   property vector2d rippleCenter: Qt.vector2d(rippleOrigin.x,rippleOrigin.y)
   property real phase: 0
   property real spotRadius: Style.space(80)
-  property real cornerRadius: Style.cornerRadius
+  property real cornerRadius: surfaceRoot && typeof surfaceRoot.effectiveRadius === "number" ? Spotlight.radius(surfaceRoot) : Style.cornerRadius
   property color accent: Commons.Color.accent
   property real profile: adaptive ? 1 : 0
   property real intensity: 1
