@@ -10,9 +10,6 @@ ContainerSurface {
   required property var row
   required property var bridge
   required property var strings
-  property string provider:"t3"
-  property bool titleOpensDetails:false
-  property Component actionsComponent:null
   property bool expanded:false
   property bool active:true
   property var feedback:null
@@ -115,10 +112,10 @@ ContainerSurface {
             objectName:"t3Open"
             Layout.fillWidth:true;Layout.minimumWidth:0
             borderSpec:Border.none()
-            text:"";tooltipText:root.strings.t(root.titleOpensDetails ? "t3.details" : "t3.open");Accessible.name:root.row.title
+            text:"";tooltipText:root.strings.t("t3.open");Accessible.name:root.row.title
             implicitHeight:titleLabel.implicitHeight+Style.space(4)
             horizontalPadding:0;verticalPadding:Design.gap.micro
-            focusable:root.expanded;feedback:root.feedback;onClicked:root.titleOpensDetails ? root.openDetails() : root.bridge.openThread(root.row.id)
+            focusable:root.expanded;feedback:root.feedback;onClicked:root.bridge.openThread(root.row.id)
             Rectangle {
               objectName:"threadTitleFocusUnderline"
               anchors.left:parent.left;anchors.bottom:parent.bottom
@@ -168,22 +165,11 @@ ContainerSurface {
     PlainText {
       Layout.fillWidth:true;wrapMode:Text.Wrap;typeRole:"caption";color:Design.secondaryText
       visible:root.expanded && !root.compactOverview && root.needsInput && (!root.request || !root.request.canRespond || !root.bridge.canRespond || (root.response!=="" && root.response!=="sending"))
-      text:root.strings.t(root.response ? root.provider+".response."+root.response : (!root.bridge || !root.bridge.connected) ? root.provider+".response.offline" : root.request && root.request.canRespond && !root.bridge.canRespond ? root.provider+".readOnly" : root.provider==="t3" ? "t3.continueInT3" : "codex.externalRequest")
+      text:root.strings.t(root.response ? "t3.response."+root.response : (!root.bridge || !root.bridge.connected) ? "t3.response.offline" : root.request && root.request.canRespond && !root.bridge.canRespond ? "t3.readOnly" : "t3.continueInT3")
     }
     PlainText {
       Layout.fillWidth:true;visible:root.expanded && !root.compactOverview && root.detailsOpen
       text:root.detailText;wrapMode:Text.Wrap;typeRole:"caption"
     }
-    Loader {
-      Layout.fillWidth:true
-      active:root.actionsComponent!==null
-      visible:root.expanded && !root.compactOverview
-      sourceComponent:root.actionsComponent
-      property var row:root.row
-      property var bridge:root.bridge
-      property var strings:root.strings
-      property var feedback:root.feedback
-    }
-
   }
 }

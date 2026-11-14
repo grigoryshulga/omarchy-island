@@ -4,7 +4,7 @@ const settings = require('../plugin/SettingsModel.mjs');
 const {ordered} = require('../plugin/ModuleCatalog.mjs');
 const defs = ordered('overview');
 const defaults = model.layout(defs, []);
-assert.deepEqual(defaults.map(r => r.id), ['controls','media','battery','agentLimits','t3','herdr','codex','notifications','downloads']);
+assert.deepEqual(defaults.map(r => r.id), ['controls','media','battery','agentLimits','t3','herdr','notifications','downloads']);
 assert(defaults.every(r => r.visible && r.size === 'standard'));
 assert.deepEqual(model.supported(defs.find(r => r.id === 'controls')), ['minimal','standard','large']);
 assert.deepEqual(model.supported(defs.find(r => r.id === 'agentLimits')), ['compact','standard']);

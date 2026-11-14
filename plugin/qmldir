@@ -102,7 +102,3 @@ AgentLimitsProviderGroup 1.0 AgentLimitsProviderGroup.qml
 AgentLimitDetail 1.0 AgentLimitDetail.qml
 AgentProviderIcon 1.0 AgentProviderIcon.qml
 AgentUsage 1.0 AgentUsage.qml
-
-AgentSessionState 1.0 AgentSessionState.qml
-CodexState 1.0 CodexState.qml
-CodexActions 1.0 CodexActions.qml

@@ -98,7 +98,3 @@ Declare the capabilities of each scenario in its Python entry point. Keep module
 See [test isolation](test-isolation.md) for dependencies and session boundaries. The suite never silently falls back to the user's compositor. Live installed-system checks stay outside automatic module verification.
 
 The `.mjs` files are ECMAScript modules supported by the QML runtime. Node is used only by development tests; the CommonJS test entry points require Node 22.12+ for synchronous loading of these modules. Avoid assuming that newer Node methods exist in QML JavaScript.
-
-## Agent session adapters
-
-`AgentSessionState.qml` owns the shared JSONL bridge lifecycle, connection state, question responses and uncertainty handling. `T3State.qml` supplies the existing T3 transport and deep link behavior. `CodexState.qml` supplies the local Codex Unix WebSocket transport with automatic subscriptions to loaded sessions and explicit turn actions. `T3SessionList` and `T3SessionCard` retain their names for compatibility; their title, provider strings, title action and optional session-action component are configurable. The Codex descriptor reuses the existing indicator. A provider adapter must normalize session rows and request schemas before presenting them, and must validate responses against the currently pending request again in its helper.

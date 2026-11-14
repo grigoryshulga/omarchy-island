@@ -7,12 +7,11 @@ import overview from "./modules/overview/Module.mjs";
 import calendar from "./modules/calendar/Module.mjs";
 import weather from "./modules/weather/Module.mjs";
 import herdr from "./modules/herdr/Module.mjs";
-import codex from "./modules/codex/Module.mjs";
 import t3 from "./modules/t3/Module.mjs";
 import limits from "./modules/agent-limits/Module.mjs";
 
 // Presentation order is stable across all monitors.
-export const definitions = [downloads, media, notifications, battery, controls, overview, calendar, weather, limits, t3, herdr, codex];
+export const definitions = [downloads, media, notifications, battery, controls, overview, calendar, weather, limits, t3, herdr];
 export function definition(id) {return definitions.find(entry => entry.id === id) || null}
 
 export function ordered(place) {

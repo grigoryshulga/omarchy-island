@@ -60,14 +60,11 @@ class WebSocket:
     def __init__(self, origin, path):
         host, port = local_origin(origin)
         self.socket = socket.create_connection((host, port), timeout=5)
-        authority = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
-        self.handshake(authority, path)
-
-    def handshake(self, authority, path):
         self.buffer = bytearray()
         self.fragments = bytearray()
         self.fragmented = False
         key = base64.b64encode(os.urandom(16)).decode()
+        authority = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
         try:
             self.socket.sendall((f"GET {path} HTTP/1.1\r\nHost: {authority}\r\nUpgrade: websocket\r\n"
                                  f"Connection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: {key}\r\n\r\n").encode())
