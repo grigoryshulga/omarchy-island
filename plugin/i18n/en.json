@@ -2,6 +2,8 @@
   "battery.title": "Battery",
   "overview.customize": "Customize",
   "overview.done": "Done",
+  "overview.settings": "Settings",
+  "overview.backToCustomize": "Back to customization",
   "overview.reorder": "Reorder %1",
   "overview.noData": "No current data",
   "overview.hide": "Hide",

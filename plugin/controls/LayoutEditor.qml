@@ -123,7 +123,7 @@ FocusScope {
               id:toggle
               objectName:(entry.modelData.group==="favorites" ? "controlFavoriteRemove-" : "controlVisibility-")+entry.modelData.key
               Layout.fillWidth:true;leftAlign:true;focusable:true;feedback:root.feedback
-              enabled:!!root.backend && root.backend.ready && (entry.modelData.group==="favorites" || entry.modelData.key!=="settings")
+              enabled:!!root.backend && root.backend.ready
               text:root.titleFor(entry.modelData.key)
               selected:entry.modelData.group==="favorites" || root.backend && root.backend.layout.hidden.indexOf(entry.modelData.key)<0
               iconText:selected ? "󰄲" : "󰄱"

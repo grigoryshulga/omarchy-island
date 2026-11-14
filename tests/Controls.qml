@@ -81,6 +81,11 @@ ShellRoot {
       expanded:true;service:service;strings:translations;bar:bar
       onPageRequested:index=>selectedPage=index
     }
+    Island.IslandContent {
+      id:settingsHost;anchors.fill:view;visible:false
+      expanded:true;service:service;strings:translations;settings:view.settings
+      onSettingRequested:(key,value)=>{scene.preferences=[key,value]}
+    }
     Island.ControlsView {
       id:view;anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;anchors.margins:16
       width:controlsWindow.testWidth-32
@@ -105,7 +110,7 @@ ShellRoot {
       tryVerify(function(){return actions.layoutState.ready},3000)
       if(Quickshell.env("ISLAND_TEST_RESTORE")==="1") {
         check(view.controlLayout.hidden.indexOf("microphone")>=0 && view.controlLayout.main[0]==="network","Controls layout did not survive restart")
-        check(!findChild(view,"controlMicrophone") && findChild(view,"controlOpen-settings"),"restored composition differs")
+        check(!findChild(view,"controlMicrophone") && !findChild(view,"controlOpen-settings") && findChild(view,"controlOpen-monitors"),"restored composition differs")
         check(view.controlLayout.sizes.network.width===3 && view.controlLayout.sizes.network.height===2,"tile dimensions did not survive restart")
         check(view.controlLayout.labels.network.title==="Connections" && view.controlLayout.labels.network.icon==="◎","tile metadata did not survive restart")
         var savedSection=view.controlLayout.order.filter(function(k){return k.indexOf("section:")===0})[0]
@@ -156,7 +161,7 @@ ShellRoot {
         tileState.on=true;wait(10)
         check(tile.selected,"indicator did not follow external state: "+key)
       }
-      for(var key of ["monitors","settings"]) {
+      for(var key of ["monitors"]) {
         var tile=findChild(view,"controlOpen-"+key),count=tileState.toggled.length
         check(!tile.showLed,"non-toggle tile has an indicator")
         mouseClick(tile,tile.width/2,tile.height/2,Qt.RightButton)
@@ -182,10 +187,15 @@ ShellRoot {
       view.toggleMode("recording");states.recording=true;view.toggleMode("recording")
       check(scene.commands[1][0]==="omarchy-menu" && scene.commands[2][1]==="--stop-recording","capture actions differ from stock")
       var stableHeight=view.implicitHeight
-      check(findChild(view,"controlOpen-settings"),"sixth Settings tile is missing")
-      view.openSection("settings");wait(40)
-      var settingsView=findChild(view,"islandSettings")
-      check(view.implicitHeight===stableHeight && !loader.active && settingsView.visible,"Settings did not inherit Controls size or started native backend")
+      check(!findChild(view,"controlOpen-settings"),"Controls still has a Settings tile")
+      view.openSection("settings");wait(20)
+      check(view.section==="" && !loader.active,"Controls still opens the removed Settings route")
+      view.visible=false;settingsHost.visible=true
+      settingsHost.configure();wait(20)
+      findChild(settingsHost,"overviewSettings").clicked();wait(40)
+      var settingsView=findChild(settingsHost,"customizationSettings")
+      check(settingsView.visible,"Customization did not open Settings")
+      var settingsHeight=settingsHost.implicitHeight
       for(var windowWidth of [520,360]) {
         controlsWindow.testWidth=windowWidth;wait(40)
         check(settingsView.width===windowWidth-32,"settings viewport did not reach requested width: "+windowWidth)
@@ -204,7 +214,7 @@ ShellRoot {
       check(scene.preferences[0]==="hoverPreview" && scene.preferences[1]===false,"toggle did not persist")
       for(var category of ["panel","modules","alerts","general"]) {
         findChild(settingsView,"settingsTab-"+category).clicked();wait(20)
-        check(view.implicitHeight===stableHeight,"settings category resized Controls")
+        check(settingsHost.implicitHeight===settingsHeight,"settings category resized the popup")
         if(category==="panel") check(!findChild(settingsView,"setting-overviewEnabled").enabled,"Overview can be disabled, losing Settings access")
         if(category==="modules") {
           var musicBackground=findChild(settingsView,"setting-musicVisualizationBackground")
@@ -261,7 +271,7 @@ ShellRoot {
       view.settings={t3Enabled:true};wait(20)
       check(answer.enabled && answer.parent.parent.implicitHeight===answerHeight,"T3 responses did not follow parent or moved form")
       view.settings={}
-      view.back();wait(30)
+      settingsHost.back();settingsHost.back();settingsHost.visible=false;view.visible=true;wait(30)
       for(var section of ["audio","bluetooth","network","tailscale","monitors"]){
         view.openSection(section)
         check(view.implicitHeight===stableHeight,"opening a native section resized Controls: "+section)
@@ -299,7 +309,7 @@ ShellRoot {
       check(findChild(view,"controlOpen-audio").width===beforeEditWidth && view.implicitHeight===beforeEditHeight,"editing changed the layout geometry")
       check(view.editing && view.section==="" && !loader.active,"editing left the controls grid")
       check(findChild(view,"controlOpen-audio"),"editing hides actual tiles")
-      check(!findChild(view,"controlHide").enabled || view.controlLayout.hidden.indexOf("settings")<0,"Settings was hidden")
+      check(!findChild(view,"controlOpen-settings"),"Editor restored the removed Settings tile")
       var audio=findChild(view,"controlOpen-audio")
       audio.forceActiveFocus();wait(10)
       keyClick(Qt.Key_Left,Qt.ShiftModifier);wait(30)
@@ -409,7 +419,7 @@ ShellRoot {
       var favorites=findChild(overviewPages,"controlFavorites")
       check(favorites && favorites.visible && findChild(overviewPages,"controlFavorite-audio"),"Overview favorites strip is missing")
       var savedLayout=actions.layoutState.layout,savedPreferences=Island.Preferences.values
-      var favoriteKeys=["audio","bluetooth","network","tailscale","monitors","settings","microphone","dnd","nightLight","stayAwake","recording","remote"]
+      var favoriteKeys=["audio","bluetooth","network","tailscale","monitors","microphone","dnd","nightLight","stayAwake","recording","remote"]
       actions.layoutState.commit(Object.assign({},savedLayout,{favorites:favoriteKeys}))
       overviewPages.anchors.fill=null;overviewPages.height=620
       for(var panelWidth of [328,520]) for(var mode of ["minimal","standard","large"]) {
@@ -452,23 +462,13 @@ ShellRoot {
       check(favoriteAudio.activeFocus,"Direct panel Back lost its favorite focus")
       var beforeSettings=actions.layoutState.layout
       actions.layoutState.commit(Object.assign({},beforeSettings,{favorites:["settings"]}));wait(30)
-      var favoriteSettings=findChild(overviewPages,"controlFavorite-settings")
-      favoriteSettings.forceActiveFocus();favoriteSettings.clicked();wait(30)
-      check(findChild(overviewPages,"islandSettings").visible,"Settings favorite did not open settings")
-      check(overviewPages.back(),"Direct settings did not handle Back");wait(30)
-      check(!overviewPages.controls && favoriteSettings.activeFocus,"Direct settings did not return to its summary entry")
-      favoriteSettings.clicked();wait(30)
-      overviewPages.pageObject(1).enter();wait(30)
-      check(!overviewPages.controls && favorites.visible,"Returning home reopened the direct settings route")
+      check(!findChild(overviewPages,"controlFavorite-settings"),"Legacy Settings favorite survived migration")
       actions.layoutState.commit(beforeSettings);wait(30)
       findChild(overviewPages,"controlAll").forceActiveFocus();keyClick(Qt.Key_Return);wait(30)
-      check(overviewPages.controls && findChild(overviewPages,"controlOpen-settings").visible,"All controls did not open full controls")
+      check(overviewPages.controls && findChild(overviewPages,"controlOpen-audio").visible && !findChild(overviewPages,"controlOpen-settings"),"All controls did not open full controls")
       findChild(overviewPages,"controlCustomize").clicked();wait(30)
       check(findChild(overviewPages,"controlAddMenu").visible,"editing has no add button beside the gear")
       check(overviewPages.back() && overviewPages.controls,"Back did not exit inline editing before leaving Controls")
-      findChild(overviewPages,"controlOpen-settings").clicked();wait(30)
-      check(!findChild(overviewPages,"islandTabs"),"embedded settings did not hide main navigation")
-      check(overviewPages.back() && overviewPages.controls,"Settings opened from all controls skipped its parent")
       overviewPages.back();wait(20)
       actions.layoutState.move("main","network","audio")
       actions.layoutState.toggle("microphone")

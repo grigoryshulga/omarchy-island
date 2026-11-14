@@ -70,11 +70,16 @@ ColumnLayout {
   }
   readonly property real rowHeight:Math.max(Island.Design.controlHeight,Style.space(52))
   spacing:root.gridGap
+  function focusFirst() {
+    selectedKey=placements.length ? placements[0].key : ""
+    focusTile(selectedKey)
+  }
   function focusTile(key) {
     if(!host.editing && Model.sectionKey(key)) {
       var next=layout.order.slice(layout.order.indexOf(key)+1).filter(function(k){return !Model.sectionKey(k) && root.layout.hidden.indexOf(k)<0})
-      key=next.length ? next[0] : "settings"
+      key=next.length ? next[0] : ""
     }
+    if(!key) {host.forceActiveFocus();return}
     Qt.callLater(function(){for(var i=0;i<tiles.count;i++) if(tiles.itemAt(i).modelData.key===key) {tiles.itemAt(i).tile.forceActiveFocus();break}})
   }
   function resize(key,w,h) {if(backend) backend.resize(key,w,h);focusTile(key)}
@@ -168,7 +173,7 @@ ColumnLayout {
           compact:entry.quick
           iconOnly:entry.modelData.width===1
           title:root.host.controlTitle(entry.modelData.key)
-          glyph:entry.modelData.section ? "" : (root.layout.labels[entry.modelData.key] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[entry.modelData.key] || "󰒓"
+          glyph:entry.modelData.section ? "" : (root.layout.labels[entry.modelData.key] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[entry.modelData.key] || "󰒓"
           drillDown:!entry.quick && !entry.editing
           showLed:entry.quick || !!root.host.controlState && root.host.controlState.available(entry.modelData.key)
           selected:showLed && root.host.enabledState(entry.modelData.key)
@@ -332,14 +337,14 @@ ColumnLayout {
         onClicked:{root.backend.favorite(root.menuKey);menu.close()}
       }
       Island.FeedbackButton {
-        objectName:"controlHide";Layout.fillWidth:true;leftAlign:true;enabled:root.menuKey!=="settings";focusable:true
+        objectName:"controlHide";Layout.fillWidth:true;leftAlign:true;focusable:true
         text:root.host.strings.t(Model.sectionKey(root.menuKey) ? "controls.deleteSection" : "overview.hide");iconText:"−"
-        onClicked:{var key=root.menuKey;menu.close();if(Model.sectionKey(key)) root.backend.removeSection(key);else root.backend.toggle(key);root.selectedKey="settings";root.focusTile("settings")}
+        onClicked:{var key=root.menuKey;menu.close();if(Model.sectionKey(key)) root.backend.removeSection(key);else root.backend.toggle(key);root.focusFirst()}
       }
       Island.FeedbackButton {
         objectName:"controlLayoutReset";Layout.fillWidth:true;leftAlign:true;focusable:true
         text:root.host.strings.t("controls.resetLayout");iconText:"󰑓"
-        onClicked:{menu.close();root.backend.reset();root.focusTile("settings")}
+        onClicked:{menu.close();root.backend.reset();root.focusFirst()}
       }
     }
   }

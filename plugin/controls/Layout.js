@@ -1,5 +1,5 @@
-// Controls owns favorites, tile order and grid spans; Settings can move but must remain reachable.
-var mainDefaults = ["audio", "bluetooth", "network", "tailscale", "monitors", "settings"]
+// Controls owns favorites, tile order and grid spans; Island settings live in customization.
+var mainDefaults = ["audio", "bluetooth", "network", "tailscale", "monitors"]
 var favoriteDefaults = ["audio", "bluetooth", "network", "dnd", "nightLight"]
 var quickDefaults = ["microphone", "dnd", "nightLight", "stayAwake", "recording", "remote"]
 function favoriteTiles(data,size) {
@@ -25,7 +25,7 @@ function normalize(data) {
   var favorites = Array.isArray(data.favorites) ? data.favorites.filter(function(key,index,rows){return safeKey(key) && rows.indexOf(key)===index}).slice(0,32) : favoriteDefaults.slice()
   return {favorites:favorites, main:ordered(data.main, mainDefaults, true).filter(function(key){return !sectionKey(key)}), quick:ordered(data.quick, quickDefaults, false),
     order:ordered(data.order || ordered(data.main,mainDefaults,true).concat(ordered(data.quick,quickDefaults,false)), mainDefaults.concat(quickDefaults), true), sizes:normalizeSizes(data.sizes), labels:normalizeLabels(data.labels), sections:normalizeSections(data.sections),
-    hidden:Array.isArray(data.hidden) ? data.hidden.filter(function(key,index,rows) {return safeKey(key) && key !== "settings" && rows.indexOf(key)===index}).slice(0, 256) : []}
+    hidden:Array.isArray(data.hidden) ? data.hidden.filter(function(key,index,rows) {return safeKey(key) && rows.indexOf(key)===index}).slice(0, 256) : []}
 }
 function move(data, group, key, target) {
   var next = normalize(data)
@@ -47,7 +47,7 @@ function move(data, group, key, target) {
 }
 function toggle(data, key) {
   var next = normalize(data)
-  if (!safeKey(key) || key === "settings") return next
+  if (!safeKey(key)) return next
   var index = next.hidden.indexOf(key)
   if (index >= 0) next.hidden.splice(index, 1)
   else next.hidden.push(key)

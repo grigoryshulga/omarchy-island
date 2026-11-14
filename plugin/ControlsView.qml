@@ -32,7 +32,7 @@ Item {
     if(!layoutState || !layoutState.ready) return
     editing=!editing;adding=false
     if(editing) {
-      if(controlLayout.hidden.indexOf(editableGrid.selectedKey)>=0 || controlLayout.order.indexOf(editableGrid.selectedKey)<0) editableGrid.selectedKey=ControlLayout.tiles(controlLayout)[0].key
+      if(controlLayout.hidden.indexOf(editableGrid.selectedKey)>=0 || controlLayout.order.indexOf(editableGrid.selectedKey)<0) editableGrid.selectedKey=editableGrid.placements.length ? editableGrid.placements[0].key : ""
       refreshCatalog()
     } else editableGrid.focusTile(editableGrid.selectedKey)
   }
@@ -60,7 +60,6 @@ Item {
   property real detailHeight:0
   property bool sectionFromSummary:false
   signal summaryRequested()
-  readonly property bool settingsOwnKeys:section==="settings" && settingsPage.ownsKeys
   readonly property var indicators:service && ("indicators" in service) ? service.indicators : null
   readonly property var microphone:indicators ? indicators.microphone : null
   property var execute:function(command){}
@@ -105,8 +104,9 @@ Item {
 
   function openSection(name,fromSummary) {
     if(name==="customize") {configure();return}
+    if(!ControlLayout.safeKey(name)) return
     if(favoriteMode) {sectionRequested(name);return}
-    if(["audio","bluetooth","network","tailscale","monitors","settings"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
+    if(["audio","bluetooth","network","tailscale","monitors"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
     editing=false;adding=false
     if(!section) {detailHeight=landing.implicitHeight;sectionFromSummary=!!fromSummary}
     changing=true
@@ -114,8 +114,7 @@ Item {
     nativeLoader.source=""
     section=name;error=""
     changing=false
-    if(name==="settings") Qt.callLater(function(){settingsPage.focusContent()})
-    else requestPanel()
+    requestPanel()
   }
   function launchExternalPanel(id,payload) {
     if(["omarchy.wifiqr","omarchy.speedtest"].indexOf(id)<0) return
@@ -129,7 +128,6 @@ Item {
     var previous=section
     var returnToSummary=previous!=="" && sectionFromSummary
     sectionFromSummary=false
-    settingsPage.closeEditors()
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
     nativeLoader.source=""
@@ -164,7 +162,7 @@ Item {
   property string buildOutput:""
   property string buildError:""
   function requestPanel() {
-    if(!active || !section || (section==="settings") || panelBuilder.running) return
+    if(!active || !section || panelBuilder.running) return
     if(!panelCommand.length) {error=strings.t("controls.unavailable");return}
     buildingSection=section;buildOutput="";buildError=""
     panelBuilder.command=panelCommand.concat([section])
@@ -175,7 +173,6 @@ Item {
     if(!active) {
       editing=false;adding=false
       panelBuilder.running=false
-      settingsPage.closeEditors()
       if(nativeLoader.item) nativeLoader.item.close()
       nativeLoader.source=""
     } else requestPanel()
@@ -245,7 +242,7 @@ Item {
           Layout.fillWidth:true;Layout.minimumWidth:0;Layout.preferredWidth:1
           implicitHeight:Design.controlHeight
           variant:"soft";horizontalPadding:0;iconSize:Design.type.iconLarge
-          iconText:(root.controlLayout.labels[modelData] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
+          iconText:(root.controlLayout.labels[modelData] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
           tooltipText:root.controlTitle(modelData);focusable:root.favoritesInteractive;feedback:root.externalFeedback
           selected:root.controlState && root.controlState.enabledState(modelData)
             || modelData==="dnd" && root.service && root.service.doNotDisturb
@@ -338,7 +335,7 @@ Item {
     anchors.left:parent.left;anchors.right:parent.right
     anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
     anchors.topMargin:Design.gap.small
-    active:root.active && !!root.section && root.section!=="settings"
+    active:root.active && !!root.section
     visible:active
     onLoaded:{item.settings=Qt.binding(function(){return root.nativeSettings});item.open();Qt.callLater(function(){if(nativeLoader.item) nativeLoader.item.focusContent()})}
     onStatusChanged:if(status===Loader.Error) root.error=root.strings.t("controls.unavailable")
@@ -353,26 +350,6 @@ Item {
     visible:!!root.section
     anchors.top:parent.top
     onClicked:root.back()
-  }
-  PlainText {
-    anchors.left:detailBack.right;anchors.leftMargin:Design.gap.medium
-    anchors.verticalCenter:detailBack.verticalCenter
-    visible:root.section==="settings"
-    typeRole:"section"
-    text:root.strings.t("settings.title")
-  }
-  SettingsView {
-    id:settingsPage
-    objectName:"islandSettings"
-    anchors.left:parent.left;anchors.right:parent.right
-    anchors.top:detailBack.bottom;anchors.bottom:parent.bottom
-    anchors.topMargin:Design.gap.small
-    visible:root.section==="settings"
-    active:root.active && root.section==="settings"
-    settings:root.settings;strings:root.strings
-    modules:root.service && root.service.modules ? root.service.modules : ({})
-    feedback:root.externalFeedback
-    onSettingRequested:(key,value)=>root.settingRequested(key,value)
   }
   Connections {
     target:nativeLoader.item

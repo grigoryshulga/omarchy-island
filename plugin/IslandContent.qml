@@ -40,6 +40,8 @@ Item {
   property string detailPage: ""
   property var moduleDefinitions:Catalog.ordered("overview").filter(function(entry){return !!entry.overview})
   property bool configuring:false
+  property bool settingsOpen:false
+  onConfiguringChanged:if(!configuring) settingsOpen=false
   readonly property var overviewLayout:Overview.layout(moduleDefinitions,Preferences.get("overviewLayout"))
   function syncSections() {Model.syncKeys(sectionOrder,overviewLayout.map(function(row){return row.id}))}
   onOverviewLayoutChanged:syncSections()
@@ -63,8 +65,8 @@ Item {
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.modelData.id===detailPage) return slot.item}
     return null
   }
-  readonly property bool navigationHidden:!!detailItem && detailItem.navigationHidden
-  readonly property bool ownsKeys:!!detailItem && detailItem.ownsKeys
+  readonly property bool navigationHidden:settingsOpen || (!!detailItem && detailItem.navigationHidden)
+  readonly property bool ownsKeys:settingsOpen ? customizationSettings.ownsKeys : !!detailItem && detailItem.ownsKeys
   property var returnFocus: null
   property real summaryScrollY: 0
   KeyboardNavigation {id:detailNavigation;scope:root}
@@ -84,6 +86,11 @@ Item {
   }
   function back() {
     if(overviewDrag.dragging) {overviewDrag.cancel();return true}
+    if(settingsOpen) {
+      settingsOpen=false
+      Qt.callLater(function(){detailNavigation.focusItem(customizationSettingsButton)})
+      return true
+    }
     if(configuring) {configuring=false;restoreSummary();return true}
     if(!detailOpen) return false
     if(detailItem && detailItem.back()) return true
@@ -104,7 +111,7 @@ Item {
   OverviewDrag {
     id:overviewDrag;objectName:"overviewDragController"
     anchors.fill:parent;z:100
-    editing:root.configuring;entries:moduleSections;content:body;viewport:overviewScroll.contentItem
+    editing:root.configuring && !root.settingsOpen;entries:moduleSections;content:body;viewport:overviewScroll.contentItem
     onMoved:(key,beforeKey)=>{
       root.settingRequested("overviewLayout",Overview.move(root.moduleDefinitions,Preferences.get("overviewLayout"),key,beforeKey))
       Qt.callLater(function(){for(var i=0;i<moduleSections.count;i++) {var frame=moduleSections.itemAt(i);if(frame.entryKey===key) {detailNavigation.focusItem(frame.handleItem);break}}})
@@ -113,6 +120,7 @@ Item {
   Controls.ScrollView {
     id:overviewScroll
     objectName:"overviewScroll"
+    visible:!root.settingsOpen
     width:parent.width
     height:root.expanded ? root.height : Math.min(root.height,root.implicitHeight)
     clip:true;contentWidth:availableWidth
@@ -166,6 +174,12 @@ Item {
     visible:root.expanded && root.configuring
     Layout.fillWidth:true
     SectionHeading {Layout.fillWidth:true;title:root.strings.t("overview.customize")}
+    FeedbackButton {
+      id:customizationSettingsButton;objectName:"overviewSettings"
+      text:root.strings.t("overview.settings")
+      focusable:true;compact:true;feedback:root.externalFeedback
+      onClicked:{root.settingsOpen=true;Qt.callLater(function(){customizationSettings.focusContent()})}
+    }
     FeedbackButton {
       objectName:"overviewDone";text:root.strings.t("overview.done")
       focusable:true;compact:true;feedback:root.externalFeedback
@@ -221,7 +235,7 @@ Item {
           readonly property bool expanded:root.expanded
           readonly property string size:(root.expanded || root.hovering) && moduleFrame.config ? moduleFrame.config.size : "standard"
           readonly property bool detail:root.detailPage===moduleFrame.entryKey
-          readonly property bool active:root.overviewActive && root.visible && moduleSection.visible
+          readonly property bool active:root.overviewActive && root.visible && !root.settingsOpen && moduleSection.visible
           readonly property real pageHeight:root.height
         }
         readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
@@ -238,5 +252,30 @@ Item {
   PlainText {Layout.fillWidth:true;visible:!root.compactNotifications && root.service && root.service.error!==undefined && root.service.error!=="";text:root.strings.t("error").arg(root.service && root.service.error ? root.service.error : "");color:Design.danger;wrapMode:Text.Wrap}
 
   }
+  }
+  ColumnLayout {
+    anchors.fill:parent
+    visible:root.settingsOpen
+    spacing:Design.gap.small
+    RowLayout {
+      Layout.fillWidth:true
+      FeedbackButton {
+        objectName:"customizationSettingsBack"
+        iconText:Commons.I18n.rightToLeft ? "󰁔" : "󰁍"
+        tooltipText:root.strings.t("overview.backToCustomize")
+        compact:true;focusable:true;feedback:root.externalFeedback
+        onClicked:root.back()
+      }
+      SectionHeading {Layout.fillWidth:true;title:root.strings.t("settings.title")}
+    }
+    SettingsView {
+      id:customizationSettings;objectName:"customizationSettings"
+      Layout.fillWidth:true;Layout.fillHeight:true
+      active:root.overviewActive && root.visible && root.settingsOpen
+      settings:root.settings;strings:root.strings
+      modules:root.service && root.service.modules ? root.service.modules : ({})
+      feedback:root.externalFeedback
+      onSettingRequested:(key,value)=>root.settingRequested(key,value)
+    }
   }
 }

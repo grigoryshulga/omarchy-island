@@ -2,6 +2,8 @@
   "battery.title": "Батарея",
   "overview.customize": "Настроить",
   "overview.done": "Готово",
+  "overview.settings": "Настройки",
+  "overview.backToCustomize": "Назад к настройке вида",
   "overview.reorder": "Переместить: %1",
   "overview.noData": "Нет данных",
   "overview.hide": "Скрыть",

@@ -12,13 +12,13 @@ for (const [size, columns, count] of [['minimal',3,3],['standard',5,5],['large',
   assert.deepEqual(source.favorites, allFavorites, 'Changing presentation must preserve saved favorites');
   assert.deepEqual(plain(model.favoriteTiles({...initial,favorites:[]},size)), {columns,keys:[]});
 }
-assert.equal(initial.main[5], 'settings');
+assert.equal(initial.main.includes('settings'), false);
 assert.deepEqual(plain(model.normalize({main:['network','network','../bad','plugin:good.control'], hidden:['settings','network']})), {
-  main:['network','plugin:good.control','audio','bluetooth','tailscale','monitors','settings'],
-  quick:initial.quick, order:["network","plugin:good.control","audio","bluetooth","tailscale","monitors","settings"].concat(initial.quick), sizes:{}, labels:{}, sections:{}, hidden:['network'], favorites:initial.favorites
+  main:['network','plugin:good.control','audio','bluetooth','tailscale','monitors'],
+  quick:initial.quick, order:["network","plugin:good.control","audio","bluetooth","tailscale","monitors"].concat(initial.quick), sizes:{}, labels:{}, sections:{}, hidden:['network'], favorites:initial.favorites
 });
 assert.equal(model.move(initial, 'main', 'audio', 'network').main[2], 'audio');
-assert.equal(model.move(initial, 'main', 'settings', 'audio').main[0], 'settings');
+assert.equal(model.move(initial, 'main', 'monitors', 'audio').main[0], 'monitors');
 assert.deepEqual(plain(model.move(initial, 'quick', 'audio', 'dnd')), initial);
 assert.deepEqual(plain(model.toggle(model.toggle(initial, 'audio'), 'audio')), initial);
 assert.deepEqual(plain(model.toggle(initial, 'settings')), initial);
@@ -68,3 +68,15 @@ assert.ok(!model.move(spaced,'order',sectionKey,'audio').main.includes(sectionKe
 assert.ok(!model.removeSection(spaced,sectionKey).order.includes(sectionKey));
 assert.equal(model.section(spaced,sectionKey,'x',999).sections[sectionKey].gap,4);
 assert.equal(model.label(initial,'audio','x'.repeat(100),'').labels.audio.title.length,80);
+
+const migrated = plain(model.normalize({
+  main:['settings','network'], order:['settings','network','audio'], favorites:['settings','network'],
+  hidden:['settings','audio'], sizes:{settings:{width:4,height:2}}, labels:{settings:{title:'Preferences',icon:'x'}}
+}));
+for (const key of ['main','order','favorites','hidden']) assert.ok(!migrated[key].includes('settings'), 'Legacy Settings tile survived in '+key);
+assert.deepEqual(migrated.favorites,['network']);
+assert.deepEqual(migrated.hidden,['audio']);
+assert.deepEqual(migrated.sizes,{});
+assert.deepEqual(migrated.labels,{});
+assert.ok(!model.tiles(migrated).some(tile=>tile.key==='settings'));
+assert.deepEqual(plain(model.favorite(initial,'settings')),initial);

@@ -188,12 +188,16 @@ ShellRoot {
         wait(80)
         checkEqual(led.phase, phase, "Inactive tile shader must stop its clock")
         controls.active = true
-        controls.openSection("settings")
+        controls.visible = false
+        inbox.visible = true
+        inbox.overviewActive = true
+        inbox.configure()
+        findChild(inbox, "overviewSettings").clicked()
         wait(200)
-        var setting = findChild(controls, "setting-hoverPreview")
+        var setting = findChild(findChild(inbox, "customizationSettings"), "setting-hoverPreview")
         led = findChild(setting, "controlIndicatorGlow")
         check(led.active)
-        controls.active = false
+        inbox.overviewActive = false
         wait(200)
         check(!led.active, "Inactive Settings must stop switch effects")
         phase = led.phase
