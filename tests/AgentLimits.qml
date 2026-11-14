@@ -71,6 +71,8 @@ ShellRoot {
       backend.cache=cache;wait(30)
       check(pin.activeFocus && findChild(center,"limitPin")===pin,"refresh destroyed focus/delegate")
       var countdown=findChild(center,"limitResetCountdown")
+      var freshness=findChild(center,"limitFreshness")
+      check(countdown.parent===freshness.parent && freshness.x>countdown.x,"freshness is not beside reset countdown")
       check(countdown.text===strings.t("limits.resetIn").arg(strings.t("limits.daysHoursMinutes").arg(Commons.I18n.formatNumber(1)).arg(Commons.I18n.formatNumber(2)).arg(Commons.I18n.formatNumber(5))),"quota caption is not a relative countdown")
       forward.clicked();wait(30)
       check(forward.text==="" && forward.iconText==="" && forward.title===strings.t("limits.title") && forward.Accessible.name===forward.title,"limits navigation is not an accessible heading")

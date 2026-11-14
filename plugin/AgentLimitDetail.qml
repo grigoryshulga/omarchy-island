@@ -83,40 +83,49 @@ ColumnLayout {
     value: root.known ? root.row.remaining / 100 : 0
     accent: root.quotaColor === Design.text ? Design.accent : root.quotaColor
   }
-  PlainText {
-    id: resetCaption
-    objectName: "limitResetCountdown"
-    readonly property string exactReset: root.row.resetsAt > 0 && !root.row.pendingReset
-      ? root.strings.t("limits.resetAt").arg(new Date(root.row.resetsAt).toLocaleString(Qt.locale(Commons.I18n.formatLocale), Locale.ShortFormat)) : ""
-    Accessible.name: text
-    Accessible.description: exactReset
-    HoverHandler { id: resetHover }
-    Controls.ToolTip {
-      visible: root.visible && resetHover.hovered && resetCaption.exactReset !== ""
-      delay: 400
-      text: resetCaption.exactReset
-      padding: Design.gap.small
-      background: BorderSurface {
-        color: Commons.Color.tooltip.background
-        borderSpec: Border.surfaceSpec("tooltip", "border", Commons.Color.tooltip.border, Math.max(1, Style.normalBorderWidth))
-        radius: 0
+  RowLayout {
+    Layout.fillWidth: true
+    spacing: Design.gap.small
+    PlainText {
+      id: resetCaption
+      objectName: "limitResetCountdown"
+      readonly property string exactReset: root.row.resetsAt > 0 && !root.row.pendingReset
+        ? root.strings.t("limits.resetAt").arg(new Date(root.row.resetsAt).toLocaleString(Qt.locale(Commons.I18n.formatLocale), Locale.ShortFormat)) : ""
+      Accessible.name: text
+      Accessible.description: exactReset
+      HoverHandler { id: resetHover }
+      Controls.ToolTip {
+        visible: root.visible && resetHover.hovered && resetCaption.exactReset !== ""
+        delay: 400
+        text: resetCaption.exactReset
+        padding: Design.gap.small
+        background: BorderSurface {
+          color: Commons.Color.tooltip.background
+          borderSpec: Border.surfaceSpec("tooltip", "border", Commons.Color.tooltip.border, Math.max(1, Style.normalBorderWidth))
+          radius: 0
+        }
+        contentItem: PlainText { text: resetCaption.exactReset; color: Commons.Color.tooltip.text; typeRole: "caption" }
       }
-      contentItem: PlainText { text: resetCaption.exactReset; color: Commons.Color.tooltip.text; typeRole: "caption" }
+      Layout.fillWidth: true
+      Layout.minimumWidth: 0
+      Layout.alignment: Qt.AlignTop
+      typeRole: "caption"
+      wrapMode: Text.Wrap
+      color: Design.secondaryText
+      text: Model.resetCountdown(root.row, root.now, root.strings, Commons.I18n.formatNumber)
+      visible: text !== ""
     }
-    Layout.fillWidth: true
-    typeRole: "caption"
-    wrapMode: Text.Wrap
-    color: Design.secondaryText
-    text: Model.resetCountdown(root.row, root.now, root.strings, Commons.I18n.formatNumber)
-    visible: text !== ""
-  }
-  PlainText {
-    objectName: "limitFreshness"
-    Layout.fillWidth: true
-    typeRole: "caption"
-    wrapMode: Text.Wrap
-    color: root.row.stale ? Design.warning : Design.secondaryText
-    text: Model.freshness(root.row, root.now, root.strings, Commons.I18n.formatNumber)
+    PlainText {
+      objectName: "limitFreshness"
+      horizontalAlignment: Text.AlignRight
+      Layout.fillWidth: true
+      Layout.minimumWidth: 0
+      Layout.alignment: Qt.AlignTop
+      typeRole: "caption"
+      wrapMode: Text.Wrap
+      color: root.row.stale ? Design.warning : Design.secondaryText
+      text: Model.freshness(root.row, root.now, root.strings, Commons.I18n.formatNumber)
+    }
   }
   RowLayout {
     visible: root.editingPins && root.pinIndex >= 0
