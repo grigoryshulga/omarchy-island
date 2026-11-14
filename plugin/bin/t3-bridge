@@ -19,6 +19,7 @@ from urllib.parse import quote, urlencode
 import uuid
 
 from t3_cli import CliError, LocalCli, valid_version
+from t3_linked import LinkedMonitor, merge_sessions
 from t3_model import identifier, request_identifier, request_view, select_threads, session_view, validate_answers
 from t3_transport import TransportError, WebSocket, http_json
 
@@ -55,6 +56,9 @@ class Bridge:
         self.stage = 'runtime'
         self.last_connected_at = 0
         self.last_failure = None
+        self.linked = None
+        self.linked_rows = []
+        self.linked_baseline = []
 
     def cli(self, *args):
         return self.local_cli.auth(self.base, *args)
@@ -110,6 +114,8 @@ class Bridge:
         # baseline, or the next real transition (including completion) is lost.
         self.last_output = ""
         self.publish()
+        self.linked = LinkedMonitor(self.base, self.local_cli, self.origin, self.environment)
+        self.linked.start()
 
     def http(self, path, method="GET"):
         return http_json(self.origin, path, self.credential["token"], method)
@@ -144,11 +150,14 @@ class Bridge:
             else:
                 self.details.pop(row["id"], None)
             rows.append(session_view(row, self.projects, request, self.project_icons))
-        output = {"type": "sessions", "rows": rows}
+        output = {"type": "sessions", "rows": merge_sessions(rows, self.linked_rows)}
         serial = json.dumps(output, sort_keys=True)
         if serial != self.last_output:
             self.last_output = serial
+            if self.linked_baseline:
+                output['baselineIds'] = self.linked_baseline
             self.output(output)
+        self.linked_baseline = []
         self.dirty = False
 
     def result(self, request_id, status):
@@ -251,6 +260,11 @@ class Bridge:
             self.respond(action)
 
     def disconnect(self):
+        if self.linked:
+            self.linked.close()
+            self.linked = None
+        self.linked_rows = []
+        self.linked_baseline = []
         for request_id, _ in self.pending.values():
             self.result(request_id, "uncertain")
         self.pending.clear()
@@ -315,6 +329,12 @@ class Bridge:
                         self.action(self.inbox.get_nowait())
                     frame = self.ws.receive()
                     now = time.monotonic()
+                    if self.linked:
+                        try:
+                            self.linked_rows, self.linked_baseline = self.linked.updates.get_nowait()
+                            self.dirty = True
+                        except queue.Empty:
+                            pass
                     if now - last_ping >= 20:
                         self.ws.send({"_tag": "Ping"})
                         last_ping = now

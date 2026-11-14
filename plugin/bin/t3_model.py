@@ -159,6 +159,7 @@ def session_view(row, projects, request=None, project_icons=None):
     pending = row.get("pendingRuntimeRequest")
     status = row.get("activityRunStatus") or row.get("status", "idle")
     return {"id": row["id"], "title": text(row.get("title"), 256),
+            "updatedAt": timestamp(row.get("updatedAt")),
             "project": text(projects.get(row.get("projectId"), ""), 256),
             "projectIcon": project_icon((project_icons or {}).get(row.get("projectId"))),
             "status": status if status in BUSY | TERMINAL else "idle",

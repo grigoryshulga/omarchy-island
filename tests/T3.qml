@@ -244,6 +244,23 @@ ShellRoot {
         pages.alertKind="";pages.expanded=true
         snapshot([]);wait(30)
         verify(!findChild(pages,"t3Section").visible,"Empty T3 must be completely hidden")
+        // Linked environments share counters, but keep their own deep-link target.
+        var opened=[],savedOpen=service.t3.openUrl
+        service.t3.openUrl=function(url){opened.push(url)}
+        var linked={id:"linked/remote-env/thread-1",threadId:"thread-1",environmentId:"remote-env",title:"Remote",project:"VPS",status:"running",requestId:"",summary:""}
+        alerts.clear()
+        service.t3.receive(JSON.stringify({type:"sessions",rows:[second,linked],baselineIds:[linked.id]}))
+        compare(service.t3.workingCount,2)
+        compare(alerts.count,1,"Only the new local session should alert")
+        service.t3.openThread(linked.id)
+        compare(opened[0],"t3code://threads/remote-env/thread-1")
+        linked=Object.assign({},linked,{requestId:"linked/remote-env/thread-1/pending",requestKind:"unknown"})
+        snapshot([second,linked])
+        compare(service.t3.waitingCount,1)
+        compare(service.t3.workingCount,1)
+        snapshot([second])
+        compare(service.t3.waitingCount,0,"Unavailable linked source kept a stale request")
+        service.t3.openUrl=savedOpen
         service.t3.allowed=false
         compare(service.t3.rows.length,0)
         compare(service.t3.waitingCount,0)

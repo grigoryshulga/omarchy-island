@@ -26,6 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 project = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project / 'plugin/bin'))
 from t3_cli import CliError, LocalCli, run_cli
+from t3_linked import LinkedMonitor, McpClient, merge_sessions
 from t3_model import project_icon, request_view, select_threads, session_view, validate_answers
 from t3_transport import local_origin, TransportError, WebSocket, MAX_MESSAGE
 
@@ -116,6 +117,62 @@ class ModelTests(unittest.TestCase):
             with self.assertRaises(TransportError): local_origin(origin)
 
 
+class LinkedTests(unittest.TestCase):
+    def setUp(self):
+        self.monitor=LinkedMonitor(Path('/unused'),None,'http://127.0.0.1:1234','local')
+        self.failed=False
+        self.seen=[]
+        def call(name, args):
+            self.seen.append((name,args))
+            if name=='t3_environment_links':
+                return {'links':[{'environmentId':env,'status':'reachable','label':env} for env in ('bad','good','local')]}
+            env=args['environmentId']
+            if env=='bad' or self.failed:raise TransportError('fixture')
+            if name=='t3_project_list':return {'projects':[{'id':'p','title':'Project'}]}
+            if name=='t3_thread_list':
+                return {'threads':[{'threadId':id,'projectId':'p','status':'running',
+                                    'relationshipToParent':'subagent' if id=='child' else None,
+                                    'settled':id=='settled'} for id in ('work','child','settled')]}
+            return {'thread':{'pendingRequestCount':0},'recentRuns':[],'items':[]}
+        self.monitor.client=type('Client',(),{'call':staticmethod(call)})()
+
+    def test_sources_fail_independently_and_stale_rows_are_removed(self):
+        rows,available=self.monitor.collect()
+        self.assertEqual([r['id'] for r in rows],['linked/good/work'])
+        self.assertEqual(available,{'good'})
+        self.assertFalse(any(args.get('environmentId')=='local' for _,args in self.seen))
+        self.failed=True
+        self.assertEqual(self.monitor.collect(),([],set()))
+
+    def test_global_limit_preserves_requests_over_local_work(self):
+        local=[dict(id=str(i),status='running',requestId='',updatedAt=100) for i in range(30)]
+        remote=[dict(id='linked/e/t',status='waiting',requestId='pending',updatedAt=0)]
+        rows=merge_sessions(local,remote)
+        self.assertEqual(len(rows),30)
+        self.assertEqual(rows[0]['id'],'linked/e/t')
+
+    def test_temporary_cli_failure_retries_and_revokes_readonly_token(self):
+        calls=[]
+        def auth(base,*args):
+            calls.append(args)
+            if len(calls)==1:raise CliError('cli_timeout')
+            return json.dumps({'token':'PRIVATE_FIXTURE','sessionId':'linked-session'})
+        self.monitor.cli=type('Cli',(),{'auth':staticmethod(auth)})()
+        def collect():
+            self.monitor.stopped.set()
+            return [],set()
+        self.monitor.collect=collect
+        with patch('t3_linked.INTERVAL',0):self.monitor.run()
+        self.assertEqual(len(calls),3)
+        self.assertEqual(calls[-1],('revoke','linked-session'))
+        self.assertEqual(calls[1][calls[1].index('--scope')+1],'orchestration:read')
+
+    def test_stopped_monitor_never_makes_a_call(self):
+        self.monitor.stopped.set()
+        with self.assertRaises(TransportError):self.monitor.collect()
+        self.assertEqual(self.seen,[])
+
+
 class CliTests(unittest.TestCase):
     def test_untrusted_versions_never_execute(self):
         with tempfile.TemporaryDirectory() as tmp, patch('t3_cli.subprocess.run') as run:
@@ -188,6 +245,7 @@ class FakeServer(ThreadingHTTPServer):
         self.request_id='request-1';self.request_projection=projection()
         self.socket_ready=threading.Event();self.client=None;self.sequence=1
         self.subscription_ready=threading.Event()
+        self.linked=False;self.mcp_calls=[]
     def shell(self):
         return {'snapshotSequence':self.sequence, 'schemaVersion':2, 'projects':[{'id':'p1','title':'Project'}], 'threads':[{
             'id':'thread-1', 'projectId':'p1', 'title':'A session', 'status':'running',
@@ -200,7 +258,27 @@ class Handler(BaseHTTPRequestHandler):
     def respond(self,data,status=200):
         raw=json.dumps(data).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
     def do_POST(self):
-        if self.path=='/api/auth/websocket-ticket/rpc':
+        if self.path=='/mcp':
+            message=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            self.server.mcp_calls.append(message)
+            self.send_response(200);self.send_header('Content-Type','application/json')
+            self.send_header('mcp-session-id','fixture');self.end_headers()
+            result={}
+            if message['method']=='initialize':
+                result={'protocolVersion':'2025-06-18','capabilities':{},'serverInfo':{'name':'fixture','version':'1'}}
+            elif message['method']=='tools/call':
+                name=message['params']['name'];args=message['params']['arguments']
+                if name=='t3_environment_links':
+                    value={'links':[{'environmentId':'remote-env','label':'VPS','status':'reachable'}] if self.server.linked else []}
+                elif name=='t3_project_list':value={'projects':[{'id':'p1','title':'Remote project'}],'nextCursor':None}
+                elif name=='t3_thread_list':
+                    value={'threads':[{'threadId':'thread-1','projectId':'p1','title':'Remote work','status':'running','updatedAt':'2026-11-11T10:00:00Z'}], 'nextCursor':None}
+                elif name=='t3_thread_read':
+                    value={'thread':{'threadId':'thread-1','pendingRequestCount':1,'archived':False,'settled':False},'recentRuns':[], 'items':[]}
+                else:raise AssertionError(name)
+                result={'content':[], 'structuredContent':value}
+            self.wfile.write(json.dumps({'jsonrpc':'2.0','id':message.get('id'), 'result':result}).encode())
+        elif self.path=='/api/auth/websocket-ticket/rpc':
             assert self.headers['Authorization']=='Bearer TEST_SECRET'
             self.respond({'ticket':'TICKET'})
         else: self.respond({},404)
@@ -362,6 +440,24 @@ class IntegrationTests(unittest.TestCase):
         binary.chmod(0o700)
         return binary
 
+    def test_linked_sessions_join_local_snapshot_without_id_collision(self):
+        self.server.linked=True
+        self.start(True)
+        snapshot=self.wait(lambda e:e['type']=='sessions' and len(e['rows'])==2, timeout=5)
+        local,remote=sorted(snapshot['rows'],key=lambda r:bool(r.get('environmentId')))
+        self.assertEqual(local['id'],'thread-1')
+        self.assertNotEqual(remote['id'],local['id'])
+        self.assertEqual(remote['threadId'],'thread-1')
+        self.assertEqual(remote['environmentId'],'remote-env')
+        self.assertTrue(remote['requestId'])
+        self.assertIsNone(remote['request'], 'Remote questions must open in T3')
+        self.assertIn('VPS',remote['project'])
+        self.stop()
+        calls=[json.loads(line) for line in (self.root/'cli.log').read_text().splitlines()]
+        remote_issue=next(c for c in calls if 'mcp-client' in c)
+        self.assertIn('orchestration:read',remote_issue)
+        self.assertNotIn('orchestration:operate',remote_issue)
+
     def test_matching_cache_survives_newer_path_cli(self):
         cached=self.cached_cli(self.server.version)
         path_cli=self.root/'bin/t3'
@@ -418,7 +514,7 @@ class IntegrationTests(unittest.TestCase):
         self.stop()
         calls=[json.loads(line) for line in (self.root/'cli.log').read_text().splitlines()]
         revoked=[call[1] for call in calls if 'revoke' in call]
-        self.assertEqual(revoked,['0.1.9-nightly.20261111.4515',self.server.version])
+        self.assertEqual(revoked,['0.1.9-nightly.20261111.4515']*2+[self.server.version]*2)
 
     def test_round_trip_stale_validation_and_cleanup(self):
         self.start()

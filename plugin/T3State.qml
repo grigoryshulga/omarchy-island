@@ -59,6 +59,7 @@ Item {
     } else if(event.type==="sessions" && Array.isArray(event.rows)) {
       var nextRows=event.rows.slice(0,30)
       var changes=T3.transitions(alertBaseline,nextRows)
+      if(Array.isArray(event.baselineIds)) changes=changes.filter(function(r){return event.baselineIds.indexOf(r.id)<0})
       rows=nextRows
       alertBaseline=nextRows
       // Prefer an input request or failure when several threads change together.
@@ -93,8 +94,10 @@ Item {
   }
   function openThread(id) {
     if(!allowed) return
-    var url=Security.t3ThreadUrl(environmentId,id)
-    if(url && row(id)) openUrl(url)
+    var current=row(id)
+    if(!current) return
+    var url=Security.t3ThreadUrl(current.environmentId || environmentId,current.threadId || id)
+    if(url) openUrl(url)
   }
   function restart() {
     canRespond=false;failPending();reason="";status=allowed ? "connecting" : "offline"
