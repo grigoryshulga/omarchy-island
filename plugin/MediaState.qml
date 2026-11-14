@@ -31,11 +31,19 @@ Item {
   property real audioBass: 0
   property real audioTreble: 0
   property bool audioFailed: false
+  property int audioFailures: 0
+  // Audio devices and the server may briefly disappear during a route change.
+  // Retry with backoff only while a visible visualizer actually needs samples.
+  Timer {
+    interval: Math.min(30000,1000*Math.pow(2,Math.min(5,Math.max(0,root.audioFailures-1))))
+    running: root.samplingAudio && root.audioFailed
+    onTriggered: root.audioFailed = false
+  }
   Behavior on audioLevel { NumberAnimation { duration: Preferences.duration(90) } }
   Behavior on audioBass { NumberAnimation { duration: Preferences.duration(90) } }
   Behavior on audioTreble { NumberAnimation { duration: Preferences.duration(90) } }
   onPlayingChanged: if (!playing) { audioLevel = 0; audioBass = 0; audioTreble = 0 }
-  onTrackChanged: { audioFailed = false; visualImpulses = MusicVisual.empty() }
+  onTrackChanged: { audioFailures = 0; audioFailed = false; visualImpulses = MusicVisual.empty() }
   Process {
     running: root.samplingAudio && !root.audioFailed
     command:root.audioCommand
@@ -44,6 +52,8 @@ Item {
         try {
           var values = JSON.parse(data)
           if (Array.isArray(values) && values.length === 3) {
+            root.audioFailures = 0
+            if (root.error === "audio monitor") root.error = ""
             root.visualImpulses = MusicVisual.sample(root.visualImpulses, root.visualPhase, Number(values[0]) || 0, Number(values[1]) || 0)
             root.audioLevel = Math.max(0,Math.min(1,Number(values[0]) || 0))
             root.audioBass = Math.max(0,Math.min(1,Number(values[1]) || 0))
@@ -52,7 +62,14 @@ Item {
         } catch(e) {}
       }
     }
-    onExited: function(code) { if (code !== 0 && root.samplingAudio) { root.audioFailed = true; root.error = "audio monitor" } }
+    onExited: function(code) {
+      if (code !== 0 && root.samplingAudio) {
+        root.audioFailures = Math.min(6,root.audioFailures+1)
+        root.audioFailed = true
+        root.error = "audio monitor"
+        root.audioLevel = 0; root.audioBass = 0; root.audioTreble = 0
+      }
+    }
   }
 
   function selectPlayer(name) { preferredPlayer = name }

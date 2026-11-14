@@ -222,7 +222,7 @@ Click the weather city to search or choose automatic location; Enter confirms an
 
 Weather uses a summary layout: current temperature and conditions beside a theme-colored braille illustration, followed by feels-like temperature, wind, and humidity. The next seven days share one temperature-range scale, with highs above and lows below each bar. Sunrise and sunset use the selected city's local time; unavailable solar times show a dash. Only the current-condition illustration animates; forecast illustrations remain still, and reduced motion stops animation.
 
-Visualization style controls the dot motion; background controls its colors. Shimmer preserves the original effect. Ripples expand from audio attacks, Flow lights curved streams, Embers retain local heat, Constellations reveal small groups, and Echo holds fading impressions. Aurora, Tide and Plasma replace the cover colors with flowing system-theme gradients while keeping the dot grid. Both choices save immediately and work together. Reduced motion freezes the field; hiding all visualizations stops audio analysis.
+Visualization style controls the dot motion; background controls its colors. Shimmer preserves the original effect. Ripples expand from audio attacks, Flow lights curved streams, Embers retain local heat, Constellations reveal small groups, and Echo holds fading impressions. Aurora, Tide and Plasma replace the cover colors with flowing system-theme gradients while keeping the dot grid. Both choices save immediately and work together. Reduced motion freezes the field; hiding all visualizations stops audio analysis. If the playback monitor fails, visible visualizations retry automatically with a delay increasing from 1 to 30 seconds; a successful audio frame clears the error. Retries stop while hidden, paused, or reduced motion is active.
 
 For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
 
@@ -372,6 +372,7 @@ python3 tests/indicators.py                # Wayland indicators and native OSD
 ISLAND_T3_ONLY=1 python3 tests/indicators.py # T3 count, spinner, reduced motion and clock alignment
 python3 tests/dictation.py                 # Dictation states and reduced motion
 ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
+python3 tests/audio-recovery.py            # Private MPRIS, audio recovery, backoff and suspended retries
 python3 tests/music-visualization.py       # Offscreen style/background combinations and audio-consumer lifecycle
 python3 tests/artwork-render.py            # GPU artwork frames, styles, backgrounds and reduced motion
 python3 tests/performance.py               # QML timings, delegate reuse, focus and inactive-page work
