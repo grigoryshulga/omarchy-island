@@ -1,1 +1,1 @@
-export default {id:"controls",titleKey:"tabs.controls",state:"ControlsState.qml",overview:"modules/controls/Overview.qml",order:{overview:-30},overviewShortcut:"Alt+1"};
+export default {id:"controls",titleKey:"tabs.controls",state:"ControlsState.qml",overview:"modules/controls/Overview.qml",overviewSizes:["minimal","standard","large"],order:{overview:-30},overviewShortcut:"Alt+1"};

@@ -395,6 +395,33 @@ ShellRoot {
       check(overviewPages.enabledPages.indexOf(0)<0,"Controls remains in page navigation")
       var favorites=findChild(overviewPages,"controlFavorites")
       check(favorites && favorites.visible && findChild(overviewPages,"controlFavorite-audio"),"Overview favorites strip is missing")
+      var savedLayout=actions.layoutState.layout,savedPreferences=Island.Preferences.values
+      var favoriteKeys=["audio","bluetooth","network","tailscale","monitors","settings","microphone","dnd","nightLight","stayAwake","recording","remote"]
+      actions.layoutState.commit(Object.assign({},savedLayout,{favorites:favoriteKeys}))
+      overviewPages.anchors.fill=null;overviewPages.height=620
+      for(var panelWidth of [328,520]) for(var mode of ["minimal","standard","large"]) {
+        overviewPages.width=panelWidth
+        Island.Preferences.values=Object.assign({},savedPreferences,{overviewLayout:[{id:"controls",visible:true,size:mode}]});wait(30)
+        var columns=mode==="minimal" ? 3 : 5,count=mode==="large" ? 10 : columns
+        var grid=findChild(overviewPages,"controlFavoritesGrid"),all=findChild(overviewPages,"controlAll")
+        check(all.iconText!=="" && all.text==="","All controls must be an inline arrow tile")
+        check(all.y===grid.y && all.x>=grid.x+grid.width,"Arrow tile is not beside favorites")
+        for(var i=0;i<favoriteKeys.length;i++) {
+          var favorite=findChild(overviewPages,"controlFavorite-"+favoriteKeys[i])
+          check(i<count ? !!favorite : !favorite,"Incorrect favorite count for "+mode)
+          if(favorite) {
+            check(favorite.x>=0 && favorite.x+favorite.width<=grid.width+1,"Favorite overflows a narrow panel")
+            check(Math.abs(favorite.y-Math.floor(i/columns)*(favorite.height+grid.rowSpacing))<1,"Favorites do not use the requested rows")
+          }
+        }
+        check(actions.layoutState.layout.favorites.length===favoriteKeys.length,"Changing size discarded saved favorites")
+        if(panelWidth===520 && Quickshell.env("ISLAND_CONTROLS_CAPTURE"))
+          grabImage(controlsWindow.contentItem).save(Quickshell.env("ISLAND_CONTROLS_CAPTURE")+"-"+mode+".png")
+      }
+      actions.layoutState.commit(Object.assign({},savedLayout,{favorites:[]}));wait(30)
+      check(findChild(overviewPages,"controlAll").visible,"Empty favorites hid access to all controls")
+      actions.layoutState.commit(savedLayout);Island.Preferences.values=savedPreferences
+      overviewPages.anchors.fill=controlsWindow.contentItem;wait(30)
       var previousDnd=service.doNotDisturb
       findChild(overviewPages,"controlFavorite-dnd").clicked()
       check(service.doNotDisturb!==previousDnd,"favorite quick control did not execute")
@@ -410,7 +437,7 @@ ShellRoot {
       check(overviewPages.controls,"Back skipped the full controls page")
       check(overviewPages.back(),"Controls did not return to summary")
       check(!overviewPages.controls && favorites.visible,"Controls did not restore Overview summary")
-      findChild(overviewPages,"controlAll").clicked();wait(30)
+      findChild(overviewPages,"controlAll").forceActiveFocus();keyClick(Qt.Key_Return);wait(30)
       check(overviewPages.controls && findChild(overviewPages,"controlOpen-settings").visible,"All controls did not open full controls")
       findChild(overviewPages,"controlCustomize").clicked();wait(30)
       check(findChild(overviewPages,"controlAddMenu").visible,"editing has no add button beside the gear")

@@ -52,13 +52,21 @@ Column {
     visible:!root.allSessions
     width:parent.width
     implicitHeight:Math.max(headingContent.implicitHeight,sectionTitle.implicitHeight)
-    SectionLink {id:sectionTitle;objectName:"t3OpenDetails";focusable:root.expanded && root.summaryMode;feedback:root.feedback;onClicked:root.expanded ? root.detailsRequested() : root.expandRequested();anchors.left:parent.left;width:root.summaryMode ? implicitWidth : parent.width;title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length);height:Design.compactControlHeight}
+    HoverHandler {id:headerHover}
+    SectionLink {
+      id:sectionTitle;objectName:"t3OpenDetails"
+      anchors.fill:parent
+      focusable:root.expanded && root.summaryMode;feedback:root.feedback
+      hasCursor:headerHover.hovered
+      title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length)
+      onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()
+    }
     Flow {
       id:headingContent
       objectName:"t3SummaryHeading"
       anchors.right:parent.right
       anchors.rightMargin:Design.gap.small
-      width:Math.max(0,parent.width-sectionTitle.width-Design.gap.small)
+      width:Math.max(0,parent.width-sectionTitle.implicitWidth-Design.gap.small)
       layoutDirection:Qt.RightToLeft
       spacing:Design.gap.small
       Repeater {

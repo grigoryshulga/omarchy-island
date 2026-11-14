@@ -6,6 +6,7 @@ const defs = ordered('overview');
 const defaults = model.layout(defs, []);
 assert.deepEqual(defaults.map(r => r.id), ['controls','media','battery','agentLimits','t3','notifications','downloads']);
 assert(defaults.every(r => r.visible && r.size === 'standard'));
+assert.deepEqual(model.supported(defs.find(r => r.id === 'controls')), ['minimal','standard','large']);
 let saved = model.update(defs, [], 'notifications', {visible:false,size:'compact'}, -1);
 const moved = defaults.findIndex(row => row.id === 'notifications') - 1;
 assert.equal(saved[moved].id, 'notifications');

@@ -20,6 +20,8 @@ Item {
   property var externalFeedback:null
   property bool active:false
   property bool favoriteMode:false
+  property string favoriteSize:"standard"
+  readonly property var favoriteTiles:ControlLayout.favoriteTiles(controlLayout,favoriteSize)
   property bool favoritesInteractive:true
   signal sectionRequested(string key)
   signal allRequested()
@@ -217,53 +219,60 @@ Item {
     _moduleWidgets:function(id){return root.bar && typeof root.bar.moduleWidgets==="function" ? root.bar.moduleWidgets(id) : []}
     _run:function(command){if(root.bar) root.bar.run(command)}
   }
-  ColumnLayout {
+  RowLayout {
     id:favorites
     objectName:"controlFavorites"
     anchors.left:parent.left;anchors.right:parent.right
     visible:root.favoriteMode
     spacing:Design.gap.tight
-    SectionLink {
-      objectName:"controlAll";Layout.fillWidth:true;title:root.strings.t("tabs.controls")
-      focusable:root.favoritesInteractive;feedback:root.externalFeedback
-      onClicked:root.allRequested()
-    }
-    Flickable {
+    GridLayout {
+      id:favoriteGrid
+      objectName:"controlFavoritesGrid"
       Layout.fillWidth:true
-      implicitHeight:Design.controlHeight
-      contentWidth:favoriteRow.implicitWidth;contentHeight:height
-      flickableDirection:Flickable.HorizontalFlick
-      boundsBehavior:Flickable.StopAtBounds;clip:true
-      RowLayout {
-        id:favoriteRow;height:parent.height;spacing:Design.gap.tight
-        Repeater {
-          model:root.controlLayout.favorites
-          FeedbackButton {
-            required property string modelData
-            objectName:"controlFavorite-"+modelData
-            implicitWidth:Design.controlHeight;implicitHeight:Design.controlHeight
-            iconText:(root.controlLayout.labels[modelData] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
-            tooltipText:root.controlTitle(modelData);focusable:true;feedback:root.externalFeedback
-            selected:root.controlState && root.controlState.enabledState(modelData)
-              || modelData==="dnd" && root.service && root.service.doNotDisturb
-              || modelData==="nightLight" && root.indicators && root.indicators.nightLight
-              || modelData==="stayAwake" && root.indicators && root.indicators.stayAwake
-              || modelData==="recording" && root.indicators && root.indicators.recording
-              || modelData==="microphone" && root.indicators && root.indicators.microphoneMuted
-            enabled:root.favoritesInteractive && modelData!=="remote" && (modelData!=="microphone" || !!root.microphone)
-            onClicked: {
-              if(ControlLayout.quickDefaults.indexOf(modelData)>=0) root.toggleMode(modelData)
-              else root.openSection(modelData)
-            }
-            onRightClicked: {
-              if(ControlLayout.quickDefaults.indexOf(modelData)>=0) clicked()
-              else if(root.controlState) root.controlState.toggle(modelData)
-            }
+      Layout.minimumWidth:0
+      columns:root.favoriteTiles.columns
+      rowSpacing:Design.gap.tight;columnSpacing:Design.gap.tight
+      Repeater {
+        model:root.favoriteTiles.keys
+        FeedbackButton {
+          required property string modelData
+          objectName:"controlFavorite-"+modelData
+          Layout.fillWidth:true;Layout.minimumWidth:0;Layout.preferredWidth:1
+          implicitHeight:Design.controlHeight
+          variant:"soft";horizontalPadding:0;iconSize:Design.type.iconLarge
+          iconText:(root.controlLayout.labels[modelData] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",settings:"󰒓",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[modelData] || "󰒓"
+          tooltipText:root.controlTitle(modelData);focusable:root.favoritesInteractive;feedback:root.externalFeedback
+          selected:root.controlState && root.controlState.enabledState(modelData)
+            || modelData==="dnd" && root.service && root.service.doNotDisturb
+            || modelData==="nightLight" && root.indicators && root.indicators.nightLight
+            || modelData==="stayAwake" && root.indicators && root.indicators.stayAwake
+            || modelData==="recording" && root.indicators && root.indicators.recording
+            || modelData==="microphone" && root.indicators && root.indicators.microphoneMuted
+          enabled:root.favoritesInteractive && modelData!=="remote" && (modelData!=="microphone" || !!root.microphone)
+          onClicked: {
+            if(ControlLayout.quickDefaults.indexOf(modelData)>=0) root.toggleMode(modelData)
+            else root.openSection(modelData)
+          }
+          onRightClicked: {
+            if(ControlLayout.quickDefaults.indexOf(modelData)>=0) clicked()
+            else if(root.controlState) root.controlState.toggle(modelData)
           }
         }
       }
     }
-
+    FeedbackButton {
+      objectName:"controlAll"
+      Layout.preferredWidth:Design.controlHeight
+      Layout.fillHeight:true
+      implicitHeight:Design.controlHeight
+      horizontalPadding:0;variant:"soft"
+      iconText:Commons.I18n.rightToLeft ? "󰁍" : "󰁔"
+      iconSize:Design.type.iconLarge
+      tooltipText:root.strings.t("controls.all")
+      focusable:root.favoritesInteractive;enabled:root.favoritesInteractive
+      feedback:root.externalFeedback
+      onClicked:root.allRequested()
+    }
   }
   ColumnLayout {
     id:landing

@@ -2,6 +2,11 @@
 var mainDefaults = ["audio", "bluetooth", "network", "tailscale", "monitors", "settings"]
 var favoriteDefaults = ["audio", "bluetooth", "network", "dnd", "nightLight"]
 var quickDefaults = ["microphone", "dnd", "nightLight", "stayAwake", "recording", "remote"]
+function favoriteTiles(data,size) {
+  var columns=size==="minimal" ? 3 : 5
+  var limit=size==="large" ? 10 : columns
+  return {columns:columns,keys:normalize(data).favorites.slice(0,limit)}
+}
 function safeKey(key) {
   return typeof key === "string" && (mainDefaults.concat(quickDefaults).indexOf(key) >= 0
     || /^plugin:[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/.test(key))

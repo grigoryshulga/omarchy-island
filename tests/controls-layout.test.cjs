@@ -5,6 +5,13 @@ const model = vm.createContext({});
 vm.runInContext(fs.readFileSync(require.resolve('../plugin/controls/Layout.js'), 'utf8'), model);
 const plain = x => JSON.parse(JSON.stringify(x));
 const initial = plain(model.normalize({}));
+const allFavorites = initial.main.concat(initial.quick);
+for (const [size, columns, count] of [['minimal',3,3],['standard',5,5],['large',5,10]]) {
+  const source = {...initial, favorites:allFavorites};
+  assert.deepEqual(plain(model.favoriteTiles(source,size)), {columns,keys:allFavorites.slice(0,count)});
+  assert.deepEqual(source.favorites, allFavorites, 'Changing presentation must preserve saved favorites');
+  assert.deepEqual(plain(model.favoriteTiles({...initial,favorites:[]},size)), {columns,keys:[]});
+}
 assert.equal(initial.main[5], 'settings');
 assert.deepEqual(plain(model.normalize({main:['network','network','../bad','plugin:good.control'], hidden:['settings','network']})), {
   main:['network','plugin:good.control','audio','bluetooth','tailscale','monitors','settings'],

@@ -29,6 +29,7 @@ Island.ModuleView {
     settings:root.presentation.settings;externalFeedback:root.presentation.feedback
     favoritesInteractive:root.presentation.expanded
     favoriteMode:!root.presentation.detail
+    favoriteSize:root.presentation.size || "standard"
     onSectionRequested:key=>{root.detailsRequested();Qt.callLater(function(){if(root.presentation.detail) content.openSection(key)})}
     onAllRequested:root.detailsRequested()
     active:root.presentation.active
