@@ -375,6 +375,7 @@ Additional checks for the affected feature:
 ```bash
 python3 tests/live-notifications.py --live-session # Explicitly changes the running Island instance
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
+python3 tests/hover.py                     # Offscreen clock hover, dismissal and re-entry
 python3 tests/panel-layout.py              # Wayland panel orientation, edge slots, indicators and compact OSD
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
 python3 tests/clock-layout.py              # Offscreen clock builder, dragging, focus and indicator lifecycle

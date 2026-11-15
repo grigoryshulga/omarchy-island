@@ -58,7 +58,6 @@ BarWidget {
   readonly property bool calendarMode:selectedPage===2
   readonly property bool weatherMode:selectedPage===3
   property bool hoverOpen: false
-  property bool hoverContentAvailable:false
   property string alertKind: ""
   property bool hoverSuppressed: false
   property date now: new Date()
@@ -114,9 +113,15 @@ BarWidget {
     Qt.callLater(function(){previewContent.openDetails(moduleId)})
   }
   function openControls() {openModuleDetails("controls")}
-  function toggleCalendar() { if (pinned && calendarMode) close(); else openCalendar() }
-  function close() { hoverSuppressed = true; pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop() }
-  function toggle() { pinned ? close() : open() }
+  function toggleCalendar() { if (pinned && calendarMode) close(true); else openCalendar() }
+  function close(suppressHover) {
+    // An outside dismissal has already left the hover region; waiting for
+    // another exit would swallow the next entry. Clock toggles explicitly
+    // suppress re-entry when the pinned surface was covering the clock.
+    hoverSuppressed = suppressHover === true || isHovered
+    pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop()
+  }
+  function toggle() { pinned ? close(true) : open() }
   function showT3Activity() {
     if(!service || !service.latestT3 || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
     if(service.t3TargetScreen && service.t3TargetScreen!==screenName) return
@@ -336,7 +341,9 @@ BarWidget {
     triggerMode: root.pinned ? "click" : "hover"
     centerOnBar: false
     alignmentItem: clockLabel
-    open: root.pinned || (root.hoverOpen && root.hoverContentAvailable) || (root.showAlert && !root.stripNotification)
+    // The hover header is always present. Open before measuring its layout;
+    // a hidden surface cannot polish the first preview's content height.
+    open: root.pinned || root.hoverOpen || (root.showAlert && !root.stripNotification)
     frameless: root.notificationToast || bareCard
     bareCard: (root.alertKind==="t3" || root.alertKind==="herdr" || root.alertKind==="media") && !root.pinned && !root.hoverOpen
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}
@@ -403,7 +410,6 @@ BarWidget {
     BrailleFeedback {id:panelFeedback;surface:panelGlow;effect:panelGlow;hover:null}
     PopupPages {
       id: previewContent
-      onImplicitHeightChanged:Qt.callLater(function(){root.hoverContentAvailable=previewContent.implicitHeight>0})
       objectName:"islandPopupPages"
       maximumOverviewHeight:Math.max(1,Math.min(Style.space(640),preview.availableHeight-preview.insetTop-preview.insetBottom))
       keyboardActive:root.pinned && preview.open
