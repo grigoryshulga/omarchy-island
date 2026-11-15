@@ -464,6 +464,10 @@ ShellRoot {
       tryVerify(function(){return overviewControl.item && overviewControl.item.opened},4000)
       check(overviewPages.controls && overviewPages.selectedPage===1,"favorite panel did not open within Overview")
       check(!findChild(overviewPages,"overviewBack").visible && findChild(overviewPages,"controlBack").visible,"native detail still has duplicate outer navigation")
+      var panelViewport=findChild(overviewControl.item,"inlinePanelViewport")
+      var overviewViewport=findChild(overviewPages,"overviewScroll")
+      var panelBottom=panelViewport.mapToItem(overviewViewport,0,panelViewport.height).y
+      check(Math.abs(panelBottom-overviewViewport.height)<1,"native panel clips before the Overview bottom: "+panelBottom+" < "+overviewViewport.height)
       findChild(overviewPages,"controlBack").clicked();wait(30)
       check(!overviewPages.controls && favorites.visible,"Controls did not restore Overview summary")
       check(favoriteAudio.activeFocus,"Direct panel Back lost its favorite focus")

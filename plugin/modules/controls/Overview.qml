@@ -3,7 +3,7 @@ import "../.." as Island
 Island.ModuleView {
   id:root
   available:!!presentation && (presentation.expanded || presentation.hovering) && !!backend
-  implicitHeight:presentation.detail ? Math.max(content.implicitHeight,presentation.pageHeight-Island.Design.controlHeight-Island.Design.gap.section) : content.implicitHeight
+  implicitHeight:presentation.detail ? Math.max(content.implicitHeight,presentation.pageHeight) : content.implicitHeight
   readonly property bool editing:content.editing
   readonly property bool inPanel:content.section!==""
   readonly property bool adding:content.adding
