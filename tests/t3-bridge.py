@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Local fake T3 server: real HTTP/WebSocket, credentials, responses and reconnects."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import base64
@@ -577,9 +578,7 @@ class IntegrationTests(unittest.TestCase):
         env=dict(os.environ,T3CODE_HOME=str(self.root),HOME=str(self.root/'home'),CLI_LOG=str(self.root/'cli.log'),
                  PATH=str(self.root/'bin')+os.pathsep+os.environ['PATH'],QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
         result=subprocess.run(['dbus-run-session','--','qs','-p',str(self.root),'--no-color'],env=env,capture_output=True,text=True,timeout=15)
-        output=result.stdout+result.stderr
-        self.assertIn('T3_ROUNDTRIP_PASS',output,output)
-        self.assertFalse(any(s in output for s in ['TypeError:','ReferenceError:','Binding loop','FAIL!','T3_ROUNDTRIP_FAIL']),output)
+        assert_qml_pass(result, 'T3_ROUNDTRIP_PASS')
         self.assertEqual(len(self.server.writes),1)
         self.assertEqual(self.server.writes[0]['requestId'],NATIVE_REQUEST_ID)
         self.assertEqual(self.server.writes[0]['answers'],{'q1':['local']})

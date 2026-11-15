@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise battery UI and native command protocol without changing system power."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os,subprocess,tempfile,json
@@ -28,5 +29,5 @@ else:
     except subprocess.TimeoutExpired as error:
         print((error.stdout or b'').decode());raise
     print(r.stdout)
-    assert 'BATTERY_PASS' in r.stdout and not any(x in r.stdout for x in ['BATTERY_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign','FAIL!']),r.stdout
+    assert_qml_pass(r, 'BATTERY_PASS')
     assert [json.loads(line) for line in helper.with_suffix('.log').read_text().splitlines()]==[['battery','performance'],['ac','power-saver']]

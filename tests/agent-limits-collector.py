@@ -3,6 +3,10 @@ ensure()
 import importlib.util
 import importlib.machinery
 import json
+import io
+import os
+from contextlib import closing
+from urllib.error import HTTPError
 import tempfile
 import unittest
 from pathlib import Path
@@ -86,17 +90,6 @@ class ProviderParsingTests(unittest.TestCase):
         rates = {"model": {"input": 1, "output": 2, "cacheRead": 0.1, "cacheWrite": 1.25}}
         self.assertAlmostEqual(MODULE.price_model("model", usage, rates), 4.35)
 
-    def test_error_preserves_remote_limits_but_not_credentials(self):
-        fresh = MODULE.empty_provider("zai")
-        previous = MODULE.empty_provider("zai")
-        previous["limits"] = [{"label": "Weekly", "percent": 40}]
-        previous["syncedAt"] = 123
-        MODULE.preserve_on_error(fresh, previous, "network unavailable")
-        self.assertEqual(fresh["limits"], previous["limits"])
-        self.assertTrue(fresh["stale"])
-        serialized = json.dumps(fresh)
-        self.assertNotIn("Authorization", serialized)
-        self.assertNotIn("secret", serialized)
 
 
 class CredentialTests(unittest.TestCase):
@@ -638,7 +631,10 @@ class ProviderSettingsTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for name, path in (("CONFIG", "config.json"), ("CACHE", "data.json"), ("LIVE_LIMITS_STATE", "live.json")):
+        for name, path in (("CONFIG", "config.json"), ("CACHE", "private/data.json"), ("LIVE_LIMITS_STATE", "live.json"),
+                           ("DATA_HOME", "data"), ("AGENT_RECORDS", "records"), ("PI_SESSIONS", "pi"),
+                           ("CLAUDE_PROJECTS", "claude/projects"), ("CODEX_SESSIONS", "codex"),
+                           ("CLAUDE_CONFIG", "claude"), ("RUNTIME_DIR", "runtime")):
             patcher = patch.object(MODULE, name, self.root / path)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -707,33 +703,22 @@ class ProviderSettingsTests(unittest.TestCase):
             MODULE.configure_provider("zai", "disable")
         self.assertEqual(MODULE.CONFIG.read_text(), "{broken")
 
-    def test_disabled_providers_make_no_credential_or_native_probe(self):
-        MODULE.atomic_json(MODULE.CONFIG, {"providers": {p: {"enabled": False} for p in MODULE.PROVIDERS}})
-        config = MODULE.load_config()
-        with patch.object(MODULE, "auth_file_key") as auth, patch.object(MODULE, "subprocess") as bws:
-            self.assertEqual(MODULE.credentials(config), ({}, {}))
-            auth.assert_not_called()
-            bws.assert_not_called()
-        buckets = {p: {} for p in MODULE.PROVIDERS}
-        with patch.object(MODULE, "opencode_ledger", return_value=buckets), \
-             patch.object(MODULE, "pi_ledger", return_value={}), \
-             patch.object(MODULE, "claude_ledger", return_value={}), \
-             patch.object(MODULE, "codex_ledger", return_value={}), \
-             patch.object(MODULE, "native_provider") as native:
+    def test_disabled_providers_make_no_external_requests(self):
+        MODULE.CONFIG.write_text(json.dumps({"providers": {p: {"enabled": False} for p in MODULE.PROVIDERS}}))
+        with patch.object(MODULE.subprocess, "run") as run, \
+             patch.object(MODULE.subprocess, "Popen") as popen, \
+             patch.object(MODULE.urllib.request, "build_opener") as http:
             self.assertEqual(MODULE.sync()["providers"], [])
-            native.assert_not_called()
+            run.assert_not_called()
+            popen.assert_not_called()
+            http.assert_not_called()
 
     def test_sync_uses_saved_order_and_omits_disabled_cards(self):
-        MODULE.atomic_json(MODULE.CONFIG, {"providerOrder": ["codex", "claude"],
-            "providers": {p: {"enabled": p in ("claude", "codex")} for p in MODULE.PROVIDERS}})
-        with patch.object(MODULE, "opencode_ledger", return_value={}), \
-             patch.object(MODULE, "pi_ledger", return_value={}), \
-             patch.object(MODULE, "claude_ledger", return_value={}), \
-             patch.object(MODULE, "codex_ledger", return_value={}), \
-             patch.object(MODULE, "credentials", return_value=({}, {})), \
-             patch.object(MODULE, "native_provider", side_effect=lambda p, *args: MODULE.empty_provider(p)):
-            result = MODULE.sync()
-        self.assertEqual([p["id"] for p in result["providers"]], ["codex", "claude"])
+        MODULE.CONFIG.write_text(json.dumps({"providerOrder": ["gemini", "openai-api"],
+            "providers": {p: {"enabled": p in ("gemini", "openai-api")} for p in MODULE.PROVIDERS}}))
+        result = MODULE.sync()
+        self.assertEqual([p["id"] for p in result["providers"]], ["gemini", "openai-api"])
+        self.assertEqual(json.loads(MODULE.CACHE.read_text()), result)
 
 
 class CatalogCollectorTests(unittest.TestCase):
@@ -834,36 +819,63 @@ class CatalogConnectionTests(unittest.TestCase):
 class CatalogIntegrationTests(unittest.TestCase):
     setUp = ProviderSettingsTests.setUp
 
-    def test_probe_caches_success_and_honors_retry_after(self):
-        result = ([MODULE.limit_row("Weekly", 25, "")], [], "Code")
-        with patch.object(MODULE, "collect_catalog_provider", return_value=result) as collect:
-            MODULE.catalog_probe("kimi-code", "test-key")
-            MODULE.catalog_probe("kimi-code", "test-key")
-            collect.assert_called_once()
-        with patch.object(MODULE, "collect_catalog_provider", side_effect=MODULE.SyncError("rate limited", 1200)) as collect:
-            for _ in range(2):
-                with self.assertRaises(MODULE.SyncError):
-                    MODULE.catalog_probe("minimax", "test-key")
-            collect.assert_called_once()
-        self.assertGreater(MODULE.live_limits_state()["catalog:minimax:global"]["retryAt"], time.time() + 1190)
+    def test_sync_caches_quota_backs_off_and_recovers_without_leaking_credentials(self):
+        MODULE.CONFIG.write_text(json.dumps({"providers": {p: {"enabled": p == "openrouter"} for p in MODULE.PROVIDERS}}))
+        auth = MODULE.DATA_HOME / "opencode/auth.json"
+        auth.parent.mkdir(parents=True)
+        auth.write_text(json.dumps({"openrouter": {"key": "PRIVATE_TEST_KEY"}}))
+        # The session runner uses 077; that would hide missing permission fixes.
+        previous_umask = os.umask(0o022)
+        self.addCleanup(os.umask, previous_umask)
+        now = 1_800_000_000
+        with patch.object(MODULE.time, "time", return_value=now) as clock, \
+             patch.object(MODULE.urllib.request, "build_opener") as opener:
+            http = opener.return_value.open
+            http.side_effect = lambda *a, **kw: io.BytesIO(b'{"data":{"usage":2.5,"limit":10,"limit_remaining":7.5}}')
+            fresh = MODULE.sync()
+            provider = fresh["providers"][0]
+            self.assertEqual(provider["limits"][0]["percent"], 25)
+            self.assertEqual(provider["limitsSource"], "live")
+            self.assertFalse(provider["stale"])
+            self.assertEqual(json.loads(MODULE.CACHE.read_text()), fresh)
+            self.assertNotIn("PRIVATE_TEST_KEY", json.dumps(fresh))
+            self.assertEqual(MODULE.CACHE.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(MODULE.CACHE.parent.stat().st_mode & 0o777, 0o700)
+            request = http.call_args.args[0]
+            self.assertEqual(request.full_url, "https://openrouter.ai/api/v1/key")
+            self.assertEqual(request.get_header("Authorization"), "Bearer PRIVATE_TEST_KEY")
+            clock.return_value = now + 60
+            cached = MODULE.sync()["providers"][0]
+            self.assertEqual(cached["limits"], provider["limits"])
+            self.assertEqual(cached["limitsCheckedAt"], provider["limitsCheckedAt"])
+            self.assertEqual(http.call_count, 1, "Fresh quota caused another HTTP request")
 
-    def test_sync_integrates_new_quota_and_keeps_it_on_failure(self):
-        MODULE.atomic_json(MODULE.CONFIG, {"providers": {p: {"enabled": p == "openrouter"} for p in MODULE.PROVIDERS}})
-        result = ([MODULE.limit_row("Key budget (USD)", 25, "")], [], "API")
-        with patch.object(MODULE, "opencode_ledger", return_value={p: MODULE.empty_harness_ledger() for p in MODULE.API_PROVIDERS}), \
-             patch.object(MODULE, "pi_ledger", return_value={}), \
-             patch.object(MODULE, "claude_ledger", return_value={}), \
-             patch.object(MODULE, "codex_ledger", return_value={}), \
-             patch.object(MODULE, "credentials", return_value=({"openrouter": "test-key"}, {})), \
-             patch.object(MODULE, "catalog_probe", return_value=result) as collect:
-            fresh = MODULE.sync()["providers"][0]
-            self.assertEqual(fresh["limits"][0]["percent"], 25)
-            self.assertEqual(fresh["limitsSource"], "live")
-            collect.side_effect = MODULE.SyncError("rate limited")
+            # An old/foreign cache may contain credentials; only display data may
+            # survive a failed refresh. The input must actually contain the secret.
+            fresh["providers"][0]["token"] = "PRIVATE_OLD_TOKEN"
+            fresh["providers"][0]["Authorization"] = "Bearer PRIVATE_OLD_TOKEN"
+            MODULE.CACHE.write_text(json.dumps(fresh))
+            clock.return_value = now + 301
+            http.side_effect = HTTPError(request.full_url, 429, "rate limited", {"Retry-After": "1200"}, None)
             stale = MODULE.sync()["providers"][0]
-            self.assertEqual(stale["limits"][0]["percent"], 25)
+            self.assertEqual(stale["limits"], provider["limits"])
             self.assertTrue(stale["stale"])
-            self.assertNotIn("test-key", MODULE.CACHE.read_text())
+            self.assertTrue(stale["error"])
+            self.assertEqual(http.call_count, 2)
+            for secret in ("PRIVATE_TEST_KEY", "PRIVATE_OLD_TOKEN", "Authorization"):
+                self.assertNotIn(secret, MODULE.CACHE.read_text())
+
+            # Past the default backoff, but still inside the server's Retry-After.
+            clock.return_value = now + 1000
+            self.assertTrue(MODULE.sync()["providers"][0]["stale"])
+            self.assertEqual(http.call_count, 2, "Retry-After was ignored")
+            clock.return_value = now + 1502
+            http.side_effect = lambda *a, **kw: io.BytesIO(b'{"data":{"usage":5,"limit":10,"limit_remaining":5}}')
+            recovered = MODULE.sync()["providers"][0]
+            self.assertEqual(http.call_count, 3)
+            self.assertEqual(recovered["limits"][0]["percent"], 50)
+            self.assertFalse(recovered["stale"])
+            self.assertEqual(recovered["error"], "")
 
     def test_api_ledger_attribution_excludes_subscription_harnesses(self):
         helpers = PiLedgerTests()
@@ -878,7 +890,7 @@ class CatalogIntegrationTests(unittest.TestCase):
         import sqlite3
         database = self.root / "opencode/opencode.db"
         database.parent.mkdir()
-        with sqlite3.connect(database) as connection:
+        with closing(sqlite3.connect(database)) as connection, connection:
             connection.execute("CREATE TABLE message (data TEXT, time_created INTEGER)")
             for provider in ("openrouter", "kimi-for-coding", "moonshotai", "minimax-coding-plan", "openai", "google", "openai-codex", "google-gemini-cli"):
                 message = {"role": "assistant", "providerID": provider, "modelID": "unknown", "tokens": {"input": 100}, "cost": 0.1}
@@ -901,14 +913,6 @@ class IslandAggregateTests(unittest.TestCase):
         self.assertTrue(day["priced"])
         self.assertEqual(day["unpricedTokens"], 40)
         self.assertEqual(day["cost"], 1.0)
-
-    def test_snapshot_permissions(self):
-        with tempfile.TemporaryDirectory() as directory:
-            cache = Path(directory) / "private/data.json"
-            with patch.object(MODULE, "CACHE", cache):
-                MODULE.atomic_json(cache, {"providers": []})
-            self.assertEqual(cache.stat().st_mode & 0o777, 0o600)
-            self.assertEqual(cache.parent.stat().st_mode & 0o777, 0o700)
 
 if __name__ == "__main__":
     unittest.main()

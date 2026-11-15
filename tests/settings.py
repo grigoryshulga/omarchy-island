@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Wayland: check settings against an isolated fake shell; no session changes."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -18,5 +19,4 @@ with tempfile.TemporaryDirectory(prefix='island-settings-') as temporary:
     result = subprocess.run(['qs', '-p', str(root), '--no-color'], env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=15)
     print(result.stdout)
-    assert 'SETTINGS_PASS' in result.stdout and not any(marker in result.stdout for marker in
-        ['SETTINGS_FAIL', 'ReferenceError:', 'TypeError:', 'Binding loop', 'Cannot assign', 'Unable to assign']), result.stdout
+    assert_qml_pass(result, 'SETTINGS_PASS')

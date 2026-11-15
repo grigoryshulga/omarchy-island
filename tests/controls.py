@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise inline native panels without changing radios, devices or connections."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os,subprocess,tempfile,json,stat
@@ -59,5 +60,5 @@ Panel {
             assert stat.S_IMODE(state.stat().st_mode)==0o600
             assert stat.S_IMODE(state.parent.stat().st_mode)==0o700
             restored=subprocess.run(['qs','-p',str(root),'--no-color'],env=dict(run_env,ISLAND_TEST_RESTORE='1'),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=10)
-            assert 'CONTROLS_PASS' in restored.stdout and 'CONTROLS_FAIL' not in restored.stdout,restored.stdout
-        assert 'CONTROLS_PASS' in result.stdout and not any(x in result.stdout for x in ['CONTROLS_FAIL','FAIL!','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign']),result.stdout
+            assert_qml_pass(restored, 'CONTROLS_PASS')
+        assert_qml_pass(result, 'CONTROLS_PASS')

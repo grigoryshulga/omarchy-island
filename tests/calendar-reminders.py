@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Real calendar and reminder service against an isolated native CLI substitute."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import json
@@ -32,7 +33,6 @@ state.write_text(json.dumps(rows))
         QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software'),capture_output=True,text=True,timeout=14)
     output=result.stdout+result.stderr
     print(output)
-    assert 'CALENDAR_REMINDERS_PASS' in output and not any(marker in output for marker in
-        ('CALENDAR_REMINDERS_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign'))
+    assert_qml_pass(result, 'CALENDAR_REMINDERS_PASS')
     calls=[json.loads(line) for line in (root/'calls.jsonl').read_text().splitlines()]
     assert calls==[['5','literal $(touch /tmp/island-never); <b>'],['clear']],calls

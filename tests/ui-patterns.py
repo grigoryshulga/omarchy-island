@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Capabilities: offscreen. Actual SDK compositions and keyboard/theme states."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import shutil
@@ -24,9 +25,7 @@ with ModuleHarness() as harness:
                             capture_output=True, text=True, timeout=20)
     output = result.stdout + result.stderr
     print(output)
-    assert result.returncode == 0 and 'PATTERNS_CAPTURE_PASS' in output
-    assert not any(error in output for error in ('ERROR:', 'PATTERNS_CAPTURE_FAIL', 'TypeError:',
-                   'ReferenceError:', 'Binding loop', 'Cannot assign', 'Unable to assign'))
+    assert_qml_pass(result, 'PATTERNS_CAPTURE_PASS')
     assert len(list(captures.glob('*.png'))) == 10
     for name, expected_width in [('dark-ready', 740), ('narrow-large', 380)]:
         data = (captures / (name + '.png')).read_bytes()

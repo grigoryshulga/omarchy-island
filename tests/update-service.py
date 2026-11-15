@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check the native update probe's exit-code contract without checking packages."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -59,5 +60,4 @@ ShellRoot {
         raise
     output = run.stdout + run.stderr
     print(output)
-    assert 'UPDATE_SERVICE_PASS' in output and not any(message in output for message in
-           ['FAIL!', 'ReferenceError:', 'TypeError:', 'Unable to assign']), output
+    assert_qml_pass(run, 'UPDATE_SERVICE_PASS')

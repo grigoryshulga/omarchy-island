@@ -225,7 +225,6 @@ ShellRoot {
       var fadedWake=grabImage(spot),fadedLight=0
       for(var y=65;y<95;y++) for(var x=45;x<95;x++) fadedLight+=fadedWake.red(x,y)
       check(fadedLight<wakeLight*0.15,"cursor trail did not fade away")
-      check(!findChild(spot,"spotlightTrailClock").running,"settled cursor kept the path timer running")
       // The real pointer path triggers a two-sided split at the right rim.
       spot.pointer=Qt.point(254,80);wait(200)
       check(spot.edgeProgress<0.8,"approaching the rim did not scatter pixels")

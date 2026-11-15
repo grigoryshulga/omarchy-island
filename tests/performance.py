@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Exercise calendar navigation in real QML; report timings and guard reuse/focus."""
+"""Exercise calendar navigation in real QML; report timings and guard focus/current data."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import argparse
@@ -38,7 +39,4 @@ with tempfile.TemporaryDirectory(prefix="island-performance-") as temporary:
         print((error.stdout or b"").decode())
         raise
     print(result.stdout)
-    assert "PERFORMANCE_PASS" in result.stdout and not any(
-        error in result.stdout for error in ["FAIL!", "ReferenceError:", "TypeError:",
-                                            "Binding loop", "Cannot assign", "Unable to assign"]
-    ), result.stdout
+    assert_qml_pass(result, 'PERFORMANCE_PASS')

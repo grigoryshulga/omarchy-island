@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Send real window key events through the four pages and native controls."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os,subprocess,tempfile
@@ -20,4 +21,4 @@ with tempfile.TemporaryDirectory(prefix='island-keyboard-') as temporary:
     except subprocess.TimeoutExpired as error:
         print((error.stdout or b'').decode());raise
     print(r.stdout)
-    assert 'KEYBOARD_PASS' in r.stdout and not any(x in r.stdout for x in ['KEYBOARD_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign','FAIL!']),r.stdout
+    assert_qml_pass(r, 'KEYBOARD_PASS')

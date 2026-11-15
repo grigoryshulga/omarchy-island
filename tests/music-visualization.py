@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check live settings, shader inputs and audio-consumer lifecycle without a GPU."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -18,6 +19,4 @@ with tempfile.TemporaryDirectory(prefix='island-music-') as temporary:
                             capture_output=True, text=True, timeout=10)
     output = result.stdout + result.stderr
     print(output)
-    assert 'MUSIC_VISUALIZATION_PASS' in output and not any(marker in output for marker in
-        ['MUSIC_VISUALIZATION_FAIL', 'ReferenceError:', 'TypeError:', 'Binding loop',
-         'Cannot assign', 'Unable to assign']), output
+    assert_qml_pass(result, 'MUSIC_VISUALIZATION_PASS')

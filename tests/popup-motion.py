@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os,pathlib,subprocess,tempfile
@@ -11,4 +12,4 @@ with tempfile.TemporaryDirectory(prefix='island-motion-') as tmp:
     env=os.environ.copy();env['QT_QPA_PLATFORM']='wayland'
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=16)
     print(result.stdout)
-    if 'ISLAND_MOTION_PASS' not in result.stdout or any(marker in result.stdout for marker in ['ISLAND_MOTION_FAIL','ReferenceError:','TypeError:','FAIL!']): raise SystemExit(1)
+    assert_qml_pass(result, 'ISLAND_MOTION_PASS')

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os, subprocess, tempfile
@@ -21,5 +22,4 @@ with tempfile.TemporaryDirectory(prefix='island-dictation-state-') as temporary:
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,
                           stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=10)
     print(result.stdout)
-    assert 'DICTATION_STATE_PASS' in result.stdout and not any(s in result.stdout for s in
-        ['DICTATION_STATE_FAIL','ReferenceError:','TypeError:','Binding loop']),result.stdout
+    assert_qml_pass(result, 'DICTATION_STATE_PASS')

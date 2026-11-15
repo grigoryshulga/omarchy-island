@@ -1,6 +1,4 @@
 const assert = require('node:assert/strict');
-const {readFileSync,readdirSync} = require('node:fs');
-const {join} = require('node:path');
 const tokens = require('../plugin/DesignTokens.js');
 
 // A bad theme must not produce unreadable normal text or selected text.
@@ -17,14 +15,9 @@ const themeAccent=[0.62,0.72,1,1], dark=[0.04,0.05,0.08,1];
 assert.deepEqual(tokens.readable(themeAccent,dark,4.5),themeAccent,'Legible theme colors must not change');
 assert.ok(tokens.contrast([0,0,0,1],[1,1,1,1])===21);
 
-// Architectural guard: a new screen cannot silently bring separator chrome back.
-for(const file of readdirSync(join(__dirname,'../plugin')).filter(name=>name.endsWith('.qml'))) {
-  const source=readFileSync(join(__dirname,'../plugin',file),'utf8');
-  assert.ok(!/\bPanelSeparator\s*\{/.test(source),`${file} introduces a decorative separator`);
-}
-console.log('Design palette and no-divider checks passed');
 
 const palette=require('../plugin/ThemePaletteModel.js');
 assert.deepEqual(palette.parse('color1 = "#ee0000"\ncolor2 = "#00ee00"\ncolor3 = "#eeee00"\ncolor4 = "#0000ee"'),{red:'#ee0000',green:'#00ee00',yellow:'#eeee00',blue:'#0000ee'});
 assert.deepEqual(palette.parse('blue = "#4488ff"\ncolor4 = "#0000ee"\ngreen = "#44ee88" # comment'),{blue:'#4488ff',green:'#44ee88'});
 assert.deepEqual(palette.parse('blue = "not a color"\nred = "#12345678"'),{});
+console.log('Design contrast and theme palette checks passed');

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check the weather layout in an isolated process; optionally capture GPU frames."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -40,6 +41,4 @@ __attribute__((constructor)) static void format() {
             env['ISLAND_WEATHER_CAPTURE']=str(capture)
         result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=15)
         print(result.stdout)
-        assert 'WEATHER_SUMMARY_PASS' in result.stdout and not any(marker in result.stdout for marker in (
-            'WEATHER_SUMMARY_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign',
-            'Unable to assign','recursive rearrange','FAIL!','Failed to build graphics pipeline')),result.stdout
+        assert_qml_pass(result, 'WEATHER_SUMMARY_PASS')

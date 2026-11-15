@@ -68,15 +68,7 @@ assert.deepEqual(M.movePin(pinIds,id,1),[pinIds[1],id,pinIds[2]]);
 for(const [target,step] of [[id,-1],[pinIds[2],1],['missing',1],[id,2]])
   assert.deepEqual(M.movePin(pinIds,target,step),pinIds);
 assert.equal(pinIds[0],id,'moving pins mutated preferences');
-// A reordered snapshot must preserve surviving delegates, while removed windows disappear.
-const entries=[{id:'a'},{id:'b'}],first=entries[0];
-const list={get count(){return entries.length},get:i=>entries[i],remove:i=>entries.splice(i,1),append:item=>entries.push(item)};
-M.syncIdentities(list,['b','a','c'],'id');
-assert.deepEqual(entries.map(x=>x.id),['a','b','c']);
-assert.equal(entries[0],first);
-M.syncIdentities(list,['c','a'],'id');
-assert.deepEqual(entries.map(x=>x.id),['a','c']);
-console.log('PASS: Limits freshness, balances, pin ordering and stable identities.');
+console.log('PASS: Limits freshness, balances and pin ordering.');
 
 const U=require('../plugin/AgentUsageModel.js');
 const usageNow=new Date(2026,10,14,12).getTime();

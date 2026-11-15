@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check actual popup theme bindings without opening windows or sending input."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -19,5 +20,4 @@ with tempfile.TemporaryDirectory(prefix='island-popup-theme-') as temporary:
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, timeout=8)
     print(result.stdout)
-    assert 'POPUP_THEME_PASS' in result.stdout and not any(marker in result.stdout for marker in
-        ('POPUP_THEME_FAIL', 'ReferenceError:', 'TypeError:', 'Cannot assign', 'Unable to assign'))
+    assert_qml_pass(result, 'POPUP_THEME_PASS')

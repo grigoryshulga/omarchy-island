@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """QML → stdin protocol → real storage/parser, with only HTTP replaced."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -37,6 +38,5 @@ print(json.dumps(data.operate(request)))
         capture_output=True, text=True, timeout=35)
     output = result.stdout + result.stderr
     print(output)
-    assert 'CALENDAR_SUBSCRIPTIONS_PASS' in output and not any(marker in output for marker in
-        ('CALENDAR_SUBSCRIPTIONS_FAIL', 'ReferenceError:', 'TypeError:', 'Binding loop', 'Cannot assign', 'Unable to assign', 'FAIL!'))
+    assert_qml_pass(result, 'CALENDAR_SUBSCRIPTIONS_PASS')
     assert 'private-token' not in output

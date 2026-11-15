@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify real theme bindings and editor state in an isolated QML process."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -16,5 +17,4 @@ with tempfile.TemporaryDirectory(prefix='island-design-test-') as temporary:
     env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=10)
     print(result.stdout)
-    assert 'DESIGN_PASS' in result.stdout and not any(x in result.stdout for x in
-        ('DESIGN_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign','FAIL!')),result.stdout
+    assert_qml_pass(result, 'DESIGN_PASS')

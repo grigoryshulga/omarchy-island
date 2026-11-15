@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Offscreen QML forms with a fake bridge; no access to the user's T3 server."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import json
@@ -41,7 +42,7 @@ for line in sys.stdin:
              T3_FIXTURE=str(root/'fixture.json'),T3_RESPONSES=str(root/'responses.jsonl'),QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
     result=subprocess.run(['dbus-run-session','--','qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=24)
     print(result.stdout)
-    assert 'T3_QML_PASS' in result.stdout and not any(s in result.stdout for s in ['FAIL!', 'T3_QML_FAIL','TypeError:','ReferenceError:','Binding loop','Cannot assign','Unable to assign']),result.stdout
+    assert_qml_pass(result, 'T3_QML_PASS')
     assert '[Island T3]' in result.stdout and 'TEST_SECRET' not in result.stdout
     replies=[json.loads(line) for line in (root/'responses.jsonl').read_text().splitlines()]
     assert len(replies)==1,replies
@@ -50,4 +51,4 @@ for line in sys.stdin:
     (root/'shell.qml').write_text((project/'tests/T3Diagnostics.qml').read_text())
     result=subprocess.run(['dbus-run-session','--','qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=12)
     print(result.stdout)
-    assert 'T3_DIAGNOSTICS_PASS' in result.stdout and not any(s in result.stdout for s in ['FAIL!', 'T3_DIAGNOSTICS_FAIL','TypeError:','ReferenceError:','Binding loop','Cannot assign','Unable to assign']),result.stdout
+    assert_qml_pass(result, 'T3_DIAGNOSTICS_PASS')

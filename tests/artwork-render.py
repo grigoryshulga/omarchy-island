@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Compare actual shader frames, including a silent audio monitor."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -31,4 +32,4 @@ __attribute__((constructor)) static void format() {
     env['LD_PRELOAD']=str(library)+((':'+env['LD_PRELOAD']) if env.get('LD_PRELOAD') else '')
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=25)
     print(result.stdout)
-    if 'ARTWORK_FRAMES_PASS' not in result.stdout or any(x in result.stdout for x in ['ARTWORK_FRAMES_FAIL','ReferenceError:','TypeError:','Failed to build graphics pipeline']):raise SystemExit(1)
+    assert_qml_pass(result, 'ARTWORK_FRAMES_PASS')

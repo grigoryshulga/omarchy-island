@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Real QML state/collector contract and keyboard UI with isolated, aggregate-only fixtures."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os, subprocess, tempfile
@@ -27,7 +28,7 @@ else:
     env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software',ISLAND_LIMITS_HELPER=str(helper),ISLAND_LIMITS_CACHE=str(root/'cache.json'),ISLAND_LIMITS_LOG=str(root/'calls.jsonl'))
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=15)
     print(result.stdout)
-    assert 'LIMITS_PASS' in result.stdout and not any(x in result.stdout for x in ['LIMITS_FAIL','ReferenceError:','TypeError:','Binding loop','Cannot assign','Unable to assign','FAIL!'])
+    assert_qml_pass(result, 'LIMITS_PASS')
     assert (root/'calls.jsonl').exists()
 
 from module_harness import ModuleHarness

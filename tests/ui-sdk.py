@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Capabilities: offscreen. Public SDK, copyable template and fake-host behavior."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import json
@@ -46,10 +47,7 @@ with ModuleHarness() as harness:
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, timeout=15)
     print(result.stdout)
-    assert result.returncode == 0 and 'DESIGN_CAPTURE_PASS' in result.stdout
-    assert not any(error in result.stdout for error in
-                   ('ERROR:', 'TypeError:', 'ReferenceError:', 'Binding loop',
-                    'Cannot assign', 'Unable to assign'))
+    assert_qml_pass(result, 'DESIGN_CAPTURE_PASS')
     assert {path.name for path in captures.glob('*.png')} == {'dark.png', 'light.png', 'mono.png'}
 
 with ModuleHarness() as harness:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Recover the real media collector after a failed helper, on private MPRIS."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -115,8 +116,7 @@ ShellRoot {
                                 capture_output=True, text=True, timeout=11)
         output = result.stdout + result.stderr
         print(output)
-        assert 'AUDIO_RECOVERY_PASS' in output and not any(marker in output for marker in
-            ['AUDIO_RECOVERY_FAIL', 'FAIL!', 'ReferenceError:', 'TypeError:', 'Binding loop']), output
+        assert_qml_pass(result, 'AUDIO_RECOVERY_PASS')
         assert attempts.read_text() == '3', 'Collector restarted while hidden or reduced motion was active'
         starts = [float(value) for value in attempts.with_suffix('.times').read_text().splitlines()]
         assert starts[2] - starts[1] >= 1.8, 'Consecutive failures retried without backoff'

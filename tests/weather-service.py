@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Real QML weather service with a deterministic provider and an isolated home."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -52,6 +53,6 @@ ShellRoot {
     env=dict(os.environ,HOME=str(home),QT_QPA_PLATFORM='offscreen',QT_QUICK_BACKEND='software')
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,capture_output=True,text=True,timeout=6)
     output=result.stdout+result.stderr
-    assert 'WEATHER_SERVICE_PASS' in output and 'WEATHER_SERVICE_FAIL' not in output,output
+    assert_qml_pass(result, 'WEATHER_SERVICE_PASS')
     assert (state/'weather.json').is_file(),'Weather cache missing'
 print('PASS: weather startup, native city changes, disabled networking and last-good data on failure.')

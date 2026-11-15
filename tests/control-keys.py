@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify display reorder key dispatch without changing any real displays."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -19,5 +20,4 @@ with tempfile.TemporaryDirectory(prefix='island-control-keys-') as directory:
         env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QT_QUICK_BACKEND='software'),
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=10)
     print(result.stdout)
-    assert result.returncode == 0 and 'CONTROL_KEYS_PASS' in result.stdout
-    assert not any(value in result.stdout for value in ['FAIL!', 'ReferenceError:', 'TypeError:', 'Cannot assign'])
+    assert_qml_pass(result, 'CONTROL_KEYS_PASS')

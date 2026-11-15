@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os
@@ -28,7 +29,7 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-qml-') as tmp:
         print((error.stdout or b"").decode(errors="replace"), flush=True)
         raise
     print(result.stdout)
-    assert 'DOWNLOADS_SERVICE_PASS' in result.stdout and not any(s in result.stdout for s in ['FAIL!', 'ReferenceError:', 'TypeError:'])
+    assert_qml_pass(result, 'DOWNLOADS_SERVICE_PASS')
 
     assert json.loads((root / 'opened.json').read_text()) == [str(home / 'downloads/nested')]
     state = json.loads((home / '.local/state/omarchy/island/downloads.json').read_text())

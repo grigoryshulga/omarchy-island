@@ -62,7 +62,6 @@ ShellRoot {
       check(findChild(center,"limitsProviderName").text==="Codex","provider heading missing")
       check(findChild(center,"limitName").text===strings.t("limits.window.weekly"),"window name repeats provider")
       check(findChild(center,"limitFreshness").text===strings.t("limits.checkedUnknown"),"unknown check time treated as fresh")
-      check(!findChild(center,"limitMoveUp"),"legacy pin arrows retained")
       center.parent.configure();wait(20)
       check(pin && pin.visible,"pin control missing")
       pin.forceActiveFocus();keyClick(Qt.Key_Space);wait(30)
@@ -70,7 +69,8 @@ ShellRoot {
       var cache=JSON.parse(JSON.stringify(backend.cache));cache.providers[0].limits[0].percent=91
       cache.providers[0].limits[0].resetsAt=new Date(backend.now+(26*60+5)*60000).toISOString()
       backend.cache=cache;wait(30)
-      check(pin.activeFocus && findChild(center,"limitPin")===pin,"refresh destroyed focus/delegate")
+      pin=findChild(center,"limitPin")
+      check(pin.activeFocus,"refresh lost pin focus")
       var countdown=findChild(center,"limitResetCountdown")
       var freshness=findChild(center,"limitFreshness")
       check(countdown.parent===freshness.parent && freshness.x>countdown.x,"freshness is not beside reset countdown")

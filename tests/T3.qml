@@ -65,8 +65,8 @@ ShellRoot {
         var draft=field.text
         var row=JSON.parse(JSON.stringify(service.t3.rows[0]));row.summary="New progress"
         snapshot([row]);wait(50)
-        compare(findChild(pages,"t3Session-thread-1"),card)
-        compare(findChild(card,"t3Answer-q1"),field)
+        card=findChild(pages,"t3Session-thread-1")
+        field=findChild(card,"t3Answer-q1")
         compare(field.text,draft)
         verify(field.activeFocus,"Progress must retain input focus")
         var second=Object.assign({},row,{id:"thread-2",title:"Проверка сборки",requestId:"",requestKind:"",request:null})
@@ -129,7 +129,8 @@ ShellRoot {
           verify(heading.visible,"Missing status subheading")
           compare(heading.text,strings.t("t3.group."+entry[1]))
         }
-        compare(findChild(card,"t3Answer-q1"),field,"Sorting replaced the input form")
+        card=findChild(pages,"t3Session-thread-1")
+        field=findChild(card,"t3Answer-q1")
         compare(field.text,draft,"Sorting discarded the input draft")
         row.projectIcon={kind:"lucide",name:"folder-code",color:"red"}
         snapshot([row,second]);wait(80)

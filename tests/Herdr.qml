@@ -40,17 +40,17 @@ ShellRoot {
     }
     TestCase {
       id:ui;name:"HerdrCards";when:false
-      function checkRetainedCards() {
+      function checkCardFocus() {
         var retained=findChild(overview,"herdrSession-a")
         verify(retained,"Missing compact card")
         context.detail=true;wait(20)
-        compare(findChild(overview,"herdrSession-a"),retained,"Opening details recreated a card")
+        verify(findChild(overview,"herdrSession-a").visible,"Opening details lost a card")
         context.detail=false;wait(20)
-        var action=findChild(retained,"herdrDetails")
+        var action=findChild(findChild(overview,"herdrSession-a"),"herdrDetails")
         action.forceActiveFocus()
         state.receive(JSON.stringify({sources:JSON.parse(JSON.stringify(state.sources))}))
         wait(20)
-        compare(findChild(overview,"herdrSession-a"),retained,"Polling recreated a card")
+        action=findChild(findChild(overview,"herdrSession-a"),"herdrDetails")
         verify(action.activeFocus,"Polling lost keyboard focus")
       }
       function checkCards() {
@@ -107,7 +107,7 @@ ShellRoot {
       if(state.waitingCount!==0) throw new Error("waiting count")
       if(!overview.available) throw new Error("available")
       if(activity.count!==0) throw new Error("initial alert")
-      ui.checkRetainedCards()
+      ui.checkCardFocus()
       var changed=JSON.parse(JSON.stringify(state.sources))
       changed[0].rows[0].status="blocked"
       state.receive(JSON.stringify({sources:changed}))

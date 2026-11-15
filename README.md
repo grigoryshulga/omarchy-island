@@ -370,6 +370,8 @@ bin/test-session --wayland -- python3 tests/keyboard.py
 
 The same commands are intended for CI images containing the dependencies above; a CI workflow/image is not included yet. See [test isolation and module requirements](docs/test-isolation.md).
 
+The [test audit](docs/test-audit.md) records removed implementation checks and their behavioral replacements. QML runners share `tests/qml_result.py`: success requires a zero exit status, the complete scenario marker, and no failure, timeout, or QML runtime diagnostics on either output stream. Test public results, focus, drafts, rendered content and external actions; avoid assertions about source spelling, private timers, delegate identity or the sequence of internal helper calls. Await observable asynchronous results with a deadline; retain bounded observation periods for assertions that no event occurs.
+
 Additional checks for the affected feature:
 
 ```bash

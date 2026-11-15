@@ -8,27 +8,6 @@ function load(name, deps={}) {
 }
 const Calendar=load('CalendarModel');
 const Security=load('Security'), Detect=load('Detect',{Security}), Markup=load('Markup',{Security}), Store=load('Store',{Security,Detect,Markup}), Model=load('Model');
-const keyRows = [], mutations = [];
-const keyModel = {
- get count() {return keyRows.length}, get: i => keyRows[i],
- insert(i, row) {keyRows.splice(i, 0, row); mutations.push('insert')},
- remove(i) {keyRows.splice(i, 1); mutations.push('remove')},
- move(from, to) {keyRows.splice(to, 0, keyRows.splice(from, 1)[0]); mutations.push('move')}
-};
-Model.syncKeys(keyModel, ['first', 'second']);
-const retained = keyRows[0];
-mutations.length = 0;
-Model.syncKeys(keyModel, ['first', 'second']);
-assert.equal(mutations.length, 0, 'data-only updates do not mutate the delegate model');
-Model.syncKeys(keyModel, ['second', 'new', 'first']);
-assert.equal(keyRows[2], retained, 'reordering preserves existing entries');
-assert.deepEqual(keyRows.map(row => row.entryKey), ['second', 'new', 'first']);
-Model.syncKeys(keyModel, ['first']);
-assert.equal(keyRows[0], retained, 'removal preserves survivors');
-Model.syncKeys(keyModel, []);
-assert.equal(keyRows.length, 0);
-assert.equal(Model.notificationKey({app:'Chat',summary:'Same',key:'old'}),
- Model.notificationKey({app:'Chat',summary:'Same',key:'new'}), 'merged identity follows its header');
 const Clock=load('ClockModel');
 for (const format of ['HH:mm', "HH:mm 'seconds'", "HH:mm 's", "'ss'"])
  assert.equal(Clock.clockNeedsSeconds(format), false, format);

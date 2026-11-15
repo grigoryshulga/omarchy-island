@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os,subprocess,tempfile
@@ -13,4 +14,4 @@ with tempfile.TemporaryDirectory(prefix='island-indicators-qml-') as temporary:
     env=dict(os.environ,ISLAND_PANEL_LAYOUT='1',QT_QPA_PLATFORM='wayland',QT_QUICK_BACKEND='rhi' if os.environ.get('ISLAND_TEST_GPU') else 'software')
     r=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=15)
     print(r.stdout)
-    assert 'PANEL_LAYOUT_PASS' in r.stdout and not any(s in r.stdout for s in ['INDICATORS_FAIL','ReferenceError:','TypeError:']),r.stdout
+    assert_qml_pass(r, 'PANEL_LAYOUT_PASS')

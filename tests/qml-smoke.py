@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import os,pathlib,subprocess,tempfile
@@ -15,4 +16,4 @@ with tempfile.TemporaryDirectory(prefix='island-qml-') as tmp:
         print((error.stdout or b'').decode())
         raise
     print(result.stdout)
-    if 'ISLAND_INTERACTION_PASS' not in result.stdout or 'FAIL!' in result.stdout: raise SystemExit(1)
+    assert_qml_pass(result, 'ISLAND_INTERACTION_PASS')

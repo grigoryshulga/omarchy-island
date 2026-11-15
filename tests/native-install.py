@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Validate and clone through Omarchy's real CLI, using an isolated home and IPC stub."""
+from qml_result import assert_qml_pass
 from session import ensure
 ensure()
 import json
@@ -57,6 +58,6 @@ with tempfile.TemporaryDirectory(prefix='island-native-') as directory:
     qml_env = dict(os.environ, QT_QPA_PLATFORM='offscreen', QT_QUICK_BACKEND='software')
     result = subprocess.run(['qs', '-p', str(root), '--no-color'], env=qml_env,
                             capture_output=True, text=True, timeout=8)
-    assert 'ISLAND_NATIVE_REGISTRY_PASS' in result.stdout+result.stderr, result.stdout+result.stderr
+    assert_qml_pass(result, 'ISLAND_NATIVE_REGISTRY_PASS')
 
 print('PASS: native clone, root/legacy manifests, clean git checkout, clock replacement and restoration.')

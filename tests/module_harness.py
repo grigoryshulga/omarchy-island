@@ -1,4 +1,5 @@
 """Shared offscreen host, storage and process-fixture setup for module scenarios."""
+from qml_result import assert_qml_pass
 import os
 from pathlib import Path
 import shutil
@@ -39,5 +40,4 @@ class ModuleHarness:
         result = subprocess.run(['qs', '-p', str(self.root), '--no-color'], env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=12)
         print(result.stdout)
-        assert result.returncode == 0 and marker in result.stdout and not any(error in result.stdout for error in
-            ['MODULES_FAIL', 'FAIL!', 'TypeError:', 'ReferenceError:', 'Binding loop', 'Cannot assign', 'Unable to assign'])
+        assert_qml_pass(result, marker)
