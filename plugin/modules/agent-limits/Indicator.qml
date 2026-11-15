@@ -19,5 +19,11 @@ Island.ModuleView {
     text:root.backend && root.backend.tightest ? "󰧑 "+Commons.I18n.formatNumber(Math.round(root.backend.tightest.remaining))+"%"+(root.backend.tightest.stale ? " ·" : "") : ""
     color:root.backend && root.backend.tightest && root.backend.tightest.remaining<=Math.min(Preferences.get("agentLimitsWarning"),Preferences.get("agentLimitsCritical")) ? Design.barDanger : Design.barText
   }
-  MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.detailsRequested()}
+  FeedbackButton {
+    objectName:"moduleIndicatorAction"
+    anchors.fill:parent;focusable:true
+    horizontalPadding:0;verticalPadding:0
+    tooltipText:root.presentation.strings.t("indicator.openModule").arg(root.presentation.strings.t("limits.title"))
+    onClicked:root.detailsRequested()
+  }
 }

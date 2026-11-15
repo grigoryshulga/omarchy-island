@@ -24,5 +24,11 @@ Island.ModuleView {
     PlainText {visible:root.waiting;text:"󰋗";color:root.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}
     PlainText {id:t3Count;objectName:"islandT3Count";Layout.maximumWidth:root.presentation.vertical ? root.presentation.barSize-Style.space(4) : Infinity;elide:Text.ElideRight;text:root.text;color:root.color;typeRole:"bar";font.family:root.presentation.bar ? root.presentation.bar.fontFamily : Style.font.family;Layout.preferredHeight:root.presentation.vertical ? Style.space(18) : root.presentation.barHeight;verticalAlignment:Text.AlignVCenter}
   }
-  MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.detailsRequested()}
+  FeedbackButton {
+    objectName:"moduleIndicatorAction"
+    anchors.fill:parent;focusable:true
+    horizontalPadding:0;verticalPadding:0
+    tooltipText:root.presentation.strings.t("indicator.openModule").arg("T3 Code")
+    onClicked:root.detailsRequested()
+  }
 }

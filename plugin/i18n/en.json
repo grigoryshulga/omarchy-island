@@ -550,5 +550,14 @@
   "herdr.status.idle": "Idle",
   "herdr.status.unknown": "Unknown",
   "herdr.details": "Session details",
-  "herdr.expand": "Open Overview"
+  "herdr.expand": "Open Overview",
+  "indicator.action.recording": "Stop recording",
+  "indicator.action.remote": "Open controls",
+  "indicator.action.update": "Open Omarchy update",
+  "indicator.action.microphone": "Unmute microphone",
+  "indicator.action.dnd": "Turn off Do not disturb",
+  "indicator.action.nightLight": "Turn off night light",
+  "indicator.action.stayAwake": "Allow automatic sleep",
+  "indicator.openModule": "Open %1",
+  "controls.toggleState": "Toggle %1"
 }

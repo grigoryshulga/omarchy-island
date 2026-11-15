@@ -9,9 +9,16 @@ ShellRoot {
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("Island/i18n")}
   QtObject {
     id:service
-    property var modules:({sample:sample,weather:weather})
+    property var modules:({sample:sample,weather:weather,t3:{allowed:true,workingCount:1,waitingCount:0},herdr:{allowed:true,workingCount:1,waitingCount:0},agentLimits:{allowed:true,indicatorVisible:true,tightest:{remaining:10,name:"Codex",label:"Weekly",stale:false}},battery:{allowed:true,present:true,lowCharge:true,fraction:0.1,icon:"󰁺"}})
     property bool doNotDisturb:true
-    property var indicators:null
+    property var indicators:QtObject {
+      property bool recording:true
+      property bool remoteActive:true
+      property bool updateAvailable:true
+      property bool microphoneMuted:true
+      property bool nightLight:true
+      property bool stayAwake:true
+    }
   }
   QtObject {
     id:weather
@@ -32,6 +39,10 @@ ShellRoot {
     }
     Island.ClockIndicatorStrip {
       id:liveStrip;y:860;property int openedPage:0
+      property var actions:[]
+      property string openedModule:""
+      onActivate:mode=>actions=actions.concat([mode])
+      onDetailsRequested:moduleId=>openedModule=moduleId
       onPageRequested:index=>openedPage=index
       strings:strings;service:service
       elements:[{id:"module:sample",kind:"indicator",side:"left"},{id:"dnd",kind:"indicator",side:"left"}]
@@ -40,6 +51,34 @@ ShellRoot {
       id:test;when:false
       function test_editor() {
         compare(liveStrip.tooltips,'Sample · '+strings.t('dnd'))
+        var savedElements=liveStrip.elements
+        for(var mode of ["recording","remote","update","microphone","nightLight","stayAwake","dnd"]) {
+          liveStrip.elements=[{id:mode,kind:"indicator",side:"left"}];wait(20)
+          var action=findChild(liveStrip,"indicatorAction-"+mode)
+          verify(action.visible)
+          verify(action.height>=liveStrip.barHeight)
+          mouseClick(action,action.width/2,action.height/2)
+          compare(liveStrip.actions.slice(-1)[0],mode)
+          action.forceActiveFocus();keyClick(Qt.Key_Return)
+          compare(liveStrip.actions.length,2*(["recording","remote","update","microphone","nightLight","stayAwake","dnd"].indexOf(mode)+1))
+          liveStrip.editing=true;wait(10)
+          verify(!action.visible)
+          liveStrip.editing=false
+        }
+        liveStrip.elements=[{id:"module:battery",kind:"indicator",side:"left"}];wait(20)
+        findChild(liveStrip,"batteryIndicatorButton").clicked()
+        compare(liveStrip.openedModule,"battery")
+        for(var moduleId of ["t3","herdr","agentLimits"]) {
+          liveStrip.elements=[{id:"module:"+moduleId,kind:"indicator",side:"left"}];wait(20)
+          var moduleAction=findChild(liveStrip,"moduleIndicatorAction")
+          verify(moduleAction.visible)
+          mouseClick(moduleAction,moduleAction.width/2,moduleAction.height/2)
+          compare(liveStrip.openedModule,moduleId)
+          liveStrip.openedModule=""
+          moduleAction.forceActiveFocus();keyClick(Qt.Key_Space)
+          compare(liveStrip.openedModule,moduleId)
+        }
+        liveStrip.elements=savedElements;wait(20)
         verify(liveStrip.implicitWidth>20)
         sample.allowed=false;wait(30)
         compare(liveStrip.tooltips,strings.t('dnd'))

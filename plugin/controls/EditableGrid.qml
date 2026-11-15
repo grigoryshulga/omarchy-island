@@ -176,6 +176,8 @@ ColumnLayout {
           glyph:entry.modelData.section ? "" : (root.layout.labels[entry.modelData.key] || {}).icon || ({audio:"󰕾",bluetooth:"󰂯",network:"󰤨",tailscale:"󰖂",monitors:"󰍺",microphone:"󰍭",dnd:"󰂛",nightLight:"󰔎",stayAwake:"",recording:"󰻂",remote:"󰢹"})[entry.modelData.key] || "󰒓"
           drillDown:!entry.quick && !entry.editing
           showLed:entry.quick || !!root.host.controlState && root.host.controlState.available(entry.modelData.key)
+          ledInteractive:showLed && !entry.editing
+          ledTooltip:root.host.strings.t("controls.toggleState").arg(title)
           selected:showLed && root.host.enabledState(entry.modelData.key)
           enabled:entry.editing || (entry.modelData.key!=="remote" && (entry.modelData.key!=="microphone" || !!root.host.microphone))
           glyphColor:entry.modelData.key==="recording" && selected ? Island.Design.danger : selected ? Island.Design.accent : Island.Design.text

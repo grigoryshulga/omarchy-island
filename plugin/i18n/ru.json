@@ -554,5 +554,14 @@
   "herdr.status.idle": "Ожидает",
   "herdr.status.unknown": "Неизвестно",
   "herdr.details": "Подробности сессии",
-  "herdr.expand": "Открыть обзор"
+  "herdr.expand": "Открыть обзор",
+  "indicator.action.recording": "Остановить запись",
+  "indicator.action.remote": "Открыть управление",
+  "indicator.action.update": "Открыть обновление Omarchy",
+  "indicator.action.microphone": "Включить микрофон",
+  "indicator.action.dnd": "Выключить «Не беспокоить»",
+  "indicator.action.nightLight": "Выключить ночной свет",
+  "indicator.action.stayAwake": "Разрешить автоматический сон",
+  "indicator.openModule": "Открыть %1",
+  "controls.toggleState": "Переключить %1"
 }

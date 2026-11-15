@@ -159,6 +159,12 @@ ShellRoot {
         mouseClick(tile,tile.width/2,tile.height/2,Qt.RightButton);wait(10)
         check(view.section==="" && !tile.selected && tileState.toggled.slice(-1)[0]===key,"right click did not toggle without opening: "+key)
         tileState.on=true;wait(10)
+        var toggle=findChild(tile,"controlStateToggle")
+        check(toggle && toggle.visible,"LED has no toggle button: "+key)
+        mouseClick(toggle,toggle.width/2,toggle.height/2);wait(10)
+        check(view.section==="" && !tile.selected,"LED click opened panel instead of toggling: "+key)
+        toggle.forceActiveFocus();keyClick(Qt.Key_Space);wait(10)
+        check(tile.selected,"Focused LED cannot toggle with Space: "+key)
         check(tile.selected,"indicator did not follow external state: "+key)
       }
       for(var key of ["monitors"]) {

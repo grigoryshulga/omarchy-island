@@ -10,6 +10,8 @@ FeedbackButton {
   property bool iconOnly:false
   property bool drillDown: false
   property bool showLed: !drillDown
+  property bool ledInteractive:false
+  property string ledTooltip:""
   property bool effectsActive: true
   property color glyphColor: selected ? Design.accent : Design.text
   implicitWidth:Style.space(compact ? 120 : 190)
@@ -36,6 +38,19 @@ FeedbackButton {
       width:Style.space(5);height:width;radius:width/2
       color:root.selected ? root.glyphColor : Design.secondaryText
       opacity:root.selected ? 1 : 0.35
+      FeedbackButton {
+        objectName:"controlStateToggle"
+        anchors.centerIn:parent
+        width:Style.space(22);height:width
+        visible:root.ledInteractive
+        focusable:true
+        horizontalPadding:0;verticalPadding:0
+        tooltipText:root.ledTooltip
+        Accessible.role:Accessible.CheckBox
+        Accessible.checked:root.selected
+        onClicked:root.rightClicked()
+        onRightClicked:root.rightClicked()
+      }
       IndicatorGlow {anchors.centerIn:parent;active:root.effectsActive && root.selected && root.visible;accent:root.glyphColor;width:Style.space(34);height:width}
     }
     Item {Layout.fillWidth:true;visible:root.iconOnly}

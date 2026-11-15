@@ -8,10 +8,11 @@ import "Bridge" as Bridge
 
 ShellRoot {
   id:scene
+  property var commands:[]
   property bool mockNightLight:false
   property bool mockStayAwake:false
-  Commons.ShellIpc {target:"nightlight";function status():string{return JSON.stringify({enabled:scene.mockNightLight})}}
-  Commons.ShellIpc {target:"idle";function status():string{return JSON.stringify({stayAwake:scene.mockStayAwake})}}
+  Commons.ShellIpc {target:"nightlight";function toggle():void{scene.mockNightLight=!scene.mockNightLight} function status():string{return JSON.stringify({enabled:scene.mockNightLight})}}
+  Commons.ShellIpc {target:"idle";function toggle():void{scene.mockStayAwake=!scene.mockStayAwake} function status():string{return JSON.stringify({stayAwake:scene.mockStayAwake})}}
   Island.IndicatorState {id:backend;layouts.observeSystem:false}
   QtObject {
     id:states
@@ -30,6 +31,7 @@ ShellRoot {
     property string osdMessage:backend.osdMessage
     property string osdProgressText:backend.osdProgressText
     property string osdScreen:""
+    function refreshControls(){backend.refreshControls()}
     function attach(item){backend.attach(item)}
     function detach(item){backend.detach(item)}
   }
@@ -116,7 +118,7 @@ ShellRoot {
   FloatingWindow {
     visible:true
     implicitWidth:620;implicitHeight:bar.vertical ? 620 : 80
-    Island.BarWidget {id:widget;x:fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.width-width : (parent.width-width)/2;y:bar.vertical ? (fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.height-height : (parent.height-height)/2) : (parent.height-height)/2;width:implicitWidth;height:implicitHeight;bar:bar}
+    Island.BarWidget {id:widget;execute:function(argv){scene.commands=scene.commands.concat([argv])};x:fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.width-width : (parent.width-width)/2;y:bar.vertical ? (fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.height-height : (parent.height-height)/2) : (parent.height-height)/2;width:implicitWidth;height:implicitHeight;bar:bar}
   }
   TestCase {
     id:test
@@ -252,6 +254,10 @@ ShellRoot {
       check(limitIndicator.visible && limitIndicator.implicitWidth>0,"limit indicator missing")
       check(clock.tooltipText.indexOf("Codex")>=0 && clock.tooltipText.indexOf("Weekly")>=0,"limit indicator tooltip lost provider/window")
       check(limitIndicator.mapToItem(clock,0,0).x+limitIndicator.width<label.mapToItem(clock,0,0).x,"limit indicator overlaps clock")
+      var limitsButton=findChild(limitIndicator,"moduleIndicatorAction")
+      mouseClick(limitsButton,limitsButton.width/2,limitsButton.height/2);wait(60)
+      check(widget.pinned && findChild(widget,"islandPopupPages").detailPage==="agentLimits","Limit indicator did not open its center")
+      widget.close();wait(40)
       service.agentLimits.indicatorVisible=false;service.agentLimits.allowed=false;wait(20)
       if(Quickshell.env("ISLAND_T3_ONLY")) {console.log("INDICATORS_PASS");Qt.quit();return}
       if(Quickshell.env("ISLAND_TEST_GPU")) {
@@ -283,6 +289,19 @@ ShellRoot {
       check(Math.abs(at.x+label.width/2-clock.width/2)<1,"indicators moved the clock off center")
       check(left.x>=0 && left.x+left.width<=clock.width/2-Math.min(label.width,label.contentWidth)/2 && right.x>=clock.width/2 && right.x+right.width<=clock.width,"indicator sides overlap the clock or overflow")
       for(var name of ["islandMicrophoneIndicator","islandDndIndicator","islandNightLightIndicator","islandStayAwakeIndicator"]) check(findChild(widget,name).visible,"active indicator missing: "+name)
+      states.updateAvailable=true;wait(30)
+      for(var mode of ["microphone","recording","update","nightLight","stayAwake","dnd","remote"]) {
+        var action=findChild(widget,"indicatorAction-"+mode)
+        check(action && action.visible && action.height>=bar.barSize,"Indicator has no bar-height hit area: "+mode)
+        mouseClick(action,action.width/2,action.height/2);wait(40)
+        if(mode==="dnd") check(!service.doNotDisturb,"DND indicator did not turn off DND")
+        if(mode==="nightLight") check(!backend.nightLight,"Night light indicator did not turn off mode")
+        if(mode==="stayAwake") check(!backend.stayAwake,"Stay awake indicator did not turn off mode")
+        if(mode==="remote") check(widget.pinned && widget.controlsMode,"Remote indicator did not open controls")
+      }
+      check(JSON.stringify(scene.commands)===JSON.stringify([["omarchy-audio-input-mute"],["omarchy-capture-screenrecording","--stop-recording"],["omarchy-launch-floating-terminal-with-presentation","omarchy-update"]]),"Indicator command arguments changed")
+      widget.close();wait(40)
+      console.log("INDICATOR_ACTIONS_PASS")
       check(osd("volume-muted",75,100,700).output==="ok" && backend.osdActive && !bridge.opened,"native volume OSD was not routed to Island")
       wait(270)
       tryVerify(function(){return !label.visible},300)

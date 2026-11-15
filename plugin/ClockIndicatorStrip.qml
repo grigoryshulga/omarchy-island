@@ -34,7 +34,7 @@ GridLayout {
   }
   signal activate(string mode)
   signal pageRequested(int index)
-  signal detailsRequested()
+  signal detailsRequested(string moduleId)
   signal calendarRequested()
   signal selected(string id)
   signal dropped(string id,var item,real dx,real dy)
@@ -75,6 +75,17 @@ GridLayout {
         enabled:!root.editing
         visible:cell.live
         sourceComponent:cell.modelData.kind!=="indicator" ? null : cell.entry && cell.entry.moduleId ? moduleView : ({recording:recordingView,remote:remoteView,reminders:remindersView,update:updateView,microphone:microphoneView,dnd:dndView,nightLight:nightLightView,stayAwake:stayAwakeView})[cell.modelData.id] || null
+      }
+      FeedbackButton {
+        objectName:"indicatorAction-"+cell.modelData.id
+        anchors.centerIn:parent
+        width:parent.width+Style.space(4)
+        height:Math.max(parent.height,root.barHeight)
+        visible:!root.editing && cell.live && !!cell.entry && !cell.entry.moduleId && cell.modelData.id!=="reminders"
+        focusable:true
+        horizontalPadding:0;verticalPadding:0
+        tooltipText:visible ? root.strings.t("indicator.action."+cell.modelData.id) : ""
+        onClicked:root.activate(cell.modelData.id)
       }
       PlainText {
         id:placeholder
@@ -128,10 +139,10 @@ GridLayout {
             readonly property bool showAlert:root.showAlert
             readonly property var bar:root.bar
           }
-          onDetailsRequested:cell.entry.pageIndex ? root.pageRequested(cell.entry.pageIndex) : root.detailsRequested()
+          onDetailsRequested:cell.entry.pageIndex!==undefined ? root.pageRequested(cell.entry.pageIndex) : root.detailsRequested(cell.entry.moduleId)
         }
       }
-    Component {id:recordingView; StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activate("recording")} implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}
+    Component {id:recordingView; StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}
     Component {id:remoteView; StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:Design.barAccent;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}
     Component {id:remindersView; FeedbackButton {
         objectName:"islandReminderIndicator"
@@ -147,7 +158,7 @@ GridLayout {
       }}
     Component {id:updateView; StatusBeacon {
         id:updateBeacon
-        objectName:"islandUpdateIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activate("update")}
+        objectName:"islandUpdateIndicator";
         implicitHeight:root.vertical ? Style.space(18) : root.barHeight
         property bool available:root.preference("indicatorUpdate") && !!root.indicators && !!root.indicators.updateAvailable
         tint:Commons.Color.foreground
@@ -156,10 +167,10 @@ GridLayout {
         waveWidth:root.vertical ? 0 : root.waveSpan
         waveOffset:-root.x-cell.x
       }}
-    Component {id:microphoneView; PlainText {objectName:"islandMicrophoneIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activate("microphone")} property bool available:root.preference("indicatorMicrophone") && root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
-    Component {id:dndView; PlainText {objectName:"islandDndIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activate("dnd")} property bool available:root.preference("indicatorDnd") && root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
-    Component {id:nightLightView; PlainText {objectName:"islandNightLightIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activate("nightLight")} property bool available:root.preference("indicatorNightLight") && root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
-    Component {id:stayAwakeView; PlainText {objectName:"islandStayAwakeIndicator"; MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.activate("stayAwake")} property bool available:root.preference("indicatorStayAwake") && root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
+    Component {id:microphoneView; PlainText {objectName:"islandMicrophoneIndicator"; property bool available:root.preference("indicatorMicrophone") && root.indicators && root.indicators.microphoneMuted;text:"󰍭";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
+    Component {id:dndView; PlainText {objectName:"islandDndIndicator"; property bool available:root.preference("indicatorDnd") && root.service !== null && root.service.doNotDisturb;text:"󰂛";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
+    Component {id:nightLightView; PlainText {objectName:"islandNightLightIndicator"; property bool available:root.preference("indicatorNightLight") && root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
+    Component {id:stayAwakeView; PlainText {objectName:"islandStayAwakeIndicator"; property bool available:root.preference("indicatorStayAwake") && root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
     }
   }
 }

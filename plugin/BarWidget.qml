@@ -24,19 +24,21 @@ BarWidget {
   readonly property bool osdTransitioning: osdShown>0 && osdShown<1 && !Preferences.reduceMotion && Preferences.get("panelAnimation")
   Behavior on osdShown {NumberAnimation {duration:Preferences.panelDuration(root.showOsd ? 240 : 200);easing.type:Easing.OutCubic}}
   readonly property real indicatorGutter: vertical ? 0 : Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
+  property var execute:function(argv){Util.execArgv(argv)}
   function activateIndicator(mode) {
+    if(mode==="remote") {openControls();return}
     if(mode==="dnd") {if(service) service.setDoNotDisturb(false);return}
     if(mode==="nightLight" || mode==="stayAwake") {
       IpcRegistry.call(mode==="nightLight" ? "nightlight" : "idle","toggle",[])
-      indicators.refreshControls()
+      if(indicators && ("refreshControls" in indicators)) indicators.refreshControls()
       return
     }
     var commands={
-      microphone:"omarchy-audio-input-mute",
-      recording:"omarchy-capture-screenrecording --stop-recording",
-      update:"omarchy-launch-floating-terminal-with-presentation omarchy-update"
+      microphone:["omarchy-audio-input-mute"],
+      recording:["omarchy-capture-screenrecording","--stop-recording"],
+      update:["omarchy-launch-floating-terminal-with-presentation","omarchy-update"]
     }
-    if(bar && commands[mode]) bar.run(commands[mode])
+    if(commands[mode]) execute(commands[mode])
   }
   function connectIndicators() {
     if(registeredIndicators===indicators) return
@@ -81,7 +83,8 @@ BarWidget {
     previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
   readonly property string barText: showAlert && alertKind!=="t3" && alertKind!=="herdr" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
-  readonly property bool isHovered: trigger.tooltipHovered || preview.containsMouse
+  readonly property bool isHovered: barHover.hovered || preview.containsMouse
+  HoverHandler {id:barHover}
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
   function activateWeather() { if(Settings.get(settings,"weatherEnabled") && service && service.weather) service.weather.activate() }
@@ -106,10 +109,11 @@ BarWidget {
   function openWeather() {
     openPage(3)
   }
-  function openControls() {
+  function openModuleDetails(moduleId) {
     openPage(1)
-    Qt.callLater(function(){previewContent.openDetails("controls")})
+    Qt.callLater(function(){previewContent.openDetails(moduleId)})
   }
+  function openControls() {openModuleDetails("controls")}
   function toggleCalendar() { if (pinned && calendarMode) close(); else openCalendar() }
   function close() { hoverSuppressed = true; pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop() }
   function toggle() { pinned ? close() : open() }
@@ -226,7 +230,7 @@ BarWidget {
       y: root.vertical ? Style.space(6) : (parent.height-height)/2
       onActivate:mode=>root.activateIndicator(mode)
       onPageRequested:index=>root.openPage(index)
-      onDetailsRequested:root.openOverview()
+      onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
     }
     Item {
@@ -302,7 +306,7 @@ BarWidget {
       y: root.vertical ? parent.height-height-Style.space(6) : (parent.height-height)/2
       onActivate:mode=>root.activateIndicator(mode)
       onPageRequested:index=>root.openPage(index)
-      onDetailsRequested:root.openOverview()
+      onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
     }
   }
