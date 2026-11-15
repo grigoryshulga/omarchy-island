@@ -63,6 +63,15 @@ assert.equal(M.windowLabel({label:'Weekly (7-day)'},freshnessStrings),'Weekly wi
 assert.equal(M.windowLabel({label:'Custom quota'},freshnessStrings),'Custom quota');
 assert.equal(M.windowLabel({label:'constructor'},freshnessStrings),'constructor');
 assert.equal(M.balances({balance:[{currency:'USD',total:0},{currency:'CNY',total:12.5},{currency:'USD',total:null}]},n=>n.toFixed(2)),'USD 0.00 · CNY 12.50');
+// DeepSeek's collector preserves the API's decimal strings in the shared cache.
+const deepseekBalance={balance:[
+  {currency:'USD',total:'10.01',granted:'0.01',toppedUp:'10.00'},
+  {currency:'CNY',total:'20.00',granted:'0.00',toppedUp:'20.00'}
+]};
+assert.equal(M.balances(deepseekBalance,(n,decimals)=>n.toFixed(decimals)),'USD 10.01 · CNY 20.00');
+assert.equal(M.balances({balance:[{currency:'USD',total:'0.00'}]},n=>n.toFixed(2)),'USD 0.00');
+for(const total of [null,undefined,'','   ','unknown','10.01 USD','NaN','Infinity',NaN,Infinity,true,false,[],{}])
+  assert.equal(M.balances({balance:[{currency:'USD',total}]},n=>n.toFixed(2)),'','invalid balance became a displayed amount');
 const pinIds=[id,M.key('claude','Session'),M.key('disabled','Weekly')];
 assert.deepEqual(M.movePin(pinIds,id,1),[pinIds[1],id,pinIds[2]]);
 for(const [target,step] of [[id,-1],[pinIds[2],1],['missing',1],[id,2]])
