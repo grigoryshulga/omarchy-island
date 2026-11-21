@@ -351,8 +351,13 @@ Item {
       onTapped:eventPoint=>{if(root.externalFeedback) root.externalFeedback.pulseFrom(nativeLoader,eventPoint.position)}
     }
   }
-  ControlBackButton {
-    id:detailBack
+  NavigationBackButton {
+    id:detailBack;objectName:"controlBack"
+    property bool islandExternalNavigation:true
+    strings:root.strings
+    feedback:root.externalFeedback
+    foreground:activeFocus || hot ? Design.accent : Design.text
+    anchors.left:parent.left
     visible:!!root.section
     anchors.top:parent.top
     onClicked:root.back()

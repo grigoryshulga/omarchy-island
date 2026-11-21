@@ -25,6 +25,7 @@ DownloadCard 1.0 DownloadCard.qml
 DownloadList 1.0 DownloadList.qml
 DownloadProgress 1.0 DownloadProgress.qml
 FeedbackButton 1.0 FeedbackButton.qml
+NavigationBackButton 1.0 NavigationBackButton.qml
 IndicatorGlow 1.0 IndicatorGlow.qml
 IndicatorState 1.0 IndicatorState.qml
 IslandContent 1.0 IslandContent.qml

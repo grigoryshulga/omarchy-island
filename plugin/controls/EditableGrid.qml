@@ -404,7 +404,9 @@ ColumnLayout {
         visible:menu.page==="arrange";Layout.fillWidth:true;spacing:Island.Design.gap.small
         Island.FeedbackButton {
           id:arrangeBack;Layout.fillWidth:true;leftAlign:true;focusable:true
-          text:root.host.controlTitle(root.menuKey);iconText:Commons.I18n.rightToLeft ? "→" : "←"
+          LayoutMirroring.enabled:Commons.I18n.rightToLeft
+          LayoutMirroring.childrenInherit:true
+          text:root.host.controlTitle(root.menuKey);iconText:LayoutMirroring.enabled ? "󰁔" : "󰁍"
           tooltipText:root.host.strings.t("controls.tileActions")
           onClicked:{menu.page="actions";arrangeOpener.forceActiveFocus()}
         }

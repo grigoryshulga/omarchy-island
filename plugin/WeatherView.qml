@@ -119,7 +119,11 @@ Item {
     RowLayout {
       Layout.fillWidth: true
       spacing:Design.gap.tight
-      FeedbackButton { objectName: "weatherBack"; visible: root.showBack; feedback: root.feedback; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: root.backRequested() }
+      NavigationBackButton {
+        objectName:"weatherBack";visible:root.showBack
+        strings:root.strings;feedback:root.feedback
+        onClicked:root.backRequested()
+      }
       Item {
         id: locationSlot
         Layout.fillWidth: true

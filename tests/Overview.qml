@@ -165,10 +165,19 @@ ShellRoot {
         mouseClick(t3Button.parent,t3Button.parent.width/2,t3Button.parent.height/2);wait(50)
         compare(overview.detailPage,"t3","Header whitespace did not open T3 details")
         verify(!findChild(overview,"islandMediaPlayer").visible,"T3 details did not replace music")
-        verify(findChild(overview,"overviewBack").visible,"Detail view has no Back action")
+        var backButton=findChild(overview,"overviewBack")
+        verify(backButton.visible && backButton.activeFocus,"Detail view did not focus Back")
+        compare(backButton.x,0,"Back must be first in the detail header")
+        overview.LayoutMirroring.childrenInherit=true
+        overview.LayoutMirroring.enabled=true
+        tryCompare(backButton,"x",backButton.parent.width-backButton.width)
+        compare(backButton.iconText,"󰁔")
+        overview.LayoutMirroring.enabled=false
+        tryCompare(backButton,"x",0)
+        compare(backButton.iconText,"󰁍")
         verify(findChild(overview,"t3Session-done-29").visible,"Full T3 list is incomplete")
         compare(overview.implicitHeight,height,"Full T3 list grew the panel")
-        verify(overview.back());wait(50)
+        keyClick(Qt.Key_Return);wait(50)
         verify(t3Button.activeFocus,"Back did not restore focus")
         var finishedBadge=findChild(overview,"t3Count-finished")
         keyClick(Qt.Key_Tab);verify(finishedBadge.activeFocus,"Tab from the heading skipped its counter")

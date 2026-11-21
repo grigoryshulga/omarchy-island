@@ -126,7 +126,12 @@ Item {
     Item {
       Layout.fillWidth: true
       implicitHeight: currentDate.implicitHeight+Style.space(8)
-      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); if(!root.closeSubview()) root.backRequested() } }
+      NavigationBackButton {
+        id:backButton;objectName:"calendarBack"
+        anchors.left:parent.left;anchors.verticalCenter:currentDate.verticalCenter
+        strings:root.strings;visible:root.showBack
+        onClicked:{root.pulseFrom(backButton);if(!root.closeSubview()) root.backRequested()}
+      }
       FeedbackButton {
         id: currentDate
         objectName: "calendarCurrentDate"
