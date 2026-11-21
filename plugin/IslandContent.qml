@@ -135,8 +135,10 @@ Item {
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : alertKind==="herdr" ? herdrToast.statusIcon : notificationIcon
   implicitHeight: {
     if (!expanded) return body.implicitHeight
-    if (configuring || (detailOpen && !(detailDefinition && detailDefinition.detail))) return pageHeight
-    return Math.min(maximumOverviewHeight,overviewScroll.y+body.implicitHeight)
+    if (configuring) return pageHeight
+    if (!detailOpen) return Math.min(maximumOverviewHeight,body.implicitHeight)
+    return detailDefinition && detailDefinition.detail
+        ? Math.min(maximumOverviewHeight,overviewScroll.y+body.implicitHeight) : pageHeight
   }
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   OverviewDrag {

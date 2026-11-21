@@ -330,7 +330,28 @@ ShellRoot {
       }
       check(redFill>grayFill*3,"colored fill does not stand out from the gray track")
       console.log("BRAILLE_PROGRESS_FRAMES_PASS")
-      timeField.visible=true
+      artwork.visible=false; progressProbe.visible=false
+      timeField.width=301; timeField.visible=true
+      timeField.fraction=1; wait(80)
+      var grid=grabImage(timeField), xs=[], ys=[]
+      for (var y=0; y<grid.height; y++) {
+        for (var x=0; x<grid.width; x++) {
+          if (grid.red(x,y)!==grid.red(0,0) || grid.green(x,y)!==grid.green(0,0) || grid.blue(x,y)!==grid.blue(0,0)) {
+            xs[x]=true; ys[y]=true
+          }
+        }
+      }
+      function dotStarts(axis) {
+        var starts=[]
+        for (var i=0;i<axis.length;i++) if (axis[i] && !axis[i-1]) starts.push(i)
+        return starts
+      }
+      var columns=dotStarts(xs), rows=dotStarts(ys)
+      check(columns.length>4 && rows.length===8,"dot grid has missing rows or columns")
+      var pitch=columns[1]-columns[0]
+      for (var axis of [columns,rows])
+        for (var i=1;i<axis.length;i++) check(axis[i]-axis[i-1]===pitch,"uneven dot spacing")
+
       for (var mode of ["timer","pomodoro","stopwatch"]) {
         timeField.mode=mode; timeField.seconds=1; timeField.fraction=0.25; wait(80)
         var early=grabImage(timeField)
