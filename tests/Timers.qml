@@ -80,6 +80,29 @@ ShellRoot {
       overview.width=390
       findChild(view,"timeMode-timer").clicked()
     }
+    function checkHeaderBaselines() {
+      function textItem(item, text) {
+        if (item instanceof Text && item.text === text && item.visible) return item
+        for (const child of item.children) {
+          const match=textItem(child,text)
+          if (match) return match
+        }
+        return null
+      }
+      const clock=findChild(overview,"timersOpen"), date=findChild(overview,"calendarOpen")
+      for (const width of [300,390,520]) {
+        overview.width=width
+        wait(30)
+        const a=textItem(clock,clock.text), b=textItem(date,date.text)
+        verify(a && b)
+        if (width===520) compare(a.fontInfo.pixelSize,b.fontInfo.pixelSize)
+        const timeY=a.mapToItem(overview,0,a.baselineOffset).y
+        const dateY=b.mapToItem(overview,0,b.baselineOffset).y
+        if (Math.abs(timeY-dateY)>0.01)
+          throw new Error("Header baselines at width "+width+" (expanded="+overview.expanded+"): "+timeY+" and "+dateY)
+      }
+      overview.width=390
+    }
     function run() {
       tryVerify(function(){return !!fixture.toolsState && fixture.toolsState.ready})
       var headerTime = findChild(overview,"timersOpen")
@@ -88,7 +111,9 @@ ShellRoot {
       var sample=new Date(2026,10,21,9,5)
       overview.currentDate=sample
       compare(headerTime.text,sample.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),Locale.ShortFormat))
+      checkHeaderBaselines()
       overview.expanded=false; overview.hovering=true
+      checkHeaderBaselines()
       mouseClick(headerTime)
       tryCompare(overview,"detailPage","timers")
       verify(overview.expanded)

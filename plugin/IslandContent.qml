@@ -195,10 +195,15 @@ Item {
     objectName:"overviewHeader"
     visible:(root.expanded || root.hovering) && !root.detailOpen && !root.configuring
     Layout.fillWidth:true;spacing:Design.gap.small
-    FeedbackButton {
+    component HeaderButton: FeedbackButton {
+      Layout.alignment:Qt.AlignBaseline
+      Layout.preferredWidth:Math.ceil(implicitWidth)
+      fontSize:Design.type.title
+    }
+    HeaderButton {
       id:timeButton; objectName:"timersOpen"
       text:root.currentDate.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),Locale.ShortFormat)
-      fontSize:Design.type.title; horizontalPadding:Design.gap.tight; compact:true
+      horizontalPadding:Design.gap.tight; compact:true
       enabled:!!root.service && !!root.service.modules && !!root.service.modules.timers
       focusable:root.expanded; opacity:1
       foreground:Design.accent
@@ -213,11 +218,11 @@ Item {
         }
       }
     }
-    FeedbackButton {
+    HeaderButton {
       id:dateButton;objectName:"calendarOpen"
-      Layout.fillWidth:true;Layout.minimumWidth:0;Layout.maximumWidth:implicitWidth
+      Layout.fillWidth:true;Layout.minimumWidth:0;Layout.maximumWidth:Math.ceil(implicitWidth)
       text:root.currentDate.toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd, d MMMM")
-      fontSize:Design.type.title;leftAlign:true;horizontalPadding:0
+      leftAlign:true;horizontalPadding:0
       focusable:root.expanded && Settings.get(root.settings,"calendarEnabled")
       enabled:focusable;opacity:1
       tooltipText:root.strings.t("calendar.open")

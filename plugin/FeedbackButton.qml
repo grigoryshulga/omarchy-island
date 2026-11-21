@@ -73,6 +73,7 @@ BorderSurface {
   // Reserve focus width in every state so hover and focus never relayout siblings.
   implicitWidth: _contentNaturalWidth + horizontalPadding * 2 + _reservedBorderLeft + _reservedBorderRight
   implicitHeight: Math.max(compact ? Design.compactControlHeight : Design.controlHeight, row.implicitHeight + verticalPadding * 2 + _reservedBorderTop + _reservedBorderBottom)
+  baselineOffset: row.y + label.y + label.baselineOffset
   radius: Design.controlRadius
 
   readonly property bool hot: mouseArea.containsMouse || hasCursor
