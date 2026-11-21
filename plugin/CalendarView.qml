@@ -12,7 +12,6 @@ Item {
   required property var strings
   property var reminders:null
   property bool yearMode:false
-  property bool sourcesMode:false
   property var subscriptions:null
   property bool subscriptionsReady:false
   readonly property var eventDays:subscriptions ? subscriptions.daysForYear(viewYear) : []
@@ -39,11 +38,11 @@ Item {
   readonly property var weekNumbers: Calendar.weekNumbers(cells,firstDay)
   readonly property string monthTitle: strings.t("calendar.monthYear").arg(locale.standaloneMonthName(viewMonth,Locale.LongFormat)).arg(Calendar.localDate(viewYear,viewMonth,1).toLocaleDateString(locale,"yyyy"))
   signal backRequested()
-  signal weekStartRequested(string value)
-  readonly property real monthImplicitHeight:body.implicitHeight-(yearMode && !sourcesMode ? yearGrid.implicitHeight-calendarGrid.implicitHeight : 0)
+  signal settingsRequested()
+  readonly property real monthImplicitHeight:body.implicitHeight-(yearMode ? yearGrid.implicitHeight-calendarGrid.implicitHeight : 0)
   implicitHeight: body.implicitHeight
-  onActiveChanged: {if(!active) settingsMenu.close();else {refreshToday();activateSubscriptions()}}
-  onVisibleChanged: {if(!visible) settingsMenu.close();else activateSubscriptions()}
+  onActiveChanged: if(active) {refreshToday();activateSubscriptions()}
+  onVisibleChanged: activateSubscriptions()
 
   function cancelReminderClear() {return reminderPanel.cancelClear()}
   function pulseFrom(item) {
@@ -56,7 +55,6 @@ Item {
     glow.pulse(at)
   }
   function showToday() {
-    sourcesMode=false
     yearMode=false;viewYear=today.getFullYear(); viewMonth=today.getMonth()
     selectedDay={year:viewYear,month:viewMonth,day:today.getDate(),key:todayKey}
   }
@@ -65,17 +63,14 @@ Item {
     if(Calendar.key(now.getFullYear(),now.getMonth(),now.getDate())===todayKey) return
     var follow=selectedDay.key===todayKey && viewYear===today.getFullYear() && viewMonth===today.getMonth()
     today=now
-    if(follow && !yearMode && !sourcesMode) showToday()
+    if(follow && !yearMode) showToday()
   }
   function shiftMonth(delta) {
     if(yearMode) {viewYear=Math.max(1,Math.min(9999,viewYear+delta));return}
     selectDay(Calendar.stepMonth(viewYear,viewMonth,delta,selectedDay.day))
   }
   function closeSubview() {
-    if(sourcesMode) {
-      sourcesMode=false
-      settingsButton.forceActiveFocus(Qt.TabFocusReason)
-    } else if(yearMode) {
+    if(yearMode) {
       yearMode=false
       viewYear=selectedDay.year; viewMonth=selectedDay.month
       monthButton.forceActiveFocus(Qt.TabFocusReason)
@@ -84,24 +79,11 @@ Item {
   }
   function selectDay(day) { selectedDay=day; viewYear=day.year; viewMonth=day.month }
   function focusSelectedDay() {
-    if(sourcesMode) {sourcesPanel.focusEditor();return}
     if(yearMode) {yearGrid.focusMonth();return}
     for(var i=0;i<dayCells.count;i++) {
       var item=dayCells.itemAt(i)
       if(item && item.modelData.key===selectedDay.key) {item.forceActiveFocus(Qt.TabFocusReason);return}
     }
-  }
-  function chooseWeekStart(value) {
-    weekStartRequested(value)
-    settingsMenu.close()
-  }
-  function stepSetting(index,delta) {
-    var count=subscriptions ? 3 : 2,next=(index+delta+count)%count
-    if(next===2) subscriptionsButton.forceActiveFocus()
-    else weekChoices.itemAt(next).forceActiveFocus()
-  }
-  function focusWeekStart() {
-    if(settingsMenu.opened) weekChoices.itemAt(firstDay===0 ? 0 : 1).forceActiveFocus()
   }
   function handleKey(event) {
     if(event.key===Qt.Key_PageUp) shiftMonth(-1)
@@ -144,13 +126,13 @@ Item {
     Item {
       Layout.fillWidth: true
       implicitHeight: currentDate.implicitHeight+Style.space(8)
-      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack || root.sourcesMode; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); if(!root.closeSubview()) root.backRequested() } }
+      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); if(!root.closeSubview()) root.backRequested() } }
       FeedbackButton {
         id: currentDate
         objectName: "calendarCurrentDate"
         anchors.horizontalCenter: parent.horizontalCenter
         width: Math.min(implicitWidth,parent.width-2*(settingsButton.width+Style.space(8)))
-        text: root.sourcesMode ? root.strings.t("ics.sources") : root.today.toLocaleDateString(root.locale,root.strings.t("calendar.currentDateFormat"))
+        text: root.today.toLocaleDateString(root.locale,root.strings.t("calendar.currentDateFormat"))
         fontSize: Design.type.page
         fontWeight: Design.weight("page")
         color: "transparent"
@@ -169,12 +151,12 @@ Item {
         horizontalPadding:Design.gap.small
         radius: Design.controlRadius
         focusable: true
-        onClicked: {root.pulseFrom(settingsButton);settingsMenu.opened ? settingsMenu.close() : settingsMenu.open()}
+        onClicked: {root.pulseFrom(settingsButton);root.settingsRequested()}
       }
     }
     GridLayout {
       id:calendarGrid
-      visible:!root.yearMode && !root.sourcesMode
+      visible:!root.yearMode
       Layout.fillWidth: true
       columns: 8
       columnSpacing:Design.gap.tight
@@ -270,14 +252,13 @@ Item {
     }
 
     CalendarYear {
-      id:yearGrid;Layout.fillWidth:true;visible:root.yearMode && !root.sourcesMode
+      id:yearGrid;Layout.fillWidth:true;visible:root.yearMode
       year:root.viewYear;month:root.viewMonth;firstDay:root.firstDay;todayKey:root.todayKey;reminderDays:root.markedDays
       onYearShift:delta=>root.shiftMonth(delta)
       onTodayRequested:{root.showToday();Qt.callLater(root.focusSelectedDay)}
       onMonthChosen:month=>{root.viewMonth=month;root.yearMode=false;root.selectedDay=Calendar.parts(Calendar.civilDate(root.viewYear,month,1));Qt.callLater(root.focusSelectedDay)}
     }
     RowLayout {
-      visible:!root.sourcesMode
       Layout.fillWidth: true
       spacing:Design.gap.small
       FeedbackButton { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
@@ -294,72 +275,16 @@ Item {
     }
     CalendarAgenda {
       Layout.fillWidth:true
-      visible:!root.sourcesMode && !root.yearMode && root.selectedDay.year===root.viewYear && root.selectedDay.month===root.viewMonth && !!root.subscriptions && root.subscriptions.hasEnabled
+      visible:!root.yearMode && root.selectedDay.year===root.viewYear && root.selectedDay.month===root.viewMonth && !!root.subscriptions && root.subscriptions.hasEnabled
       strings:root.strings;subscriptions:root.subscriptions;year:root.viewYear;selectedKey:root.selectedDay.key
-    }
-    CalendarSources {
-      id:sourcesPanel
-      Layout.fillWidth:true
-      visible:root.sourcesMode && !!root.subscriptions
-      strings:root.strings;subscriptions:root.subscriptions
     }
     ReminderPanel {
       id:reminderPanel
       active:root.active
       Layout.fillWidth:true
-      visible:!!root.reminders && !root.sourcesMode
+      visible:!!root.reminders
       strings:root.strings;reminders:root.reminders;selectedKey:root.selectedDay.key
     }
   }
-  }
-  Controls.Popup {
-    id: settingsMenu
-    objectName: "calendarSettingsMenu"
-    parent: settingsButton
-    x: Commons.I18n.rightToLeft ? 0 : settingsButton.width-width
-    y: settingsButton.height+Style.space(5)
-    width: Math.min(root.width,Style.space(230))
-    padding:Design.gap.medium
-    focus: true
-    closePolicy: Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
-    enter: Transition {NumberAnimation {property:"opacity";from:0;to:1;duration:Preferences.duration(160);easing.type:Easing.OutCubic}}
-    exit: Transition {NumberAnimation {property:"opacity";to:0;duration:Preferences.duration(100);easing.type:Easing.OutCubic}}
-    background: BorderSurface {color:Design.canvas;borderSpec:Design.popupBorder;radius:Design.cardRadius}
-    onOpened: Qt.callLater(root.focusWeekStart)
-    onClosed: if(root.active && root.visible) {if(root.sourcesMode) sourcesPanel.focusEditor();else settingsButton.forceActiveFocus()}
-    contentItem: Column {
-      spacing:Design.gap.small
-      PlainText {width:parent.width;text:root.strings.t("calendar.weekStartsOn");color:Design.secondaryText;typeRole:"caption";wrapMode:Text.Wrap}
-      Repeater {
-        id: weekChoices
-        model: ["sunday","monday"]
-        ActionButton {
-          required property string modelData
-          required property int index
-          objectName: "calendarWeekStart-"+modelData
-          width: parent.width
-          text: root.locale.dayName(index===0 ? 0 : 1,Locale.LongFormat)
-          selected: root.firstDay===(index===0 ? 0 : 1)
-          foreground: selected ? Design.accent : Design.text
-          leftAlign: true
-          background: "transparent"
-          onClicked: {root.pulseFrom(settingsButton);root.chooseWeekStart(modelData)}
-          Keys.onDownPressed: root.stepSetting(index,1)
-          Keys.onUpPressed: root.stepSetting(index,-1)
-          Keys.onTabPressed: root.stepSetting(index,1)
-          Keys.onBacktabPressed: root.stepSetting(index,-1)
-        }
-      }
-      ActionButton {
-        id:subscriptionsButton;objectName:"calendarSubscriptions"
-        visible:!!root.subscriptions;width:parent.width
-        text:root.strings.t("ics.sources");leftAlign:true;background:"transparent"
-        onClicked:{root.sourcesMode=true;settingsMenu.close()}
-        Keys.onDownPressed:root.stepSetting(2,1)
-        Keys.onUpPressed:root.stepSetting(2,-1)
-        Keys.onTabPressed:root.stepSetting(2,1)
-        Keys.onBacktabPressed:root.stepSetting(2,-1)
-      }
-    }
   }
 }

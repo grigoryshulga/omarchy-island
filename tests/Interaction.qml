@@ -115,7 +115,7 @@ ShellRoot {
       Rectangle { anchors.fill: parent; color: Commons.Color.popups.background }
       property bool testPages: false
       property bool dismissed:false
-      Island.CalendarView { id: calendar; visible: !calendarSurface.testPages; x: 12; y: 12; width: parent.width-24; strings: strings; onWeekStartRequested: value => weekStart=value }
+      Island.CalendarView { id: calendar; visible: !calendarSurface.testPages; x: 12; y: 12; width: parent.width-24; strings: strings }
       Island.PopupPages {
         id: pages
         x: 12; y: 12; width: parent.width-24; height: implicitHeight
@@ -428,14 +428,10 @@ ShellRoot {
       check(findChild(today,"calendarTodayGlow").active,"today has no braille glow")
       check(findChild(calendar,"calendarMonth").fontSize<findChild(calendar,"calendarCurrentDate").fontSize,"calendar typography hierarchy is reversed")
       check(findChild(calendar,"calendarPrevious").y>=0 && findChild(calendar,"calendarMonth").mapToItem(calendar,0,0).y>today.mapToItem(calendar,0,0).y,"month navigation is not below the grid")
-      mouseClick(findChild(calendar,"calendarSettings"));wait(180)
-      check(findChild(calendar,"calendarSettingsMenu").opened,"calendar gear did not open settings")
-      var sunday=findChild(findChild(calendar,"calendarSettingsMenu").contentItem,"calendarWeekStart-sunday")
-      mouseClick(sunday);wait(120)
+      calendar.weekStart="sunday"
       check(calendar.firstDay===0 && calendar.cells[0].key==="2024-01-28","Sunday preference did not update calendar")
       check(calendar.weekNumbers.length===6 && calendar.weekNumbers[0]===5 && calendar.weekNumbers[5]===10,"ISO week numbers are incorrect")
-      mouseClick(findChild(calendar,"calendarSettings"));wait(180)
-      mouseClick(findChild(findChild(calendar,"calendarSettingsMenu").contentItem,"calendarWeekStart-monday"));wait(120)
+      calendar.weekStart="monday"
       check(calendar.firstDay===1 && calendar.cells[0].key==="2024-01-29","Monday preference did not update calendar")
       check(calendar.implicitHeight===calendarHeight,"calendar height changed between months")
       console.log("CALENDAR_LAYOUT_PASS")
@@ -556,6 +552,19 @@ ShellRoot {
       check(calendarSurface.dismissed,"media background right click did not dismiss popup")
 
       console.log("CYCLIC_TABS_PASS")
+      pages.requestPage(2);wait(300)
+      mouseClick(findChild(findChild(pages,"islandCalendar"),"calendarSettings"))
+      tryVerify(function(){return Island.IslandSettingsWindow.visible && !!Island.IslandSettingsWindow.view})
+      var settingsView=Island.IslandSettingsWindow.view
+      tryVerify(function(){var heading=findChild(settingsView,"settingsHeading-calendar");return !!heading && heading.activeFocus})
+      var weekChoice=findChild(settingsView,"setting-calendarWeekStart")
+      mouseClick(weekChoice);tryCompare(weekChoice,"popupOpen",true)
+      keyClick(Qt.Key_Down);keyClick(Qt.Key_Down);keyClick(Qt.Key_Return)
+      tryCompare(weekChoice,"value","sunday")
+      check(findChild(pages,"islandCalendar").firstDay===0,"Settings did not update the open calendar")
+      weekChoice.changed("locale")
+      Island.IslandSettingsWindow.close()
+      wait(100)
       console.log("ISLAND_INTERACTION_PASS")
       if (Quickshell.env("ISLAND_CALENDAR_CAPTURE_PATH")) {
         calendarSurface.grabToImage(function(result) { result.saveToFile(Quickshell.env("ISLAND_CALENDAR_CAPTURE_PATH")); Qt.quit() })

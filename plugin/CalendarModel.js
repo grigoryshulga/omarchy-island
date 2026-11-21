@@ -26,7 +26,7 @@ function weekdays(start) {
 function weekStart(value,fallback) {
   if(value==="sunday") return 0
   if(value==="monday") return 1
-  return fallback%7===0 ? 0 : 1
+  return Number.isInteger(fallback) && fallback>=0 && fallback<=7 ? fallback%7 : 1
 }
 function isoWeek(year,month,day) {
   var thursday=civilDate(year,month,day)

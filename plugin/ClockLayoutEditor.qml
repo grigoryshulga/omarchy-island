@@ -67,7 +67,7 @@ Column {
   Row {
     width:parent.width;spacing:Design.gap.small
     layoutDirection:Commons.I18n.rightToLeft ? Qt.RightToLeft : Qt.LeftToRight
-    SectionHeading {width:Math.max(0,parent.width-orientation.width-reset.width-2*parent.spacing);title:root.strings.t("clock.title")}
+    PlainText {width:Math.max(0,parent.width-orientation.width-reset.width-2*parent.spacing);text:root.strings.t("clock.title");typeRole:"settingsHeading";wrapMode:Text.Wrap;Accessible.role:Accessible.Heading}
     FeedbackButton {
       id:orientation;objectName:"clockOrientation";iconSize:fontSize;iconText:root.vertical ? "↕" : "↔";compact:true;focusable:true
       tooltipText:root.strings.t(root.vertical ? "clock.vertical" : "clock.horizontal")
@@ -184,7 +184,7 @@ Column {
     width:parent.width;spacing:Design.gap.medium
     layoutDirection:Commons.I18n.rightToLeft ? Qt.RightToLeft : Qt.LeftToRight
     PlainText {
-      text:root.strings.t("clock.elements");typeRole:"section";wrapMode:Text.Wrap
+      text:root.strings.t("clock.elements");typeRole:"settingsHeading";Accessible.role:Accessible.Heading;wrapMode:Text.Wrap
       Layout.fillWidth:true;Layout.minimumWidth:0
     }
     DesignDropdown {

@@ -25,6 +25,24 @@ Item {
     else if(at.y+item.height>viewport.contentY+viewport.height) viewport.contentY=at.y+item.height-viewport.height
   }
   function focusContent() { if(tabs.itemAt(category)) tabs.itemAt(category).forceActiveFocus() }
+  function focusGroup(groupId) {
+    if(!groupId) return false
+    var sectionIndex=sections.findIndex(section=>section.groups.some(group=>group.id===groupId))
+    if(sectionIndex<0) return false
+    category=sectionIndex
+    Qt.callLater(function(){
+      root.revealTab(tabs.itemAt(root.category))
+      for(var i=0;i<groups.count;i++) {
+        var group=groups.itemAt(i)
+        if(group.modelData.id===groupId) {
+          group.heading.forceActiveFocus(Qt.TabFocusReason)
+          viewport.contentY=Math.max(0,Math.min(group.y,viewport.contentHeight-viewport.height))
+          break
+        }
+      }
+    })
+    return true
+  }
   function revealTab(item) {
     if(!item) return
     if(sidebar) {
@@ -120,7 +138,7 @@ Item {
     Column {
       id:body
       width:viewport.width
-      spacing:Design.gap.section
+      spacing:Design.gap.page
       Loader {
         id:clockEditor
         width:body.width-Design.gap.small
@@ -146,7 +164,8 @@ Item {
           spacing:Design.gap.small
           function closeEditors() {for(var i=0;i<rows.count;i++) rows.itemAt(i).editor.close()}
           function hasOpenEditor() {for(var i=0;i<rows.count;i++) if(rows.itemAt(i).editor.popupOpen) return true;return false}
-          SectionHeading {width:parent.width;title:root.strings.t("settings.group."+group.modelData.id)}
+          readonly property alias heading:sectionHeading
+          PlainText {id:sectionHeading;objectName:"settingsHeading-"+group.modelData.id;width:parent.width;text:root.strings.t("settings.group."+group.modelData.id);typeRole:"settingsHeading";wrapMode:Text.Wrap;Accessible.role:Accessible.Heading}
           PlainText {
             width:parent.width
             visible:!!group.modelData.description

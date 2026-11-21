@@ -243,6 +243,7 @@ Item {
         viewSource:holder.modelData.page
         backend:root.service && root.service.modules ? root.service.modules[holder.modelData.id] || null : null
         presentation:QtObject {
+          function openSettings(groupId) {var overview=root.pageObject(1);if(overview) overview.openSettings(groupId)}
           function openPage(index) {root.enterPage(index);root.requestPage(index)}
           function goBack() {root.back()}
           readonly property var service:root.service

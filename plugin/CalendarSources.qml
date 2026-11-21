@@ -9,7 +9,6 @@ ColumnLayout {
   required property var strings
   required property var subscriptions
   spacing:Design.gap.medium
-  function focusEditor() {name.forceActiveFocus()}
   RowLayout {
     Layout.fillWidth:true
     SectionHeading {Layout.fillWidth:true;title:root.strings.t("ics.sourceList");detail:Commons.I18n.formatNumber((root.subscriptions ? root.subscriptions.sources.length : 0))+" / "+Commons.I18n.formatNumber(6)}

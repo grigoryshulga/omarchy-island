@@ -15,7 +15,7 @@ Window {
   width:Style.space(820);height:Style.space(660)
   minimumWidth:Style.space(300);minimumHeight:Style.space(240)
   Commons.Translations {id:translations;directory:Qt.resolvedUrl("i18n")}
-  function present(source) {
+  function present(source,groupId) {
     host=source
     if (!visible) {
       var output=Qt.application.screens.find(item=>item.name===source.Screen.name)
@@ -27,7 +27,7 @@ Window {
       showNormal()
     }
     requestActivate()
-    Qt.callLater(function(){if(root.visible && loader.item) loader.item.focusContent()})
+    Qt.callLater(function(){if(root.visible && loader.item && !loader.item.focusGroup(groupId)) loader.item.focusContent()})
   }
   onHostChanged:if(!host && visible) close()
   onVisibleChanged:if(!visible) host=null

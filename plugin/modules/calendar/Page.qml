@@ -18,6 +18,6 @@ Island.ModulePage {
     weekStart:String(root.presentation.settings.calendarWeekStart || "")
     radialBraille:root.presentation.radialBraille
     onBackRequested:root.presentation.goBack()
-    onWeekStartRequested:value=>root.settingRequested("calendarWeekStart",value)
+    onSettingsRequested:root.presentation.openSettings("calendar")
   }
 }

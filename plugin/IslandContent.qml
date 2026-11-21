@@ -47,9 +47,9 @@ Item {
   readonly property bool dragActive:overviewDrag.dragging
   readonly property bool reorderMenuOpen:overviewDrag.actionsKey!==""
   property bool configuring:false
-  function openSettings() {
+  function openSettings(groupId) {
     closeRequested()
-    IslandSettingsWindow.present(root)
+    IslandSettingsWindow.present(root,groupId)
   }
   readonly property var overviewLayout:Overview.layout(moduleDefinitions,Preferences.get("overviewLayout"))
   function syncSections() {Model.syncKeys(sectionOrder,overviewLayout.map(function(row){return row.id}))}

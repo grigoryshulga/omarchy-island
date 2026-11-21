@@ -77,6 +77,7 @@ assert.equal(Calendar.stepDay({year:2024,month:1,day:28},1).key,'2024-02-29');
 assert.equal(Calendar.weekStart('sunday',1),0);
 assert.equal(Calendar.weekStart('monday',7),1);
 assert.equal(Calendar.weekStart('',7),0);
+assert.equal(Calendar.weekStart('locale',6),6);
 assert.equal(Calendar.weekStart('invalid',1),1);
 for(const [date,week] of [['2020-12-31',53],['2021-01-01',53],['2021-01-04',1],['2024-02-29',9],['2026-12-31',53],['2027-01-01',53]]) {
  const [year,month,day]=date.split('-').map(Number);

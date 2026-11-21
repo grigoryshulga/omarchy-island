@@ -196,9 +196,8 @@ BarWidget {
     if(service && service.modules && service.modules.media) service.modules.media.allowedPlayers=Array.isArray(setting("musicApps",null)) ? setting("musicApps",[]) : []
   }
   function updateSetting(key,value) {
-    if(key==="calendarWeekStart" && value!=="sunday" && value!=="monday") return
     if(key==="weatherTemperatureUnit" && ["celsius","fahrenheit","kelvin"].indexOf(value)<0) return
-    if(["recentMullvadRegions","calendarWeekStart","weatherTemperatureUnit","format","verticalFormat"].indexOf(key)<0 && !Settings.valid(key,value)) return
+    if(["recentMullvadRegions","weatherTemperatureUnit","format","verticalFormat"].indexOf(key)<0 && !Settings.valid(key,value)) return
     var entry={id:root.moduleName}
     for(var name in root.settings) if(name!=="id") entry[name]=root.settings[name]
     entry[key]=value

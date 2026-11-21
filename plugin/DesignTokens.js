@@ -5,6 +5,7 @@ var typography = {
   body: {source: "title", size: 14, line: 20, weight: 400},
   title: {source: "title", size: 14, line: 20, weight: 600},
   section: {source: "heading", size: 16, line: 24, weight: 600},
+  settingsHeading: {source: "title", factor: 1.35, size: 19, line: 26, weight: 600},
   page: {source: "display", size: 24, line: 32, weight: 600},
   metric: {source: "displayLarge", size: 28, line: 36, weight: 500},
   hero: {source: "displayLarge", factor: 1.5, size: 42, line: 48, weight: 600},

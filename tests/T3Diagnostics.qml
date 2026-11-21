@@ -34,6 +34,11 @@ ShellRoot {
       function run() {
         try {
           var text=findChild(settings,"t3ConnectionReason"),button=findChild(settings,"t3Reconnect")
+          var details=findChild(settings,"t3ConnectionDetails")
+          verify(details.visible && !text.visible && !findChild(settings,"t3ConnectionCli").visible)
+          verify(button.bordered && button.variant==="soft")
+          verify(findChild(settings,"settingsHeading-t3").font.pixelSize>findChild(settings,"settingLabel-t3Enabled").font.pixelSize)
+          details.forceActiveFocus();keyClick(Qt.Key_Return);wait(30)
           verify(text && text.visible,"Offline diagnostic must be accessible in module settings")
           compare(text.text,strings.t("t3.diagnostic.cli_version"))
           verify(findChild(settings,"t3ConnectionVersions").text.indexOf(backend.cliVersion)>=0)
@@ -60,6 +65,8 @@ ShellRoot {
           backend.cliPath="";backend.serverVersion="";wait(30)
           verify(!findChild(settings,"t3ConnectionVersions").visible)
           verify(!findChild(settings,"t3ConnectionCli").visible)
+          verify(!findChild(settings,"t3ConnectionTime").visible)
+          details.forceActiveFocus();keyClick(Qt.Key_Space);wait(30)
           verify(findChild(settings,"t3ConnectionTime").visible,"Last success survives failed reconnects")
           var event={type:"connection",status:"offline",reason:"cli_version",stage:"cli",serverVersion:"1.0.0",cliVersion:"2.0.0",cliPath:"/cli",cliSource:"path",lastConnectedAt:1234}
           state.receive(JSON.stringify(event))
