@@ -153,7 +153,14 @@ Hover over Now for a read-only preview of the request, file, or track. Click the
 
 ### Time tools
 
-Open **Overview → Time tools** or run `omarchy-shell island timers` to use the timer, Pomodoro and stopwatch independently. The timer accepts minutes or `min:sec` (one second to 24 hours). The stopwatch displays tenths of a second in its detail view. Start, pause, resume or reset any tool. Pomodoro uses four 25-minute focus sessions with 5-minute breaks and a 15-minute break after the fourth session. When a countdown ends, Island sends a desktop notification. Start the next Pomodoro phase when ready. Running and paused tools survive popup dismissal and shell restarts. **Now** displays a running tool and opens its controls directly.
+Click the time beside the date in Overview, or run `omarchy-shell island timers`. Select a tab to switch instruments.
+
+- **Timer** — Type minutes or `min:sec` into the large digits. Enter or ▶ starts the countdown. The printed hourglass drains as time passes.
+- **Pomodoro** — Open the gear to set the number of rounds and the lengths of focus sessions, short breaks and long breaks. The initial cycle has four 25-minute focus sessions, 5-minute short breaks and a final 15-minute break. The dial draws one sector per round. The inner ring tracks the break. Edits made during a cycle apply to the next cycle, including after a reset. Start each new phase when ready.
+- **Stopwatch** — The engraved hand completes a turn each minute. The digits show tenths of a second.
+- **World clock** — The fourth tab embeds the installed Omarchy Elsewhen panel, including city search and its globe. Island starts with the cities configured in the Elsewhen bar entry, when available, and remembers subsequent edits in Island.
+
+The timer, Pomodoro and stopwatch run independently and survive shell restarts. **Now** opens the running tool. Finished countdowns send a desktop notification.
 
 ### Keyboard
 

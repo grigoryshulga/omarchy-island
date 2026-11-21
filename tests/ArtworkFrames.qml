@@ -3,6 +3,7 @@ import QtTest
 import Quickshell
 import qs.Commons as Commons
 import "Island" as Island
+import "Island/modules/timers" as Timers
 
 ShellRoot {
   QtObject {
@@ -20,6 +21,11 @@ ShellRoot {
     visible: true
     color: "black"
     implicitWidth: 320; implicitHeight: 200
+    Timers.TimePrint {
+      id: timePrint
+      width: 88; height: 88; z: 1; visible: false
+      mode: "timer"; live: visible; step: 0; fraction: 0
+    }
     Island.ArtworkBackground { id: artwork; anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top;height:160; service: service }
     Island.BrailleGauge {id:gauge;anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom;height:24;value:0.2}
     Island.BrailleProgress {id:progressProbe;width:300;height:12;accent:"white";value:0.25;visible:false}
@@ -324,6 +330,17 @@ ShellRoot {
       }
       check(redFill>grayFill*3,"colored fill does not stand out from the gray track")
       console.log("BRAILLE_PROGRESS_FRAMES_PASS")
+      timePrint.visible=true
+      check(timePrint.printed,"time tools shader backend unavailable")
+      for (var mode of ["timer","pomodoro","stopwatch"]) {
+        timePrint.mode=mode; timePrint.fraction=0.25; wait(80)
+        var early=grabImage(timePrint)
+        timePrint.fraction=0.75; wait(80)
+        var late=grabImage(timePrint)
+        check(!early.equals(late),mode+" graphic did not follow elapsed time")
+        wait(50)
+        check(late.equals(grabImage(timePrint)),mode+" graphic moved while time stood still")
+      }
       console.log("ARTWORK_FRAMES_PASS")
       Qt.quit()
     }

@@ -10,7 +10,7 @@ assert.equal(new Set(pages.map(entry => entry.pageIndex)).size, pages.length);
 assert.equal(pages[0].id, 'overview');
 assert.equal(pages[0].enabledSetting, undefined, 'Overview must keep Controls reachable');
 for (const entry of catalog.definitions) {
-  for (const slot of ['state', 'page', 'overview', 'indicator', 'tab']) {
+  for (const slot of ['state', 'page', 'detail', 'overview', 'indicator', 'tab']) {
     if (entry[slot]) assert.ok(fs.existsSync(path.join(__dirname, '../plugin', entry[slot])), `${entry.id}: missing ${slot}`);
   }
 }

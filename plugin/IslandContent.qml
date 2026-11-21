@@ -29,7 +29,12 @@ Item {
   readonly property var summaryWeather:weather || (service && ("weather" in service) ? service.weather : null)
   property date currentDate:new Date()
   function focusSummary(target) {(target==="calendarOpen" ? dateButton : weatherButton).forceActiveFocus()}
-  Timer {interval:60000;repeat:true;running:root.visible && root.overviewActive && (root.expanded || root.hovering);onTriggered:root.currentDate=new Date()}
+  Timer {
+    interval: Math.max(1,60000 - root.currentDate.getSeconds()*1000 - root.currentDate.getMilliseconds())
+    repeat:true; running:root.visible && root.overviewActive && (root.expanded || root.hovering)
+    onTriggered:root.currentDate=new Date()
+  }
+  onVisibleChanged:if(visible) currentDate=new Date()
   onOverviewActiveChanged:{if(overviewActive) currentDate=new Date();else overviewDrag.cancel()}
   property bool compactNotifications: !expanded && !hovering && alertKind==="notification"
   signal settingRequested(string key,var value)
@@ -61,11 +66,12 @@ Item {
     Qt.callLater(function(){detailNavigation.first(detailHeader.visible ? detailHeader : body)})
   }
   function changeLayout(id,patch,step) {settingRequested("overviewLayout",Overview.update(moduleDefinitions,Preferences.get("overviewLayout"),id,patch,step))}
-  readonly property var detailDefinition:moduleDefinitions.find(function(entry){return entry.id===root.detailPage}) || null
+  readonly property var detailDefinition:Catalog.definition(detailPage)
   property real pageHeight: Style.space(520)
   property real maximumOverviewHeight:Style.space(640)
   readonly property bool detailOpen: detailPage!==""
   readonly property var detailItem: {
+    if (detailDefinition && detailDefinition.detail) return headerDetail.item
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.modelData.id===detailPage) return slot.item}
     return null
   }
@@ -78,9 +84,10 @@ Item {
   onDetailPageChanged:activityTarget=null
   function openDetails(page,target) {
     if(!expanded) {expandRequested();return}
-    returnFocus=detailNavigation.focused
+    returnFocus=page==="timers" ? timeButton : detailNavigation.focused
     summaryScrollY=overviewScroll.contentItem.contentY
     detailPage=page
+    if (detailDefinition && detailDefinition.detail) headerDetail.definition=detailDefinition
     activityTarget=target || null
     overviewScroll.contentItem.contentY=0
     Qt.callLater(function(){
@@ -89,7 +96,7 @@ Item {
         root.back()
         return
       }
-      if (target && root.detailItem && typeof root.detailItem.focusActivity==="function" && root.detailItem.focusActivity(detailNavigation)) return
+      if ((target || (root.detailDefinition && root.detailDefinition.detail)) && root.detailItem && typeof root.detailItem.focusActivity==="function" && root.detailItem.focusActivity(detailNavigation)) return
       detailNavigation.first(detailHeader.visible ? detailHeader : body)
     })
   }
@@ -184,7 +191,7 @@ Item {
     Layout.fillWidth:true;spacing:Design.gap.small
     FeedbackButton {
       id:dateButton;objectName:"calendarOpen"
-      Layout.fillWidth:true;Layout.minimumWidth:0
+      Layout.fillWidth:true;Layout.minimumWidth:0;Layout.maximumWidth:implicitWidth
       text:root.currentDate.toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd, d MMMM")
       fontSize:Design.type.title;leftAlign:true;horizontalPadding:0
       focusable:root.expanded && Settings.get(root.settings,"calendarEnabled")
@@ -193,6 +200,25 @@ Item {
       feedback:root.externalFeedback
       onClicked:root.calendarRequested()
     }
+    FeedbackButton {
+      id:timeButton; objectName:"timersOpen"
+      text:root.currentDate.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),Locale.ShortFormat)
+      fontSize:Design.type.title; horizontalPadding:Design.gap.tight; compact:true
+      enabled:!!root.service && !!root.service.modules && !!root.service.modules.timers
+      focusable:root.expanded; opacity:1
+      foreground:Design.accent
+      tooltipText:root.strings.t("timers.open")
+      Accessible.name:text + " · " + tooltipText
+      feedback:root.externalFeedback
+      onClicked:{
+        if (root.expanded) root.openDetails("timers")
+        else {
+          root.expandRequested()
+          Qt.callLater(function(){if(root.expanded) root.openDetails("timers")})
+        }
+      }
+    }
+    Item {Layout.fillWidth:true; Layout.preferredWidth:0}
     WeatherChip {
       id:weatherButton;objectName:"weatherOpen"
       visible:Settings.get(root.settings,"weatherEnabled") && !!root.summaryWeather && root.summaryWeather.allowed
@@ -205,6 +231,23 @@ Item {
       visible:root.expanded;iconText:"󰒓";compact:true;focusable:true
       tooltipText:root.strings.t("overview.settings");feedback:root.externalFeedback
       onClicked:root.openSettings()
+    }
+  }
+  ModuleSlot {
+    id:headerDetail
+    property var definition:null
+    viewSource:definition ? definition.detail : ""
+    onCloseRequested:root.back()
+    Layout.fillWidth:true
+    visible:!!root.detailDefinition && !!root.detailDefinition.detail
+    backend:root.service && root.service.modules && definition ? root.service.modules[definition.id] || null : null
+    presentation:QtObject {
+      readonly property var bar:root.bar
+      readonly property real pageHeight:root.pageHeight
+      readonly property var strings:root.strings
+      readonly property var feedback:root.externalFeedback
+      readonly property var activityTarget:root.activityTarget
+      readonly property bool active:root.overviewActive && root.visible && headerDetail.visible && root.expanded
     }
   }
   T3SessionCard {

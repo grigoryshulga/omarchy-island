@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from adapter import AdaptationError, build
 
 PANELS = {'audio': 'audio', 'bluetooth': 'bluetooth', 'network': 'network',
-          'tailscale': 'tailscale', 'monitors': 'monitor'}
+          'tailscale': 'tailscale', 'monitors': 'monitor', 'elsewhen': 'elsewhen'}
 
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == '--catalog':

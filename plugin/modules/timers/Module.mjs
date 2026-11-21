@@ -1,4 +1,4 @@
 export default {
-  id: "timers", titleKey: "timers.title", order: {overview: 45},
-  state: "modules/timers/State.qml", overview: "modules/timers/Overview.qml"
+  id: "timers", titleKey: "timers.title",
+  state: "modules/timers/State.qml", detail: "modules/timers/Detail.qml"
 };

@@ -15,7 +15,7 @@ export function current(service) {
   if (timers && timers.activeMode) {
     const mode = timers.activeMode;
     const state = timers.records[mode];
-    return {kind:"timers", count:1, row:{mode, label:mode === "pomodoro" ? Time.phase(state.step) : mode,
+    return {kind:"timers", count:1, row:{mode, label:mode === "pomodoro" ? Time.phase(state) : mode,
       seconds:Time.reading(mode,state,timers.now)}};
   }
 
@@ -36,5 +36,6 @@ export function current(service) {
 
 export function glyph(activity) {
   if (!activity) return "";
-  return {t3:"󰋗", timers:"󱎫", downloads:"󰇚", media:"󰎆"}[activity.kind];
+  if (activity.kind === "timers") return Time.glyphs[activity.row.mode];
+  return {t3:"󰋗", downloads:"󰇚", media:"󰎆"}[activity.kind];
 }
