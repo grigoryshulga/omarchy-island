@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import qs.Commons as Commons
 import "Island" as Island
 import "Bridge" as Bridge
+import "Island/modules/timers" as Timers
 
 ShellRoot {
   id:scene
@@ -13,6 +14,7 @@ ShellRoot {
   property bool mockStayAwake:false
   Commons.ShellIpc {target:"nightlight";function toggle():void{scene.mockNightLight=!scene.mockNightLight} function status():string{return JSON.stringify({enabled:scene.mockNightLight})}}
   Commons.ShellIpc {target:"idle";function toggle():void{scene.mockStayAwake=!scene.mockStayAwake} function status():string{return JSON.stringify({stayAwake:scene.mockStayAwake})}}
+  Timers.State {id:timers;execute:function(argv){}}
   Island.IndicatorState {id:backend;layouts.observeSystem:false}
   QtObject {
     id:states
@@ -40,7 +42,12 @@ ShellRoot {
     property bool allowed:false
     property int waitingCount:0
     property int workingCount:0
+    property int finishedCount:0
+    property int failedCount:0
+    readonly property var counts:({attention:waitingCount,finished:finishedCount,failed:failedCount,working:workingCount})
+    property bool canRespond:false
     property bool connected:false
+    function row(id){return rows.find(r=>r.id===id)}
     property string status:"offline"
     property var rows:[]
   }
@@ -68,7 +75,7 @@ ShellRoot {
       function loadCatalog(){}
     }
     property var controlBackend:Island.ControlsState {panelCommand:[];outputCommand:["true"];tailscaleCommand:["true"]}
-    readonly property var modules:({controls:controlBackend,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
+    readonly property var modules:({timers:timers,controls:controlBackend,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
     property var t3:t3State
     property var indicators:states
     property bool doNotDisturb:false
@@ -112,8 +119,10 @@ ShellRoot {
     property bool foregroundAnimationEnabled:true
     property bool transparent:false
     property var activePopout:null
-    function registerClickTarget(t){}
-    function unregisterClickTarget(t){}
+    property var clickTargets:[]
+    function registerClickTarget(t){if(!clickTargets.includes(t)) clickTargets=clickTargets.concat([t])}
+    function unregisterClickTarget(t){clickTargets=clickTargets.filter(item=>item!==t)}
+
     function showTooltip(t,s){}
     function hideTooltip(t){}
     function requestPopout(t){activePopout=t}
@@ -123,6 +132,18 @@ ShellRoot {
     visible:true
     implicitWidth:620;implicitHeight:bar.vertical ? 620 : 80
     Island.BarWidget {id:widget;execute:function(argv){scene.commands=scene.commands.concat([argv])};x:fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.width-width : (parent.width-width)/2;y:bar.vertical ? (fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.height-height : (parent.height-height)/2) : (parent.height-height)/2;width:implicitWidth;height:implicitHeight;bar:bar}
+    MouseArea {
+      id:barPointer;anchors.fill:parent;enabled:false
+      onClicked:mouse=>{
+        for(var i=bar.clickTargets.length-1;i>=0;i--) {
+          var button=bar.clickTargets[i]
+          if (button.interactive!==false && Commons.Util.itemContainsPoint(button,barPointer,mouse.x,mouse.y)) {
+            button.triggerPress(mouse.button)
+            return
+          }
+        }
+      }
+    }
   }
   LazyLoader {
     id:secondOutput
@@ -251,25 +272,45 @@ ShellRoot {
       var t3Indicator=findChild(widget,"islandT3Indicator")
       check(!t3Indicator.visible,"disabled T3 indicator is visible")
       t3State.allowed=true;t3State.workingCount=3;wait(25)
-      check(t3Indicator.visible && t3Indicator.text.indexOf(Commons.I18n.formatNumber(3))>=0,"T3 working count is missing")
+      check(!t3Indicator.visible,"Running work should stay off the bar")
+      t3State.finishedCount=4;wait(25)
+      check(t3Indicator.visible && t3Indicator.text===Commons.I18n.formatNumber(4),"Completed count missing")
       var count=findChild(widget,"islandT3Count")
       check(Math.abs(count.mapToItem(clock,0,count.baselineOffset).y-label.mapToItem(clock,0,label.baselineOffset).y)<1,"T3 count and clock baselines differ")
-      var spinner=findChild(widget,"islandT3Spinner"),glyph=findChild(spinner,"t3SpinnerGlyph")
-      check(Math.abs(spinner.width-count.font.pixelSize*0.75)<1,"T3 spinner must scale with the count font")
-      check(Math.abs(spinner.mapToItem(count,0,spinner.height/2).y-count.height/2-Commons.Style.space(1))<1,"T3 spinner optical offset differs from count center")
-      check(spinner.animating,"T3 bar spinner is not running")
-      check(spinner.tint===label.color && count.color===label.color,"T3 indicator must follow the clock color")
-      var frame=glyph.text;wait(120)
-      check(glyph.text!==frame,"T3 bar braille spinner did not advance")
-      Commons.Style.reduceMotion=true;wait(25)
-      check(!spinner.animating,"T3 bar spinner ignored reduced motion")
-      Commons.Style.reduceMotion=false
+      t3State.failedCount=1;wait(25)
+      check(t3Indicator.text===Commons.I18n.formatNumber(1),"Failure hidden by completions")
       t3State.waitingCount=2;wait(25)
-      check(t3Indicator.text.indexOf(Commons.I18n.formatNumber(2))>=0 && t3Indicator.color===label.color,"T3 input requests did not take priority")
-      check(!spinner.animating,"Pending inputs kept an invisible spinner running")
+      check(t3Indicator.text===Commons.I18n.formatNumber(2),"Pending input hidden by other activity")
       var clockAt=label.mapToItem(clock,0,0)
       check(Math.abs(clockAt.x+label.width/2-clock.width/2)<1,"T3 indicator moved the clock off center")
-      t3State.waitingCount=0;t3State.workingCount=0;wait(25)
+      t3State.rows=[{id:"ready",title:"Ready to review",project:"Island",requestId:"",summary:"Done",status:"completed"}];t3State.connected=true
+      var savedLayout=widget.clockLayout,storedLayout=widget.settings.clockLayout || null
+      if (!savedLayout.some(row=>row.id==="now"))
+        widget.updateSetting("clockLayout",savedLayout.concat([{id:"now",kind:"indicator",side:"left"}]))
+      tryVerify(function(){return timers.ready})
+      timers.toggle("pomodoro")
+      var nowButton=findChild(widget,"islandNowIndicator"),pages=findChild(widget,"islandPopupPages")
+      tryVerify(function(){return nowButton.visible && nowButton.activity && nowButton.activity.kind==="timers"})
+      barPointer.enabled=true
+      wait(80)
+      var timerPoint=nowButton.mapToItem(barPointer,nowButton.width/2,nowButton.height/2)
+      mouseClick(barPointer,timerPoint.x,timerPoint.y)
+      tryCompare(pages,"detailPage","timers",800)
+      tryVerify(function(){return findChild(pages,"timeMode-pomodoro").selected})
+      var popup=findChild(widget,"islandPopup"),outside=findChild(popup,"islandOutside")
+      t3Indicator=findChild(widget,"islandT3Indicator")
+      var t3Point=t3Indicator.mapToItem(barPointer,t3Indicator.width/2,t3Indicator.height/2)
+      mouseClick(outside,t3Point.x,t3Point.y)
+      tryCompare(pages,"detailPage","t3")
+      var readyCard=findChild(pages,"t3Session-ready")
+      check(readyCard && readyCard.visible && pages.implicitHeight<pages.calendarWeatherHeight,"T3 page does not fit one thread")
+      widget.close(true);tryCompare(popup,"visible",false,1000)
+      mouseClick(barPointer,t3Point.x,t3Point.y)
+      tryCompare(pages,"detailPage","t3")
+      widget.close(true);barPointer.enabled=false
+      timers.reset("pomodoro");widget.updateSetting("clockLayout",storedLayout)
+      t3State.connected=false;t3State.rows=[]
+      t3State.waitingCount=0;t3State.finishedCount=0;t3State.failedCount=0;wait(25)
       check(!t3Indicator.visible,"settled T3 sessions kept the bar indicator")
       t3State.allowed=false
       console.log("T3_INDICATOR_PASS")
@@ -479,5 +520,5 @@ ShellRoot {
       } else Qt.quit()
     }
   }
-  Timer {interval:300;running:true;onTriggered:Quickshell.env("ISLAND_PANEL_LAYOUT") ? test.test_panelLayout() : test.test_indicators()}
+  Timer {interval:300;running:true;onTriggered:{try {Quickshell.env("ISLAND_PANEL_LAYOUT") ? test.test_panelLayout() : test.test_indicators()} catch(e){console.log("INDICATORS_FAIL",e,e.stack);Qt.quit()}}}
 }

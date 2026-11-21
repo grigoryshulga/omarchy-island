@@ -287,6 +287,11 @@ BarWidget {
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
     tooltipText:root.moduleTooltips
+    function triggerPressAt(button,point) {
+      var cell=leftIndicators.actionAt(trigger,point) || rightIndicators.actionAt(trigger,point)
+      if (cell && button!==Qt.MiddleButton) cell.triggerPress(button)
+      else triggerPress(button)
+    }
     onPressed: button => { if (button === Qt.RightButton) root.cycleClockFormat(); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
     onWheelMoved: delta => {if(delta) root.cyclePage(delta<0 ? 1 : -1)}
     ArtworkBackground {

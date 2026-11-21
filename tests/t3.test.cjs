@@ -35,15 +35,18 @@ const running={id:'a',status:'running',requestId:''};
 assert.deepEqual(model.transitions(null,[running]),[]);
 assert.deepEqual(model.transitions([running],[{...running,title:'renamed'}]),[]);
 assert.deepEqual(model.transitions([{...running,status:'queued'}],[running]),[]);
-assert.equal(model.transitions([], [running]).length,1);
+assert.equal(model.transitions([], [running]).length,0);
 assert.equal(model.transitions([running],[{...running,status:'completed'}]).length,1);
 assert.equal(model.transitions([running],[{...running,requestId:'question'}]).length,1);
 assert.deepEqual(model.transitions([], [{...running,status:'completed'}]),[]);
 assert.deepEqual(model.transitions([running], []),[]);
+const finished={id:'short',status:'completed',finishedAt:101};
+assert.deepEqual(model.transitions([], [finished],100),[finished]);
+assert.deepEqual(model.transitions([], [finished],102),[]);
 
 assert.equal(model.statusRank({status:'running',requestId:'q'}),0);
-assert.equal(model.statusRank({status:'completed'}),1);
-assert.equal(model.statusRank({status:'failed'}),2);
+assert.equal(model.statusRank({status:'completed'}),2);
+assert.equal(model.statusRank({status:'failed'}),1);
 assert.equal(model.statusRank({status:'running'}),4);
 assert.equal(model.statusRank({status:'starting'}),4);
 
@@ -55,15 +58,15 @@ assert.equal(icons.color('unknown',true,'fallback'),'fallback');
 assert.equal(icons.color('constructor',true,'fallback'),'fallback');
 
 
-// Overview hides terminal successes and bounds working rows without hiding requests/failures.
+// Show the newest results alongside requests and failures.
 const overviewRows = [
   {id:'done',status:'completed'}, {id:'a',status:'running'},
   {id:'b',status:'queued'}, {id:'c',status:'running'},
   {id:'question',status:'running',requestId:'request'}, {id:'failed',status:'failed'}
 ];
-assert.deepEqual(model.overviewRows(overviewRows), ['a','b','question','failed']);
+assert.deepEqual(model.overviewRows(overviewRows), ['question','failed','done']);
 assert.deepEqual(model.counts(overviewRows), {attention:1,working:3,finished:1,failed:1,other:0});
-assert.deepEqual(model.overviewRows([{id:'done',status:'completed'}]), []);
+assert.deepEqual(model.overviewRows([{id:'done',status:'completed'}]), ['done']);
 
 assert.deepEqual(model.counts([{status:'cancelled'}, {status:'idle'}, {status:'failed',requestId:'q'}]), {attention:1,working:0,finished:0,failed:0,other:2});
 
@@ -74,3 +77,5 @@ for (const [row, group] of [
   [{status:'cancelled'},'inactive'], [{status:'idle'},'inactive'],
   ...['preparing','starting','queued','running','waiting'].map(status=>[{status},'working'])
 ]) assert.equal(model.statusGroup(row),group);
+
+assert.deepEqual(model.overviewRows([1,3,2].map(n => ({id:String(n),status:'completed',finishedAt:n}))), ['3','2']);

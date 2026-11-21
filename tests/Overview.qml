@@ -123,11 +123,11 @@ ShellRoot {
       id:test;when:false
       function test_overview() {
         var finished=[]
-        for(var i=0;i<30;i++) finished.push({id:"done-"+i,title:"Completed task "+i,project:"Island",status:"completed",requestId:"",summary:""})
+        for(var i=0;i<30;i++) finished.push({id:"done-"+i,title:"Completed task "+i,finishedAt:1000-i,project:"Island",status:"completed",requestId:"",summary:""})
         bridge.rows=finished;wait(80)
         compare(findChild(overview,"overviewScroll").height,overview.height,"Summary clips content above unused window space")
         verify(overview.implicitHeight>0 && overview.implicitHeight<=overview.maximumOverviewHeight,"Summary exceeds its height limit")
-        verify(!findChild(overview,"t3Session-done-0").visible,"Completed cards leaked into summary")
+        verify(findChild(overview,"t3Session-done-0").visible && !findChild(overview,"t3Session-done-2").visible,"Summary must surface two completed threads")
         compare(findChild(overview,"t3Count-finished").count,30,"Completed indicator missed tasks")
         verify(!findChild(overview,"t3Count-working").visible,"Zero working count is visible")
         var seek=findChild(overview,"mediaCompactProgress")
@@ -259,13 +259,7 @@ ShellRoot {
           compare(badge.count,1,"Incorrect status count: "+kind)
           verify(badge.visible && badge.tooltipText!=="","Missing status indicator: "+kind)
         }
-        var spinner=findChild(findChild(overview,"t3Count-working"),"t3CountSpinner")
-        verify(spinner.animating,"Working counter spinner is stopped")
-        overview.overviewActive=false;wait(20)
-        verify(!spinner.animating,"Inactive Overview kept the counter animating")
-        overview.overviewActive=true
         overview.anchors.fill=null;overview.width=348;overview.height=148;Commons.Style.cornerRadius=0;Commons.Style.reduceMotion=true;wait(80)
-        verify(!spinner.animating,"Reduced motion kept the counter animating")
         var heading=findChild(overview,"t3SummaryHeading")
         for(var kind of ["attention","working","finished","failed","other"]) {
           var badge=findChild(overview,"t3Count-"+kind)

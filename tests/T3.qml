@@ -21,7 +21,7 @@ ShellRoot {
   FloatingWindow {
     id:window
     visible:true;implicitWidth:540;implicitHeight:900
-    Island.PopupPages {id:pages;anchors.fill:parent;anchors.margins:16;service:service;strings:strings;expanded:true;keyboardActive:true}
+    Island.PopupPages {id:pages;anchors.fill:parent;anchors.margins:16;service:service;strings:strings;expanded:true;keyboardActive:true;onExpandRequested:expanded=true}
     Timer {interval:400;running:true;onTriggered:{try {test.test_sessions()} catch(error) {console.log("T3_QML_FAIL",error.stack);Qt.quit()}}}
     Timer {interval:18000;running:true;onTriggered:{console.log("T3_QML_TIMEOUT");Qt.quit()}}
     TestCase {
@@ -41,7 +41,7 @@ ShellRoot {
         var threadAction=findChild(findChild(pages,"t3Session-thread-1"),"t3Details")
         verify(threadAction.visible && threadAction.iconText==="","thread header still has an arrow")
         threadAction.forceActiveFocus();keyClick(Qt.Key_Return);wait(80)
-        compare(pages.implicitHeight,pages.calendarWeatherHeight,"Details lost their stable working height")
+        verify(pages.implicitHeight>0 && pages.implicitHeight<pages.calendarWeatherHeight,"One thread left empty space below the list")
         var card=findChild(pages,"t3Session-thread-1")
         verify(card!==null)
         var field=findChild(card,"t3Answer-q1"),submit=findChild(card,"t3Submit")
@@ -108,18 +108,20 @@ ShellRoot {
         verify(!findChild(section,"t3Group-thread-6").visible,"Repeated status duplicated its heading")
         compare(findChild(card,"t3Answer-q1").text,draft,"Opening details discarded draft")
         verify(pages.back(),"Back did not return to summary");wait(50)
-        verify(!sixth.visible && workingCard.visible,"Summary must cap working rows")
+        verify(!sixth.visible && !workingCard.visible,"Running work occupied a review slot")
         verify(!findChild(section,"t3Group-thread-1").visible,"Group headings leaked into summary")
         verify(threadAction.activeFocus,"Back lost thread-row focus")
-        verify(pages.implicitHeight>summaryHeight && pages.implicitHeight<=pages.maximumOverviewHeight,"Summary did not adapt to the additional visible threads")
+        compare(pages.implicitHeight,summaryHeight,"Running threads grew the review summary")
         openDetails.clicked();wait(50)
         compare(findChild(card,"t3Answer-q1").text,draft,"Returning to details lost the draft")
         pages.expanded=false;pages.hovering=true;wait(50)
         verify(card.visible && !workingCard.visible && !sixth.visible,"Hover preview must show only the first sorted thread")
         verify(!spinner.animating,"Hidden hover thread kept its spinner running")
         compare(findChild(card,"t3Answer-q1").text,draft,"Hover transition discarded draft")
-        pages.expanded=true;pages.hovering=false;wait(50)
-        openDetails.clicked();wait(50)
+        mouseClick(openDetails,openDetails.width/3,openDetails.height/2)
+        tryCompare(pages,"detailPage","t3")
+        verify(pages.expanded)
+        pages.hovering=false
         var done=Object.assign({},second,{id:"thread-done",status:"completed"})
         snapshot([second,done,row]);wait(50)
         var doneCard=findChild(pages,"t3Session-thread-done")
@@ -230,16 +232,17 @@ ShellRoot {
         snapshot([]);wait(30)
         alerts.clear()
         service.setDoNotDisturb(false)
-        snapshot([Object.assign({},second,{status:"running"})]);wait(30)
-        compare(alerts.count,1)
+        snapshot([second]);wait(30)
+        compare(alerts.count,0,"Starting work should be quiet")
         snapshot([Object.assign({},second,{status:"starting"})]);wait(30)
-        compare(alerts.count,1,"Run phases must not repeat popups")
+        compare(alerts.count,0,"Run phases must stay quiet")
         service.setDoNotDisturb(true)
         snapshot([Object.assign({},second,{status:"completed"})]);wait(30)
-        compare(alerts.count,1,"DND must suppress popups")
+        compare(alerts.count,0,"DND must suppress popups")
         service.setDoNotDisturb(false)
-        snapshot([Object.assign({},second,{status:"running"})]);wait(30)
-        compare(alerts.count,2)
+        snapshot([second]);wait(30)
+        snapshot([Object.assign({},second,{status:"completed"})]);wait(30)
+        compare(alerts.count,1,"A new result should alert")
         pages.expanded=false;pages.hovering=false;pages.alertKind="t3";wait(50)
         verify(findChild(pages,"t3ActivityToast").visible,"Status alert must render its compact card")
         pages.alertKind="";pages.expanded=true
@@ -252,7 +255,7 @@ ShellRoot {
         alerts.clear()
         service.t3.receive(JSON.stringify({type:"sessions",rows:[second,linked],baselineIds:[linked.id]}))
         compare(service.t3.workingCount,2)
-        compare(alerts.count,1,"Only the new local session should alert")
+        compare(alerts.count,0,"Running sessions and linked baselines must stay quiet")
         service.t3.openThread(linked.id)
         compare(opened[0],"t3code://threads/remote-env/thread-1")
         linked=Object.assign({},linked,{requestId:"linked/remote-env/thread-1/pending",requestKind:"unknown"})

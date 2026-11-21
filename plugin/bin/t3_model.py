@@ -34,6 +34,14 @@ def timestamp(value):
         return 0
 
 
+def session_order(pending, status, finished_at, updated_at, thread_id):
+    rank = {"failed": 1, "completed": 2}.get(status, 3 if status in BUSY else 4)
+    if pending:
+        rank = 0
+    recency = (finished_at or updated_at) if status in TERMINAL else updated_at
+    return rank, -recency, thread_id
+
+
 def select_threads(threads, now=None):
     now = time.time() if now is None else now
     result = []
@@ -46,14 +54,15 @@ def select_threads(threads, now=None):
         lineage = row.get("lineage") or {}
         if lineage.get("relationshipToParent") == "subagent" or lineage.get("sideChat") or row.get("delegatedFrom"):
             continue
-        pending = row.get("pendingRuntimeRequest")
-        active = row.get("status") in BUSY or row.get("activityRunStatus") in BUSY
-        recent = row.get("status") in TERMINAL and timestamp(row.get("latestRunCompletedAt") or row.get("updatedAt")) > now - RETENTION
-        if pending or active or recent:
-            result.append(row)
-    result.sort(key=lambda r: (0 if r.get("pendingRuntimeRequest") else 1 if r.get("status") in BUSY or r.get("activityRunStatus") in BUSY else 2,
-                               -timestamp(r.get("updatedAt")), r["id"]))
-    return result[:LIMIT]
+        pending = row.get("pendingRuntimeRequest") or row.get("pendingRequestCount", 0)
+        status = row.get("activityRunStatus") or row.get("status")
+        finished_at = timestamp(row.get("latestRunCompletedAt"))
+        updated_at = timestamp(row.get("updatedAt"))
+        recent = status in TERMINAL and (finished_at or updated_at) > now - RETENTION
+        if pending or status in BUSY or recent:
+            result.append((session_order(pending, status, finished_at, updated_at, row["id"]), row))
+    result.sort(key=lambda entry: entry[0])
+    return [row for _, row in result[:LIMIT]]
 
 
 def request_view(projection, request_id):

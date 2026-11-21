@@ -54,6 +54,13 @@ GridLayout {
     for(var i=0;i<cells.count;i++) {var item=cells.itemAt(i),p=item.mapToItem(target,item.width/2,item.height/2);result.push({id:item.modelData.id,x:p.x,y:p.y})}
     return result
   }
+  function actionAt(source,point) {
+    for (var i=0;i<cells.count;i++) {
+      var cell=cells.itemAt(i)
+      if (cell && cell.interactive && cell.contains(cell.mapFromItem(source,point))) return cell
+    }
+    return null
+  }
   function focusElement(id) {for(var i=0;i<cells.count;i++) if(cells.itemAt(i).modelData.id===id) cells.itemAt(i).button.forceActiveFocus()}
   columns:vertical ? 1 : -1
   rows:vertical ? -1 : 1
@@ -68,6 +75,32 @@ GridLayout {
       readonly property bool live:!!view.item && !!view.item.available
       readonly property bool hasBarAction: !!entry && !entry.moduleId && modelData.kind === "indicator"
           && modelData.id !== "reminders" && modelData.id !== "now"
+      // The native bar intercepts left clicks for drag-to-reorder and forwards
+      // them only to registered targets. Each live indicator owns its cell.
+      readonly property bool interactive:!root.editing && visible && live && modelData.kind==="indicator"
+      property var registeredBar:null
+      function syncRegistration() {
+        if (!root || !cell) return
+        var next=interactive && root.bar && root.bar.registerClickTarget ? root.bar : null
+        if (next===registeredBar) return
+        if (registeredBar) registeredBar.unregisterClickTarget(cell)
+        registeredBar=next
+        if (next) next.registerClickTarget(cell)
+      }
+      Component.onCompleted:Qt.callLater(syncRegistration)
+      onInteractiveChanged:Qt.callLater(syncRegistration)
+      Connections {target:root;function onBarChanged(){Qt.callLater(cell.syncRegistration)}}
+      Component.onDestruction:if(registeredBar) registeredBar.unregisterClickTarget(cell)
+      function triggerPress(button) {
+        if (!interactive) return
+        if (hasBarAction) {
+          if (button===Qt.RightButton) root.quickAction(modelData.id)
+          else if (button===Qt.LeftButton) root.activate(modelData.id)
+        } else if (button===Qt.LeftButton) {
+          if (entry && entry.moduleId) view.item.detailsRequested()
+          else view.item.clicked()
+        }
+      }
       readonly property real actionExtent: hasBarAction ? Style.space(24) : 0
       readonly property real cellWidth: Math.max(actionExtent,naturalWidth)
       readonly property real naturalHeight: live ? view.implicitHeight : root.editing ? root.barHeight : 0

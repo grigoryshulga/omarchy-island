@@ -83,7 +83,11 @@ Item {
   property var activityTarget: null
   onDetailPageChanged:activityTarget=null
   function openDetails(page,target) {
-    if(!expanded) {expandRequested();return}
+    if(!expanded) {
+      expandRequested()
+      Qt.callLater(function(){if(root.expanded) root.openDetails(page,target)})
+      return
+    }
     returnFocus=page==="timers" ? timeButton : detailNavigation.focused
     summaryScrollY=overviewScroll.contentItem.contentY
     detailPage=page
@@ -137,7 +141,7 @@ Item {
     if (!expanded) return body.implicitHeight
     if (configuring) return pageHeight
     if (!detailOpen) return Math.min(maximumOverviewHeight,body.implicitHeight)
-    return detailDefinition && detailDefinition.detail
+    return detailPage==="t3" || (detailDefinition && detailDefinition.detail)
         ? Math.min(maximumOverviewHeight,overviewScroll.y+body.implicitHeight) : pageHeight
   }
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
@@ -210,13 +214,7 @@ Item {
       tooltipText:root.strings.t("timers.open")
       Accessible.name:text + " · " + tooltipText
       feedback:root.externalFeedback
-      onClicked:{
-        if (root.expanded) root.openDetails("timers")
-        else {
-          root.expandRequested()
-          Qt.callLater(function(){if(root.expanded) root.openDetails("timers")})
-        }
-      }
+      onClicked:root.openDetails("timers")
     }
     HeaderButton {
       id:dateButton;objectName:"calendarOpen"
@@ -271,7 +269,7 @@ Item {
     row:root.service && root.service.latestT3 ? root.service.latestT3 : ({id:"",title:"",project:"",status:"idle",requestId:"",request:null,summary:""})
     bridge:root.t3;strings:root.strings;active:visible && root.visible
     feedback:root.externalFeedback
-    onExpandRequested:root.expandRequested()
+    onExpandRequested:root.openDetails("t3",{sessionId:row.id})
   }
   HerdrSessionCard {
     id:herdrToast
@@ -326,7 +324,8 @@ Item {
           readonly property var activityTarget:detail ? root.activityTarget : null
           readonly property bool detail:root.detailPage===moduleFrame.entryKey
           readonly property bool active:root.overviewActive && root.visible && moduleSection.visible
-          readonly property real pageHeight:overviewScroll.height
+          readonly property real pageHeight:detail && moduleFrame.entryKey==="t3"
+              ? Math.max(1,Math.min(root.maximumOverviewHeight,root.pageHeight)-overviewScroll.y) : overviewScroll.height
         }
         readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
         onAvailableChanged:if(!available && root.activityTarget && root.detailPage===moduleFrame.entryKey) Qt.callLater(function(){

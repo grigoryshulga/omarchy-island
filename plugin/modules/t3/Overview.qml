@@ -4,7 +4,7 @@ import "../.." as Island
 
 Island.ModuleView {
   id:root
-  available:(presentation.expanded || presentation.hovering) && !!backend && backend.allowed && backend.connected && backend.rows.length>0
+  available:(presentation.expanded || presentation.hovering) && !!backend && backend.allowed && backend.connected && backend.rows.length>0 && (presentation.expanded || list.summaryIds.length>0)
   function focusActivity(navigation) {return list.focusActivity(navigation)}
   implicitHeight:list.implicitHeight
   Island.T3SessionList {
@@ -18,7 +18,7 @@ Island.ModuleView {
     summaryMode:!root.presentation || !root.presentation.detail
     activityTarget:root.presentation ? root.presentation.activityTarget || null : null
     allSessions:!!root.presentation && root.presentation.detail
-    maximumHeight:root.presentation ? Math.max(Style.space(96),root.presentation.pageHeight-Style.space(128)) : Style.space(96)
+    maximumHeight:allSessions ? root.presentation.pageHeight : root.presentation ? Math.max(Style.space(96),root.presentation.pageHeight-Style.space(128)) : Style.space(96)
     onDetailsRequested:root.detailsRequested()
     onExpandRequested:root.expandRequested()
   }

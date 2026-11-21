@@ -42,7 +42,6 @@ def projection():
 
 class ModelTests(unittest.TestCase):
     def test_retention_and_priorities(self):
-        now = time.time()
         rows = [{'id':str(i), 'status':'running', 'updatedAt':'2026-11-11T10:00:00Z'} for i in range(35)]
         rows += [{'id':'question', 'status':'idle', 'pendingRuntimeRequest':REQUEST},
                  {'id':'old', 'status':'completed', 'updatedAt':'2000-01-01T00:00:00Z'},
@@ -50,11 +49,14 @@ class ModelTests(unittest.TestCase):
                  {'id':'sidechat', 'status':'running', 'lineage':{'sideChat':True}},
                  {'id':'delegated', 'status':'running', 'delegatedFrom':{'threadId':'parent'}},
                  {'id':'child', 'status':'running', 'lineage':{'relationshipToParent':'subagent'}}]
+        rows.extend([dict(id='ready', status='completed', latestRunCompletedAt='2026-11-11T09:59:00Z'),
+                     dict(id='error', status='failed', latestRunCompletedAt='2026-11-11T09:58:00Z')])
+        now = 1794391200  # 2026-11-11 10:00 UTC
         selected = select_threads(rows, now)
         self.assertEqual(len(selected), 30)
-        self.assertEqual(selected[0]['id'], 'question')
+        self.assertEqual([r['id'] for r in selected[:3]], ['question','error','ready'])
         self.assertFalse({'old','archived','child','sidechat','delegated'} & {r['id'] for r in selected})
-        self.assertEqual([r['id'] for r in select_threads(rows[35:],now)],['question'])
+        self.assertEqual([r['id'] for r in select_threads(rows[35:],now)],['question','error','ready'])
 
     def test_project_icons(self):
         for icon in ({'kind':'emoji','emoji':'🏝️'}, {'kind':'monogram','text':'OI','color':'blue'},
@@ -148,9 +150,10 @@ class LinkedTests(unittest.TestCase):
     def test_global_limit_preserves_requests_over_local_work(self):
         local=[dict(id=str(i),status='running',requestId='',updatedAt=100) for i in range(30)]
         remote=[dict(id='linked/e/t',status='waiting',requestId='pending',updatedAt=0)]
+        remote.append(dict(id='linked/e/done',status='completed',requestId='',finishedAt=99))
         rows=merge_sessions(local,remote)
         self.assertEqual(len(rows),30)
-        self.assertEqual(rows[0]['id'],'linked/e/t')
+        self.assertEqual([r['id'] for r in rows[:2]],['linked/e/t','linked/e/done'])
 
     def test_temporary_cli_failure_retries_and_revokes_readonly_token(self):
         calls=[]

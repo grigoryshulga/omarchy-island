@@ -6,7 +6,7 @@ import threading
 import uuid
 
 from t3_cli import CliError
-from t3_model import BUSY, identifier, select_threads, session_view, text
+from t3_model import LIMIT, identifier, select_threads, session_order, session_view, text
 from t3_transport import local_origin, TransportError
 
 INTERVAL = 10
@@ -194,6 +194,6 @@ class LinkedMonitor:
 
 def merge_sessions(local, linked):
     rows = local + linked
-    rows.sort(key=lambda r: (0 if r['requestId'] else 1 if r['status'] in BUSY else 2,
-                             -r.get('updatedAt', 0), r['id']))
-    return rows[:30]
+    rows.sort(key=lambda r: session_order(r['requestId'], r['status'], r.get('finishedAt', 0),
+                                          r.get('updatedAt', 0), r['id']))
+    return rows[:LIMIT]

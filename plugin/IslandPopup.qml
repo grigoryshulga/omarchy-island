@@ -152,8 +152,14 @@ PanelWindow {
       onClicked: mouse => {
         var target=root.anchorItem
         if (target && root.anchorWindow && typeof target.triggerPress === "function") {
-          var point=target.mapToItem(root.anchorWindow.contentItem,0,0)
-          if(mouse.x>=point.x && mouse.y>=point.y && mouse.x<=point.x+target.width && mouse.y<=point.y+target.height) { target.triggerPress(mouse.button); return }
+          var barX=mouse.x-(root.position==="right" ? root.width-root.anchorWindow.width : 0)
+          var barY=mouse.y-(root.position==="bottom" ? root.height-root.anchorWindow.height : 0)
+          var point=target.mapFromItem(root.anchorWindow.contentItem,barX,barY)
+          if(target.contains(point)) {
+            if (typeof target.triggerPressAt==="function") target.triggerPressAt(mouse.button,point)
+            else target.triggerPress(mouse.button)
+            return
+          }
         }
         root.close()
       }

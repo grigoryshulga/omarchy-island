@@ -16,12 +16,16 @@ function statusGroup(row) {
   if(row && row.status==="failed") return "failed"
   return "inactive"
 }
-function statusRank(row) {return ["attention","completed","failed","inactive","working"].indexOf(statusGroup(row))}
+function statusRank(row) {return ["attention","failed","completed","inactive","working"].indexOf(statusGroup(row))}
+function compareRows(a,b) {
+  var rank=statusRank(a)-statusRank(b)
+  if(rank || statusGroup(a)!=="completed") return rank
+  return (b.finishedAt || b.updatedAt || 0)-(a.finishedAt || a.updatedAt || 0) || (a.id<b.id ? -1 : a.id>b.id ? 1 : 0)
+}
 function overviewRows(rows) {
-  var working=0
-  return rows.filter(function(row){
-    if(row.requestId || row.status==="failed") return true
-    return busy(row) && ++working<=2
+  var completed=0
+  return rows.slice().sort(compareRows).filter(function(row){
+    return !!row.requestId || row.status==="failed" || (row.status==="completed" && ++completed<=2)
   }).map(function(row){return row.id})
 }
 function counts(rows) {
@@ -58,12 +62,14 @@ function duration(row, now, format) {
 function alertState(row) {
   return row.requestId ? "request:"+row.requestId : busy(row) ? "running" : row.status
 }
-function transitions(previous, next) {
+function transitions(previous, next, previousSnapshotAt) {
   if(previous===null) return []
   return next.filter(function(row) {
     var old=previous.find(function(item){return item.id===row.id})
     var state=alertState(row)
-    return state!=="idle" && (old ? alertState(old)!==state : !!row.requestId || busy(row))
+    if (!row.requestId && state!=="completed" && state!=="failed") return false
+    if (old) return alertState(old)!==state || (!row.requestId && row.finishedAt>old.finishedAt)
+    return !!row.requestId || row.finishedAt>previousSnapshotAt
   })
 }
 if(typeof module!=="undefined") module.exports={overviewRows:overviewRows,counts:counts,statusRole:statusRole,statusRank:statusRank,statusGroup:statusGroup,alertState:alertState,transitions:transitions,busy:busy,toggle:toggle,answer:answer,valid:valid,duration:duration,optionDescription:optionDescription}

@@ -42,7 +42,7 @@ Column {
     var previous=[]
     for(var n=0;n<items.count;n++) previous.push(items.get(n).sessionId)
     var ordered=rows.slice().sort(function(a,b){
-      var rank=T3.statusRank(a)-T3.statusRank(b)
+      var rank=T3.compareRows(a,b)
       var ai=previous.indexOf(a.id),bi=previous.indexOf(b.id)
       if(ai<0) ai=previous.length+rows.indexOf(a)
       if(bi<0) bi=previous.length+rows.indexOf(b)
@@ -72,7 +72,7 @@ Column {
       focusable:root.expanded && root.summaryMode;feedback:root.feedback
       hasCursor:headerHover.hovered
       title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length)
-      onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()
+      onClicked:root.detailsRequested()
     }
     Flow {
       id:headingContent
@@ -83,7 +83,7 @@ Column {
       layoutDirection:Qt.RightToLeft
       spacing:Design.gap.small
       Repeater {
-        model:[{key:"attention",icon:"󰋗",role:"warning"},{key:"working",icon:"",role:"info"},{key:"finished",icon:"✓",role:"success"},{key:"failed",icon:"󰅙",role:"danger"},{key:"other",icon:"·",role:"secondaryText"}]
+        model:[{key:"attention",icon:"󰋗",role:"warning"},{key:"failed",icon:"󰅙",role:"danger"},{key:"finished",icon:"✓",role:"success"},{key:"working",icon:"◷",role:"secondaryText"},{key:"other",icon:"·",role:"secondaryText"}]
         FeedbackButton {
           id:badge
           required property var modelData
@@ -96,13 +96,12 @@ Column {
           implicitWidth:badgeContent.implicitWidth+2*horizontalPadding
           tooltipText:root.strings.t("overview.t3"+modelData.key.charAt(0).toUpperCase()+modelData.key.slice(1)).arg(Commons.I18n.formatNumber(count))
           Accessible.name:tooltipText
-          onClicked:root.expanded ? root.detailsRequested() : root.expandRequested()
+          onClicked:root.detailsRequested()
           RowLayout {
             id:badgeContent
             anchors.centerIn:parent
             spacing:Design.gap.micro
-            T3Spinner {objectName:"t3CountSpinner";visible:badge.modelData.key==="working";active:root.active && root.visible;tint:badge.tint}
-            PlainText {visible:badge.modelData.key!=="working";text:badge.modelData.icon;typeRole:"caption";color:badge.tint}
+            PlainText {text:badge.modelData.icon;typeRole:"caption";color:badge.tint}
             PlainText {text:Commons.I18n.formatNumber(badge.count);typeRole:"caption";color:badge.tint}
           }
         }
@@ -115,7 +114,7 @@ Column {
     objectName:"t3SessionsScroll"
     width:parent.width
     height:Math.min(cards.implicitHeight,root.summaryMode ? Style.space(144) : root.maximumHeight)
-    visible:root.rows.length>0
+    visible:root.summaryMode ? root.summaryIds.length>0 : root.rows.length>0
     contentWidth:availableWidth
     clip:true
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff
@@ -136,7 +135,7 @@ Column {
           width:cards.width
           spacing:Design.gap.small
           function focusRequest(navigation) {return card.focusRequest(navigation)}
-          visible:root.singleSession ? sessionId===root.singleSession : root.pendingOnly ? groupKey==="attention" : root.summaryMode ? root.summaryIds.indexOf(sessionId)>=0 && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
+          visible:root.singleSession ? sessionId===root.singleSession : root.pendingOnly ? groupKey==="attention" : root.summaryMode ? (root.expanded ? root.summaryIds.indexOf(sessionId)>=0 : sessionId===root.summaryIds[0]) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
           PlainText {
             objectName:"t3Group-"+groupRow.sessionId
             width:parent.width
@@ -154,7 +153,7 @@ Column {
             bridge:root.bridge;strings:root.strings;expanded:root.expanded;feedback:root.feedback
             compactOverview:root.summaryMode
             active:root.active && visible && groupRow.y+y+height>viewport.contentItem.contentY && groupRow.y+y<viewport.contentItem.contentY+viewport.availableHeight
-            onExpandRequested:root.expandRequested()
+            onExpandRequested:root.summaryMode ? root.detailsRequested() : root.expandRequested()
             onOverviewDetailsRequested:root.detailsRequested()
           }
         }

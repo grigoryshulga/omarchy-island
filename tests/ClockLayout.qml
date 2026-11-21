@@ -9,7 +9,7 @@ ShellRoot {
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("Island/i18n")}
   QtObject {
     id:service
-    property var modules:({sample:sample,weather:weather,t3:{allowed:true,workingCount:1,waitingCount:0},herdr:{allowed:true,workingCount:1,waitingCount:0},agentLimits:{allowed:true,indicatorVisible:true,tightest:{remaining:10,name:"Codex",label:"Weekly",stale:false}},battery:{allowed:true,present:true,lowCharge:true,fraction:0.1,icon:"󰁺"}})
+    property var modules:({sample:sample,weather:weather,t3:{allowed:true,counts:{attention:0,failed:0,finished:1}},herdr:{allowed:true,workingCount:1,waitingCount:0},agentLimits:{allowed:true,indicatorVisible:true,tightest:{remaining:10,name:"Codex",label:"Weekly",stale:false}},battery:{allowed:true,present:true,lowCharge:true,fraction:0.1,icon:"󰁺"}})
     property var t3:QtObject {property bool connected:true;property var rows:[]}
     property var downloads:[]
     property bool playing:false
