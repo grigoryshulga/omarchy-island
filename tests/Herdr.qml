@@ -53,6 +53,17 @@ ShellRoot {
         action=findChild(findChild(overview,"herdrSession-a"),"herdrDetails")
         verify(action.activeFocus,"Polling lost keyboard focus")
       }
+      function checkBlockedPriority() {
+        var rows=["a","b","c","d","e"].map(function(id,i){return {id:id,title:id,source:"default",pane:"w1:p"+i,status:i<3 ? "idle" : "blocked"}})
+        state.receive(JSON.stringify({sources:[{id:"local/default",label:"default",status:"connected",rows:rows}]}))
+        wait(20)
+        var cards=rows.map(function(row){return findChild(overview,"herdrSession-"+row.id)})
+        verify(cards[3].visible && cards[4].visible && cards[0].visible && !cards[1].visible)
+        verify(cards[3].y<cards[4].y && cards[4].y<cards[0].y,"Compact view lost stable priority")
+        context.detail=true;wait(20)
+        verify(cards[1].visible && cards[0].y<cards[3].y,"Details lost the source order")
+        context.detail=false
+      }
       function checkCards() {
         var title=findChild(card,"herdrSessionTitle"),slot=findChild(card,"herdrStatusSlot")
         var originalTitleX=title.mapToItem(card,0,0).x,originalHeight=card.implicitHeight
@@ -117,6 +128,7 @@ ShellRoot {
       state.receive(JSON.stringify({sources:[{id:"local/default",status:"unavailable",rows:[]}]}))
       state.receive(JSON.stringify({sources:changed}))
       if(activity.count!==1) throw new Error("reconnect alert")
+      ui.checkBlockedPriority()
       state.allowed=false
       if(state.rows.length!==0) throw new Error("cleanup rows")
       if(Object.keys(state.alertBaseline).length!==0) throw new Error("cleanup baseline")

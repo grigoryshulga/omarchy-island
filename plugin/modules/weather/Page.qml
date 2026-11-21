@@ -5,7 +5,7 @@ Island.ModulePage {
   available:!!backend && backend.allowed
   implicitHeight:content.implicitHeight
   function cancelEditing(){content.cancelEditing()}
-  function back(){if(content.editing) {content.cancelEditing();return true};return false}
+  function back(){if(content.editing) {content.cancelEditing(true);return true};return false}
   function enter(){if(backend) backend.activate()}
   Island.WeatherView {
     id:content;objectName:"islandWeather";anchors.fill:parent

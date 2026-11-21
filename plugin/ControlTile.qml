@@ -11,6 +11,7 @@ FeedbackButton {
   property bool drillDown: false
   property bool showLed: !drillDown
   property bool ledInteractive:false
+  readonly property bool islandNavigationContainer:drillDown && showLed && ledInteractive
   property string ledTooltip:""
   property bool effectsActive: true
   property color glyphColor: selected ? Design.accent : Design.text
@@ -40,6 +41,7 @@ FeedbackButton {
       opacity:root.selected ? 1 : 0.35
       FeedbackButton {
         objectName:"controlStateToggle"
+        readonly property bool islandTabOnly:true
         anchors.centerIn:parent
         width:Style.space(22);height:width
         visible:root.ledInteractive

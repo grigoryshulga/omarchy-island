@@ -27,6 +27,8 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-') as tmp:
     reader = Thread(target=read_lines, daemon=True)
     reader.start()
     events = []
+    active_ids = {}
+    completed_ids = {}
 
     def receive(timeout):
         try:
@@ -36,7 +38,11 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-') as tmp:
         assert line is not None, 'Watcher exited before the scenario completed'
         event = json.loads(line)
         if event['event'] == 'active':
+            for item in event['files']:
+                active_ids[item['path']] = item.pop('id')
             assert event['count'] == len(event['files']), f'Wrong active download count: {event}'
+        elif event['event'] == 'complete':
+            completed_ids[event['path']] = event.pop('id')
         events.append(event)
 
     def wait_for(predicate, description, action=None):
@@ -88,6 +94,7 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-') as tmp:
         partial.rename(final)
         expected = {'event': 'complete', 'path': str(final), 'bytes': 14}
         wait_for(lambda: completed() == [expected], 'Rename did not complete exactly once')
+        assert completed_ids[str(final)] == active_ids[str(partial)] == active_ids[str(final)]
         wait_active([])
 
         # This cancellation immediately follows an active snapshot. The final

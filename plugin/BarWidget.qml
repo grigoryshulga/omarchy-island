@@ -145,7 +145,10 @@ BarWidget {
     if (activity.kind==="t3") {
       if (activity.count===1) target.sessionId=activity.row.id
       else target.pendingOnly=true
-    } else if (activity.kind==="downloads") target.downloadKey=activity.row.key
+    } else if (activity.kind==="downloads") {
+      target.downloadKey=activity.row.key
+      target.downloadName=activity.row.filename
+    }
     openModuleDetails(activity.kind,target)
   }
   function openModuleDetails(moduleId,target) {
@@ -223,6 +226,7 @@ BarWidget {
       alertKind = "media"; alertLife.interval = 3000; alertLife.restart()
     }
   }
+  onShowOsdChanged: if(!showOsd && isHovered && !pinned && !hoverOpen && !hoverSuppressed) hoverDelay.restart()
   onIsHoveredChanged: {
     if (isHovered) { leaveGrace.stop(); if (!pinned && !hoverSuppressed && Settings.get(settings,"hoverPreview") && Settings.get(settings,"overviewEnabled")) hoverDelay.restart() }
     else { hoverSuppressed = false; hoverDelay.stop(); leaveGrace.restart() }

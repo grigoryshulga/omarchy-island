@@ -13,15 +13,11 @@ ContainerSurface {
   required property var strings
   property bool expanded:false
   property bool active:true
-  activeFocusOnTab:expanded
   objectName:"download-"+row.key
   color:Design.surface
   border.width: 0
   radius:Design.cardRadius
   implicitHeight:content.implicitHeight+2*Design.cardPadding
-  Keys.onReturnPressed:service.openDownload(row)
-  Keys.onEnterPressed:service.openDownload(row)
-  Keys.onSpacePressed:service.openDownload(row)
   MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:root.service.openDownload(root.row)}
   ColumnLayout {
     id:content

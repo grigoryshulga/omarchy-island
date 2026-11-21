@@ -31,7 +31,7 @@ ContainerSurface {
   property real dismissShown: hover.hovered || keyboardFocused ? 1 : 0
   Behavior on dismissShown {NumberAnimation {duration:Preferences.duration(150);easing.type:Easing.OutCubic}}
   readonly property var members: row.members || [row]
-  readonly property var senderActions: Model.notificationActions(row,function(member) { return service.actions(member) })
+  readonly property var senderActions: row.members ? [] : service.actions(row)
   readonly property var codeActions: {
     var found = []
     members.forEach(function(member) {
@@ -48,8 +48,6 @@ ContainerSurface {
     })
     return found
   }
-  // Commands refer to one concrete item (e.g. a screenshot path). A merged
-  // card opens the newest item; never duplicate buttons or launch every file.
   readonly property var execActions: (Security.parseExecActions(members[0].execActions) || []).map(function(action,index) {
     return {label:action.label,row:members[0],index:index}
   })
@@ -59,13 +57,10 @@ ContainerSurface {
   readonly property string linkSchema: JSON.stringify(linkActions.map(function(action){return action.link}))
   readonly property string senderSchema: JSON.stringify(senderActions.filter(function(action){return action.id!=="default"}).map(function(action){return {id:action.id,text:action.text}}))
   readonly property string execSchema: JSON.stringify(execActions.map(function(action){return {label:action.label,index:action.index}}))
+  readonly property string dismissLabel:members.length>1 ? strings.t("notifications.dismissCount").arg(Commons.I18n.formatNumber(members.length)) : strings.t("delete")
   function dismiss() {
     var backend = service, keys = members.map(function(member) { return member.key })
     keys.forEach(function(key) { backend.remove(key) })
-  }
-  function invokeAction(action) {
-    var backend = service, id = action.id
-    action.targets.slice().forEach(function(member) { backend.invoke(member,id) })
   }
   readonly property bool hasActions: !grouped || linkActions.length>0 || codeActions.length>0 || senderActions.some(function(action){return action.id!=="default"}) || execActions.length>0
   property var feedback: brailleFeedback
@@ -78,7 +73,7 @@ ContainerSurface {
   border.width: 0
   radius: Design.cardRadius
   readonly property real verticalPadding:grouped ? 0 : Design.gap.medium
-  implicitHeight: Math.max(content.implicitHeight,footer.visible ? footer.implicitHeight : 0) + 2*verticalPadding + (separated ? Design.gap.large : 0)
+  implicitHeight: content.implicitHeight + (footer.visible ? footer.height + Design.gap.tight*footer.reveal : 0) + 2*verticalPadding + (separated ? Design.gap.large : 0)
   ContainerSurface {anchors.fill:parent;color:"transparent";radius:Design.cardRadius;borderSpec:Border.controlSpec("focus",Design.text,Design.accent);visible:root.keyboardFocused}
 
   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { root.feedback.pulseFrom(root,Qt.point(mouse.x,mouse.y)); root.service.activate(root.row) } }
@@ -103,7 +98,7 @@ ContainerSurface {
       PlainText { visible: !root.grouped; Layout.fillWidth: true; text: Model.source(root.row); color: Design.accent; typeRole:"caption" }
       Item { visible: root.grouped; Layout.fillWidth: true }
       PlainText { text: new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm"); color: Design.secondaryText; typeRole:"caption" }
-      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
+      FeedbackButton { feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.expanded; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.dismissLabel; horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
     }
     RowLayout {
       Layout.fillWidth: true
@@ -115,7 +110,7 @@ ContainerSurface {
         Layout.minimumWidth:0;Layout.maximumWidth:Layout.preferredWidth
         Layout.preferredHeight:rowDismiss.implicitHeight
         clip:true
-      FeedbackButton { id:rowDismiss; objectName:"notificationDismiss"; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.strings.t("delete"); horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
+      FeedbackButton { id:rowDismiss; objectName:"notificationDismiss"; feedback: root.feedback; radius: Math.min(Style.cornerRadius,Style.space(4)); visible: root.grouped && root.expanded && root.individualDismiss; opacity: hover.hovered || root.keyboardFocused ? 1 : 0; enabled: opacity > 0; iconText: "󰅖"; tooltipText: root.dismissLabel; horizontalPadding:Design.gap.tight; verticalPadding: 0; implicitHeight:Design.inlineControlHeight; focusable: true; onClicked: root.dismiss() }
       }
     }
     PlainText { objectName:"notificationBody"; Layout.fillWidth:true; visible:text!==""; text:root.row.members ? root.row.body : Model.plain(root.row.body); typeRole:"caption"; color:Design.secondaryText; wrapMode:Text.Wrap; maximumLineCount:root.compact ? 1 : root.expanded ? 1000 : 2; elide:Text.ElideRight }
@@ -123,12 +118,13 @@ ContainerSurface {
   Item {
     id:footer
     objectName:"notificationFooter"
-    anchors.right:parent.right;anchors.bottom:parent.bottom
+    anchors.right:parent.right;anchors.top:content.bottom
     anchors.rightMargin:root.grouped ? 0 : Design.cardPadding
-    anchors.bottomMargin:root.verticalPadding
+    anchors.topMargin:Design.gap.tight*reveal
     width:Math.max(0,Math.min(root.width-(root.grouped ? 0 : 2*Design.cardPadding),actions.naturalWidth+2*Design.gap.micro))
-    property real reveal:!root.compact && (hover.hovered || root.keyboardFocused) ? 1 : 0
+    property real reveal:!root.compact && (root.expanded || hover.hovered || root.keyboardFocused) ? 1 : 0
     implicitHeight:actions.implicitHeight+2*Design.gap.micro
+    height:implicitHeight*reveal
     visible:!root.compact && root.hasActions
     opacity:reveal;enabled:reveal>0
     clip:true
@@ -182,7 +178,7 @@ ContainerSurface {
           objectName: "notificationAction-" + modelData.id
           text: Model.plain(modelData.text)
           focusable: true
-          onClicked: {var action=root.senderActions.find(function(action){return action.id===modelData.id && action.text===modelData.text});if(action) root.invokeAction(action)}
+          onClicked: {var action=root.senderActions.find(function(action){return action.id===modelData.id && action.text===modelData.text});if(action) root.service.invoke(root.row,action.id)}
         }
       }
       Repeater {

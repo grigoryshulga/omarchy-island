@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
@@ -16,7 +15,6 @@ Item {
   readonly property var feedback: externalFeedback || weatherFeedback
   property bool showBack: true
   property bool editing: false
-  property var draftPlace: null
   property bool draftAuto: false
   property bool shortQuery:false
   readonly property string searchMessage: shortQuery ? "weather.searchMin" : !weather ? "" : weather.searching ? "weather.searching"
@@ -40,20 +38,25 @@ Item {
   signal temperatureUnitRequested(string value)
   implicitHeight: body.implicitHeight
   onActiveChanged: { if(!active) cancelEditing(); else clockNow=Date.now() }
-  function cancelEditing() {
-    editing=false;shortQuery=false;searchDelay.stop();draftPlace=null;draftAuto=false
+  function cancelEditing(restoreFocus) {
+    editing=false;shortQuery=false;searchDelay.stop();draftAuto=false
     if(weather) weather.cancelSearch()
     city.text=""
+    if(restoreFocus && active && visible) locationButton.forceActiveFocus(Qt.TabFocusReason)
   }
   function startEditing() {
     cancelEditing();editing=true
-    Qt.callLater(function(){city.forceActiveFocus()})
+    Qt.callLater(function(){if(root.editing && root.active && root.visible) city.forceActiveFocus()})
   }
   function commitCity() {
     if(!weather) return
     if(draftAuto) weather.autoLocate()
     else {
-      var place=draftPlace || weather.suggestions[0]
+      if(weather.suggestions.length>1) {
+        cityResults.itemAt(0).forceActiveFocus(Qt.TabFocusReason)
+        return
+      }
+      var place=weather.suggestions[0]
       if(!place) {
         shortQuery=city.text.trim().length<2
         if(!shortQuery && !weather.searching && (searchDelay.running || weather.searchStatus==="error")) {
@@ -64,15 +67,11 @@ Item {
       }
       weather.choose(place)
     }
-    cancelEditing()
+    cancelEditing(true)
   }
   function inside(item,position) {
     var at=item.mapFromItem(root,position.x,position.y)
     return item.visible && at.x>=0 && at.y>=0 && at.x<=item.width && at.y<=item.height
-  }
-  TapHandler {
-    acceptedButtons: Qt.AllButtons
-    onPressedChanged: if(pressed && root.editing && !root.inside(locationSlot,point.position) && !root.inside(suggestions,point.position) && !root.inside(autoButton,point.position)) root.cancelEditing()
   }
   function temp(value) { var n=Model.temperature(value,temperatureUnit); return n===null ? "—" : Commons.I18n.formatNumber(n)+(temperatureUnit==="kelvin" ? " K" : "°") }
   function cycleTemperatureUnit() {temperatureUnitRequested(Model.nextTemperatureUnit(temperatureUnit))}
@@ -90,9 +89,31 @@ Item {
   HoverHandler { id: hover }
   BrailleFeedback { id: weatherFeedback; surface: root; effect: glow; hover: hover }
   BrailleSpotlight { id: glow; surfaceRoot: root; objectName: "weatherSpotlight"; anchors.fill: parent; active: !root.externalFeedback && hover.hovered; pointer: hover.point.position; adaptive: root.radialBraille }
+  Flickable {
+    id: viewport
+    objectName: "weatherScroll"
+    anchors.fill: parent
+    clip: true
+    contentWidth: width
+    contentHeight: body.height
+    flickableDirection: Flickable.VerticalFlick
+    boundsBehavior: Flickable.StopAtBounds
+    Keys.onPressed: event => {
+      if(root.editing || (event.key!==Qt.Key_PageUp && event.key!==Qt.Key_PageDown)) return
+      var step=event.key===Qt.Key_PageDown ? height : -height
+      contentY=Math.max(0,Math.min(contentHeight-height,contentY+step))
+      event.accepted=true
+    }
   ColumnLayout {
     id: body
-    width: parent.width
+    TapHandler {
+      acceptedButtons: Qt.AllButtons
+      onPressedChanged: if(pressed && root.editing) {
+        var position=body.mapToItem(root,point.position.x,point.position.y)
+        if(!root.inside(locationSlot,position) && !root.inside(suggestions,position) && !root.inside(autoButton,position)) root.cancelEditing()
+      }
+    }
+    width: viewport.width
     height:Math.max(implicitHeight,root.height)
     spacing:Design.gap.section
     RowLayout {
@@ -127,10 +148,10 @@ Item {
           placeholderText: root.strings.t("weather.searchCity")
           Accessible.name:placeholderText
           Accessible.description:root.searchMessage ? root.strings.t(root.searchMessage) : ""
-          onTextChanged: if(root.editing) {root.shortQuery=false;root.draftPlace=null;root.draftAuto=false;root.weather.cancelSearch();searchDelay.restart()}
+          onTextChanged: if(root.editing) {root.shortQuery=false;root.draftAuto=false;root.weather.cancelSearch();searchDelay.restart()}
           Keys.onReturnPressed: root.commitCity()
           Keys.onEnterPressed: root.commitCity()
-          Keys.onEscapePressed: event => {root.cancelEditing();event.accepted=true}
+          Keys.onEscapePressed: event => {root.cancelEditing(true);event.accepted=true}
         }
       }
       ActionButton {
@@ -157,9 +178,12 @@ Item {
       visible: root.editing && root.weather && (root.weather.suggestions.length>0 || root.searchMessage!=="")
       spacing:Design.gap.small
       Repeater {
+        id: cityResults
         model: root.weather ? root.weather.suggestions : []
         FeedbackButton {
           required property var modelData
+          required property int index
+          objectName: "weatherCityResult-"+index
           feedback: root.feedback
           Layout.fillWidth: true
           text: modelData.name+" · "+modelData.description
@@ -167,7 +191,7 @@ Item {
           fontSize: Design.type.label
           radius: Design.controlRadius
           focusable: true
-          onClicked: {var place=modelData;city.text=place.name;searchDelay.stop();root.draftPlace=place;city.forceActiveFocus()}
+          onClicked: {root.weather.choose(modelData);root.cancelEditing(true)}
         }
       }
       PlainText {
@@ -213,45 +237,20 @@ Item {
             text: Commons.I18n.formatNumber(Model.temperature(root.current ? root.current.temperature : null,root.temperatureUnit))
             typeRole: "hero"
           }
-          BorderSurface {
-            id: unitButton
+          FeedbackButton {
             objectName: "weatherUnit"
-            readonly property string text: Model.unitSymbol(root.temperatureUnit)
-            readonly property bool hot: unitMouse.containsMouse
-            implicitWidth: unitLabel.implicitWidth+Style.space(4)
-            implicitHeight: unitLabel.implicitHeight
-            color: "transparent"
-            borderSpec: activeFocus ? Border.controlSpec("focus",Design.text,Design.accent) : Border.none()
-            radius: Design.controlRadius
-            activeFocusOnTab: true
+            text: Model.unitSymbol(root.temperatureUnit)
+            tooltipText: root.strings.t("weather.changeUnit").arg(text)
+            Accessible.name: tooltipText
+            fontSize: Design.type.page
+            fontWeight: Design.weight("page")
+            horizontalPadding: Style.space(2)
+            verticalPadding: 0
+            compact: true
+            focusable: true
+            feedback: root.feedback
             Layout.alignment: Qt.AlignTop
-            function activate() {root.feedback.pulseFrom(unitButton);root.cycleTemperatureUnit()}
-            PlainText {
-              id: unitLabel
-              anchors.centerIn: parent
-              text: unitButton.text
-              typeRole: "page"
-              color: unitButton.hot || unitButton.activeFocus ? Design.accent : Design.text
-            }
-            MouseArea {
-              id: unitMouse
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {unitButton.forceActiveFocus();root.feedback.pulseFrom(unitButton)}
-              onDoubleClicked: unitButton.activate()
-            }
-            Controls.ToolTip {
-              visible: unitMouse.containsMouse
-              delay: 400
-              text: root.strings.t("weather.changeUnit")
-              padding:Design.gap.small
-              background: BorderSurface {color:Commons.Color.tooltip.background;borderSpec:Border.surfaceSpec("tooltip","border",Commons.Color.tooltip.border,Math.max(1,Style.normalBorderWidth));radius:0}
-              contentItem: PlainText {text:root.strings.t("weather.changeUnit");color:Commons.Color.tooltip.text;typeRole:"caption"}
-            }
-            Keys.onReturnPressed: activate()
-            Keys.onEnterPressed: activate()
-            Keys.onSpacePressed: activate()
+            onClicked: root.cycleTemperatureUnit()
           }
         }
         PlainText {
@@ -274,6 +273,7 @@ Item {
         condition: root.condition<0 ? 2 : root.condition
         isDay: root.current ? root.current.isDay : true
         animated: root.active && root.visible && root.current!==null
+          && hero.y+hero.height>viewport.contentY && hero.y<viewport.contentY+viewport.height
         opacity: root.current ? 1 : 0.25
       }
     }
@@ -402,6 +402,7 @@ Item {
       typeRole:"caption"
       horizontalAlignment: Text.AlignHCenter
     }
+  }
   }
   Timer { id: searchDelay; interval: 300; onTriggered: if(root.weather && root.editing) root.weather.search(city.text) }
 }

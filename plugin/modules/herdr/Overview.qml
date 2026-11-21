@@ -1,6 +1,7 @@
 import QtQuick
 import "../.." as Island
 import "../../Model.js" as Model
+import "../../HerdrModel.js" as Herdr
 
 Island.ModuleView {
   id:root
@@ -24,8 +25,9 @@ Island.ModuleView {
         id:sourceColumn
         required property string entryKey
         readonly property var source:root.sources.find(function(item){return item.id===sourceColumn.entryKey}) || ({label:"",status:"unavailable",rows:[]})
-        function sync() {Model.syncKeys(sessionKeys,source.rows.map(function(row){return row.id}))}
-        onSourceChanged:sync()
+        readonly property var orderedRows:root.presentation.detail ? source.rows : Herdr.prioritizeBlocked(source.rows)
+        function sync() {Model.syncKeys(sessionKeys,orderedRows.map(function(row){return row.id}))}
+        onOrderedRowsChanged:sync()
         Component.onCompleted:sync()
         ListModel {id:sessionKeys}
         width:parent.width;spacing:Island.Design.gap.small

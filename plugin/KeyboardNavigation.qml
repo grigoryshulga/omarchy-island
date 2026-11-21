@@ -66,7 +66,7 @@ QtObject {
     if(items.indexOf(focused)<0) {if(items.length) focusItem(items[0]);return items.length>0}
     var from=focused.mapToItem(scope,focused.width/2,focused.height/2),origin=focused.mapToItem(scope,0,0),best=null,score=Infinity
     for(var i=0;i<items.length;i++) {
-      var item=items[i];if(item===focused) continue
+      var item=items[i];if(item===focused || ("islandTabOnly" in item && item.islandTabOnly)) continue
       var at=item.mapToItem(scope,item.width/2,item.height/2),x=at.x-from.x,y=at.y-from.y
       var forward=dx ? x*dx : y*dy,cross=dx ? Math.abs(y) : Math.abs(x)
       if(forward<=1) continue

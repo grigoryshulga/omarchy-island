@@ -42,23 +42,36 @@ Item {
     width:parent.width
     spacing:Design.gap.small
     RowLayout {
+      id:header
       Layout.fillWidth:true
       Layout.preferredHeight:Style.space(30)
       spacing:Design.gap.small
       PlainText {
+        id:batteryIcon
         text:root.power ? root.power.icon : ""
         font.pixelSize:Style.font.icon
         color:chargeGauge.accent
       }
       PlainText {
+        id:percentage
         objectName:"batteryPercentage"
         text:root.power ? Commons.I18n.formatNumber(Math.round(root.power.fraction*100))+"%" : ""
         typeRole:"caption"
         font.bold:true
       }
+      TextMetrics {
+        id:statusMetrics
+        font.family:Design.fontFamily
+        font.pixelSize:Design.fontSize("caption")
+        font.weight:Design.weight("caption")
+        text:[root.mode,root.remaining].filter(Boolean).join(" · ")
+      }
       PlainText {
-        Layout.fillWidth:true
-        text:root.remaining && root.width>Style.space(430) ? root.mode+" · "+root.remaining : root.mode
+        id:status
+        Layout.fillWidth:true;Layout.minimumWidth:0;Layout.preferredWidth:0
+        readonly property real availableWidth:root.width-batteryIcon.implicitWidth-percentage.implicitWidth-2*header.spacing-(profileButton.visible ? profileButton.implicitWidth+header.spacing : 0)
+        readonly property bool separate:root.remaining!=="" && statusMetrics.advanceWidth>availableWidth
+        text:separate ? root.mode : statusMetrics.text
         elide:Text.ElideRight
         typeRole:"caption"
         color:Design.secondaryText
@@ -75,6 +88,13 @@ Item {
         horizontalPadding:Design.gap.small;verticalPadding:Design.gap.micro
         onClicked:root.toggleMenu()
       }
+    }
+    PlainText {
+      objectName:"batteryRemaining"
+      visible:status.separate
+      text:root.remaining
+      Layout.fillWidth:true
+      typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap
     }
     BatteryGauge {
       id:chargeGauge

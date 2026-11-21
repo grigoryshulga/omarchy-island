@@ -29,6 +29,8 @@ ShellRoot {
       ]})
     function cancelSearch() {suggestions=[];searchStatus="idle"}
     function search(query) {searchStatus=query==="missing" ? "empty" : "error"}
+    property var chosen:null
+    function choose(place){chosen=place}
     function refresh() {}
   }
   FloatingWindow {
@@ -109,6 +111,17 @@ ShellRoot {
             Commons.Style.fontBaseSize=size;wait(70);geometry()
           }
         }
+        view.width=388;view.height=358
+        var scroll=item("weatherScroll"),footer=item("weatherSunset")
+        tryVerify(function(){return scroll.contentHeight>scroll.height})
+        unit.forceActiveFocus();keyClick(Qt.Key_PageDown);check(scroll.contentY>0,"Page Down did not reach the forecast")
+        keyClick(Qt.Key_PageUp);check(scroll.contentY===0,"Page Up did not return to current weather")
+        for(var turn=0;turn<20 && footer.mapToItem(view,0,footer.height).y>view.height+1;turn++) {
+          mouseWheel(scroll,150,190,0,-120,Qt.NoButton);wait(100)
+        }
+        tryVerify(function(){return footer.mapToItem(view,0,footer.height).y<=view.height+1})
+        scroll.contentY=0
+        view.height=Qt.binding(function(){return view.implicitHeight})
         Commons.Style.fontBaseSize=12;view.width=420
         Commons.Style.cornerRadius=0;wait(40)
         check(findChild(item("weatherDay-0"),"weatherRange").radius===0,"square theme got round range bars")
@@ -137,6 +150,16 @@ ShellRoot {
         tryCompare(status,"text",translations.t("weather.searchError"))
         check(input.text==="failure" && input.activeFocus,"error lost search or focus")
         keyClick(Qt.Key_Escape);check(!view.editing && !status.visible,"cancel retained search state")
+        check(item("weatherLocation").activeFocus,"Escape did not restore focus to the city")
+        item("weatherLocation").clicked();tryCompare(input,"activeFocus",true)
+        input.text="Springfield";wait(350)
+        provider.suggestions=[{name:"Springfield",description:"Illinois"},{name:"Springfield",description:"Missouri"}]
+        keyClick(Qt.Key_Return)
+        var choice=item("weatherCityResult-0")
+        check(choice.activeFocus && choice.text.includes("Illinois") && view.editing && !provider.chosen,"ambiguous Enter saved a city without selection")
+        keyClick(Qt.Key_Tab);check(item("weatherCityResult-1").activeFocus,"Tab did not focus the next region")
+        keyClick(Qt.Key_Return)
+        check(provider.chosen && provider.chosen.description==="Missouri" && item("weatherLocation").activeFocus,"result activation saved the wrong region or lost focus")
         console.log("WEATHER_SUMMARY_PASS");Qt.quit()
       }
     }

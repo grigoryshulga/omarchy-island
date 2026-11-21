@@ -81,6 +81,13 @@ Column {
     actionText:kind==="error" && root.expanded ? root.strings.t("limits.refresh") : ""
     onActionRequested:root.backend.refresh()
   }
+  FeedbackButton {
+    objectName:"limitsOpenAll"
+    visible:root.expanded && root.compact && !root.centerOpen && !root.rows.length
+    text:root.strings.t("limits.openAll")
+    focusable:true;feedback:root.feedback
+    onClicked:root.detailsRequested()
+  }
   AgentLimitsCenter {
     id: center
     availableHeight: root.availableHeight

@@ -1,6 +1,10 @@
 function statusRole(status) {
   return status==="blocked" ? "warning" : status==="working" ? "info" : status==="done" ? "success" : "secondaryText"
 }
+function prioritizeBlocked(rows) {
+  return rows.filter(function(row){return row.status==="blocked"})
+    .concat(rows.filter(function(row){return row.status!=="blocked"}))
+}
 // A missing source resets its baseline: reconnecting must not replay old work.
 function transitions(previous, sources) {
   var next={}, alerts=[]

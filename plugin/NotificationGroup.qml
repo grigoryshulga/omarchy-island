@@ -22,9 +22,13 @@ ContainerSurface {
   property var externalFeedback: null
   property bool radialBraille: true
   property int limit: 3
-  readonly property var mergedRows: Model.coalesceNotifications(group.rows)
-  function syncRows() {Model.syncKeys(rowItems,mergedRows.map(Model.notificationKey))}
-  onMergedRowsChanged: syncRows()
+  function rowKey(row) {
+    return Model.notificationKey(row, !!row.execArgv || !!row.execActions || (service && service.actions(row).length > 0))
+  }
+  readonly property var mergedRows: Model.coalesceNotifications(group.rows,rowKey)
+  readonly property var mergedKeys: mergedRows.map(rowKey)
+  function syncRows() {Model.syncKeys(rowItems,mergedKeys)}
+  onMergedKeysChanged: syncRows()
   Component.onCompleted: syncRows()
   ListModel {id:rowItems}
   readonly property var feedback: externalFeedback || brailleFeedback
@@ -87,7 +91,7 @@ ContainerSurface {
         opacity: hover.hovered || root.keyboardFocused ? 1 : 0
         enabled: hover.hovered || root.keyboardFocused
         iconText: "󰅖"
-        tooltipText: root.strings.t("deleteGroup")
+        tooltipText: root.strings.t("deleteGroup").arg(Commons.I18n.formatNumber(root.group.rows.length))
         horizontalPadding:Design.gap.small; verticalPadding: 0; implicitHeight:Design.inlineControlHeight
         onClicked: root.dismissGroup()
         Behavior on opacity { NumberAnimation { duration: Preferences.duration(120) } }
@@ -100,7 +104,7 @@ ContainerSurface {
       Loader {
         required property string entryKey
         required property int index
-        readonly property var modelData: root.mergedRows.find(function(row){return Model.notificationKey(row)===entryKey}) || ({key:"",app:root.group.source,summary:"",body:"",ts:0})
+        readonly property var modelData: root.mergedRows[root.mergedKeys.indexOf(entryKey)] || ({key:"",app:root.group.source,summary:"",body:"",ts:0})
         Layout.fillWidth: true
         Layout.fillHeight: false
         Layout.preferredHeight: item ? item.implicitHeight : 0

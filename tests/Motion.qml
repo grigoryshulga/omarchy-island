@@ -39,7 +39,13 @@ ShellRoot {
     signal t3Arrival()
     property var latestT3: null
     property string t3TargetScreen: ""
-    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
+    property var controls: QtObject {
+      property var panelCommand:[]
+      function watch(item,visible) {}
+      function available(key) {return false}
+      function enabledState(key) {return false}
+    }
+    readonly property var modules:({controls:controls,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3: QtObject {
       property bool allowed:false
       property bool connected:true
@@ -59,6 +65,7 @@ ShellRoot {
     property var latest: null
     property var player: p
     readonly property bool hasMedia: Model.hasMedia(player,MprisPlaybackState.Stopped)
+    property var allowedPlayers: []
     property var players: []
     property var mutedSources: []
     property int mediaCalls: 0
@@ -110,6 +117,8 @@ ShellRoot {
   TestCase {
     id: test
     when: false
+    // Loaded module delegates are visual children of the popup's page surface.
+    function onPage(name) {return findChild(findChild(widget,"islandPopupPages"),name)}
     function checkExit(ok,message) {
       if(!ok) {console.log("ISLAND_MOTION_FAIL:",message);Qt.quit();throw new Error(message)}
     }
@@ -118,8 +127,11 @@ ShellRoot {
     property real startWidth: 0
     property real playerWidth: 0
     property string nativeSize: ""
+    property bool sawExitFrame:false
     function sampleExit(popup) {
-      checkExit(popup.visible && popup.backingWindowVisible && popup.shown>0.1 && popup.shown<0.95,"close has no perceptible intermediate frame")
+      if(popup.shown<=0.1 || popup.shown>=0.95) return
+      checkExit(popup.visible && popup.backingWindowVisible,"closing hid the intermediate frame")
+      sawExitFrame=true
       checkExit(popup.drawnWidth<startWidth-1 && popup.drawnWidth>startWidth*0.9,"close does not gently contract: stage="+exitTick+", from="+startWidth+", current="+popup.drawnWidth+", open="+popup.open)
       checkExit(popup.width+"x"+popup.height===nativeSize,"closing resized the native surface")
     }
@@ -132,14 +144,18 @@ ShellRoot {
     // Sample real exit frames, interrupt them with the next mode, then
     // verify the final completed close unmaps the native surface.
     function test_exit_step() {
-      var popup=findChild(widget,"islandPopup"),tabs=findChild(widget,"overviewHeader"),player=findChild(widget,"islandMediaPlayer"),art=findChild(widget,"islandPopupArtwork")
+      var popup=findChild(widget,"islandPopup"),tabs=onPage("overviewHeader"),player=onPage("islandMediaPlayer"),art=findChild(widget,"islandPopupArtwork")
       exitTick++
       if(exitTick===20) {
         startWidth=popup.drawnWidth;nativeSize=popup.width+"x"+popup.height
         widget.close()
         checkExit(tabs.visible && player.visible && art.visible,"pinned close discarded its contents or backdrop before fading")
       }
-      if([25,65,105,145,185].indexOf(exitTick)>=0) sampleExit(popup)
+      for(var start of [20,60,100,140,180]) {
+        if(exitTick===start) sawExitFrame=false
+        if(exitTick>start && exitTick<=start+5) sampleExit(popup)
+        if(exitTick===start+5) checkExit(sawExitFrame,"close has no perceptible intermediate frame at stage "+start)
+      }
       if(exitTick===26) {
         widget.contentExpanded=false;widget.hoverOpen=true
         var hoverCard=findChild(popup,"islandPopupCard")
@@ -154,7 +170,7 @@ ShellRoot {
       if(exitTick===65) checkExit(Math.abs(player.width-playerWidth)<1,"hover close reflowed its content")
       if(exitTick===66) widget.showNotification()
       if(exitTick===100) {
-        var toast=findChild(widget,"notificationGroup-Test")
+        var toast=onPage("notificationGroup-Test")
         var toastHeight=toast ? toast.height : -1
         startWidth=popup.drawnWidth
         widget.alertKind=""
@@ -163,15 +179,15 @@ ShellRoot {
       if(exitTick===106) widget.alertKind="media"
       if(exitTick===132) {
         checkExit(popup.bareCardShown && popup.padding===0,"music toast retained its outer container")
-        checkExit(findChild(widget,"mediaSectionHeading")===null,"music toast retained its section heading")
-        checkExit(player.color.toString()==="#00000000","music toast paints a nested card")
+        checkExit(onPage("mediaSectionHeading")===null,"music toast retained its section heading")
+        checkExit(player.visible && findChild(player,"mediaTransport").visible,"music toast hid its transport controls")
         checkExit(art.visible && !findChild(widget,"islandToastWaves").active,"music toast lost artwork or gained notification waves")
         p.trackTitle="A very long track title that should elide without moving the player controls"
         widget.hoverOpen=true
       }
       if(exitTick===138) {
         checkExit(!popup.bareCardShown && player.compactOverview,"hovering music toast did not restore Overview")
-        checkExit(player.color.toString()===Island.Design.surface.toString(),"Overview did not restore its media card")
+        checkExit(tabs.visible && player.visible && findChild(popup,"islandPopupCard").color.toString()===Commons.Color.popups.background.toString(),"Overview did not restore its header, player and popup background")
         console.log("MUSIC_TOAST_CARD_PASS")
       }
       if(exitTick===140) {
@@ -189,7 +205,9 @@ ShellRoot {
         checkExit(artworkFadeTailSeen,"tab switch did not preserve the artwork fade tail")
         startWidth=popup.drawnWidth
         widget.close()
-        checkExit(!tabs.visible && Math.abs(findChild(widget,"islandCalendar").mapToItem(findChild(widget,"islandPageSwipe"),0,0).x)<1,"calendar close switched its content before fading")
+        var pager=findChild(widget,"islandPageSwipe")
+        var headerOrigin=tabs.mapToItem(pager,0,0).x
+        checkExit((headerOrigin+tabs.width<=1 || headerOrigin>=pager.width-1) && Math.abs(onPage("islandCalendar").mapToItem(pager,0,0).x)<1,"calendar close switched its content before fading")
       }
       if(exitTick===185) widget.openCalendar()
       if(exitTick===210) {
@@ -234,7 +252,7 @@ ShellRoot {
         verify(!lifetime.running,"Closed T3 popup kept its timer")
         widget.openControls();wait(450)
         verify(fakeBar.activePopout!==widget && typeof fakeBar.activePopout.close==="function","Clock still owns the bar underline or lost popup coordination")
-        var dndControl=findChild(widget,"controlDnd"),wasDnd=service.doNotDisturb
+        var dndControl=onPage("controlDnd"),wasDnd=service.doNotDisturb
         mouseClick(dndControl,dndControl.width/2,dndControl.height/2,Qt.RightButton)
         verify(popup.open && service.doNotDisturb!==wasDnd,"Control right click must toggle without dismissing")
         mouseClick(findChild(popup,"islandPopupBackground"),3,3,Qt.RightButton)
@@ -268,7 +286,7 @@ ShellRoot {
         widget.settings={format:"dddd HH:mm"}
         widget.updateSetting("calendarWeekStart","sunday")
         widget.updateSetting("weatherTemperatureUnit","kelvin")
-        var calendar=test.findChild(widget,"islandCalendar")
+        var calendar=test.onPage("islandCalendar")
         if(!fakeShell.writtenEntry || fakeShell.writtenEntry.calendarWeekStart!=="sunday" || fakeShell.writtenEntry.weatherTemperatureUnit!=="kelvin" || fakeShell.writtenEntry.format!=="dddd HH:mm" || calendar.firstDay!==0) {console.log("ISLAND_MOTION_FAIL: calendar/weather preferences were not saved with existing settings");Qt.quit();return}
         widget.updateSetting("calendarWeekStart","invalid")
         widget.updateSetting("weatherTemperatureUnit","invalid")
@@ -293,7 +311,7 @@ ShellRoot {
       }
       if(tick === 10) { test.mouseMove(widget.parent,1,1);service.latest=service.allEntries[0]; service.arrivalChanged() }
       if(tick===30) {
-        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.findChild(widget,"overviewHeader").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
+        if(!popup.frameSuppressed || test.findChild(popup,"islandPopupCard").color.toString()!==Commons.Color.popups.background.toString() || test.onPage("overviewHeader").visible) { console.log("ISLAND_MOTION_FAIL: notification toast lost its themed background or retained navigation",JSON.stringify({pinned:widget.pinned,hover:widget.hoverOpen,alert:widget.alertKind,frame:popup.frameSuppressed,color:test.findChild(popup,"islandPopupCard").color.toString(),theme:Commons.Color.popups.background.toString()}));widget.close();Qt.quit();return }
       }
       if(tick===30 && !test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: incoming notification has no radio waves");Qt.quit();return}
       if(tick===30) {
@@ -320,7 +338,7 @@ ShellRoot {
       if(tick >= 10 && tick < 36 && popup.shown > 0.01) entrance.push({w:popup.drawnWidth,h:popup.drawnHeight,target:popup.contentWidth})
       if(popup.open && popup.shown > 0.01 && popup.cardOrigin !== undefined && Math.abs(popup.cardOrigin.x+popup.drawnWidth/2-popup.anchorCenter.x)>1) offCenter++
       if(tick === 70) {
-        var tabs=test.findChild(widget,"overviewHeader"), player=test.findChild(widget,"islandMediaPlayer")
+        var tabs=test.onPage("overviewHeader"), player=test.onPage("islandMediaPlayer")
         if(!tabs.visible || player.mapToItem(tabs.parent,0,0).y<tabs.y+tabs.height || popup.frameSuppressed) { console.log("ISLAND_MOTION_FAIL: tabs are not above music or persistent frame is missing");widget.close();Qt.quit();return }
         if(test.findChild(widget,"islandToastWaves").visible) {console.log("ISLAND_MOTION_FAIL: notification waves leaked into overview");Qt.quit();return}
         var panelEffect=test.findChild(widget,"islandPanelSpotlight")
@@ -331,7 +349,7 @@ ShellRoot {
           console.log("ISLAND_MOTION_FAIL: music backdrop visible while playback is paused",artwork.opacity)
           widget.close(); Qt.quit(); return
         }
-        if(!test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: paused player was hidden"); widget.close(); Qt.quit(); return }
+        if(!test.onPage("islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: paused player was hidden"); widget.close(); Qt.quit(); return }
         var distinct = sizes.filter(function(s,i) {return sizes.indexOf(s) === i})
         console.log("MOTION_NATIVE_SIZES",distinct.length,JSON.stringify(distinct.slice(0,8)))
         var seed = entrance[0], grown = entrance[entrance.length-1]
@@ -343,15 +361,15 @@ ShellRoot {
       if(tick===72) test.mouseClick(test.findChild(popup,"islandOutside"),popup.width/2,13,Qt.MiddleButton)
       if(tick===90) {
         if(!widget.pinned || !widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: middle click did not open calendar"); widget.close(); Qt.quit(); return }
-        test.findChild(widget,"calendarBack").clicked()
+        test.onPage("calendarBack").clicked()
         if(!Commons.Style.reduceMotion && !test.findChild(widget,"islandPanelSpotlight").rippling) {console.log("ISLAND_MOTION_FAIL: tab click did not use the shared wave");Qt.quit();return}
       }
       if(tick===106) {
-        if(widget.calendarMode || !widget.pinned || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }
-        test.findChild(widget,"calendarOpen").clicked()
+        if(widget.calendarMode || !widget.pinned || Math.abs(test.onPage("islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }
+        test.onPage("calendarOpen").clicked()
       }
       if(tick===122) {
-        if(!widget.calendarMode || Math.abs(test.findChild(widget,"islandCalendar").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar glyph did not switch visible page"); widget.close(); Qt.quit(); return }
+        if(!widget.calendarMode || Math.abs(test.onPage("islandCalendar").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar glyph did not switch visible page"); widget.close(); Qt.quit(); return }
         test.findChild(widget,"islandClock").triggerPress(Qt.MiddleButton)
       }
       if(tick===140) {
@@ -365,15 +383,15 @@ ShellRoot {
         p.playbackState=MprisPlaybackState.Stopped; p.isPlaying=false; service.playing=false
       }
       if(tick===195) {
-        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: stopped music left its backdrop or player"); widget.close(); Qt.quit(); return }
+        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01 || test.onPage("islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: stopped music left its backdrop or player"); widget.close(); Qt.quit(); return }
         p.trackTitle=""; p.trackArtist=""; p.playbackState=MprisPlaybackState.Playing; p.isPlaying=true; service.playing=true
       }
       if(tick===215) {
-        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: empty track left its backdrop or player"); widget.close(); Qt.quit(); return }
+        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandClockArtwork").opacity>0.01 || test.onPage("islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: empty track left its backdrop or player"); widget.close(); Qt.quit(); return }
         service.player=null; service.playing=false
       }
       if(tick===225) {
-        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.findChild(widget,"islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: disconnected player left its backdrop"); widget.close(); Qt.quit(); return }
+        if(test.findChild(widget,"islandPopupArtwork").opacity>0.01 || test.onPage("islandMediaPlayer").visible) { console.log("ISLAND_MOTION_FAIL: disconnected player left its backdrop"); widget.close(); Qt.quit(); return }
         widget.close();test.mouseMove(widget.parent,1,1);service.latest=service.allEntries[1];service.arrivalChanged()
       }
       if(tick===255) {
@@ -392,29 +410,29 @@ ShellRoot {
         test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
       }
       if(tick===290) {
-        if(widget.pinned || widget.calendarMode || !test.findChild(widget,"overviewHeader").visible) {console.log("ISLAND_MOTION_FAIL: hover preview exposed tabs or switched away from Overview");Qt.quit();return}
+        if(widget.pinned || widget.calendarMode || !test.onPage("overviewHeader").visible) {console.log("ISLAND_MOTION_FAIL: hover preview exposed tabs or switched away from Overview");Qt.quit();return}
         widget.open()
         var pager=test.findChild(widget,"islandPageSwipe")
         test.mouseWheel(pager,pager.width/2,pager.height/2,-120,0,Qt.NoButton)
       }
       if(tick===310) {
         var pager=test.findChild(widget,"islandPageSwipe")
-        if(!widget.calendarMode || Math.abs(test.findChild(widget,"islandCalendar").mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: hover-to-pinned wheel resized without moving calendar contents");widget.close();Qt.quit();return}
+        if(!widget.calendarMode || Math.abs(test.onPage("islandCalendar").mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: hover-to-pinned wheel resized without moving calendar contents");widget.close();Qt.quit();return}
         test.mouseWheel(pager,pager.width/2,pager.height/2,120,0,Qt.NoButton)
       }
       if(tick===340) {
-        if(widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: wheel did not return visible overview");widget.close();Qt.quit();return}
+        if(widget.calendarMode || Math.abs(test.onPage("islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: wheel did not return visible overview");widget.close();Qt.quit();return}
         console.log("RESIZING_PAGE_WHEEL_PASS")
-        test.findChild(widget,"controlAll").clicked()
+        test.onPage("controlAll").clicked()
       }
       if(tick===370) {
-        var controls=test.findChild(widget,"islandControls"),pager=test.findChild(widget,"islandPageSwipe")
+        var controls=test.onPage("islandControls"),pager=test.findChild(widget,"islandPageSwipe")
         if(!widget.controlsMode || !controls.active || Math.abs(controls.mapToItem(pager,0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls did not open within Overview");widget.close();Qt.quit();return}
-        if(test.findChild(widget,"islandTabControls")) {console.log("ISLAND_MOTION_FAIL: Controls still has a separate tab");widget.close();Qt.quit();return}
-        test.findChild(widget,"overviewBack").clicked()
+        if(test.onPage("islandTabControls")) {console.log("ISLAND_MOTION_FAIL: Controls still has a separate tab");widget.close();Qt.quit();return}
+        test.onPage("overviewBack").clicked()
       }
       if(tick===400) {
-        if(widget.controlsMode || widget.calendarMode || Math.abs(test.findChild(widget,"islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls wheel did not return Overview");widget.close();Qt.quit();return}
+        if(widget.controlsMode || widget.calendarMode || Math.abs(test.onPage("islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) {console.log("ISLAND_MOTION_FAIL: Controls wheel did not return Overview");widget.close();Qt.quit();return}
         console.log("CONTROLS_NAVIGATION_PASS")
         var clock=test.findChild(widget,"islandClock")
         test.mouseWheel(clock,clock.width/2,clock.height/2,0,-120,Qt.NoButton)

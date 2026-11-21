@@ -15,11 +15,15 @@ Item {
   readonly property var feedback: externalFeedback || brailleFeedback
   readonly property bool hovered: hover.hovered
   property bool expanded: false
+  property bool toast: false
   property bool compactOverview: false
   property string overviewSize:"standard"
   property bool active: true
   property bool radialBraille: true
   readonly property var player: service ? service.player : null
+  readonly property bool hasTimeline: !!player && player.positionSupported && player.lengthSupported && isFinite(player.length) && player.length > 0
+  readonly property bool showTimeline: hasTimeline && (!toast || player.canSeek)
+  readonly property bool hasVolume: !!player && player.volumeSupported
   signal expandRequested()
   signal closeRequested()
   implicitHeight: body.implicitHeight
@@ -39,7 +43,7 @@ Item {
   Timer {
     interval: 500
     repeat: true
-    running: root.active && root.visible && root.expanded && root.player !== null && root.player.isPlaying && root.player.positionSupported
+    running: root.active && root.visible && (root.expanded || root.toast) && root.showTimeline && root.player.isPlaying
     onTriggered: if (root.player) root.player.positionChanged()
   }
   ColumnLayout {
@@ -71,19 +75,19 @@ Item {
       objectName:"mediaCompactProgress"
       accessibleName:root.strings.t("media.playbackPosition")
       accessibleDescription:root.strings.t("media.seconds").arg(Commons.I18n.formatNumber(Math.floor(liveValue)))
-      visible:root.compactOverview && root.overviewSize==="standard" && root.player && root.player.lengthSupported && root.player.positionSupported
+      visible:root.compactOverview && root.overviewSize==="standard" && root.hasTimeline
       Layout.fillWidth:true
       bar:root.bar
       fillColor:Design.accent
-      maximum:root.player ? Math.max(1,root.player.length) : 1
+      maximum:root.hasTimeline ? root.player.length : 1
       value:root.player ? root.player.position : 0
-      enabled:root.expanded && root.player!==null && root.player.canSeek && root.player.lengthSupported && root.player.positionSupported
+      enabled:root.expanded && root.hasTimeline && root.player.canSeek
       step:1
       onReleased:value=>{if(root.player && root.player.canSeek) root.player.position=value}
     }
     Item {
       Layout.fillWidth: true
-      property real reveal: root.expanded && !root.compactOverview && root.player !== null ? 1 : 0
+      property real reveal: (root.expanded || root.toast) && !root.compactOverview && (root.showTimeline || root.hasVolume) ? 1 : 0
       implicitHeight: details.implicitHeight * reveal
       visible: reveal > 0
       clip: true
@@ -97,24 +101,27 @@ Item {
           id: timeline
           Layout.fillWidth: true
           spacing:Design.gap.tight
-          PlainText {objectName:"mediaElapsed";text:Model.time(seek.liveValue);typeRole:"caption";color:Design.text;Layout.alignment:Qt.AlignVCenter}
+          PlainText {objectName:"mediaElapsed";visible:root.showTimeline;text:Model.time(seek.liveValue);typeRole:"caption";color:Design.text;Layout.alignment:Qt.AlignVCenter}
           IslandSlider {
             id: seek
             objectName: "mediaSeek"
+            visible: root.showTimeline
             accessibleName: root.strings.t("media.playbackPosition")
             accessibleDescription: root.strings.t("media.seconds").arg(Commons.I18n.formatNumber(Math.floor(liveValue)))
             Layout.fillWidth: true
             bar: root.bar
             fillColor: Design.accent
-            maximum: root.player && root.player.lengthSupported ? Math.max(1,root.player.length) : 1
+            maximum: root.hasTimeline ? root.player.length : 1
             value: root.player && root.player.positionSupported ? root.player.position : 0
-            enabled: root.player !== null && root.player.canSeek && root.player.lengthSupported && root.player.positionSupported
+            enabled: root.hasTimeline && root.player.canSeek
             step: 1
             onClicked: position => root.feedback.pulseFrom(seek,position)
             onReleased: value => { if (root.player && root.player.canSeek) root.player.position = value }
           }
-          PlainText {objectName:"mediaDuration";text:Model.time(seek.maximum);typeRole:"caption";color:Design.text;Layout.alignment:Qt.AlignVCenter}
+          PlainText {objectName:"mediaDuration";visible:root.showTimeline;text:root.hasTimeline ? Model.time(root.player.length) : "";typeRole:"caption";color:Design.text;Layout.alignment:Qt.AlignVCenter}
+          Item { visible: !root.showTimeline; Layout.fillWidth: true }
           VolumePopover {
+            visible: root.hasVolume
             id: volumeControl
             feedback: root.feedback
             player: root.player

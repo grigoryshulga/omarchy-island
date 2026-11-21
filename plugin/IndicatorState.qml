@@ -29,9 +29,8 @@ Item {
   readonly property var microphone: Pipewire.defaultAudioSource
   readonly property bool microphoneMuted: !!microphone && (UntypedInput.active ? (UntypedInput.known && UntypedInput.muted) : (!!microphone.audio && microphone.audio.muted))
   property bool downloading: false
-  function showDownload() {if(downloading && !osdActive) showOsd(JSON.stringify({icon:"download",message:"Downloading file...",duration:0}))}
+  function showDownload() {if(downloading && !osdActive) showOsd(JSON.stringify({icon:"download",message:strings.t("downloads.downloading"),duration:1400}))}
   onDownloadingChanged: {if(downloading) showDownload();else if(osdKind==="download") hideOsd()}
-  onOsdActiveChanged: if(!osdActive && downloading) Qt.callLater(showDownload)
   property bool osdActive: false
   property string osdKind: "volume"
   property real osdValue: 0
@@ -43,7 +42,7 @@ Item {
   property string osdScreen: ""
   property int osdSerial: 0
 
-  function attach(item) {if(consumers.indexOf(item)<0) consumers=consumers.concat([item]);refresh();showDownload()}
+  function attach(item) {if(consumers.indexOf(item)<0) consumers=consumers.concat([item]);refresh();if(consumers.length===1) showDownload()}
   function detach(item) {consumers=consumers.filter(function(c){return c!==item});if(!consumers.length) hideOsd()}
   function status(target) {
     var reply=IpcRegistry.call(target,"status",[])

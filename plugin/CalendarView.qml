@@ -69,8 +69,18 @@ Item {
   }
   function shiftMonth(delta) {
     if(yearMode) {viewYear=Math.max(1,Math.min(9999,viewYear+delta));return}
-    var next=Calendar.stepMonth(viewYear,viewMonth,delta)
-    viewYear=next.year; viewMonth=next.month
+    selectDay(Calendar.stepMonth(viewYear,viewMonth,delta,selectedDay.day))
+  }
+  function closeSubview() {
+    if(sourcesMode) {
+      sourcesMode=false
+      settingsButton.forceActiveFocus(Qt.TabFocusReason)
+    } else if(yearMode) {
+      yearMode=false
+      viewYear=selectedDay.year; viewMonth=selectedDay.month
+      monthButton.forceActiveFocus(Qt.TabFocusReason)
+    } else return false
+    return true
   }
   function selectDay(day) { selectedDay=day; viewYear=day.year; viewMonth=day.month }
   function focusSelectedDay() {
@@ -102,6 +112,7 @@ Item {
     else if(event.key===Qt.Key_Up) selectDay(Calendar.stepDay(selectedDay,-7))
     else if(event.key===Qt.Key_Down) selectDay(Calendar.stepDay(selectedDay,7))
     else return false
+    focusSelectedDay()
     return true
   }
   HoverHandler { id: hover }
@@ -133,7 +144,7 @@ Item {
     Item {
       Layout.fillWidth: true
       implicitHeight: currentDate.implicitHeight+Style.space(8)
-      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack || root.sourcesMode; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); if(root.sourcesMode) root.sourcesMode=false;else root.backRequested() } }
+      FeedbackButton { id: backButton; anchors.left: parent.left; anchors.verticalCenter: currentDate.verticalCenter; visible: root.showBack || root.sourcesMode; objectName: "calendarBack"; iconText: Commons.I18n.rightToLeft ? "󰁔" : "󰁍"; tooltipText: root.strings.t("calendar.back"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(backButton); if(!root.closeSubview()) root.backRequested() } }
       FeedbackButton {
         id: currentDate
         objectName: "calendarCurrentDate"
@@ -271,12 +282,13 @@ Item {
       spacing:Design.gap.small
       FeedbackButton { id: previousButton; objectName: "calendarPrevious"; iconText: Commons.I18n.rightToLeft ? "󰅂" : "󰅁"; tooltipText: root.strings.t("calendar.previous"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(previousButton); root.shiftMonth(-1) } }
       FeedbackButton {
+        id:monthButton
         objectName: "calendarMonth"
         Layout.fillWidth: true
         text: root.yearMode ? Commons.I18n.formatNumber(root.viewYear) : root.monthTitle
         fontSize:Design.type.label;focusable:true
         tooltipText:root.strings.t(root.yearMode ? "calendar.showMonth" : "calendar.showYear")
-        onClicked:root.yearMode=!root.yearMode
+        onClicked:{if(root.yearMode) root.closeSubview();else {root.yearMode=true;yearGrid.focusMonth()}}
       }
       FeedbackButton { id: nextButton; objectName: "calendarNext"; iconText: Commons.I18n.rightToLeft ? "󰅁" : "󰅂"; tooltipText: root.strings.t("calendar.next"); radius: Design.controlRadius; horizontalPadding:Design.gap.small; focusable: true; onClicked: { root.pulseFrom(nextButton); root.shiftMonth(1) } }
     }

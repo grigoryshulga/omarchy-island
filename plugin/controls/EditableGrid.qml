@@ -41,7 +41,7 @@ ColumnLayout {
     return false
   }
   function showMenu(key,item) {
-    selectedKey=key;menuKey=key
+    menu.page="actions";selectedKey=key;menuKey=key
     menuPoint=item.mapToItem(root,0,item.height)
     menu.open()
   }
@@ -91,7 +91,7 @@ ColumnLayout {
   }
   function resize(key,w,h) {if(backend) backend.resize(key,w,h);focusTile(key)}
   function move(key,delta) {
-    var rows=layout.order,at=rows.indexOf(key),target=at+delta
+    var rows=placements.map(row=>row.key),at=rows.indexOf(key),target=at+delta
     if(target>=0 && target<rows.length && backend) backend.move("order",key,rows[target])
     focusTile(key)
   }
@@ -312,48 +312,145 @@ ColumnLayout {
       Island.PlainText {anchors.fill:parent;anchors.margins:root.gridGap;verticalAlignment:Text.AlignVCenter;text:root.host.controlTitle(root.dragKey);elide:Text.ElideRight}
     }
   }
+  component Stepper: RowLayout {
+    id:stepper
+    required property string label
+    required property int value
+    required property int maximum
+    signal step(int delta)
+    Layout.fillWidth:true
+    Island.PlainText {text:stepper.label;Layout.fillWidth:true;wrapMode:Text.Wrap;typeRole:"label"}
+    Island.FeedbackButton {
+      objectName:stepper.objectName+"Less";iconText:"−";compact:true;focusable:true
+      enabled:stepper.value>1
+      tooltipText:root.host.strings.t("controls.decrease").arg(stepper.label)
+      onClicked:stepper.step(-1)
+    }
+    Island.PlainText {text:Commons.I18n.formatNumber(stepper.value);typeRole:"label"}
+    Island.FeedbackButton {
+      objectName:stepper.objectName+"More";iconText:"+";compact:true;focusable:true
+      enabled:stepper.value<stepper.maximum
+      tooltipText:root.host.strings.t("controls.increase").arg(stepper.label)
+      onClicked:stepper.step(1)
+    }
+  }
   Controls.Popup {
     id:menu
+    property string page:"actions"
+    readonly property var keys:root.placements.map(row=>row.key)
+    readonly property var tileSize:root.layout.sizes[root.menuKey] || {width:2,height:1}
+    readonly property int favoriteIndex:root.layout.favorites.indexOf(root.menuKey)
+    function arrange() {
+      page="arrange"
+      Qt.callLater(function(){arrangeBack.forceActiveFocus()})
+    }
     parent:root
     x:Math.max(0,Math.min(root.width-width,root.menuPoint.x))
     y:root.menuPoint.y
-    width:Math.min(root.width,Style.space(220));padding:Island.Design.gap.small
+    margins:0
+    width:Math.min(root.width,Style.space(280));padding:Island.Design.gap.small
     focus:true
     closePolicy:Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
     onClosed:if(!root.editKey) root.focusTile(root.menuKey)
     background:Rectangle {color:Island.Design.opaqueCanvas;radius:Island.Design.controlRadius;border.width:1;border.color:Island.Design.fieldBorder}
     contentItem:ColumnLayout {
       spacing:0
-      Island.FeedbackButton {
-        objectName:"controlRename";Layout.fillWidth:true;leftAlign:true
-        text:root.host.strings.t("controls.rename");iconText:"✎";focusable:true
-        onClicked:root.beginEdit(root.menuKey,"name")
+      ColumnLayout {
+        visible:menu.page==="actions";Layout.fillWidth:true;spacing:0
+        Island.FeedbackButton {
+          objectName:"controlRename";Layout.fillWidth:true;leftAlign:true
+          text:root.host.strings.t("controls.rename");iconText:"✎";focusable:true
+          onClicked:root.beginEdit(root.menuKey,"name")
+        }
+        Island.FeedbackButton {
+          visible:!Model.sectionKey(root.menuKey);Layout.fillWidth:true;leftAlign:true
+          text:root.host.strings.t("controls.tileIcon");iconText:"◇";focusable:true
+          onClicked:root.beginEdit(root.menuKey,"icon")
+        }
+        RowLayout {
+          visible:Model.sectionKey(root.menuKey)
+          Island.PlainText {Layout.fillWidth:true;text:root.host.strings.t("controls.spacing");typeRole:"caption"}
+          Island.FeedbackButton {objectName:"controlGapLess";iconText:"−";focusable:true;tooltipText:root.host.strings.t("controls.lessSpacing");enabled:((root.layout.sections[root.menuKey] || {}).gap || 0)>0;onClicked:root.setGap((root.layout.sections[root.menuKey] || {}).gap-1)}
+          Island.FeedbackButton {objectName:"controlGapMore";iconText:"+";focusable:true;tooltipText:root.host.strings.t("controls.moreSpacing");enabled:((root.layout.sections[root.menuKey] || {}).gap || 0)<4;onClicked:root.setGap(((root.layout.sections[root.menuKey] || {}).gap || 0)+1)}
+        }
+        Island.FeedbackButton {
+          objectName:"controlFavoriteToggle";visible:!Model.sectionKey(root.menuKey);Layout.fillWidth:true;leftAlign:true
+          text:root.host.strings.t("controls.favorite");iconText:root.layout.favorites.indexOf(root.menuKey)>=0 ? "★" : "☆";focusable:true
+          enabled:menu.favoriteIndex>=0 || root.layout.favorites.length<32
+          onClicked:{
+            var adding=menu.favoriteIndex<0
+            root.backend.favorite(root.menuKey)
+            if(adding) menu.arrange()
+            else menu.close()
+          }
+        }
+        Island.FeedbackButton {
+          id:arrangeOpener;objectName:"controlArrange";Layout.fillWidth:true;leftAlign:true;focusable:true
+          text:root.host.strings.t("controls.arrange");iconText:"↕"
+          onClicked:menu.arrange()
+        }
+        Island.FeedbackButton {
+          objectName:"controlHide";Layout.fillWidth:true;leftAlign:true;focusable:true
+          text:root.host.strings.t(Model.sectionKey(root.menuKey) ? "controls.deleteSection" : "overview.hide");iconText:"−"
+          onClicked:{var key=root.menuKey;menu.close();if(Model.sectionKey(key)) root.backend.removeSection(key);else root.backend.toggle(key);root.focusFirst()}
+        }
+        Island.FeedbackButton {
+          objectName:"controlLayoutReset";Layout.fillWidth:true;leftAlign:true;focusable:true
+          text:root.host.strings.t("controls.resetLayout");iconText:"󰑓"
+          onClicked:{menu.page="reset";resetCancel.forceActiveFocus(Qt.TabFocusReason)}
+        }
       }
-      Island.FeedbackButton {
-        visible:!Model.sectionKey(root.menuKey);Layout.fillWidth:true;leftAlign:true
-        text:root.host.strings.t("controls.tileIcon");iconText:"◇";focusable:true
-        onClicked:root.beginEdit(root.menuKey,"icon")
+      ColumnLayout {
+        visible:menu.page==="arrange";Layout.fillWidth:true;spacing:Island.Design.gap.small
+        Island.FeedbackButton {
+          id:arrangeBack;Layout.fillWidth:true;leftAlign:true;focusable:true
+          text:root.host.controlTitle(root.menuKey);iconText:Commons.I18n.rightToLeft ? "→" : "←"
+          tooltipText:root.host.strings.t("controls.tileActions")
+          onClicked:{menu.page="actions";arrangeOpener.forceActiveFocus()}
+        }
+        Stepper {
+          objectName:"controlOrder";label:root.host.strings.t("controls.position")
+          value:menu.keys.indexOf(root.menuKey)+1;maximum:menu.keys.length
+          onStep:delta=>root.backend.move("order",root.menuKey,menu.keys[value-1+delta])
+        }
+        Stepper {
+          objectName:"controlWidth";label:root.host.strings.t("controls.tileWidth")
+          visible:!Model.sectionKey(root.menuKey);value:menu.tileSize.width;maximum:4
+          onStep:delta=>root.backend.resize(root.menuKey,value+delta,menu.tileSize.height)
+        }
+        Stepper {
+          objectName:"controlHeight";label:root.host.strings.t("controls.tileHeight")
+          visible:!Model.sectionKey(root.menuKey);value:menu.tileSize.height;maximum:4
+          onStep:delta=>root.backend.resize(root.menuKey,menu.tileSize.width,value+delta)
+        }
+        Stepper {
+          objectName:"controlFavoriteOrder";label:root.host.strings.t("controls.favoritePosition")
+          visible:menu.favoriteIndex>=0;value:menu.favoriteIndex+1;maximum:root.layout.favorites.length
+          onStep:delta=>root.backend.move("favorites",root.menuKey,root.layout.favorites[menu.favoriteIndex+delta])
+        }
+        Island.PlainText {
+          visible:menu.favoriteIndex>=0;Layout.fillWidth:true;wrapMode:Text.Wrap
+          typeRole:"caption";color:Island.Design.secondaryText
+          text:root.host.strings.t("controls.favoriteLimit").arg(Commons.I18n.formatNumber(Model.favoriteLimit(root.host.favoriteSize)))
+        }
       }
-      RowLayout {
-        visible:Model.sectionKey(root.menuKey)
-        Island.PlainText {Layout.fillWidth:true;text:root.host.strings.t("controls.spacing");typeRole:"caption"}
-        Island.FeedbackButton {objectName:"controlGapLess";iconText:"−";focusable:true;tooltipText:root.host.strings.t("controls.lessSpacing");enabled:((root.layout.sections[root.menuKey] || {}).gap || 0)>0;onClicked:root.setGap((root.layout.sections[root.menuKey] || {}).gap-1)}
-        Island.FeedbackButton {objectName:"controlGapMore";iconText:"+";focusable:true;tooltipText:root.host.strings.t("controls.moreSpacing");enabled:((root.layout.sections[root.menuKey] || {}).gap || 0)<4;onClicked:root.setGap(((root.layout.sections[root.menuKey] || {}).gap || 0)+1)}
-      }
-      Island.FeedbackButton {
-        objectName:"controlFavoriteToggle";visible:!Model.sectionKey(root.menuKey);Layout.fillWidth:true;leftAlign:true
-        text:root.host.strings.t("controls.favorite");iconText:root.layout.favorites.indexOf(root.menuKey)>=0 ? "★" : "☆";focusable:true
-        onClicked:{root.backend.favorite(root.menuKey);menu.close()}
-      }
-      Island.FeedbackButton {
-        objectName:"controlHide";Layout.fillWidth:true;leftAlign:true;focusable:true
-        text:root.host.strings.t(Model.sectionKey(root.menuKey) ? "controls.deleteSection" : "overview.hide");iconText:"−"
-        onClicked:{var key=root.menuKey;menu.close();if(Model.sectionKey(key)) root.backend.removeSection(key);else root.backend.toggle(key);root.focusFirst()}
-      }
-      Island.FeedbackButton {
-        objectName:"controlLayoutReset";Layout.fillWidth:true;leftAlign:true;focusable:true
-        text:root.host.strings.t("controls.resetLayout");iconText:"󰑓"
-        onClicked:{menu.close();root.backend.reset();root.focusFirst()}
+      ColumnLayout {
+        visible:menu.page==="reset";Layout.fillWidth:true;spacing:Island.Design.gap.small
+        Island.PlainText {
+          id:resetQuestion;Layout.fillWidth:true;wrapMode:Text.Wrap
+          text:root.host.strings.t("controls.resetConfirm")
+        }
+        RowLayout {
+          Island.FeedbackButton {
+            id:resetCancel;objectName:"controlResetCancel";text:root.host.strings.t("bulk.cancel")
+            Accessible.description:resetQuestion.text;focusable:true;onClicked:menu.close()
+          }
+          Island.FeedbackButton {
+            objectName:"controlResetConfirm";text:root.host.strings.t("controls.confirmReset")
+            Accessible.description:resetQuestion.text;foreground:Island.Design.danger;focusable:true
+            onClicked:{root.backend.reset();root.menuKey=root.placements[0].key;menu.close()}
+          }
+        }
       }
     }
   }

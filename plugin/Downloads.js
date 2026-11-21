@@ -8,12 +8,15 @@ function bytes(value) {return typeof value==="number" && isFinite(value) && valu
 function retain(rows, directory, now) {
   if(!Array.isArray(rows)) return []
   return rows.filter(function(r){return r && !r.active && validPath(r.downloadPath,directory) && typeof r.ts==="number" && isFinite(r.ts) && r.ts>now-1800 && r.ts<=now+60})
-    .slice(0,30).map(function(r){return row(r.downloadPath,r.ts,r.downloadedBytes,false)})
+    .slice(0,30).map(function(r){return row(r.downloadPath,r.ts,r.downloadedBytes,false,r.transferId)})
 }
-function row(path, ts, size, active) {
+function row(path, ts, size, active, id) {
+  var transferId=typeof id==="string" && /^[a-f0-9]{32}$/.test(id) ? id : ""
+  var key=active ? "active_"+path : "download_"+ts.toString().replace(".","_")
+  if (transferId) key="download_"+transferId
   var filename=path.substring(path.lastIndexOf("/")+1)
   if(active) filename=filename.replace(/\.(crdownload|part|partial|download|tmp)$/i,"") || filename
-  return {key:active ? "active_"+path : "download_"+ts.toString().replace(".","_"),downloadPath:path,ts:ts,
+  return {transferId:transferId,key:key,downloadPath:path,ts:ts,
     active:!!active,filename:filename,downloadedBytes:bytes(size),summary:filename}
 }
 function sizeText(value, format) {

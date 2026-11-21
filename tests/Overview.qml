@@ -96,7 +96,8 @@ ShellRoot {
     property var rows:[]
     function row(id) {return rows.find(function(r){return r.id===id})}
     function response(id) {return ""}
-    function openThread(id) {}
+    property string openedThread:""
+    function openThread(id) {openedThread=id}
   }
   QtObject {
     id:limits
@@ -216,14 +217,18 @@ ShellRoot {
         verify(overview.back());wait(50)
         bridge.rows=finished.concat([
           {id:"busy",title:"Working task",status:"running",requestId:""},
-          {id:"question",title:"Question",status:"running",requestId:"q"},
+          {id:"question",title:"Question",status:"running",requestId:"q",request:{id:"q",canRespond:false,prompt:"Review requested permission",reason:"Access to this project"}},
           {id:"failed",title:"Failed task",status:"failed",requestId:""},
           {id:"cancelled",title:"Stopped task",status:"cancelled",requestId:""}
         ].map(function(row){return Object.assign({project:"Island",summary:""},row)}));wait(80)
         overview.openDetails("t3",{sessionId:"question"});wait(50)
         verify(findChild(overview,"t3Session-question").visible)
         verify(!findChild(overview,"t3Session-busy").visible)
-        verify(findChild(findChild(overview,"t3Session-question"),"t3Open").activeFocus)
+        var questionCard=findChild(overview,"t3Session-question")
+        var openRequest=findChild(questionCard,"t3OpenRequest"),preview=findChild(questionCard,"t3RequestPreview")
+        verify(preview.visible && preview.text.indexOf("Review requested permission")>=0 && preview.text.indexOf("Access to this project")>=0)
+        verify(openRequest.activeFocus && openRequest.Accessible.name===strings.t("t3.openRequest"))
+        keyClick(Qt.Key_Return);compare(bridge.openedThread,"question")
         verify(overview.back());wait(30)
         bridge.canRespond=true;bridge.responsesEnabled=true
         var questionRow=Object.assign({},bridge.row("question"),{request:{id:"q",revision:1,canRespond:true,questions:[
@@ -350,6 +355,16 @@ ShellRoot {
         verify(!mediaPlayer.visible,"Hidden module remains visible")
         overview.expanded=false;overview.alertKind="media";wait(30)
         verify(mediaPlayer.visible,"Hidden Overview block suppressed the media toast")
+        var toastSeek=findChild(mediaPlayer,"mediaSeek"),volumeButton=findChild(mediaPlayer,"mediaVolumeTrigger"),duration=findChild(mediaPlayer,"mediaDuration")
+        tryVerify(function(){return toastSeek.visible && toastSeek.enabled && volumeButton.visible})
+        toastSeek.forceActiveFocus();keyClick(Qt.Key_Right);compare(p.position,22)
+        p.canSeek=false;wait(20)
+        verify(!toastSeek.visible && volumeButton.visible,"Non-seekable source gained a toast seek control")
+        p.canSeek=true;p.length=0;wait(20)
+        verify(!toastSeek.visible && volumeButton.visible && !duration.visible && duration.text==="","Stream with unknown duration lost volume or gained a fictitious timeline")
+        p.length=180;p.volumeSupported=false;wait(20)
+        verify(toastSeek.visible && !volumeButton.visible,"Volume capability hid the timeline")
+        p.volumeSupported=true
         service.latestHerdr={title:"Remote agent",source:"Build / default",pane:"w1:p1",status:"blocked"}
         overview.alertKind="herdr";wait(30)
         verify(findChild(overview,"herdrActivityToast").visible,"Herdr activity toast is hidden")

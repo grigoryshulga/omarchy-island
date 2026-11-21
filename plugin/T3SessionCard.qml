@@ -20,6 +20,7 @@ ContainerSurface {
   readonly property bool islandSpotlightSurface:true
   readonly property var request:row ? row.request : null
   readonly property bool needsInput:!!row.requestId
+  readonly property bool externalRequest:expanded && !compactOverview && needsInput && (!request || !request.canRespond)
   readonly property bool working:T3.busy(row) && !needsInput
   readonly property string requestKey:request ? request.id+":"+request.revision : ""
   readonly property string questionSchema:request && request.canRespond ? JSON.stringify(request.questions) : "[]"
@@ -28,7 +29,7 @@ ContainerSurface {
   readonly property bool editable:expanded && !!bridge && bridge.connected && bridge.canRespond && bridge.responsesEnabled && !blocked
   readonly property color statusColor:!bridge || !bridge.connected ? Design.secondaryText : Design[T3.statusRole(row)]
   readonly property string statusText:strings.t(!bridge || !bridge.connected ? "t3.disconnected" : needsInput ? (row.requestKind==="user_input" ? "t3.needsAnswer" : "t3.needsAction") : "t3.status."+row.status)
-  readonly property string detailText:request && !request.canRespond ? [request.prompt,request.reason].filter(function(v){return !!v}).join("\n\n") : row.summary
+  readonly property string detailText:request && !request.canRespond ? ([request.prompt,request.reason].filter(function(v){return !!v}).join("\n\n") || row.summary) : row.summary
   property real now:Date.now()/1000
   onRequestKeyChanged:detailsOpen=false
   signal expandRequested()
@@ -42,7 +43,7 @@ ContainerSurface {
     var field=questions.count ? questions.itemAt(0) : null
     var targets=[]
     if (field) navigation.collect(field,targets)
-    navigation.focusItem(targets.length ? targets[0] : titleLink)
+    navigation.focusItem(targets.length ? targets[0] : externalRequest ? requestLink : titleLink)
     return true
   }
   function answers() {
@@ -67,7 +68,7 @@ ContainerSurface {
     objectName:"t3Details"
     anchors.left:parent.left;anchors.right:parent.right;anchors.top:parent.top
     height:header.height+2*Design.cardPadding
-    visible:root.compactOverview || !root.expanded || root.detailText!==""
+    visible:!root.externalRequest && (root.compactOverview || !root.expanded || root.detailText!=="")
     tooltipText:root.strings.t(root.expanded ? root.detailsOpen ? "t3.hideDetails" : "t3.details" : "t3.expand")
     Accessible.name:root.row.title+" · "+tooltipText
     focusable:root.expanded;feedback:root.feedback
@@ -118,6 +119,9 @@ ContainerSurface {
             id:titleLink
             objectName:"t3Open"
             Layout.fillWidth:true;Layout.minimumWidth:0
+            enabled:!root.externalRequest
+            Accessible.ignored:root.externalRequest
+            opacity:1
             borderSpec:Border.none()
             text:"";tooltipText:root.strings.t("t3.open");Accessible.name:root.row.title
             implicitHeight:titleLabel.implicitHeight+Style.space(4)
@@ -171,12 +175,28 @@ ContainerSurface {
     }
     PlainText {
       Layout.fillWidth:true;wrapMode:Text.Wrap;typeRole:"caption";color:Design.secondaryText
-      visible:root.expanded && !root.compactOverview && root.needsInput && (!root.request || !root.request.canRespond || !root.bridge.canRespond || (root.response!=="" && root.response!=="sending"))
-      text:root.strings.t(root.response ? "t3.response."+root.response : (!root.bridge || !root.bridge.connected) ? "t3.response.offline" : root.request && root.request.canRespond && !root.bridge.canRespond ? "t3.readOnly" : "t3.continueInT3")
+      readonly property string messageKey:root.response && root.response!=="sending" ? "t3.response."+root.response
+        : !root.bridge || !root.bridge.connected ? "t3.response.offline"
+        : root.request && root.request.canRespond && !root.bridge.canRespond ? "t3.readOnly" : ""
+      visible:root.expanded && !root.compactOverview && root.needsInput && messageKey!==""
+      text:messageKey ? root.strings.t(messageKey) : ""
     }
     PlainText {
-      Layout.fillWidth:true;visible:root.expanded && !root.compactOverview && root.detailsOpen
+      objectName:"t3RequestPreview"
+      Layout.fillWidth:true
+      visible:!!root.detailText && root.expanded && !root.compactOverview && (root.externalRequest || root.detailsOpen)
+      maximumLineCount:root.externalRequest ? 3 : 2147483647
       text:root.detailText;wrapMode:Text.Wrap;typeRole:"caption"
+    }
+    FeedbackButton {
+      id:requestLink
+      objectName:"t3OpenRequest"
+      visible:root.externalRequest
+      Layout.maximumWidth:body.width
+      text:root.strings.t("t3.openRequest")
+      Accessible.description:root.row.title
+      variant:"soft";focusable:true;feedback:root.feedback
+      onClicked:root.bridge.openThread(root.row.id)
     }
   }
 }

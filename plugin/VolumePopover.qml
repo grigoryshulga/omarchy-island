@@ -13,7 +13,7 @@ Item {
   property real availableWidth: Style.space(420)
   property bool opened: false
   readonly property bool controllable: player !== null && player.volumeSupported
-  readonly property bool hovering: trigger.hot || trigger.activeFocus || volume.activeFocus || flyoutHover.hovered || volume.dragging
+  readonly property bool hovering: trigger.hot || flyoutHover.hovered || volume.dragging
   implicitWidth: Style.space(30)
   implicitHeight: Style.space(32)
   z: 10
@@ -23,7 +23,18 @@ Item {
   }
   onVisibleChanged: if (!visible) opened = false
   onControllableChanged: if (!controllable) opened = false
-  Timer { id: closeGrace; interval: 180; onTriggered: if (!root.hovering) root.opened = false }
+  Timer { id: closeGrace; interval: 180; onTriggered: if (!root.hovering && !volume.activeFocus) root.opened = false }
+  function openSlider() {
+    if (!controllable) return
+    opened = true
+    volume.forceActiveFocus(Qt.TabFocusReason)
+  }
+  function dismiss(event) {
+    if (!opened) { event.accepted = false; return }
+    opened = false
+    trigger.forceActiveFocus(Qt.BacktabFocusReason)
+    event.accepted = true
+  }
   FeedbackButton {
     id: trigger
     feedback: root.feedback
@@ -38,8 +49,13 @@ Item {
     tooltipText: root.controllable ? "" : root.strings.t("noVolume")
     focusable: true
     enabled: root.player !== null
-    onClicked: if (root.controllable) root.opened = !root.opened
-    Keys.onEscapePressed: root.opened = false
+    onClicked: {
+      if (pointerFocus) {
+        root.opened = !root.opened
+        pointerFocus = false
+      } else root.openSlider()
+    }
+    Keys.onEscapePressed: event => root.dismiss(event)
   }
   PopupReveal {
     id: reveal
@@ -62,7 +78,7 @@ Item {
     radius: Math.min(Style.cornerRadius,Style.space(6),height/2)
     borderSpec: Design.popupBorder
     opacity: shown
-    visible: shown > 0
+    visible: root.opened || shown > 0
     clip: true
     HoverHandler { id: flyoutHover }
     RowLayout {
@@ -80,7 +96,9 @@ Item {
         Layout.fillWidth: true
         Layout.preferredHeight: parent.height
         bar: root.bar
-        enabled: root.controllable
+        enabled: root.opened && root.controllable
+        Keys.onEscapePressed: event => root.dismiss(event)
+        onActiveFocusChanged: if (!activeFocus && !root.hovering) closeGrace.restart()
         value: root.controllable ? root.player.volume : 0
         onClicked: position => { if(root.feedback) root.feedback.pulseFrom(volume,position) }
         onMoved: value => { if (root.controllable) root.player.volume = value }

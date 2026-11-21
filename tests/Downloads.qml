@@ -23,15 +23,20 @@ ShellRoot {
         tryCompare(service.downloadsState,"restored",true)
         service.indicators.consumers=[content]
         var path=service.downloadsDir+"/nested/file $ & <name>.zip"
-        send({event:"active",files:[{path:path+".part",bytes:1048576}]})
+        var transferId="a0123456789abcdef0123456789abcde"
+        send({event:"active",files:[{id:transferId,path:path+".part",bytes:1048576}]})
+        var originalKey=service.downloads[0].key
         compare(service.activeDownloads,1)
         compare(service.downloads.length,1)
         compare(service.downloads[0].filename,"file $ & <name>.zip")
         compare(service.entries.length,0)
         compare(service.indicators.osdKind,"download")
+        tryCompare(service.indicators,"osdActive",false,2200)
+        compare(service.activeDownloads,1)
         service.indicators.showOsd(JSON.stringify({icon:"volume",value:50,duration:200}))
         wait(300)
-        compare(service.indicators.osdKind,"download")
+        compare(service.indicators.osdActive,false)
+        compare(service.indicators.osdKind,"volume")
         var category=findChild(content,"islandDownloads")
         tryCompare(category,"visible",true)
         var card=findChild(content,"download-"+service.downloads[0].key)
@@ -50,10 +55,17 @@ ShellRoot {
         wait(100)
         compare(progress.phase,stoppedPhase,"Inactive Overview must stop download animation")
         content.overviewActive=true
-        send({event:"active",files:[{path:path+".part",bytes:2097152}]})
+        send({event:"active",files:[{id:transferId,path:path+".part",bytes:2097152}]})
         wait(50)
         compare(findChild(content,"download-"+service.downloads[0].key),card,"Byte updates preserve delegate and focus")
         compare(service.downloads[0].downloadedBytes,2097152)
+        send({event:"active",files:[{id:transferId,path:path,bytes:2097152}]})
+        compare(service.downloads[0].key,originalKey)
+        send({event:"complete",id:transferId,path:path,bytes:2097152})
+        compare(service.downloads[0].key,originalKey)
+        compare(service.downloads[0].active,false)
+        service.downloadsState.remove(originalKey)
+        send({event:"active",files:[{path:path+".part",bytes:100}]})
         // Cancellation removes the active card without a completion toast.
         send({event:"active",files:[]})
         compare(service.downloads.length,0)
@@ -75,7 +87,10 @@ ShellRoot {
         mouseClick(remove)
         compare(service.downloads.length,0)
         send({event:"complete",path:path,bytes:3145728})
-        service.activate(service.downloads[0])
+        var completedRow=service.downloads[0]
+        service.activate(completedRow)
+        compare(service.downloads.length,1,"Opening the folder removed the download")
+        service.downloadsState.remove(completedRow.key)
         compare(service.downloads.length,0)
         compare(service.latest,null,"Removing a download replayed an older notification toast")
         send({event:"complete",path:"/tmp/outside",bytes:1})

@@ -7,6 +7,7 @@ ShellRoot {
     id: service
     readonly property var modules: ({notifications:service,downloads:service})
     property bool allowed:true
+    property var indicators: Island.IndicatorState {layouts.observeSystem:false}
     property var downloads:[]
     property var t3:null
     function openDownload(row) {}
@@ -81,8 +82,15 @@ ShellRoot {
     function test_hover() {
       var clock=findChild(widget,"islandClock")
       var popup=findChild(widget,"islandPopup")
-      leave();enter(clock)
-      previewOpens("initial hover")
+      leave()
+      service.indicators.downloading=true
+      tryCompare(widget,"showOsd",true,500)
+      enter(clock)
+      wait(80)
+      verify(!widget.hoverOpen)
+      tryCompare(widget,"showOsd",false,2200)
+      previewOpens("stationary pointer after download announcement")
+      service.indicators.downloading=false
       leave()
       tryCompare(widget,"hoverOpen",false,500)
       // Dismiss while already outside, through both the popup's outside-click
@@ -159,6 +167,17 @@ ShellRoot {
       keyClick(Qt.Key_Escape)
       tryCompare(folderTip,"visible",false,500)
       verify(widget.pinned && folder.activeFocus && pages.detailPage==="downloads","Hint Escape navigated away from the focused download")
+      verify(!findChild(pages,"download-sample.iso").activeFocusOnTab)
+      service.downloads=[Object.assign({},service.downloads[0],{active:false}),service.downloads[1]]
+      tryVerify(function(){return !findChild(pages,"download-sample.iso").row.active && !findChild(pages,"download-other.iso")})
+      service.downloads=service.downloads.slice(1)
+      tryVerify(function(){var ended=findChild(pages,"downloadEnded");return ended && ended.visible && ended.text.indexOf("sample.iso")>=0 && !findChild(pages,"download-other.iso")})
+      keyClick(Qt.Key_Escape)
+      tryCompare(pages,"detailPage","",500)
+      widget.openNow({kind:"downloads",row:service.downloads[0]})
+      tryVerify(function(){return pages.detailPage==="downloads" && findChild(pages,"download-other.iso")})
+      service.downloads=[]
+      tryVerify(function(){var ended=findChild(pages,"downloadEnded");return ended && ended.visible && ended.text.indexOf("other.iso")>=0})
       keyClick(Qt.Key_Escape)
       tryCompare(pages,"detailPage","",500)
       var gear=findChild(pages,"overviewCustomize")

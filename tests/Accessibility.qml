@@ -34,13 +34,32 @@ ShellRoot {
         id:sample;property int activations:0
         text:"Action";focusable:true;onClicked:activations++
       }
-      Island.MediaCard {id:media;width:parent.width;expanded:true;strings:strings;service:mediaBackend}
+      Island.MediaCard {
+        id:media;width:parent.width;expanded:true;strings:strings;service:mediaBackend
+        property int escapes:0
+        Keys.onEscapePressed:escapes++
+      }
       Island.SettingsRow {
         id:setting;width:parent.width;spec:({key:"hoverDelay", type:"delay"})
         strings:strings;settings:({hoverDelay:140});onSettingRequested:(key,value)=>settings=({hoverDelay:value})
       }
       Island.AgentLimitsCenter {id:center;width:parent.width;availableHeight:120;backend:null;strings:strings}
       NativeSliders {id:native}
+      Island.WeatherView {
+        id:weatherPage;width:parent.width;strings:strings
+        weather:QtObject {
+          property var report:({current:{temperature:14,code:0,isDay:true},days:[]})
+          property string temperatureUnit:"celsius"
+          property bool useImperial:false
+          property bool loading:false
+          property bool stale:false
+          property bool searching:false
+          property string searchStatus:"idle"
+          property string error:""
+          property var suggestions:[]
+        }
+        onTemperatureUnitRequested:value=>weatherPage.weather.temperatureUnit=value
+      }
       Island.CalendarView {id:calendar;width:parent.width;strings:strings}
     }
     TestCase {
@@ -83,8 +102,23 @@ ShellRoot {
         mockPlayer.canSeek=true
         var trigger=findChild(media,"mediaVolumeTrigger")
         compare(probe.inspect(trigger).name,strings.t("media.volume"))
-        verify(probe.act(trigger,"Press"))
         var volume=findChild(media,"mediaVolume")
+        trigger.forceActiveFocus(Qt.TabFocusReason)
+        verify(!trigger.Accessible.expanded,"Tab alone opened volume")
+        keyClick(Qt.Key_Return)
+        tryVerify(function(){return volume.activeFocus && trigger.Accessible.expanded})
+        var previousVolume=mockPlayer.volume
+        keyClick(Qt.Key_Right)
+        verify(mockPlayer.volume>previousVolume)
+        keyClick(Qt.Key_Escape)
+        verify(!trigger.Accessible.expanded && trigger.activeFocus,"Escape must return from the slider to its trigger")
+        compare(media.escapes,0)
+        keyClick(Qt.Key_Escape)
+        compare(media.escapes,1,"A second Escape must reach the enclosing popup")
+        keyClick(Qt.Key_Space)
+        tryVerify(function(){return volume.activeFocus})
+        keyClick(Qt.Key_Escape)
+        verify(probe.act(trigger,"Press"))
         tryVerify(function(){return volume.visible && probe.inspect(volume).role===Accessible.Slider})
         compare(probe.inspect(volume).name,strings.t("media.volume"))
         verify(probe.setValue(volume,0.7));compare(mockPlayer.volume,0.7)
@@ -144,6 +178,12 @@ ShellRoot {
       }
 
       function run() {
+        var unit=findChild(weatherPage,"weatherUnit")
+        compare(probe.inspect(unit).role,Accessible.Button)
+        compare(probe.inspect(unit).name,strings.t("weather.changeUnit").arg("°C"))
+        verify(probe.act(unit,"Press"))
+        compare(weatherPage.weather.temperatureUnit,"fahrenheit")
+        compare(probe.inspect(unit).name,strings.t("weather.changeUnit").arg("°F"))
         checkButton();checkSliders();checkNativeSliders();checkTabs();checkCalendar()
         console.log("ACCESSIBILITY_PASS")
       }

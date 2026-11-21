@@ -36,7 +36,10 @@ function syncKeys(model, keys) {
     else if (found!==i) model.move(found,i,1)
   }
 }
-function notificationKey(row) { return JSON.stringify([source(row), String(row.summary || "")]) }
+function notificationKey(row, individual) {
+  // A sender action belongs to the concrete message with that key.
+  return individual ? JSON.stringify([source(row), String(row.summary || ""),row.key]) : JSON.stringify([source(row), String(row.summary || "")])
+}
 function collect(live, history) {
   var seen = {}, out = []
   live.concat(history).forEach(function(row) {
@@ -69,10 +72,10 @@ function hasMedia(player, stoppedState) {
 
 // Presentation only: originals remain independent so sender recalls and
 // replacements remove/update exactly one message, including in history.
-function coalesceNotifications(rows) {
+function coalesceNotifications(rows, keyFor) {
   var groups = [], byHeader = Object.create(null)
   rows.forEach(function(row) {
-    var key = notificationKey(row)
+    var key = (keyFor || notificationKey)(row)
     if (!byHeader[key]) { byHeader[key] = []; groups.push(byHeader[key]) }
     byHeader[key].push(row)
   })
@@ -84,21 +87,4 @@ function coalesceNotifications(rows) {
     row.body = ordered.slice().reverse().map(function(r) { return plain(r.body) }).filter(function(body) { return body !== "" }).join("\n")
     return row
   })
-}
-
-// Equivalent sender actions share one button. Keep each original target so
-// "Mark as read" acknowledges all messages represented by the card.
-function notificationActions(row, resolve) {
-  var actions = [], byAction = Object.create(null)
-  ;(row.members || [row]).forEach(function(member) {
-    resolve(member).forEach(function(action) {
-      var key = JSON.stringify([action.id, action.text])
-      if (!byAction[key]) {
-        byAction[key] = {id:action.id, text:action.text, targets:[]}
-        actions.push(byAction[key])
-      }
-      byAction[key].targets.push(member)
-    })
-  })
-  return actions
 }

@@ -16,6 +16,7 @@ Island.ModuleView {
       id:card;objectName:"islandMediaPlayer";width:parent.width
       externalFeedback:root.presentation.feedback
       service:root.backend;strings:root.presentation.strings;bar:root.presentation.bar
+      toast:root.toast
       expanded:root.presentation.expanded;compactOverview:!root.presentation.detail && !root.toast && root.presentation.size!=="large"
       overviewSize:root.presentation.detail ? "large" : root.toast ? "standard" : root.presentation.size || "standard"
       active:root.presentation.active;radialBraille:root.presentation.radialBraille

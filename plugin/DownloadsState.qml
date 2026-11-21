@@ -36,14 +36,14 @@ Item {
     if(event.event==="active" && Array.isArray(event.files)) {
       var previous=downloads
       var active=event.files.filter(function(f){return f && Downloads.validPath(f.path,root.downloadsDir)}).map(function(f){
-        var old=previous.find(function(r){return r.active && r.downloadPath===f.path})
-        return Downloads.row(f.path,old ? old.ts : clock()/1000,f.bytes,true)
+        var old=previous.find(function(r){return r.active && (f.id ? r.transferId===f.id : r.downloadPath===f.path)})
+        return Downloads.row(f.path,old ? old.ts : clock()/1000,f.bytes,true,f.id)
       })
       downloads=active.concat(downloads.filter(function(r){return !r.active}))
       activeDownloads=active.length
     } else if(event.event==="complete" && Downloads.validPath(event.path,downloadsDir)) {
-      var row=Downloads.row(event.path,clock()/1000+(++downloadSequence)/1000000,event.bytes,false)
-      var remaining=downloads.filter(function(r){return r.downloadPath!==event.path})
+      var row=Downloads.row(event.path,clock()/1000+(++downloadSequence)/1000000,event.bytes,false,event.id)
+      var remaining=downloads.filter(function(r){return r.key!==row.key && r.downloadPath!==event.path})
       downloads=remaining.filter(function(r){return r.active}).concat(Downloads.retain([row].concat(remaining.filter(function(r){return !r.active})),downloadsDir,clock()/1000))
       latest=row;completed(row)
       changed()
@@ -52,7 +52,6 @@ Item {
   function openDownload(row) {
     if(!allowed || !Downloads.validPath(row.downloadPath,downloadsDir)) return false
     execute(["xdg-open",row.downloadPath.substring(0,row.downloadPath.lastIndexOf("/"))])
-    if(!row.active) remove(row.key)
     return true
   }
   Process {

@@ -2,9 +2,10 @@
 var mainDefaults = ["audio", "bluetooth", "network", "tailscale", "monitors"]
 var favoriteDefaults = ["audio", "bluetooth", "network", "dnd", "nightLight"]
 var quickDefaults = ["microphone", "dnd", "nightLight", "stayAwake", "recording", "remote"]
+function favoriteLimit(size) {return size==="large" ? 10 : size==="minimal" ? 3 : 5}
 function favoriteTiles(data,size) {
   var columns=size==="minimal" ? 3 : 5
-  var limit=size==="large" ? 10 : columns
+  var limit=favoriteLimit(size)
   return {columns:columns,keys:normalize(data).favorites.slice(0,limit)}
 }
 function safeKey(key) {

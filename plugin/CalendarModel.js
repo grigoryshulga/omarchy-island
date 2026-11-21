@@ -55,5 +55,9 @@ function monthCells(year,month,start,today) {
   }
   return out
 }
-function stepMonth(year,month,delta) { return parts(civilDate(year,month+delta,1)) }
+function stepMonth(year,month,delta,day) {
+  var targetMonth=month+delta
+  var lastDay=civilDate(year,targetMonth+1,0).getUTCDate()
+  return parts(civilDate(year,targetMonth,Math.min(day || 1,lastDay)))
+}
 function stepDay(day,delta) { return parts(civilDate(day.year,day.month,day.day+delta)) }

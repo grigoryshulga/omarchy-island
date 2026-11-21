@@ -119,7 +119,10 @@ Item {
     if(page && page.handleKey(direction ? {key:direction.key} : event)) return true
     return direction ? navigation.move(direction.x,direction.y) : false
   }
-  KeyboardNavigation {id:navigation;scope:root;containers:[root.currentPage()]}
+  KeyboardNavigation {
+    id:navigation;scope:root;containers:[root.currentPage()]
+    onFocusedChanged:if((root.calendar || root.weather) && contains(root.currentPage(),focused)) revealItem(focused)
+  }
   Instantiator {
     model:Catalog.ordered("overview").filter(function(entry){return !!entry.overviewShortcut})
     delegate:Shortcut {

@@ -10,9 +10,10 @@ ShellRoot {
     id:fakeControls
     property var panelCommand:["python3",decodeURIComponent(Qt.resolvedUrl("Island/controls/build-panel.py").toString().replace(/^file:\/\//,""))]
     function watch(item,visible){}
-    function available(key){return false}
+    property int audioToggles:0
+    function available(key){return key==="audio"}
     function enabledState(key){return false}
-    function toggle(key){}
+    function toggle(key){if(key==="audio") audioToggles++}
     function execute(argv){}
     function systemCall(target,method,args){return {ran:true}}
   }
@@ -161,7 +162,14 @@ ShellRoot {
         check(pages.controls,"Alt+1 did not open Controls")
         var audio=findChild(pages,"controlOpen-audio"),bluetooth=findChild(pages,"controlOpen-bluetooth")
         check(findChild(pages,"overviewBack").activeFocus,"detail switch did not focus its Back button")
-        audio.forceActiveFocus()
+        var led=findChild(audio,"controlStateToggle")
+        audio.forceActiveFocus();keyClick(Qt.Key_Tab)
+        check(led.activeFocus,"Tab skipped the Audio state toggle")
+        keyClick(Qt.Key_Space)
+        check(fakeControls.audioToggles===1 && pages.controls,"Space did not toggle Audio in place")
+        keyClick(Qt.Key_Tab);check(bluetooth.activeFocus,"Tab did not advance to Bluetooth")
+        keyClick(Qt.Key_Backtab,Qt.ShiftModifier);check(led.activeFocus,"Shift+Tab skipped the state toggle")
+        keyClick(Qt.Key_Backtab,Qt.ShiftModifier);check(audio.activeFocus,"Shift+Tab did not return to Audio")
         keyClick(Qt.Key_Right);check(bluetooth.activeFocus,"right arrow did not move between tiles: "+findChild(pages,"islandKeyboardNavigation").focused.objectName)
         keyClick(Qt.Key_J);check(findChild(pages,"controlOpen-tailscale").activeFocus,"Vim J did not move down")
         var dnd=findChild(pages,"controlDnd")
@@ -195,6 +203,15 @@ ShellRoot {
         var calendar=findChild(pages,"islandCalendar"),before=calendar.selectedDay.key
         keyClick(Qt.Key_J);wait(40);check(calendar.selectedDay.key!==before,"Vim calendar day navigation failed")
         check(findChild(calendar,"calendar-day-"+calendar.selectedDay.key).activeFocus,"calendar date selection did not follow keyboard focus")
+        calendar.selectDay({year:2024,month:0,day:31,key:"2024-01-31"});calendar.focusSelectedDay()
+        keyClick(Qt.Key_PageDown)
+        check(calendar.selectedDay.key==="2024-02-29" && findChild(calendar,"calendar-day-2024-02-29").activeFocus,"month paging did not clamp selection and focus")
+        keyClick(Qt.Key_Right)
+        check(calendar.selectedDay.key==="2024-03-01","next day jumped to the previous month")
+        var monthTrigger=findChild(calendar,"calendarMonth")
+        monthTrigger.forceActiveFocus();keyClick(Qt.Key_Return)
+        check(calendar.yearMode && findChild(calendar,"calendarYearMonth-2").activeFocus,"year view did not focus selected month")
+        check(pages.back() && !calendar.yearMode && monthTrigger.activeFocus,"leaving year view lost focus")
         keyClick(Qt.Key_4,Qt.AltModifier);wait(280)
         check(pages.weather,"Alt+4 did not open Weather")
         findChild(pages,"weatherLocation").clicked();wait(40)
@@ -204,6 +221,8 @@ ShellRoot {
         var cursor=field.cursorPosition
         keyClick(Qt.Key_Left)
         check(field.cursorPosition===cursor-1,"arrow navigation stole the editor caret")
+        check(pages.back() && findChild(pages,"weatherLocation").activeFocus,"weather Back did not restore city button focus")
+        findChild(pages,"weatherLocation").clicked();wait(30)
         keyClick(Qt.Key_1,Qt.AltModifier);wait(280)
         check(pages.controls,"Alt+1 did not switch away from a text editor")
         fakeWeather.allowed=false

@@ -13,12 +13,20 @@ import select
 import struct
 import sys
 import time
+import uuid
+from dataclasses import dataclass, field
 
 CREATE, MODIFY, CLOSE_WRITE = 0x100, 0x2, 0x8
 MOVED_FROM, MOVED_TO, DELETE = 0x40, 0x80, 0x200
 DELETE_SELF, MOVE_SELF, IGNORED, OVERFLOW, ISDIR = 0x400, 0x800, 0x8000, 0x4000, 0x40000000
 MASK = CREATE | MODIFY | CLOSE_WRITE | MOVED_FROM | MOVED_TO | DELETE | DELETE_SELF | MOVE_SELF
 PARTIAL = ('.crdownload', '.part', '.partial', '.download', '.tmp')
+
+
+@dataclass
+class Transfer:
+    due: float | None = None
+    id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
 
 class Watcher:
@@ -44,9 +52,9 @@ class Watcher:
         if now - self.published_at < 0.25:
             return
         files = []
-        for path in self.active:
+        for path, transfer in self.active.items():
             try:
-                files.append({'path': str(path), 'bytes': path.stat().st_size})
+                files.append({'id': transfer.id, 'path': str(path), 'bytes': path.stat().st_size})
             except FileNotFoundError:
                 pass
         if files != self.snapshot:
@@ -67,14 +75,19 @@ class Watcher:
                     continue
                 if child.is_dir():
                     self.add_tree(child, discover)
-                elif discover and child.is_file():
+                elif discover and child.is_file() and child not in self.active:
                     # A populated directory may have arrived in one rename.
-                    self.active.setdefault(child, time.monotonic() + 1)
+                    self.track(child, time.monotonic() + 1)
         except FileNotFoundError:
             pass
 
+    def track(self, path, due):
+        if path not in self.active:
+            self.active[path] = Transfer()
+        self.active[path].due = due
+
     def forget(self, path):
-        self.active = {p: due for p, due in self.active.items() if p != path and path not in p.parents}
+        self.active = {p: item for p, item in self.active.items() if p != path and path not in p.parents}
         for wd, directory in list(self.dirs.items()):
             if directory == path or path in directory.parents:
                 self.lib.inotify_rm_watch(self.fd, wd)
@@ -108,11 +121,14 @@ class Watcher:
             if mask & MOVED_TO:
                 old = self.moves.pop(cookie, (None, 0))[0]
                 if old is not None:
+                    transfers = {path / p.relative_to(old): item for p, item in self.active.items()
+                                 if p == old or old in p.parents}
                     self.forget(old)
+                    self.active.update(transfers)
                 if mask & ISDIR:
                     self.add_tree(path, True)
                 elif not path.is_symlink() and path.is_file():
-                    self.active[path] = time.monotonic() + 1
+                    self.track(path, time.monotonic() + 1)
                 continue
             if mask & DELETE:
                 self.forget(path)
@@ -122,7 +138,7 @@ class Watcher:
                     self.add_tree(path, True)
                 continue
             if not path.is_symlink() and mask & (CREATE | MODIFY | CLOSE_WRITE):
-                self.active[path] = time.monotonic() + 1 if mask & CLOSE_WRITE else None
+                self.track(path, time.monotonic() + 1 if mask & CLOSE_WRITE else None)
         self.publish()
 
     def tick(self):
@@ -131,13 +147,13 @@ class Watcher:
             if now - stamp > 0.25:
                 self.forget(path)
                 self.moves.pop(cookie)
-        for path, due in list(self.active.items()):
+        for path, transfer in list(self.active.items()):
             if not path.exists() or path.is_symlink():
                 self.active.pop(path, None)
-            elif due is not None and now >= due and not path.name.lower().endswith(PARTIAL):
+            elif transfer.due is not None and now >= transfer.due and not path.name.lower().endswith(PARTIAL):
                 self.active.pop(path, None)
                 try:
-                    self.emit({'event': 'complete', 'path': str(path), 'bytes': path.stat().st_size})
+                    self.emit({'event': 'complete', 'id': transfer.id, 'path': str(path), 'bytes': path.stat().st_size})
                 except FileNotFoundError:
                     pass
         self.publish()
