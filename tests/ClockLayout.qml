@@ -149,7 +149,7 @@ ShellRoot {
         verify(liveStrip.implicitWidth>20)
         liveStrip.vertical=true;wait(30)
         verify(liveStrip.implicitHeight>20)
-        var editor=findChild(settingsView,'clockAdd').parent
+        var editor=findChild(settingsView,'clockLayoutEditor')
         compare(editor.selectedId,'clock')
         var dnd=findChild(editor,'clockElement-dnd')
         verify(dnd)
@@ -164,6 +164,7 @@ ShellRoot {
         compare(settingsView.settings.clockLayout.find(r=>r.id==='dnd').side,'right')
         verify(findChild(editor,'clockTile-dnd').activeFocus)
         var tile=findChild(editor,"clockTile-dnd"),lane=findChild(editor,"clockLane-left")
+        compare(tile.iconText,editor.entries.find(entry=>entry.id==="dnd").icon)
         verify(tile.width>=44 && tile.height>=44)
         var dest=lane.mapToItem(tile,lane.width/2,tile.mapToItem(lane,0,tile.height/2).y)
         mouseDrag(tile,tile.width/2,tile.height/2,dest.x-tile.width/2,0,Qt.LeftButton);wait(50)
@@ -243,6 +244,8 @@ ShellRoot {
         settingsView.width=280;Commons.Style.cornerRadius=0
         Commons.Style.fontBaseSize*=1.4;wait(30)
         verify(editor.width<=settingsView.width)
+        var narrowRight=findChild(editor,"clockLane-right"),narrowLeft=findChild(editor,"clockLane-left")
+        verify(narrowRight.y>=narrowLeft.y+narrowLeft.height && narrowRight.width===narrowLeft.width,"Narrow lanes should stack")
         editor.add('separator');wait(30)
         verify(findChild(editor,'clockTile-'+editor.selectedId).activeFocus)
         // Both targets remain usable when one side has no indicators.
@@ -260,6 +263,14 @@ ShellRoot {
         mouseDrag(updateTile,updateTile.width/2,updateTile.height/2,emptyPoint.x-updateTile.width/2,emptyPoint.y-updateTile.height/2,Qt.LeftButton)
         wait(40)
         compare(editor.selectedRow.side,"right","Empty side did not accept the drop")
+        settingsView.width=280;wait(60)
+        updateTile=findChild(editor,"clockTile-update")
+        firstTile=findChild(editor,"clockTile-dnd")
+        var topSlot=firstTile.mapToItem(updateTile,firstTile.width/2,4)
+        mouseDrag(updateTile,updateTile.width/2,updateTile.height/2,topSlot.x-updateTile.width/2,topSlot.y-updateTile.height/2,Qt.LeftButton)
+        wait(40)
+        compare(editor.elements[0].id,"update","Dragging between stacked lanes chose the wrong insertion point")
+        compare(editor.selectedRow.side,"left")
         console.log('CLOCK_LAYOUT_PASS')
       }
       function run(){try{test_editor()}catch(e){console.log('MODULES_FAIL',String(e),e.stack)}Qt.quit()}

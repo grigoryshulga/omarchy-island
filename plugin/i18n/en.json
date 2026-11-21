@@ -547,6 +547,8 @@
   "now.action": "Needs action",
   "now.requests": "Requests · %1",
   "now.playing": "Now playing",
+  "clock.emptySide": "Drop an element here",
+  "clock.elements": "Panel elements",
   "clock.title": "Clock widget",
   "clock.time": "Time",
   "clock.reminders": "Reminders",

@@ -6,11 +6,14 @@ Item {
   id:board
   required property var editor
   required property Flickable viewport
+  readonly property bool stacked:width<Style.space(390)
   property string dragged:""
   property string targetSide:""
   property string beforeId:""
   property real markerY:0
   property point pointer:Qt.point(0,0)
+  property point grabOffset
+  property size grabbedSize
   property point localPointer
   implicitHeight:columns.implicitHeight
   function cancel() {dragged="";targetSide="";beforeId=""}
@@ -27,10 +30,11 @@ Item {
     targetSide=""
     if (p.x<0 || p.x>width || p.y<0 || p.y>height || point.y<0 || point.y>viewport.height) return
     var left=lanes.itemAt(0),right=lanes.itemAt(1)
-    var lane=Math.abs(p.x-left.x-left.width/2)<=Math.abs(p.x-right.x-right.width/2) ? left : right
+    var lane=stacked ? (p.y<right.y-columns.rowSpacing/2 ? left : right)
+                     : (p.x<right.x-columns.columnSpacing/2 ? left : right)
     targetSide=lane.side
     beforeId=""
-    markerY=lane.list.y
+    markerY=lane.y+lane.list.y
     for (var i=0;i<lane.cards.count;i++) {
       var tile=lane.cards.itemAt(i)
       if (tile.row.id===dragged) continue
@@ -56,8 +60,29 @@ Item {
       }
     }
   }
-  RowLayout {
-    id:columns;width:parent.width;spacing:Design.gap.small
+  component IndicatorTile: FeedbackButton {
+    id:face
+    horizontalPadding:Design.gap.small
+    implicitHeight:Math.max(Style.space(44),caption.implicitHeight+2*Design.gap.small)
+    leftAlign:true;variant:"soft";iconSize:Design.type.iconSmall
+    PlainText {
+      id:grip;anchors.right:parent.right;anchors.rightMargin:face.horizontalPadding
+      anchors.verticalCenter:parent.verticalCenter
+      text:"⠿";typeRole:"caption";color:Design.secondaryText;Accessible.ignored:true
+    }
+    PlainText {
+      id:caption
+      anchors.left:parent.left;anchors.right:parent.right;anchors.verticalCenter:parent.verticalCenter
+      anchors.leftMargin:face.horizontalPadding+face.iconSize+Design.gap.small
+      anchors.rightMargin:face.horizontalPadding+grip.width+Design.gap.tight
+      text:face.Accessible.name;typeRole:"label";wrapMode:Text.Wrap
+      maximumLineCount:3;elide:Text.ElideRight
+      color:face.selected ? Design.selectedText : Design.text
+    }
+  }
+  GridLayout {
+    id:columns;width:parent.width;columns:board.stacked ? 1 : 2
+    rowSpacing:Design.gap.medium;columnSpacing:Design.gap.small
     layoutDirection:Qt.LeftToRight
     Repeater {
       id:lanes
@@ -73,14 +98,20 @@ Item {
           return null
         }
         objectName:"clockLane-"+side
-        Layout.preferredWidth:(board.width-columns.spacing)/2;Layout.minimumWidth:0;Layout.fillHeight:true
-        implicitHeight:list.y+Math.max(Style.space(44),list.implicitHeight)+Design.gap.small
+        Layout.preferredWidth:board.stacked ? board.width : (board.width-columns.columnSpacing)/2;Layout.minimumWidth:0;Layout.fillHeight:true
+        implicitHeight:list.y+Math.max(Style.space(44),list.implicitHeight,emptyHint.visible ? emptyHint.implicitHeight : 0)+Design.gap.small
         color:Design.surface;radius:Design.cardRadius
         border.width:board.targetSide===side ? Style.space(1) : 0;border.color:Design.accent
         PlainText {
           id:heading;x:Design.gap.small;y:x;width:parent.width-2*x
-          typeRole:"label";wrapMode:Text.Wrap
+          typeRole:"title";wrapMode:Text.Wrap
           text:board.editor.strings.t("clock."+ (board.editor.vertical ? (lane.side==="left" ? "above" : "below") : lane.side))
+        }
+        PlainText {
+          id:emptyHint;visible:cards.count===0
+          x:list.x;y:list.y;width:list.width
+          text:board.editor.strings.t("clock.emptySide")
+          typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap
         }
         Column {
           id:list;x:Design.gap.small;y:heading.y+heading.height+Design.gap.small
@@ -88,35 +119,29 @@ Item {
           Repeater {
             id:cards
             model:board.editor.elements.filter(row=>row.side===lane.side)
-            FeedbackButton {
+            IndicatorTile {
               id:tile
               required property var modelData
               readonly property var row:modelData
               objectName:"clockTile-"+row.id
-              width:list.width;height:Math.max(Style.space(44),caption.implicitHeight+2*Design.gap.small)
-              leftAlign:true;focusable:true;variant:"soft";selected:board.editor.selectedId===row.id
+              width:list.width;height:implicitHeight
+              focusable:true;selected:board.editor.selectedId===row.id
               Accessible.name:board.editor.elementTitle(row)
-              iconText:"⠿"
-              PlainText {
-                id:caption
-                anchors.left:parent.left;anchors.right:parent.right;anchors.verticalCenter:parent.verticalCenter
-                anchors.leftMargin:tile.horizontalPadding+tile.iconSize+Design.gap.small
-                anchors.rightMargin:tile.horizontalPadding
-                text:tile.Accessible.name;typeRole:"label";wrapMode:Text.Wrap
-                maximumLineCount:3;elide:Text.ElideRight
-                color:tile.selected ? Design.selectedText : Design.text
-              }
-              horizontalPadding:Design.gap.small
+              iconText:board.editor.elementIcon(row)
+              hasCursor:hit.containsMouse && !board.dragged
               opacity:board.dragged===row.id ? 0.4 : 1
               onClicked:board.editor.selectedId=row.id
               onActiveFocusChanged:if(activeFocus) {board.editor.selectedId=row.id;board.editor.revealFocus(tile)}
               MouseArea {
+                id:hit
                 anchors.fill:parent;preventStealing:true;hoverEnabled:true
                 cursorShape:pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                 property point start
                 property bool moving:false
                 onPressed:mouse=>{
                   moving=false;tile.forceActiveFocus(Qt.MouseFocusReason)
+                  board.grabOffset=Qt.point(mouse.x,mouse.y)
+                  board.grabbedSize=Qt.size(tile.width,tile.height)
                   start=mapToItem(board.viewport,mouse.x,mouse.y)
                 }
                 onPositionChanged:mouse=>{
@@ -139,18 +164,19 @@ Item {
         }
         Rectangle {
           visible:board.targetSide===lane.side
-          x:list.x;y:board.markerY-Design.gap.small/2;width:list.width;height:Math.max(2,Style.space(2));color:Design.accent
+          x:list.x;y:board.markerY-lane.y-Design.gap.small/2;width:list.width;height:Math.max(2,Style.space(2));color:Design.accent
         }
       }
     }
   }
-  FeedbackButton {
+  IndicatorTile {
     z:2
     visible:board.dragged!==""
-    x:Math.max(0,Math.min(board.width-width,board.localPointer.x-width/2))
-    y:board.localPointer.y-height/2
-    width:(board.width-columns.spacing)/2;height:Math.max(implicitHeight,Style.space(44))
-    text:board.editor.selectedRow ? board.editor.elementTitle(board.editor.selectedRow) : ""
-    variant:"soft";bordered:true;iconText:"⠿";enabled:false;opacity:1;Accessible.ignored:true
+    x:Math.max(0,Math.min(board.width-width,board.localPointer.x-board.grabOffset.x))
+    y:board.localPointer.y-board.grabOffset.y
+    width:board.grabbedSize.width;height:board.grabbedSize.height
+    Accessible.name:board.editor.selectedRow ? board.editor.elementTitle(board.editor.selectedRow) : ""
+    bordered:true;selected:true
+    iconText:board.editor.selectedRow ? board.editor.elementIcon(board.editor.selectedRow) : "";enabled:false;opacity:1;Accessible.ignored:true
   }
 }

@@ -57,12 +57,17 @@ Item {
   }
   onVisibleChanged: if(!visible) closeEditors()
   onCategoryChanged: {closeEditors();viewport.contentY=0}
+  FontMetrics {id:navMetrics;font.family:Design.fontFamily;font.pixelSize:Design.type.label}
+  Rectangle {
+    visible:root.sidebar;anchors.fill:tabViewport
+    color:Design.surface;radius:Design.cardRadius
+  }
   Flickable {
     id:tabViewport
     objectName:"settingsTabs"
     LayoutMirroring.enabled:root.windowMode && Commons.I18n.rightToLeft
     onWidthChanged:Qt.callLater(function(){root.revealTab(tabs.itemAt(root.category))})
-    width:root.sidebar ? Style.space(178) : parent.width;height:root.sidebar ? parent.height : tabRow.implicitHeight
+    width:root.sidebar ? Math.max(Style.space(182),Math.min(root.width/3,navMetrics.advanceWidth(root.strings.t("settings.tab.overview"))+Design.gap.spacious)) : parent.width;height:root.sidebar ? parent.height : tabRow.implicitHeight
     anchors.left:parent.left
     contentWidth:root.sidebar ? width : tabRow.implicitWidth
     contentHeight:root.sidebar ? tabRow.implicitHeight : height
@@ -82,6 +87,12 @@ Item {
           required property int index
           objectName:"settingsTab-"+modelData.id
           width:root.sidebar ? tabViewport.width : implicitWidth
+          height:root.sidebar ? Math.max(implicitHeight,Style.space(44)) : implicitHeight
+          leftAlign:root.sidebar
+          LayoutMirroring.enabled:root.sidebar && Commons.I18n.rightToLeft
+          LayoutMirroring.childrenInherit:root.sidebar && Commons.I18n.rightToLeft
+          iconText:root.sidebar ? ({general:"󰒓",panel:"󰥔",alerts:"󰂚",modules:"󰘦",overview:"󰕮"})[modelData.id] : ""
+          iconSize:Design.type.iconSmall
           label:root.strings.t("settings.tab."+modelData.id)
           Accessible.name:label
           tabActive:root.category===index

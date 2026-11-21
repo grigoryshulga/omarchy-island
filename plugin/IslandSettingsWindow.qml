@@ -35,11 +35,12 @@ Window {
   onActiveFocusItemChanged:if(activeFocusItem) navigation.revealItem(activeFocusItem)
   Item {
     anchors.fill:parent;anchors.margins:Design.gap.large
-    SectionHeading {
+    PlainText {
       LayoutMirroring.enabled:Commons.I18n.rightToLeft
       anchors.left:parent.left;anchors.right:closeButton.left
       anchors.verticalCenter:closeButton.verticalCenter
-      title:root.title
+      text:root.title;typeRole:"page"
+      Accessible.role:Accessible.Heading
     }
     FeedbackButton {
       id:closeButton;objectName:"settingsWindowClose"
