@@ -14,11 +14,12 @@ Item {
   Behavior on artworkReveal { NumberAnimation { duration: Preferences.duration(280); easing.type: Easing.OutCubic } }
   readonly property int visualizationStyle: Settings.choices.musicVisualizationStyle.indexOf(Preferences.get("musicVisualizationStyle"))
   readonly property int ambientMode: ["printTones","asciiInk","engraving"].indexOf(Preferences.get("musicVisualizationStyle"))+1
+  readonly property bool ditherPrint: Preferences.get("musicVisualizationStyle")==="bayer"
   readonly property int backgroundStyle: Settings.choices.musicVisualizationBackground.indexOf(Preferences.get("musicVisualizationBackground"))
   readonly property var impulses: service && service.visualImpulses ? service.visualImpulses : null
   readonly property real phase: service ? service.visualPhase : 0
   readonly property bool active: service !== null && service.hasMedia && service.playing && Preferences.visualizationAllowed(horizontalFade)
-  readonly property bool animatedField: !ambientMode && visualizationStyle !== Settings.choices.musicVisualizationStyle.indexOf("bayer") && !Preferences.reduceMotion
+  readonly property bool animatedField: !ambientMode && !Preferences.reduceMotion
   readonly property bool sampling:animatedField && active && visible && opacity>0 && reveal>0
   onSamplingChanged:Preferences.watchVisualizer(root,sampling)
   Component.onCompleted:Preferences.watchVisualizer(root,sampling)
@@ -37,7 +38,7 @@ Item {
   Image {
     id: artwork
     anchors.fill: parent
-    source: root.backgroundStyle===0 && !root.monochrome && root.service && root.service.player && root.service.player.trackArtUrl
+    source: root.backgroundStyle===0 && (!root.monochrome || root.ditherPrint) && root.service && root.service.player && root.service.player.trackArtUrl
       ? root.service.player.trackArtUrl : Qt.resolvedUrl("assets/dot-field.svg")
     sourceSize: Qt.size(240,240)
     fillMode: Image.PreserveAspectCrop

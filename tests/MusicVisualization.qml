@@ -51,8 +51,8 @@ ShellRoot {
         }
         check(Math.abs(effect.impulseTimes.x-0.2)<0.00001 && Math.abs(effect.impulseStrengths.x-0.8)<0.00001,"shared attack history did not reach shader")
         Island.Preferences.values=({musicVisualizationStyle:"bayer"})
-        check(!bar.sampling && !popup.sampling && Island.Preferences.visualizers.length===0,"print kept an audio consumer")
-        check(effect.phase===0 && effect.bass===0 && barEffect.level===0,"print retained live inputs")
+        check(bar.sampling && popup.sampling,"visible print lost its audio input")
+        check(effect.phase===service.visualPhase && effect.bass===service.audioBass && barEffect.level===service.audioLevel,"print lost live inputs")
         for (var style of ["printTones","asciiInk","engraving"]) {
           Island.Preferences.values=({musicVisualizationStyle:style})
           wait(30)

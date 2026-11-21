@@ -16,6 +16,7 @@ with tempfile.TemporaryDirectory(prefix='island-artwork-') as temporary:
     (root/'Island').symlink_to(project/'plugin')
     (root/'shell.qml').write_text((project/'tests/ArtworkFrames.qml').read_text())
     (root/'contrast.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect width="240" height="160" fill="white"/><path d="M0 100 L240 20 V110 L0 160Z" fill="black"/></svg>')
+    (root/'duotone.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="160" height="160" fill="#ef4630"/><rect x="160" width="160" height="160" fill="#2474df"/></svg>')
     # The offscreen platform defaults to GL 2; the shipped QSB uses GL 3.3.
     source=root/'format.cpp'
     source.write_text('''#include <QSurfaceFormat>

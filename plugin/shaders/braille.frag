@@ -39,6 +39,8 @@ void main() {
     vec2 dotIndex = clamp(floor(local/3.0),vec2(0.0),vec2(1.0,3.0));
     vec2 center = vec2(1.5)+dotIndex*3.0;
     vec2 sampleAt = style < -0.5 ? qt_TexCoord0 : (cell*vec2(6.0,12.0)+center)/size;
+    const float printPitch = 2.5;
+    if (style > 5.5) sampleAt = (floor(pixel/printPitch)+0.5)*printPitch/size;
     vec4 cover = texture(source,clamp(sampleAt,vec2(0.01),vec2(0.99)));
     if (backgroundStyle > 0.5) {
         // Theme colors stay live. The same phase and audio envelope drive the
@@ -70,16 +72,23 @@ void main() {
     // The shared wallpaper shader consumes the unprinted color field.
     if (style < -0.5) { fragColor = cover * qt_Opacity; return; }
     if (style > 5.5) {
-        // Ordered halftone in the theme accent. Each source sample covers
-        // one square of the existing three-pixel grid.
+        // Keep the Bayer screen fixed. A passing band changes ink coverage.
         const int ranks[16] = int[16](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);
-        ivec2 square = ivec2(floor(pixel / 3.0));
+        ivec2 square = ivec2(floor(pixel / printPitch));
         ivec2 tile = square % 4;
         float threshold = (float(ranks[tile.y*4+tile.x])+0.5)/16.0;
         float tone = dot(cover.rgb,vec3(0.2126,0.7152,0.0722))*cover.a;
         float survival = smoothstep(0.0,0.08,reveal*1.08-noise(uvec2(square),0x5a17u));
-        float alpha = step(threshold,tone)*survival*0.32*qt_Opacity;
-        fragColor = vec4(accent.rgb*alpha,alpha);
+        float band = sin(sampleAt.x*7.0 + sampleAt.y*4.0 - phase*1.6);
+        float beat = clamp(bass*0.75 + level*0.25,0.0,1.0);
+        float midtones = 4.0*tone*(1.0-tone);
+        float density = tone + midtones*(band*(0.045 + 0.07*beat) + 0.06*beat);
+        float coverage = smoothstep(threshold-0.025,threshold+0.025,density);
+        float chroma = max(max(cover.r,cover.g),cover.b)-min(min(cover.r,cover.g),cover.b);
+        float tint = mix(0.38,0.22,monochrome)*smoothstep(0.0,0.3,chroma);
+        vec3 ink = mix(accent.rgb,cover.rgb,tint);
+        float alpha = coverage*survival*(0.32 + 0.034*band + 0.045*beat)*qt_Opacity;
+        fragColor = vec4(ink*alpha,alpha);
         return;
     }
     float luminance = mix(dot(cover.rgb,vec3(0.2126,0.7152,0.0722)),0.5,monochrome);

@@ -116,6 +116,7 @@ ShellRoot {
       }
       Island.Preferences.values=({musicVisualizationStyle:"bayer"})
       wait(80)
+      service.audioLevel=0;service.audioBass=0;wait(60)
       var printFrame=grabImage(artwork)
       var inkPixels=0, emptyPixels=0
       for(var y=0;y<printFrame.height;y++) for(var x=0;x<printFrame.width;x++) {
@@ -123,8 +124,34 @@ ShellRoot {
         else emptyPixels++
       }
       check(inkPixels>100 && emptyPixels>100,"halftone has no readable pattern")
-      service.visualPhase=5;service.audioBass=0.9;wait(60)
-      check(printFrame.equals(grabImage(artwork)),"halftone moved during playback")
+      service.visualPhase=5;wait(60)
+      var quietPrint=grabImage(artwork)
+      check(!printFrame.equals(quietPrint),"silent print has no drift")
+      service.audioBass=0.9;wait(60)
+      check(!quietPrint.equals(grabImage(artwork)),"print ignored the bass")
+      Commons.Style.reduceMotion=true;wait(60)
+      var stillPrint=grabImage(artwork)
+      service.visualPhase=7;service.audioBass=0;wait(60)
+      check(stillPrint.equals(grabImage(artwork)) && !artwork.sampling,"reduced-motion print kept moving or sampling")
+      Commons.Style.reduceMotion=false
+      service.player = {trackArtUrl: Qt.resolvedUrl("duotone.svg")}
+      function warmth(frame,position) {
+        var red=0,blue=0
+        var left=Math.floor(frame.width*position)
+        for (var y=4;y<20;y++) for (var x=left;x<left+20;x++) {
+          red+=frame.red(x,y); blue+=frame.blue(x,y)
+        }
+        return (red-blue)/Math.max(1,red+blue)
+      }
+      for (var compact of [false,true]) {
+        artwork.monochrome=compact; artwork.horizontalFade=compact
+        artwork.height=compact ? 26 : 160
+        wait(160)
+        var coverFrame=grabImage(artwork)
+        check(warmth(coverFrame,0.32)-warmth(coverFrame,0.64)>0.05,
+              "print lost local cover colors in "+(compact ? "bar" : "popup"))
+      }
+      artwork.monochrome=false; artwork.horizontalFade=false; artwork.height=160
       service.player = {trackArtUrl: Qt.resolvedUrl("contrast.svg")}
       var previousPrint = printFrame
       for (var inkStyle of ["printTones","asciiInk","engraving"]) {

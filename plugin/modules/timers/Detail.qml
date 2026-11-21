@@ -143,52 +143,57 @@ Island.ModuleView {
         }
         RowLayout {
           Layout.fillWidth:true; spacing:Island.Design.gap.tight
-          Island.DesignTextField {
-            id:duration; objectName:"timeDuration"
+          Item {
             Layout.fillWidth:true; Layout.minimumWidth:0
-            visible:root.editableDuration
-            enabled:!!root.backend && root.backend.ready
-            property int savedDuration:root.backend ? root.backend.records.timer.duration : 300000
-            readonly property int milliseconds:Time.parseDuration(text,Commons.I18n.zeroDigit)
-            text:Time.durationInput(savedDuration,Commons.I18n.formatNumber)
-            inputMask:"99:99:99;_"
-            inputMethodHints:Qt.ImhDigitsOnly
-            TextMetrics {
-              id:maskMetrics
-              font.family:duration.font.family; font.weight:duration.font.weight
-              font.pixelSize:Island.Design.type.hero; font.features:({"tnum":1})
-              text:Time.durationInput(0,Commons.I18n.formatNumber)
-            }
-            font.pixelSize:Math.max(1,Math.min(Island.Design.type.hero,Math.floor(Island.Design.type.hero*(width-2)/Math.max(1,maskMetrics.advanceWidth))))
-            font.weight:Island.Design.weight("hero")
-            font.features:({"tnum":1})
-            implicitHeight:Island.Design.lineHeight("hero")
-            leftPadding:0; rightPadding:0; topPadding:0; bottomPadding:0
-            invalid:milliseconds===0
-            Accessible.name:root.t("duration")
-            Accessible.description:root.t("durationHint")
-            onActiveFocusChanged:if(activeFocus) Qt.callLater(function(){if(duration.activeFocus) duration.selectAll()})
-            onAccepted:if(primary.enabled) primary.clicked()
-            background:Item {
-              Rectangle {
-                anchors.bottom:parent.bottom; width:parent.width; height:1
-                color:duration.invalid ? Island.Design.danger : Island.Design.focusRing
-                visible:duration.hovered || duration.activeFocus || duration.invalid
+            implicitHeight:Math.max(Island.Design.lineHeight("hero"),Math.ceil(digitMetrics.height))
+            FontMetrics { id:digitMetrics; font:reading.font }
+            Island.DesignTextField {
+              id:duration; objectName:"timeDuration"
+              anchors.fill:parent; verticalAlignment:TextInput.AlignVCenter
+              visible:root.editableDuration
+              enabled:!!root.backend && root.backend.ready
+              property int savedDuration:root.backend ? root.backend.records.timer.duration : 300000
+              readonly property int milliseconds:Time.parseDuration(text,Commons.I18n.zeroDigit)
+              text:Time.durationInput(savedDuration,Commons.I18n.formatNumber)
+              inputMask:"99:99:99;_"
+              inputMethodHints:Qt.ImhDigitsOnly
+              TextMetrics {
+                id:maskMetrics
+                font.family:duration.font.family; font.weight:duration.font.weight
+                font.pixelSize:Island.Design.type.hero; font.features:({"tnum":1})
+                text:Time.durationInput(0,Commons.I18n.formatNumber)
+              }
+              font.pixelSize:Math.max(1,Math.min(Island.Design.type.hero,Math.floor(Island.Design.type.hero*(width-2)/Math.max(1,maskMetrics.advanceWidth))))
+              font.weight:Island.Design.weight("hero")
+              font.features:({"tnum":1})
+              leftPadding:0; rightPadding:0; topPadding:0; bottomPadding:0
+              invalid:milliseconds===0
+              Accessible.name:root.t("duration")
+              Accessible.description:root.t("durationHint")
+              onActiveFocusChanged:if(activeFocus) Qt.callLater(function(){if(duration.activeFocus) duration.selectAll()})
+              onAccepted:if(primary.enabled) primary.clicked()
+              background:Item {
+                Rectangle {
+                  anchors.bottom:parent.bottom; width:parent.width; height:1
+                  color:duration.invalid ? Island.Design.danger : Island.Design.focusRing
+                  visible:duration.hovered || duration.activeFocus || duration.invalid
+                }
               }
             }
-          }
-          Island.PlainText {
-            visible:!root.editableDuration
-            objectName:"timeReading"; Layout.fillWidth:true; Layout.minimumWidth:0
-            typeRole:"hero"; font.features:({"tnum":1})
-            fontSizeMode:Text.HorizontalFit; minimumPixelSize:Island.Design.type.title
-            text: {
-              if (root.mode === "stopwatch" && root.backend) {
-                var ms=root.elapsedMs
-                return Time.format(Math.floor(ms/1000),Commons.I18n.formatNumber) + Commons.I18n.decimal
-                    + Commons.I18n.formatNumber(Math.floor(ms/100)%10)
+            Island.PlainText {
+              visible:!root.editableDuration
+              id:reading; objectName:"timeReading"
+              anchors.fill:parent; verticalAlignment:Text.AlignVCenter
+              typeRole:"hero"; font.features:({"tnum":1})
+              fontSizeMode:Text.HorizontalFit; minimumPixelSize:Island.Design.type.title
+              text: {
+                if (root.mode === "stopwatch" && root.backend) {
+                  var ms=root.elapsedMs
+                  return Time.format(Math.floor(ms/1000),Commons.I18n.formatNumber) + Commons.I18n.decimal
+                      + Commons.I18n.formatNumber(Math.floor(ms/100)%10)
+                }
+                return root.reading(root.mode)
               }
-              return root.reading(root.mode)
             }
           }
           TransportButton {

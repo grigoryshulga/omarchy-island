@@ -24,15 +24,62 @@ ShellRoot {
   ModuleHost {id:host; registry:registry}
   Commons.Translations {id:strings; directory:Qt.resolvedUrl("Island/i18n")}
   FloatingWindow {
-    implicitWidth:390; implicitHeight:350; visible:true
+    implicitWidth:520; implicitHeight:350; visible:true
     TextInput {id:clipboardSource; visible:false}
     Island.IslandContent {
-      id:overview; anchors.fill:parent; service:host; strings:strings; expanded:true
+      id:overview; width:390; height:parent.height; service:host; strings:strings; expanded:true
       onExpandRequested: expanded=true
     }
   }
   TestCase {
     id: test; parent:overview; when:false
+    function checkInstrumentGeometry(view) {
+      const primary=findChild(view,"timePrimary")
+      const reset=findChild(view,"timeReset")
+      const meter=findChild(view,"timeField")
+      function geometry() {
+        wait(40) // Let the Qt Quick layouts settle after changing state.
+        return [overview.implicitHeight, view.implicitHeight, meter.parent.height,
+                meter.mapToItem(view,0,0).y, primary.mapToItem(view,0,0).y]
+      }
+      for (const width of [300,390,520]) {
+        overview.width=width
+        for (const mode of Time.modes) {
+          findChild(view,"timeMode-"+mode).clicked()
+          toolsState.reset(mode)
+          const idle=geometry()
+          function stable(action) {
+            const status={start:"running",tick:"running",pause:"paused",resume:"running",reset:"idle"}
+            if (status[action] && toolsState.records[mode].status!==status[action])
+              throw new Error(mode+" "+action+" at width "+width+" left "+toolsState.records[mode].status)
+            const actual=geometry().join(",")
+            if (actual!==idle.join(",")) throw new Error(mode+" "+action+" at width "+width+": "+idle.join(",")+" → "+actual)
+          }
+          if (mode==="timer") toolsState.toggle(mode,3601000)
+          else primary.clicked()
+          stable("start")
+          fixture.timestamp+=2100
+          toolsState.refresh()
+          stable("tick")
+          primary.clicked()
+          stable("pause")
+          primary.clicked()
+          stable("resume")
+          reset.clicked()
+          stable("reset")
+          if (mode!=="stopwatch") {
+            primary.clicked()
+            fixture.timestamp+=Time.limit(mode,toolsState.records[mode])
+            toolsState.refresh()
+            stable("finish")
+            reset.clicked()
+            stable("reset after finish")
+          }
+        }
+      }
+      overview.width=390
+      findChild(view,"timeMode-timer").clicked()
+    }
     function run() {
       tryVerify(function(){return !!fixture.toolsState && fixture.toolsState.ready})
       var headerTime = findChild(overview,"timersOpen")
@@ -68,6 +115,7 @@ ShellRoot {
         compare(toolsState.pomodoroPlan.shortBreak,2)
         compare(toolsState.records.pomodoro.step,0)
         toolsState.refresh(); compare(fixture.alerts.length,1)
+        checkInstrumentGeometry(view)
       } else {
         compare(Time.parseDuration("24:00:00"),86400000)
         for (var input of ["00:00:00","00:60:00","00:00:60","24:00:01","02::","-1","abc"]) compare(Time.parseDuration(input),0)
@@ -171,5 +219,5 @@ ShellRoot {
       console.log("TIMERS_PASS"); Qt.quit()
     }
   }
-  Timer {interval:100; running:true; onTriggered:{try{test.run()}catch(e){console.log("TIMERS_FAIL",e.stack);Qt.quit()}}}
+  Timer {interval:100; running:true; onTriggered:{try{test.run()}catch(e){console.log("TIMERS_FAIL",e.toString(),e.stack);Qt.quit()}}}
 }

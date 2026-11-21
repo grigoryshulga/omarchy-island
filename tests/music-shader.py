@@ -62,7 +62,7 @@ void main() {
     glGetActiveUniformsiv(program, len(names), indices, GL_UNIFORM_OFFSET, offsets)
     layout = dict(zip(names, offsets))
 
-    def frame(phase, width, height, level, style=4):
+    def frame(phase, width, height, level, style=4, raw=False):
         data = bytearray(512)
         values = {'qt_Opacity':[0.7], 'size':[width,height], 'phase':[phase],
                   'level':[level], 'bass':[level], 'treble':[0], 'accent':[1,1,1,1],
@@ -76,6 +76,8 @@ void main() {
         glViewport(0,0,width,height)
         glDrawArrays(GL_TRIANGLES,0,3)
         pixels = glReadPixels(0,0,width,height,GL_RGBA,GL_UNSIGNED_BYTE)
+        if raw:
+            return pixels
         # Dot centers only: the transparent gaps must not dilute the signal.
         return [pixels[(y*width+x)*4] for y in range(1,height,3) for x in range(1,width,3)]
 
@@ -88,11 +90,30 @@ void main() {
                 print(f'Constellations {width}x{height}, level={level}, t={phase}: {changed:.1%} visibly changed dots')
                 assert changed >= 0.15, 'Constellations appear static: too few dots visibly evolve over one second'
     assert frame(0,360,180,0.4) == frame(0,360,180,0.4), 'Fixed phase is not deterministic'
-    # A flat mid-gray input resolves into eight inked cells per 4x4 tile.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes([128,128,128,255]))
-    tile = frame(0,12,12,0,style=6)
-    assert len(set(tile)) == 2 and sum(pixel > 0 for pixel in tile) == 8, 'Incorrect halftone coverage'
-    assert tile == frame(20,12,12,1,style=6), 'Print pattern moved with the audio'
+    def cover(rgb):
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes([*rgb,255]))
+
+    for height in [26,180]:
+        cover((128,128,128))
+        width = 240
+        quiet = frame(0,width,height,0,6,raw=True)
+        for other in [frame(1.4,width,height,0,6,raw=True), frame(0,width,height,0.8,6,raw=True)]:
+            changed = sum(abs(a-b)>=3 for a,b in zip(quiet[::4],other[::4]))
+            assert changed > width*height*0.1, 'Print did not react visibly to the clock or bass'
+        cover((100,100,100))
+        quiet = frame(0,width,height,0,6,raw=True)
+        # Interior samples have a ten-pixel repeat (four fixed Bayer cells).
+        for y in (0,1,5,6):
+            for x in range(0,100,10):
+                start = (y*width+x)*4
+                row = quiet[start:start+40:4]
+                assert min(row[0:2])>25 and max(row[3:5])<25 and min(row[5:7])>25 and max(row[8:10])<25, 'Unexpected print pitch'
+
+    for height in [26,180]:
+        for rgb,sign in [((239,70,48),1),((36,116,223),-1)]:
+            cover(rgb)
+            pixel = frame(0,240,height,0,6,raw=True)[:4]
+            assert sign*(pixel[0]-pixel[2])>=5, 'Print lost the cover hue'
     print('MUSIC_SHADER_PASS')
 finally:
     eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)

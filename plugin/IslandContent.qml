@@ -196,17 +196,6 @@ Item {
     visible:(root.expanded || root.hovering) && !root.detailOpen && !root.configuring
     Layout.fillWidth:true;spacing:Design.gap.small
     FeedbackButton {
-      id:dateButton;objectName:"calendarOpen"
-      Layout.fillWidth:true;Layout.minimumWidth:0;Layout.maximumWidth:implicitWidth
-      text:root.currentDate.toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd, d MMMM")
-      fontSize:Design.type.title;leftAlign:true;horizontalPadding:0
-      focusable:root.expanded && Settings.get(root.settings,"calendarEnabled")
-      enabled:focusable;opacity:1
-      tooltipText:root.strings.t("calendar.open")
-      feedback:root.externalFeedback
-      onClicked:root.calendarRequested()
-    }
-    FeedbackButton {
       id:timeButton; objectName:"timersOpen"
       text:root.currentDate.toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),Locale.ShortFormat)
       fontSize:Design.type.title; horizontalPadding:Design.gap.tight; compact:true
@@ -223,6 +212,17 @@ Item {
           Qt.callLater(function(){if(root.expanded) root.openDetails("timers")})
         }
       }
+    }
+    FeedbackButton {
+      id:dateButton;objectName:"calendarOpen"
+      Layout.fillWidth:true;Layout.minimumWidth:0;Layout.maximumWidth:implicitWidth
+      text:root.currentDate.toLocaleDateString(Qt.locale(Commons.I18n.formatLocale),"ddd, d MMMM")
+      fontSize:Design.type.title;leftAlign:true;horizontalPadding:0
+      focusable:root.expanded && Settings.get(root.settings,"calendarEnabled")
+      enabled:focusable;opacity:1
+      tooltipText:root.strings.t("calendar.open")
+      feedback:root.externalFeedback
+      onClicked:root.calendarRequested()
     }
     Item {Layout.fillWidth:true; Layout.preferredWidth:0}
     WeatherChip {

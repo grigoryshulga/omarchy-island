@@ -66,7 +66,7 @@ ShellRoot {
   QtObject {
     id:service
     // The real service always provides a bridge, even when T3 is disabled.
-    readonly property var modules:({controls:fakeControls,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
+    readonly property var modules:({timers:{},controls:fakeControls,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3:({allowed:false,connected:false,canRespond:false,responsesEnabled:false,rows:[]})
     property var indicators:states
     property QtObject reminders:QtObject {
@@ -138,6 +138,12 @@ ShellRoot {
         check(!findChild(pages,"islandTabs"),"main window still has tabs")
         var dateButton=findChild(pages,"calendarOpen"),weatherButton=findChild(pages,"weatherOpen"),gear=findChild(pages,"overviewCustomize")
         check(dateButton.visible && dateButton.text.length>0 && weatherButton.visible,"summary date/weather are missing")
+        var timeButton=findChild(pages,"timersOpen")
+        check(timeButton.x+timeButton.width<=dateButton.x && dateButton.x+dateButton.width<=weatherButton.x,"header order must be time, date, weather")
+        timeButton.forceActiveFocus();keyClick(Qt.Key_Tab)
+        check(dateButton.activeFocus,"Tab from time skipped the date")
+        keyClick(Qt.Key_Tab);check(weatherButton.activeFocus,"Tab from date skipped the weather")
+        keyClick(Qt.Key_Backtab,Qt.ShiftModifier);check(dateButton.activeFocus,"Shift+Tab from weather skipped the date")
         dateButton.forceActiveFocus();keyClick(Qt.Key_Return);wait(280)
         check(pages.calendar,"date did not open Calendar")
         var reminderClear=findChild(pages,"reminderClear"),cancelReminder=findChild(pages,"reminderClearPromptCancel")
