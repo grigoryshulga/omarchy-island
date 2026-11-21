@@ -65,12 +65,11 @@ Column {
     visible:!root.allSessions
     width:parent.width
     implicitHeight:Math.max(headingContent.implicitHeight,sectionTitle.implicitHeight)
-    HoverHandler {id:headerHover}
     SectionLink {
       id:sectionTitle;objectName:"t3OpenDetails"
-      anchors.fill:parent
+      anchors.left:parent.left
+      width:Math.max(0,parent.width-headingContent.implicitWidth-(headingContent.implicitWidth>0 ? Design.gap.small : 0))
       focusable:root.expanded && root.summaryMode;feedback:root.feedback
-      hasCursor:headerHover.hovered
       title:"T3 Code";detail:root.summaryMode ? "" : Commons.I18n.formatNumber(root.rows.length)
       onClicked:root.detailsRequested()
     }
@@ -78,7 +77,6 @@ Column {
       id:headingContent
       objectName:"t3SummaryHeading"
       anchors.right:parent.right
-      anchors.rightMargin:Design.gap.small
       width:Math.max(0,parent.width-sectionTitle.implicitWidth-Design.gap.small)
       layoutDirection:Qt.RightToLeft
       spacing:Design.gap.small

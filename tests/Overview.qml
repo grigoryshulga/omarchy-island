@@ -171,6 +171,12 @@ ShellRoot {
         verify(overview.back());wait(50)
         verify(t3Button.activeFocus,"Back did not restore focus")
         var finishedBadge=findChild(overview,"t3Count-finished")
+        keyClick(Qt.Key_Tab);verify(finishedBadge.activeFocus,"Tab from the heading skipped its counter")
+        keyClick(Qt.Key_Backtab,Qt.ShiftModifier);verify(t3Button.activeFocus,"Backtab did not return to the heading")
+        var badgeStart=finishedBadge.mapToItem(t3Button,0,0).x
+        verify(badgeStart-t3Button.width>=Island.Design.gap.small-1,"Header highlight extends into the status counter")
+        mouseMove(finishedBadge,finishedBadge.width/2,finishedBadge.height/2);wait(30)
+        verify(finishedBadge.hot && !t3Button.hot,"Hovering the counter also highlights the heading")
         mouseClick(finishedBadge,finishedBadge.width/2,finishedBadge.height/2);wait(50)
         compare(overview.detailPage,"t3","Header counters did not open T3 details")
         verify(overview.back());wait(50)
@@ -405,6 +411,7 @@ ShellRoot {
         for(var kind of ["attention","working","finished","failed","other"]) {
           var badge=findChild(overview,"t3Count-"+kind)
           verify(badge.x+badge.width<=heading.width+1 && badge.y+badge.height<=heading.height+1,"Large counters overflow instead of wrapping")
+          if (badge.visible) verify(badge.mapToItem(t3Button,0,0).x>=t3Button.width+Island.Design.gap.small-1,"Wrapped counter overlaps the heading")
         }
         Commons.Style.fontBaseSize=originalFontSize;wait(30)
         overview.height=148;wait(30)
