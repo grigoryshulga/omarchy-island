@@ -58,6 +58,22 @@ ShellRoot {
       function test_editor() {
         compare(liveStrip.tooltips,'Sample · '+strings.t('dnd'))
         var savedElements=liveStrip.elements
+        var previewRows=savedElements.concat([{id:"remote",kind:"indicator"},{id:"separator:1",kind:"separator"},{id:"space:1",kind:"space"}])
+        liveStrip.editing=true
+        liveStrip.elements=previewRows
+        for(var vertical of [false,true]) {
+          liveStrip.vertical=vertical;wait(30)
+          var previous=null
+          for(var row of previewRows) {
+            var button=findChild(liveStrip,"clockElement-"+row.id)
+            compare(button.width,liveStrip.barHeight);compare(button.height,liveStrip.barHeight)
+            var center=button.mapToItem(liveStrip,button.width/2,button.height/2)
+            var axis=vertical ? center.y : center.x
+            if(previous!==null) compare(axis-previous,liveStrip.barHeight+(vertical ? liveStrip.rowSpacing : liveStrip.columnSpacing))
+            previous=axis
+          }
+        }
+        liveStrip.editing=false
         var toggles=["microphone","dnd","nightLight","stayAwake"]
         liveStrip.elements=toggles.map(function(id){return {id:id,kind:"indicator",side:"left"}})
         for(var vertical of [false,true]) {

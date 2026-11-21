@@ -74,9 +74,10 @@ GridLayout {
       property alias view:view
       property alias button:selection
       visible:root.editing || modelData.kind!=="indicator" || live
-      implicitWidth:root.vertical ? Math.min(root.barSize-(hasBarAction ? 0 : Style.space(4)),cellWidth) : cellWidth
+      implicitWidth:root.editing ? root.barHeight : root.vertical ? Math.min(root.barSize-(hasBarAction ? 0 : Style.space(4)),cellWidth) : cellWidth
       readonly property real naturalWidth:modelData.kind==="space" ? Style.space(12) : modelData.kind==="separator" ? (root.vertical ? Style.space(16) : Style.space(1)) : live ? view.implicitWidth : root.editing ? placeholder.implicitWidth : 0
       implicitHeight: {
+        if (root.editing) return root.barHeight
         if (modelData.kind==="space") return root.vertical ? Style.space(12) : root.barHeight
         if (modelData.kind==="separator") return root.vertical ? Style.space(1) : Style.space(16)
         return root.vertical ? Math.max(actionExtent,naturalHeight) : naturalHeight
@@ -87,11 +88,11 @@ GridLayout {
       Loader {
         id:view
         transform:Translate {
-          x:cell.hasBarAction ? (cell.width-view.width)/2 : 0
-          y:cell.hasBarAction ? (cell.height-view.height)/2 : 0
+          x:(root.editing || cell.hasBarAction) ? (cell.width-view.width)/2 : 0
+          y:(root.editing || cell.hasBarAction) ? (cell.height-view.height)/2 : 0
         }
         enabled:!root.editing
-        visible:cell.live
+        visible:cell.live && (!root.editing || (implicitWidth<=cell.width && implicitHeight<=cell.height))
         sourceComponent:cell.modelData.kind!=="indicator" ? null : cell.entry && cell.entry.moduleId ? moduleView : ({now:nowView,recording:recordingView,remote:remoteView,reminders:remindersView,update:updateView,microphone:microphoneView,dnd:dndView,nightLight:nightLightView,stayAwake:stayAwakeView})[cell.modelData.id] || null
       }
       FeedbackButton {
@@ -109,27 +110,23 @@ GridLayout {
       PlainText {
         id:placeholder
         anchors.centerIn:parent
-        visible:root.editing && cell.modelData.kind==="indicator" && !cell.live
+        visible:root.editing && cell.modelData.kind==="indicator" && !view.visible
         text:cell.entry ? cell.entry.icon : "◇"
         typeRole:"bar";color:Design.secondaryText
       }
       Rectangle {
         anchors.centerIn:parent
         visible:cell.modelData.kind==="separator"
-        width:root.vertical ? parent.width : Math.max(1,Style.space(1))
-        height:root.vertical ? Math.max(1,Style.space(1)) : parent.height
+        width:root.vertical ? Math.min(parent.width,Style.space(16)) : Math.max(1,Style.space(1))
+        height:root.vertical ? Math.max(1,Style.space(1)) : Math.min(parent.height,Style.space(16))
         color:root.foreground;opacity:0.35
-      }
-      Rectangle {
-        anchors.fill:parent;anchors.margins:-Style.space(3)
-        visible:root.editing && (root.selectedId===cell.modelData.id || selection.activeFocus)
-        color:"transparent";radius:Design.controlRadius
-        border.width:1;border.color:Design.accent
       }
       FeedbackButton {
         id:selection
         objectName:"clockElement-"+cell.modelData.id
         anchors.fill:parent
+        z:-1
+        selected:root.selectedId===cell.modelData.id; bordered:selected
         visible:root.editing;focusable:true
         tooltipText:root.title(cell.modelData)
         horizontalPadding:0;verticalPadding:0

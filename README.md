@@ -195,6 +195,17 @@ Settings belong to the `gshulga.island` entry in `~/.config/omarchy/shell.json`.
 
 The gear in Overview or `omarchy-shell island settings` opens a separate, resizable settings window. It has five sections: **General** (opening and animations), **Panel** (clock widget builder), **Alerts** (notifications and system events), **Modules** (Calendar, Weather, Media, T3 Code, Herdr, and Agent limits), and **Overview layout**. Changes apply and save immediately. Wide windows show the sections in a sidebar. Escape or the close button dismisses the window. Category tabs stay on one horizontally scrollable row on narrow panels; keyboard focus reveals the selected control. Longer categories scroll internally. Related settings are grouped, and choices move below their labels when space is limited. Overview always remains available so Controls and settings cannot become inaccessible. Disabling Weather also stops weather requests.
 
+To open the settings window floating and centered by default, add this rule to `~/.config/hypr/hyprland.lua` and reopen the window. It matches the English and Russian window titles.
+
+```lua
+hl.window_rule({
+  name = "omarchy-island-settings",
+  match = { initial_class = "^org[.]quickshell$", initial_title = "^(Island settings|Настройки острова)$" },
+  float = true,
+  center = true,
+})
+```
+
 | Menu setting | Configuration and default |
 |---|---|
 | Preview on hover | `hoverPreview: true`; `hoverDelay: 140` ms, range `0`–`1000` |

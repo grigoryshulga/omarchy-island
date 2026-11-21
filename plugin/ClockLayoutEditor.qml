@@ -111,7 +111,7 @@ Column {
           vertical:root.vertical;barSize:Style.space(32);barHeight:Style.space(26)
           editing:true;selectedId:root.selectedId
           foreground:Design.text
-          x:root.vertical ? (parent.width-width)/2 : clockButton.x-Style.space(11)-width
+          x:root.vertical ? (parent.width-width)/2 : clockButton.x-left.columnSpacing-width
           y:root.vertical ? Style.space(4) : (parent.height-height)/2
           onSelected:id=>root.selectedId=id
           onDropped:(id,item,dx,dy)=>root.drop(id,item,dx,dy)
@@ -121,7 +121,7 @@ Column {
           id:clockButton;objectName:"clockElement-clock"
           width:clockText.implicitWidth+Style.space(6);height:clockText.implicitHeight+Style.space(10)
           x:(parent.width-width)/2
-          y:root.vertical ? left.height+Style.space(16) : (parent.height-height)/2
+          y:root.vertical ? left.y+left.height+left.rowSpacing : (parent.height-height)/2
           selected:root.selectedId==="clock";bordered:selected;focusable:true
           horizontalPadding:0;verticalPadding:0
           Accessible.name:root.strings.t("clock.time")
@@ -136,8 +136,8 @@ Column {
           vertical:root.vertical;barSize:Style.space(32);barHeight:Style.space(26)
           editing:true;selectedId:root.selectedId
           foreground:Design.text
-          x:root.vertical ? (parent.width-width)/2 : clockButton.x+clockButton.width+Style.space(11)
-          y:root.vertical ? clockButton.y+clockButton.height+Style.space(12) : (parent.height-height)/2
+          x:root.vertical ? (parent.width-width)/2 : clockButton.x+clockButton.width+right.columnSpacing
+          y:root.vertical ? clockButton.y+clockButton.height+right.rowSpacing : (parent.height-height)/2
           onSelected:id=>root.selectedId=id
           onDropped:(id,item,dx,dy)=>root.drop(id,item,dx,dy)
           onRevealFocus:item=>preview.reveal(item)
