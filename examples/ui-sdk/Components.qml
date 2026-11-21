@@ -29,7 +29,7 @@ UI.Surface {
     UI.ChoiceButton { Layout.fillWidth: true; label: root.strings.t("example.details"); selected: false; onClicked: selected = !selected; feedback: root.feedback }
     UI.ControlSwitch { objectName: "sdkSwitch"; effectsActive: root.effectsActive; onToggled: checked = !checked; Accessible.name: root.strings.t("settings.exampleEnabled") }
     UI.BrailleProgress { objectName: "sdkProgress"; Layout.fillWidth: true; value: root.progress }
-    UI.IslandSlider { objectName: "sdkSlider"; Layout.fillWidth: true; value: root.progress; onMoved: value => root.progress = value }
+    UI.IslandSlider { objectName: "sdkSlider"; accessibleName: root.strings.t("example.progress"); Layout.fillWidth: true; value: root.progress; onMoved: value => root.progress = value }
     UI.BrailleGauge { Layout.fillWidth: true; value: root.progress; glyph: "◉" }
     UI.Spinner { objectName: "sdkSpinner"; active: root.effectsActive }
     UI.FeedbackButton { objectName: "sdkButton"; text: root.strings.t("example.increment"); focusable: true; feedback: root.feedback; onClicked: root.progress = Math.min(1, root.progress + 0.1) }

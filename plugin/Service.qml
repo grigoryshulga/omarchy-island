@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.Commons
@@ -78,6 +79,8 @@ Item {
     function onArrivalChanged(){root.downloadAlert=false;root.latestDownload=null;root.arrival++}
   }
   onDoNotDisturbChanged:if(doNotDisturb) {latestDownload=null;latestHerdr=null}
+  readonly property string focusedScreenName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name
+    : Quickshell.screens.length ? Quickshell.screens[0].name : ""
   readonly property var mediaState:modules.media || null
   readonly property var weather:modules.weather || null
   readonly property var calendars:modules.calendar ? modules.calendar.calendars : null

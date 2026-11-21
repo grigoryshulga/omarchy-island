@@ -5,8 +5,14 @@ import "Island" as Island
 ShellRoot {
   QtObject {
     id: service
-    readonly property var modules: ({notifications:service})
+    readonly property var modules: ({notifications:service,downloads:service})
+    property bool allowed:true
+    property var downloads:[]
+    property var t3:null
+    function openDownload(row) {}
     property bool playing: false
+    property string focusedScreenName:""
+    property string targetScreen:""
     property string track: ""
     property real visualPhase: 0
     property real audioLevel: 0
@@ -119,6 +125,68 @@ ShellRoot {
       service.allEntries=[]
       enter(clock)
       previewOpens("hover still shows the header without active notifications")
+      leave();tryCompare(widget,"hoverOpen",false,500)
+      widget.updateSetting("clockLayout",[{id:"now",kind:"indicator",side:"left"}])
+      service.downloads=["sample.iso","other.iso"].map(function(name,index){
+        return {key:name,active:true,filename:name,downloadPath:"/downloads/"+name,downloadedBytes:1024,ts:index+1}
+      })
+      var indicator=findChild(widget,"islandNowIndicator")
+      tryVerify(function(){return indicator && indicator.visible},500)
+      tryCompare(popup,"visible",false,1000)
+      enter(indicator)
+      var nowCard=findChild(widget,"nowActivityPreview")
+      tryVerify(function(){return nowCard.visible && nowCard.copy.detail.indexOf("sample.iso")>=0},500)
+      verify(!widget.pinned)
+      enter(clock)
+      tryVerify(function(){return !nowCard.visible && widget.hoverOpen},500)
+      enter(indicator)
+      tryVerify(function(){return nowCard.visible},500)
+      tryVerify(function(){return popup.shown>0.99 && Math.abs(popup.drawnHeight-popup.layoutHeight)<1},1000)
+      mouseClick(nowCard,nowCard.width/2,nowCard.height/2)
+      tryCompare(widget,"pinned",true,500)
+      var pages=findChild(widget,"islandPopupPages")
+      tryCompare(pages,"detailPage","downloads",500)
+      tryVerify(function(){var file=findChild(pages,"download-sample.iso");return file && file.visible})
+      verify(!findChild(pages,"download-other.iso"))
+      // Exercise the real pinned popup, including its Escape/Back handler.
+      pages.Window.window.requestActivate()
+      tryCompare(pages.Window.window,"active",true,500)
+      var folder=findChild(findChild(pages,"download-sample.iso"),"downloadOpenFolder")
+      tryCompare(findChild(pages,"overviewBack"),"activeFocus",true,1000)
+      folder.forceActiveFocus(Qt.TabFocusReason)
+      var folderTip=findChild(folder,"islandButtonTooltip")
+      tryCompare(folderTip,"opened",true,1500)
+      keyClick(Qt.Key_Escape)
+      tryCompare(folderTip,"visible",false,500)
+      verify(widget.pinned && folder.activeFocus && pages.detailPage==="downloads","Hint Escape navigated away from the focused download")
+      keyClick(Qt.Key_Escape)
+      tryCompare(pages,"detailPage","",500)
+      var gear=findChild(pages,"overviewCustomize")
+      wait(30) // Allow Overview to restore the summary focus after Back.
+      gear.forceActiveFocus(Qt.TabFocusReason)
+      tryCompare(gear,"activeFocus",true,500)
+      var keyboardTip=findChild(gear,"islandButtonTooltip")
+      tryCompare(keyboardTip,"opened",true,1500)
+      keyClick(Qt.Key_Escape)
+      tryCompare(keyboardTip,"visible",false,500)
+      verify(widget.pinned && gear.activeFocus,"Dismissing an icon hint closed the pinned popup")
+      keyClick(Qt.Key_Escape)
+      tryCompare(widget,"pinned",false,500)
+      leave()
+      service.targetScreen="old-notification-screen"
+      service.focusedScreenName=widget.screenName
+      service.playing=true;service.track="first"
+      compare(widget.showAlert,true)
+      compare(widget.alertKind,"media")
+      service.focusedScreenName="other-monitor"
+      compare(widget.showAlert,true,"focus alone must not move the toast")
+      service.track="second"
+      compare(widget.showAlert,false)
+      service.focusedScreenName=widget.screenName
+      service.track="third";compare(widget.showAlert,true)
+      service.doNotDisturb=true;compare(widget.showAlert,false)
+      service.track="muted";service.doNotDisturb=false
+      compare(widget.showAlert,false)
       console.log("HOVER_PASS")
     }
     function run(){try{test_hover()}catch(e){console.log("MODULES_FAIL",String(e),e.stack)}Qt.quit()}

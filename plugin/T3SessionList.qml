@@ -16,6 +16,17 @@ Column {
   property bool active:false
   property bool listExpanded:false
   property bool summaryMode:false
+  property var activityTarget:null
+  readonly property string singleSession:activityTarget && activityTarget.sessionId && rows.some(function(row){return row.id===root.activityTarget.sessionId}) ? activityTarget.sessionId : ""
+  readonly property bool pendingOnly:!!activityTarget && !!activityTarget.pendingOnly && counts.attention>0
+  function focusActivity(navigation) {
+    if (!singleSession) return false
+    for (var i=0;i<sessionRows.count;i++) {
+      var entry=sessionRows.itemAt(i)
+      if (entry && entry.sessionId===singleSession) return entry.focusRequest(navigation)
+    }
+    return false
+  }
   property bool allSessions:false
   property real maximumHeight:Style.space(376)
   readonly property var summaryIds:T3.overviewRows(rows)
@@ -114,6 +125,7 @@ Column {
       width:viewport.availableWidth
       spacing:Design.gap.small
       Repeater {
+        id:sessionRows
         model:items
         Column {
           id:groupRow
@@ -123,11 +135,12 @@ Column {
           required property int index
           width:cards.width
           spacing:Design.gap.small
-          visible:root.summaryMode ? root.summaryIds.indexOf(sessionId)>=0 && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
+          function focusRequest(navigation) {return card.focusRequest(navigation)}
+          visible:root.singleSession ? sessionId===root.singleSession : root.pendingOnly ? groupKey==="attention" : root.summaryMode ? root.summaryIds.indexOf(sessionId)>=0 && (root.expanded || index===0) : root.expanded ? root.allSessions || root.listExpanded || index<4 : index===0
           PlainText {
             objectName:"t3Group-"+groupRow.sessionId
             width:parent.width
-            visible:!root.summaryMode && root.expanded && groupRow.groupStart
+            visible:!root.singleSession && !root.summaryMode && root.expanded && groupRow.groupStart
             text:root.strings.t("t3.group."+groupRow.groupKey)
             typeRole:"caption"
             color:Design.secondaryText

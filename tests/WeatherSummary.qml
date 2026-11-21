@@ -8,6 +8,7 @@ ShellRoot {
   QtObject {
     id: provider
     property bool loading: false
+    property string searchStatus:"idle"
     property bool searching: false
     property bool stale: false
     property bool useImperial: false
@@ -26,8 +27,8 @@ ShellRoot {
         {date:"2026-11-18",min:-7,max:-2,code:71},
         {date:"2026-11-19",min:-6,max:-1,code:2}
       ]})
-    function cancelSearch() {suggestions=[]}
-    function search(query) {}
+    function cancelSearch() {suggestions=[];searchStatus="idle"}
+    function search(query) {searchStatus=query==="missing" ? "empty" : "error"}
     function refresh() {}
   }
   FloatingWindow {
@@ -127,6 +128,15 @@ ShellRoot {
         check(item("weatherCondition").text===translations.t("weather.noData"),"empty state missing")
         provider.loading=true;wait(30)
         check(item("weatherCondition").text===translations.t("weather.loading"),"loading state missing")
+        item("weatherLocation").clicked()
+        var input=item("weatherCityInput"),status=item("weatherSearchStatus")
+        tryCompare(input,"activeFocus",true)
+        input.text="missing";keyClick(Qt.Key_Return)
+        tryCompare(status,"text",translations.t("weather.searchEmpty"))
+        input.text="failure";keyClick(Qt.Key_Return)
+        tryCompare(status,"text",translations.t("weather.searchError"))
+        check(input.text==="failure" && input.activeFocus,"error lost search or focus")
+        keyClick(Qt.Key_Escape);check(!view.editing && !status.visible,"cancel retained search state")
         console.log("WEATHER_SUMMARY_PASS");Qt.quit()
       }
     }

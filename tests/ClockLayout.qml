@@ -10,6 +10,10 @@ ShellRoot {
   QtObject {
     id:service
     property var modules:({sample:sample,weather:weather,t3:{allowed:true,workingCount:1,waitingCount:0},herdr:{allowed:true,workingCount:1,waitingCount:0},agentLimits:{allowed:true,indicatorVisible:true,tightest:{remaining:10,name:"Codex",label:"Weekly",stale:false}},battery:{allowed:true,present:true,lowCharge:true,fraction:0.1,icon:"󰁺"}})
+    property var t3:QtObject {property bool connected:true;property var rows:[]}
+    property var downloads:[]
+    property bool playing:false
+    property var player:null
     property bool doNotDisturb:true
     property var indicators:QtObject {
       property bool recording:true
@@ -40,6 +44,8 @@ ShellRoot {
     Island.ClockIndicatorStrip {
       id:liveStrip;y:860;property int openedPage:0
       property var actions:[]
+      property var openedActivity:null
+      onNowRequested:activity=>openedActivity=activity
       property string openedModule:""
       onActivate:mode=>actions=actions.concat([mode])
       onDetailsRequested:moduleId=>openedModule=moduleId
@@ -52,6 +58,22 @@ ShellRoot {
       function test_editor() {
         compare(liveStrip.tooltips,'Sample · '+strings.t('dnd'))
         var savedElements=liveStrip.elements
+        var toggles=["microphone","dnd","nightLight","stayAwake"]
+        liveStrip.elements=toggles.map(function(id){return {id:id,kind:"indicator",side:"left"}})
+        for(var vertical of [false,true]) {
+          liveStrip.vertical=vertical
+          wait(30)
+          var end=-Infinity
+          for(var id of toggles) {
+            var target=findChild(liveStrip,"indicatorAction-"+id)
+            var pos=target.mapToItem(liveStrip,0,0)
+            var start=vertical ? pos.y : pos.x
+            verify(target.width>=Commons.Style.space(24) && target.height>=Commons.Style.space(24),"Small "+id+" target")
+            verify(start>=end,"Adjacent "+id+" target overlaps its neighbor")
+            end=start+(vertical ? target.height : target.width)
+          }
+        }
+        liveStrip.vertical=false
         for(var mode of ["recording","remote","update","microphone","nightLight","stayAwake","dnd"]) {
           liveStrip.elements=[{id:mode,kind:"indicator",side:"left"}];wait(20)
           var action=findChild(liveStrip,"indicatorAction-"+mode)
@@ -78,6 +100,40 @@ ShellRoot {
           moduleAction.forceActiveFocus();keyClick(Qt.Key_Space)
           compare(liveStrip.openedModule,moduleId)
         }
+        liveStrip.elements=[{id:"now",kind:"indicator",side:"right"}]
+        wait(20)
+        var now=findChild(liveStrip,"islandNowIndicator")
+        compare(liveStrip.implicitWidth,0)
+        service.player={trackTitle:"Long track title ".repeat(12),trackArtist:"Artist",dbusName:"test"}
+        service.playing=true;wait(20)
+        verify(now.visible && now.width<=Commons.Style.space(136))
+        mouseClick(now,now.width/2,now.height/2)
+        compare(liveStrip.openedActivity.kind,"media")
+        service.downloads=[{key:"file",downloadPath:"/downloads/file",filename:"cover",downloadedBytes:4096,active:true,ts:1}]
+        wait(20)
+        compare(now.text,"4 KiB")
+        liveStrip.vertical=true;wait(20)
+        compare(now.text,"")
+        verify(now.Accessible.name.includes("cover") && now.Accessible.name.includes("4 KiB"))
+        verify(now.width<=liveStrip.barSize)
+        now.forceActiveFocus();keyClick(Qt.Key_Space)
+        compare(liveStrip.openedActivity.row.key,"file")
+        service.t3.rows=[{id:"thread",requestId:"q",requestKind:"user_input",project:"Island",request:{questions:[{text:"Which option?"}]}}]
+        wait(20)
+        verify(now.Accessible.name.includes("Island") && now.Accessible.name.includes("Which option?"))
+        now.Accessible.pressAction()
+        compare(liveStrip.openedActivity.row.id,"thread")
+        service.t3.rows=service.t3.rows.concat([{id:"other",requestId:"r"}])
+        liveStrip.vertical=false;wait(20)
+        verify(now.text.includes(Commons.I18n.formatNumber(2)))
+        now.forceActiveFocus();keyClick(Qt.Key_Return)
+        compare(liveStrip.openedActivity.count,2)
+        liveStrip.editing=true;wait(20)
+        verify(!now.enabled)
+        liveStrip.openedActivity=null
+        now.Accessible.pressAction()
+        compare(liveStrip.openedActivity,null)
+        liveStrip.editing=false;service.t3.rows=[];service.downloads=[];service.playing=false
         liveStrip.elements=savedElements;wait(20)
         verify(liveStrip.implicitWidth>20)
         sample.allowed=false;wait(30)
@@ -112,6 +168,16 @@ ShellRoot {
         editor.add('space');wait(30)
         compare(editor.selectedRow.kind,'space')
         var id=editor.selectedId
+        var removeAction=findChild(editor,"clockRemove")
+        removeAction.forceActiveFocus(Qt.TabFocusReason)
+        var removeTip=findChild(removeAction,"islandButtonTooltip")
+        tryCompare(removeTip,"opened",true,1200)
+        compare(removeTip.text,strings.t("clock.remove"))
+        compare(removeAction.Accessible.name,removeTip.text)
+        keyClick(Qt.Key_Escape)
+        tryCompare(removeTip,"visible",false,400)
+        compare(editor.selectedId,id,"Reading the remove hint changed the selection")
+        findChild(editor,"clockElement-"+id).forceActiveFocus()
         keyClick(Qt.Key_Left,Qt.ControlModifier);wait(30)
         compare(editor.selectedId,id)
         verify(findChild(editor,'clockElement-'+id).activeFocus)
@@ -130,6 +196,12 @@ ShellRoot {
         verify(findChild(editor,'clockElement-dnd').visible)
         findChild(editor,'clockReset').clicked();wait(30)
         compare(settingsView.settings.clockLayout,null)
+        verify(!editor.elements.some(r=>r.id==="now"))
+        editor.add("now");wait(30)
+        verify(findChild(editor,"clockElement-now").activeFocus)
+        compare(settingsView.settings.clockLayout.filter(r=>r.id==="now").length,1)
+        editor.remove();wait(30)
+        verify(!editor.elements.some(r=>r.id==="now"))
         // Weather is opt-in, shares its backend and routes to the Weather page.
         verify(!editor.elements.some(r=>r.id==='module:weather'))
         editor.add('module:weather');wait(30)

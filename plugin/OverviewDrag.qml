@@ -9,6 +9,7 @@ Item {
   required property Item viewport
   property bool editing:false
   property string dragKey:""
+  property string actionsKey:""
   property string beforeKey:""
   property point pointer:Qt.point(0,0)
   property real startY:0
@@ -18,7 +19,7 @@ Item {
   signal moved(string key,string beforeKey)
   clip:true
   function cancel(){dragKey="";beforeKey="";offsetY=0}
-  onEditingChanged:if(!editing) cancel()
+  onEditingChanged:if(!editing) {cancel();actionsKey=""}
   onVisibleChanged:if(!visible) cancel()
   function geometry() {
     var rows=[]
@@ -27,6 +28,7 @@ Item {
   }
   function begin(key,point) {
     if(!editing) return
+    actionsKey=""
     dragKey=key;startY=viewport.mapToItem(content,point.x,point.y).y
     update(point)
   }

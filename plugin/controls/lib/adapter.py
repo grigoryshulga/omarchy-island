@@ -386,6 +386,34 @@ def replace_ranges(source: str, replacements: list[tuple[int, int, str]]) -> str
     return "".join(chunks)
 
 
+def slider_accessibility(source, token_list, node, root, root_id):
+    """Share the native panel's visible channel labels and formatted values."""
+    def expression(owner, name):
+        binding = direct_property(token_list, owner, name)
+        line = binding_line(source, binding)
+        return source[binding[1].end:line[1]].strip() if line else ""
+
+    panel = expression(root, "moduleName").strip('"\'')
+    value = expression(node, "value")
+    labels = {
+        ("omarchy.audio", root_id + ".outputVolume"): ("outputHeader.text", "outputPercent.text"),
+        ("omarchy.audio", root_id + ".inputVolume"): ("microphoneHeader.text", "microphonePercent.text"),
+        ("omarchy.audio", "streamRow.streamVolume"): (root_id + ".streamLabel(streamRow.node)", "streamPct.text"),
+        ("omarchy.monitor", root_id + ".brightnessPercent"): ("brightnessHeader.text", "brightnessPercent.text"),
+        ("omarchy.monitor", root_id + ".currentTextIndex()"): ("textSizeHeader.text", "textSizePx.text"),
+    }
+    pair = labels.get((panel, value))
+    if not pair:
+        return ""
+    name, description = pair
+    # Keep future versions that remove or rename a label loadable.
+    for identifier in (description.split(".")[0], name.split(".")[0]):
+        if not re.search(r"\bid\s*:\s*" + re.escape(identifier) + r"\b", source):
+            return ""
+    return (f"\n  IslandKit.SliderAccessibility {{ slider: parent; "
+            f"Accessible.name: {name}; Accessible.description: {description} }}\n")
+
+
 def island_replacements(
     source: str,
     token_list: list[Token],
@@ -406,6 +434,10 @@ def island_replacements(
         elif node.type_name in ("BarIconButton", "WidgetButton"):
             verify_shim_contract(node, token_list, "IslandHiddenBarButton.qml", shims)
             replacements.append((node.type_token.start, node.type_token.end, "IslandHiddenBarButton"))
+        elif node.type_name == "PanelSlider":
+            accessibility = slider_accessibility(source, token_list, node, root, root_id)
+            if accessibility:
+                replacements.append((node.open_token.end, node.open_token.end, accessibility))
         elif node.type_name == "ToggleSwitch":
             replacements.append((node.type_token.start, node.type_token.end, "ControlSwitch"))
         elif node.type_name == "PanelKeyCatcher":

@@ -51,6 +51,17 @@ ShellRoot {
         calendar.selectDay({year:2026,month:2,day:29,key:"2026-03-29"})
         tryCompare(subscriptions,"busy",false,5000)
         verify(calendar.markedDays.indexOf("2026-03-29")>=0)
+        var day=findChild(calendar,"calendar-day-2026-03-29")
+        verify(day.Accessible.selected && day.Accessible.description.includes(strings.t("ics.events")))
+        compare(day.Accessible.name,new Date(2026,2,29,12).toLocaleDateString(calendar.locale,Locale.LongFormat))
+        calendar.weekStart="monday"
+        calendar.viewMonth=11;calendar.viewYear=2025
+        tryCompare(subscriptions,"busy",false,5000)
+        var adjacent=findChild(calendar,"calendar-day-2026-01-11")
+        compare(adjacent.Accessible.name,new Date(2026,0,11,12).toLocaleDateString(calendar.locale,Locale.LongFormat))
+        verify(!adjacent.Accessible.selected)
+        verify(adjacent.Accessible.description.includes(strings.t("ics.events")))
+        calendar.selectDay({year:2026,month:2,day:29,key:"2026-03-29"})
         var event=subscriptions.events.filter(function(e){return e.title.indexOf("<img")===0})[0]
         var label=findChild(calendar,"calendarEvent-"+event.id)
         verify(label!==null);compare(label.textFormat,Text.PlainText)

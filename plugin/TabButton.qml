@@ -11,6 +11,10 @@ FeedbackButton {
   // because this component paints its own label.
   implicitWidth:Math.ceil(tabLabel.implicitWidth)+Style.space(24)
   implicitHeight:Design.controlHeight
+  Accessible.name: label
+  Accessible.role: Accessible.PageTab
+  Accessible.selectable: true
+  Accessible.selected: tabActive
   selected:tabActive
   PlainText {
     id:tabLabel

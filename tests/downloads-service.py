@@ -16,6 +16,9 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-qml-') as tmp:
     (root / 'Island').symlink_to(project / 'plugin')
     (root / 'shell.qml').write_text((project / 'tests/Downloads.qml').read_text())
     home = root / 'home'; home.mkdir()
+    sample = home / 'downloads/nested/file $ & <name>.zip'
+    sample.parent.mkdir(parents=True)
+    sample.write_bytes(b'completed download')
     binary = root / 'bin'; binary.mkdir()
     opener = binary / 'xdg-open'
     opener.write_text('#!/usr/bin/env python3\nimport json,os,sys\nopen(os.environ["ISLAND_OPEN_LOG"],"w").write(json.dumps(sys.argv[1:]))\n')
@@ -31,6 +34,7 @@ with tempfile.TemporaryDirectory(prefix='island-downloads-qml-') as tmp:
     print(result.stdout)
     assert_qml_pass(result, 'DOWNLOADS_SERVICE_PASS')
 
+    assert sample.read_bytes() == b'completed download'
     assert json.loads((root / 'opened.json').read_text()) == [str(home / 'downloads/nested')]
     state = json.loads((home / '.local/state/omarchy/island/downloads.json').read_text())
     assert len(state['downloads']) == 1

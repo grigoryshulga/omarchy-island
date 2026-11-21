@@ -107,12 +107,12 @@ function skyHour(now,report) {
   return civil
 }
 function parseSuggestions(raw,query) {
-  if(typeof raw!=="string" || raw.length>65536) return []
+  if(typeof raw!=="string" || raw.length>65536) return null
   try {
     var payload=JSON.parse(raw)
-    if(payload.query!==query || !Array.isArray(payload.results)) return []
+    if(payload.query!==query || !Array.isArray(payload.results)) return null
     return payload.results.slice(0,5).filter(function(row){return coordinates(row) && text(row.name,128)!==""}).map(function(row){return {name:text(row.name,128),description:text(row.description,256),latitude:Number(row.latitude),longitude:Number(row.longitude)}})
-  } catch(e) { return [] }
+  } catch(e) { return null }
 }
 // Same metric/imperial preferences as Omarchy's weather panel.
 function imperial(override,locale,country) {

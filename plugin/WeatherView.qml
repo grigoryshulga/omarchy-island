@@ -18,6 +18,9 @@ Item {
   property bool editing: false
   property var draftPlace: null
   property bool draftAuto: false
+  property bool shortQuery:false
+  readonly property string searchMessage: shortQuery ? "weather.searchMin" : !weather ? "" : weather.searching ? "weather.searching"
+    : weather.searchStatus==="empty" ? "weather.searchEmpty" : weather.searchStatus==="error" ? "weather.searchError" : ""
   readonly property var report: weather ? weather.report : null
   readonly property var current: report ? report.current : null
   readonly property bool imperial: weather ? weather.useImperial : false
@@ -38,7 +41,7 @@ Item {
   implicitHeight: body.implicitHeight
   onActiveChanged: { if(!active) cancelEditing(); else clockNow=Date.now() }
   function cancelEditing() {
-    editing=false;searchDelay.stop();draftPlace=null;draftAuto=false
+    editing=false;shortQuery=false;searchDelay.stop();draftPlace=null;draftAuto=false
     if(weather) weather.cancelSearch()
     city.text=""
   }
@@ -51,7 +54,14 @@ Item {
     if(draftAuto) weather.autoLocate()
     else {
       var place=draftPlace || weather.suggestions[0]
-      if(!place) return
+      if(!place) {
+        shortQuery=city.text.trim().length<2
+        if(!shortQuery && !weather.searching && (searchDelay.running || weather.searchStatus==="error")) {
+          searchDelay.stop()
+          weather.search(city.text)
+        }
+        return
+      }
       weather.choose(place)
     }
     cancelEditing()
@@ -115,7 +125,9 @@ Item {
           anchors.fill: parent
           visible: root.editing
           placeholderText: root.strings.t("weather.searchCity")
-          onTextChanged: if(root.editing) {root.draftPlace=null;root.draftAuto=false;root.weather.cancelSearch();searchDelay.restart()}
+          Accessible.name:placeholderText
+          Accessible.description:root.searchMessage ? root.strings.t(root.searchMessage) : ""
+          onTextChanged: if(root.editing) {root.shortQuery=false;root.draftPlace=null;root.draftAuto=false;root.weather.cancelSearch();searchDelay.restart()}
           Keys.onReturnPressed: root.commitCity()
           Keys.onEnterPressed: root.commitCity()
           Keys.onEscapePressed: event => {root.cancelEditing();event.accepted=true}
@@ -142,7 +154,7 @@ Item {
     ColumnLayout {
       id: suggestions
       Layout.fillWidth: true
-      visible: root.editing && root.weather && (root.weather.suggestions.length>0 || root.weather.searching)
+      visible: root.editing && root.weather && (root.weather.suggestions.length>0 || root.searchMessage!=="")
       spacing:Design.gap.small
       Repeater {
         model: root.weather ? root.weather.suggestions : []
@@ -158,7 +170,14 @@ Item {
           onClicked: {var place=modelData;city.text=place.name;searchDelay.stop();root.draftPlace=place;city.forceActiveFocus()}
         }
       }
-      PlainText { visible: root.weather!==null && root.weather.searching; text: root.strings.t("weather.searching"); color: Design.secondaryText; typeRole:"caption" }
+      PlainText {
+        objectName:"weatherSearchStatus"
+        Layout.fillWidth:true
+        visible:root.searchMessage!==""
+        text:visible ? root.strings.t(root.searchMessage) : ""
+        wrapMode:Text.Wrap;maximumLineCount:3
+        color:Design.secondaryText;typeRole:"caption"
+      }
     }
     Item {
       id: hero

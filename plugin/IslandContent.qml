@@ -70,13 +70,24 @@ Item {
   property var returnFocus: null
   property real summaryScrollY: 0
   KeyboardNavigation {id:detailNavigation;scope:root}
-  function openDetails(page) {
+  property var activityTarget: null
+  onDetailPageChanged:activityTarget=null
+  function openDetails(page,target) {
     if(!expanded) {expandRequested();return}
     returnFocus=detailNavigation.focused
     summaryScrollY=overviewScroll.contentItem.contentY
     detailPage=page
+    activityTarget=target || null
     overviewScroll.contentItem.contentY=0
-    Qt.callLater(function(){detailNavigation.first(detailHeader.visible ? detailHeader : body)})
+    Qt.callLater(function(){
+      if (root.detailPage!==page) return
+      if (target && (!root.detailItem || !root.detailItem.available)) {
+        root.back()
+        return
+      }
+      if (target && root.detailItem && typeof root.detailItem.focusActivity==="function" && root.detailItem.focusActivity(detailNavigation)) return
+      detailNavigation.first(detailHeader.visible ? detailHeader : body)
+    })
   }
   function restoreSummary() {
     Qt.callLater(function(){
@@ -86,6 +97,12 @@ Item {
   }
   function back() {
     if(overviewDrag.dragging) {overviewDrag.cancel();return true}
+    if(overviewDrag.actionsKey) {
+      var frame=moduleSections.itemAt(root.overviewLayout.findIndex(function(row){return row.id===overviewDrag.actionsKey}))
+      overviewDrag.actionsKey=""
+      if(frame) detailNavigation.focusItem(frame.handleItem)
+      return true
+    }
     if(settingsOpen) {
       settingsOpen=false
       Qt.callLater(function(){detailNavigation.focusItem(customizationSettingsButton)})
@@ -129,7 +146,7 @@ Item {
     FeedbackButton {
       objectName: "limitsAddProvider"
       visible: root.detailPage === "agentLimits" && !!root.detailItem && root.detailItem.editing
-      text: "+"; tooltipText: root.strings.t("limits.addProvider")
+      iconSize:fontSize;iconText: "+"; tooltipText: root.strings.t("limits.addProvider")
       compact: true; focusable: true; feedback: root.externalFeedback
       onClicked: root.detailItem.showAdd()
     }
@@ -242,6 +259,8 @@ Item {
       readonly property var item:moduleSection.item
       definition:root.moduleDefinitions.find(function(entry){return entry.id===entryKey})
       config:root.overviewLayout.find(function(row){return row.id===entryKey})
+      canMoveUp:index>0
+      canMoveDown:index+1<moduleSections.count
       strings:root.strings;feedback:root.externalFeedback
       controller:overviewDrag;editing:root.configuring
       viewItem:moduleSection;available:moduleSection.available
@@ -268,11 +287,15 @@ Item {
           readonly property bool radialBraille:root.radialBraille
           readonly property bool expanded:root.expanded
           readonly property string size:(root.expanded || root.hovering) && moduleFrame.config ? moduleFrame.config.size : "standard"
+          readonly property var activityTarget:detail ? root.activityTarget : null
           readonly property bool detail:root.detailPage===moduleFrame.entryKey
           readonly property bool active:root.overviewActive && root.visible && !root.settingsOpen && moduleSection.visible
           readonly property real pageHeight:overviewScroll.height
         }
         readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
+        onAvailableChanged:if(!available && root.activityTarget && root.detailPage===moduleFrame.entryKey) Qt.callLater(function(){
+          if(!moduleSection.available && root.activityTarget && root.detailPage===moduleFrame.entryKey) root.back()
+        })
         onModuleEnabledChanged:if(!moduleEnabled && root.detailPage===moduleFrame.entryKey) root.back()
         onDetailsRequested:root.detailPage===moduleFrame.entryKey ? root.back() : root.openDetails(moduleFrame.entryKey)
         onCloseRequested:root.closeRequested()

@@ -50,6 +50,9 @@ ShellRoot {
           Commons.Style.reduceMotion=false
         }
         check(Math.abs(effect.impulseTimes.x-0.2)<0.00001 && Math.abs(effect.impulseStrengths.x-0.8)<0.00001,"shared attack history did not reach shader")
+        Island.Preferences.values=({musicVisualizationStyle:"bayer"})
+        check(!bar.sampling && !popup.sampling && Island.Preferences.visualizers.length===0,"print kept an audio consumer")
+        check(effect.phase===0 && effect.bass===0 && barEffect.level===0,"print retained live inputs")
         Island.Preferences.values=({musicVisualization:"open"})
         wait(220)
         check(popup.sampling && !bar.sampling,"popup-only mode sampled the bar")

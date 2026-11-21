@@ -4,25 +4,21 @@ import qs.Commons
 import qs.Ui
 import qs.Commons as Commons
 
-Item {
+FocusScope {
   id: root
   opacity: enabled ? 1 : Design.disabledOpacity
   readonly property bool islandSpotlightSurface: true
 
-  property bool islandHandlesHorizontalKeys:true
-  activeFocusOnTab:true
-  Keys.onPressed:event=>{
-    if(event.modifiers & (Qt.AltModifier|Qt.ControlModifier|Qt.MetaModifier)) {event.accepted=false;return}
-    var text=String(event.text || "").toLowerCase(),delta=0,next=root.liveValue
-    if(event.key===Qt.Key_Left || text==="h" || text==="р") delta=root.mirrored ? root.step : -root.step
-    else if(event.key===Qt.Key_Right || text==="l" || text==="д") delta=root.mirrored ? -root.step : root.step
-    else if(event.key===Qt.Key_Home) next=root.minimum
-    else if(event.key===Qt.Key_End) next=root.maximum
-    else {event.accepted=false;return}
-    next=Math.max(root.minimum,Math.min(root.maximum,next+delta))
-    if(root.integer) next=Math.round(next)
-    root.liveValue=next;root.moved(next);root.released(next)
-    event.accepted=true
+  property string accessibleName: ""
+  property string accessibleDescription: ""
+  SliderAccessibility {
+    id: control
+    slider: root
+    focus: true
+    activeFocusOnTab: true
+    Accessible.name: root.accessibleName
+    Accessible.description: root.accessibleDescription
+    LayoutMirroring.enabled: root.mirrored
   }
   BorderSurface {anchors.fill:parent;color:"transparent";borderSpec:Border.controlSpec("focus",Design.text,Design.accent);radius:Design.cardRadius;visible:root.activeFocus}
   property QtObject bar: null
@@ -191,11 +187,7 @@ Item {
     onCanceled: root.dragging=false
     onWheel: function(wheel) {
       var delta = wheel.angleDelta.y > 0 ? root.step : -root.step
-      var next = Math.max(root.minimum, Math.min(root.maximum, root.liveValue + delta))
-      if (root.integer) next = Math.round(next)
-      root.liveValue = next
-      root.moved(next)
-      root.released(next)
+      control.commit(root.liveValue + delta)
     }
   }
 }

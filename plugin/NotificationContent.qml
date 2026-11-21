@@ -12,6 +12,8 @@ ColumnLayout {
   required property var service
   required property var strings
   property bool expanded:false
+  property bool active:true
+  function cancelClear() {return confirmation.cancel(true)}
   property bool hovering:false
   property bool detailOpen:false
   property string overviewSize:"standard"
@@ -57,6 +59,7 @@ ColumnLayout {
     Layout.fillWidth: true
     visible: root.expanded && root.detailPage==="notifications"
     FeedbackButton {
+      id:activeTab
       objectName: "notificationsActive"
       text: root.strings.t("notifications.active")
       selected: !root.historyOpen
@@ -64,6 +67,7 @@ ColumnLayout {
       onClicked: root.historyOpen = false
     }
     FeedbackButton {
+      id:historyButton
       objectName: "notificationsHistory"
       text: root.strings.t("notifications.history")
       selected: root.historyOpen
@@ -71,14 +75,38 @@ ColumnLayout {
       onClicked: root.historyOpen = true
     }
     Item { Layout.fillWidth: true }
-    FeedbackButton { objectName: "notificationsClear"; radius: Design.controlRadius; visible: root.expanded && root.rows.length > 0; text: root.strings.t("clear"); focusable: true; verticalPadding: 0; onClicked: root.historyOpen ? root.service.clearHistory() : root.service.clear() }
-    FeedbackButton { objectName: "notificationsDnd"; radius: Design.controlRadius; visible: root.expanded; text: root.service && root.service.doNotDisturb ? "󰂛" : "󰂚"; selected: root.service && root.service.doNotDisturb; tooltipText: root.strings.t("dnd"); focusable: true; verticalPadding: 0; onClicked: root.service.setDoNotDisturb(!root.service.doNotDisturb) }
+    FeedbackButton { objectName: "notificationsDnd"; radius: Design.controlRadius; visible: root.expanded; iconSize:fontSize;iconText: root.service && root.service.doNotDisturb ? "󰂛" : "󰂚"; selected: root.service && root.service.doNotDisturb; tooltipText: root.strings.t("dnd"); Accessible.checkable: true; Accessible.checked: selected; focusable: true; verticalPadding: 0; onClicked: root.service.setDoNotDisturb(!root.service.doNotDisturb) }
   }
   RowLayout {
     Layout.fillWidth: true
     visible: root.detailPage==="notifications" && root.rows.length > 0 && !root.compactNotifications && (root.expanded || root.hovering || root.alertKind === "notification")
-    Item { Layout.fillWidth: true; visible: root.rows.length === 0 }
     PlainText { objectName: "notificationCount"; visible: root.rows.length > 0; Layout.fillWidth: true; text: root.strings.tn("notifications", root.rows.length).arg(Commons.I18n.formatNumber(root.rows.length)); color: Design.secondaryText; typeRole:"caption" }
+    FeedbackButton {
+      id:clearButton
+      objectName:"notificationsClear"
+      visible:root.expanded && !confirmation.opened
+      text:root.strings.t(root.historyOpen ? "notifications.clearHistory" : "notifications.archiveAll")
+      compact:true
+      focusable:true
+      onClicked: {
+        if (root.historyOpen) confirmation.ask()
+        else {
+          activeTab.forceActiveFocus(Qt.TabFocusReason)
+          root.service.clear()
+        }
+      }
+    }
+  }
+  ClearConfirmation {
+    id:confirmation
+    objectName:"historyClearPrompt"
+    strings:root.strings
+    targetIds:root.historyOpen && root.service ? root.service.historyEntries.map(row=>row.key) : []
+    questionKey:"notifications.confirmClear"
+    trigger:clearButton
+    fallback:historyButton
+    permitted:root.active && root.expanded && root.detailOpen && root.historyOpen
+    onConfirmed:root.service.clearHistory()
   }
   Controls.ScrollView {
     id: scroll
@@ -143,7 +171,7 @@ ColumnLayout {
     spacing:Design.gap.tight
     Repeater {
       model: root.service ? root.service.mutedSources : []
-      FeedbackButton { radius: Design.controlRadius; required property string modelData; text: "󰂛 " + modelData.replace(/[<>]/g,"") + " ×"; focusable: true; onClicked: root.service.mute(modelData) }
+      FeedbackButton { radius: Design.controlRadius; required property string modelData; text: "󰂛 " + modelData.replace(/[<>]/g,"") + " ×"; tooltipText: root.strings.t("unmute")+" · "+modelData; Accessible.name: tooltipText; focusable: true; onClicked: root.service.mute(modelData) }
     }
   }
 }

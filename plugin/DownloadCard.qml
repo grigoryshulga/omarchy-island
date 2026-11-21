@@ -41,7 +41,7 @@ ContainerSurface {
       PlainText {text:root.strings.t(root.row.active ? "downloads.downloading" : "downloads.complete");color:Design.secondaryText;typeRole:"caption"}
       PlainText {objectName:"downloadSize";Layout.fillWidth:true;text:Downloads.sizeText(root.row.downloadedBytes,Commons.I18n.formatNumber);color:Design.accent;typeRole:"caption"}
       ActionButton {objectName:"downloadOpenFolder";iconText:"󰉋";tooltipText:root.strings.t("downloads.openFolder");horizontalPadding:Design.gap.tight;verticalPadding:0;implicitHeight:Design.inlineControlHeight;onClicked:root.service.openDownload(root.row)}
-      ActionButton {visible:!root.row.active && root.expanded;iconText:"󰅖";tooltipText:root.strings.t("delete");horizontalPadding:Design.gap.tight;verticalPadding:0;implicitHeight:Design.inlineControlHeight;onClicked:root.service.remove(root.row.key)}
+      ActionButton {objectName:"downloadRemove";visible:!root.row.active && root.expanded;iconText:"󰅖";tooltipText:root.strings.t("downloads.removeFromList").arg(root.row.filename);horizontalPadding:Design.gap.tight;verticalPadding:0;implicitHeight:Design.inlineControlHeight;onClicked:root.service.remove(root.row.key)}
     }
     DownloadProgress {objectName:"downloadProgress";Layout.fillWidth:true;visible:root.row.active;active:root.active && root.row.active}
   }

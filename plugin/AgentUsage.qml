@@ -42,7 +42,7 @@ Column {
         TabButton { required property string modelData; Layout.fillWidth:true; label:root.strings.t("limits.range."+modelData); tabActive:root.range===modelData; focusable:true; onClicked:root.range=modelData }
       }
       FeedbackButton {
-        text:"ⓘ"; compact:true; focusable:true
+        iconSize:fontSize;iconText:"ⓘ"; compact:true; focusable:true
         tooltipText:root.strings.t(root.metric==="cost" ? "limits.estimate" : "limits.localUsage")
         Accessible.description:tooltipText
       }
@@ -97,7 +97,7 @@ Column {
           }
           PlainText {Layout.fillWidth:true;typeRole:"caption";color:Design.secondaryText;wrapMode:Text.Wrap;text:(root.selectedPeriod ? root.period(root.selectedPeriod) : root.strings.t("limits.range."+root.range))+" · "+root.strings.t("limits.requests").arg(Commons.I18n.formatNumber(root.report.total.requests))}
         }
-        FeedbackButton {visible:root.selectedPeriod!=="";text:"×";tooltipText:root.strings.t("limits.clearPeriod");compact:true;focusable:true;onClicked:root.selectedPeriod=""}
+        FeedbackButton {visible:root.selectedPeriod!=="";iconSize:fontSize;iconText:"×";tooltipText:root.strings.t("limits.clearPeriod");compact:true;focusable:true;onClicked:root.selectedPeriod=""}
       }
       PlainText {visible:root.metric==="cost" && root.report.total.unpricedTokens>0;width:parent.width;wrapMode:Text.Wrap;typeRole:"caption";color:Design.warning;text:root.strings.t("limits.unpriced")}
       RowLayout {

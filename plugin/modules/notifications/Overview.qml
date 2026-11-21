@@ -4,9 +4,11 @@ Island.ModuleView {
   id:root
   available:!!backend && ((presentation.expanded && (presentation.detail || backend.activeEntries.length>0)) || (presentation.hovering && backend.activeEntries.length>0) || (presentation.alertKind==="notification" && !!presentation.alert && !presentation.alert.downloadPath))
   implicitHeight:content.implicitHeight
+  function back(){return content.cancelClear()}
   toastIcon:content.notificationIcon
   Island.NotificationContent {
     id:content;width:parent.width
+    active:root.presentation.active
     service:root.backend;strings:root.presentation.strings
     expanded:root.presentation.expanded;hovering:root.presentation.hovering
     overviewSize:root.presentation.size || "standard"

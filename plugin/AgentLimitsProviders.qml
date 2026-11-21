@@ -43,7 +43,7 @@ Column {
           FeedbackButton {
             objectName: "limitsChooseProvider-" + card.modelData.id
             visible: root.adding
-            text: "+"; tooltipText: root.strings.t("limits.addProvider")
+            iconSize:fontSize;iconText: "+"; tooltipText: root.strings.t("limits.addProvider")
             Accessible.name: tooltipText + " · " + card.modelData.name
             compact: true; focusable: true; feedback: root.feedback
             onClicked: root.providerChosen(card.modelData.id)
@@ -60,12 +60,12 @@ Column {
             onClicked:root.backend.change(card.modelData.id,card.modelData.enabled ? "disable" : "enable","","global")
           }
           FeedbackButton {
-            objectName:"agentProviderConnect-"+card.modelData.id;text:"󰒓";tooltipText:root.strings.t("limits.provider.connection");focusable:true;compact:true
+            objectName:"agentProviderConnect-"+card.modelData.id;iconSize:fontSize;iconText:"󰒓";tooltipText:root.strings.t("limits.provider.connection");Accessible.name:tooltipText+" · "+card.modelData.name;focusable:true;compact:true
             visible:!!card.modelData.secretName && !root.embedded;enabled:root.backend && !root.backend.busy
             onClicked:{root.editingId=card.modelData.id;root.secretDraft=card.modelData.secretName;root.regionDraft=card.modelData.region}
           }
-          FeedbackButton {visible:!root.embedded;text:"↑";tooltipText:root.strings.t("limits.moveUp");focusable:true;compact:true;enabled:card.index>0 && root.backend && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"up","","global")}
-          FeedbackButton {visible:!root.embedded;text:"↓";tooltipText:root.strings.t("limits.moveDown");focusable:true;compact:true;enabled:root.backend && card.index<root.backend.catalog.length-1 && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"down","","global")}
+          FeedbackButton {visible:!root.embedded;iconSize:fontSize;iconText:"↑";tooltipText:root.strings.t("limits.moveUp");Accessible.name:tooltipText+" · "+card.modelData.name;focusable:true;compact:true;enabled:card.index>0 && root.backend && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"up","","global")}
+          FeedbackButton {visible:!root.embedded;iconSize:fontSize;iconText:"↓";tooltipText:root.strings.t("limits.moveDown");Accessible.name:tooltipText+" · "+card.modelData.name;focusable:true;compact:true;enabled:root.backend && card.index<root.backend.catalog.length-1 && !root.backend.busy;onClicked:root.backend.change(card.modelData.id,"down","","global")}
         }
         ColumnLayout {
           visible:root.editingId===card.modelData.id

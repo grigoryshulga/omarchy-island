@@ -79,6 +79,8 @@ Item {
     }
     IslandSlider {
       id:slider
+      accessibleName:title.text
+      accessibleDescription:delayValue.text
       objectName:root.numeric ? "setting-"+root.key : ""
       visible:root.numeric
       y:title.height+Design.gap.small

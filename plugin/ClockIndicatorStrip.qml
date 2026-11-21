@@ -5,6 +5,8 @@ import qs.Commons as Commons
 import "ModuleCatalog.mjs" as Catalog
 import "ClockLayout.mjs" as ClockLayout
 import "SettingsModel.mjs" as Settings
+import "NowActivity.mjs" as NowActivity
+import "NowPresentation.js" as NowPresentation
 
 GridLayout {
   id:root
@@ -36,6 +38,8 @@ GridLayout {
   signal pageRequested(int index)
   signal detailsRequested(string moduleId)
   signal calendarRequested()
+  signal nowRequested(var activity)
+  signal nowHovered(bool hovered)
   signal selected(string id)
   signal dropped(string id,var item,real dx,real dy)
   signal revealFocus(var item)
@@ -61,27 +65,40 @@ GridLayout {
       required property var modelData
       readonly property var entry:root.entries.find(function(entry){return entry.id===modelData.id}) || null
       readonly property bool live:!!view.item && !!view.item.available
+      readonly property bool hasBarAction: !!entry && !entry.moduleId && modelData.kind === "indicator"
+          && modelData.id !== "reminders" && modelData.id !== "now"
+      readonly property real actionExtent: hasBarAction ? Style.space(24) : 0
+      readonly property real cellWidth: Math.max(actionExtent,naturalWidth)
+      readonly property real naturalHeight: live ? view.implicitHeight : root.editing ? root.barHeight : 0
       property alias view:view
       property alias button:selection
       visible:root.editing || modelData.kind!=="indicator" || live
-      implicitWidth:root.vertical ? Math.min(root.barSize-Style.space(4),naturalWidth) : naturalWidth
+      implicitWidth:root.vertical ? Math.min(root.barSize-(hasBarAction ? 0 : Style.space(4)),cellWidth) : cellWidth
       readonly property real naturalWidth:modelData.kind==="space" ? Style.space(12) : modelData.kind==="separator" ? (root.vertical ? Style.space(16) : Style.space(1)) : live ? view.implicitWidth : root.editing ? placeholder.implicitWidth : 0
-      implicitHeight:modelData.kind==="space" ? (root.vertical ? Style.space(12) : root.barHeight) : modelData.kind==="separator" ? (root.vertical ? Style.space(1) : Style.space(16)) : live ? view.implicitHeight : root.editing ? root.barHeight : 0
+      implicitHeight: {
+        if (modelData.kind==="space") return root.vertical ? Style.space(12) : root.barHeight
+        if (modelData.kind==="separator") return root.vertical ? Style.space(1) : Style.space(16)
+        return root.vertical ? Math.max(actionExtent,naturalHeight) : naturalHeight
+      }
       Layout.alignment:Qt.AlignCenter
       z:drag.active ? 10 : 0
       transform:Translate {x:drag.active ? drag.translation.x : 0;y:drag.active ? drag.translation.y : 0}
       Loader {
         id:view
+        transform:Translate {
+          x:cell.hasBarAction ? (cell.width-view.width)/2 : 0
+          y:cell.hasBarAction ? (cell.height-view.height)/2 : 0
+        }
         enabled:!root.editing
         visible:cell.live
-        sourceComponent:cell.modelData.kind!=="indicator" ? null : cell.entry && cell.entry.moduleId ? moduleView : ({recording:recordingView,remote:remoteView,reminders:remindersView,update:updateView,microphone:microphoneView,dnd:dndView,nightLight:nightLightView,stayAwake:stayAwakeView})[cell.modelData.id] || null
+        sourceComponent:cell.modelData.kind!=="indicator" ? null : cell.entry && cell.entry.moduleId ? moduleView : ({now:nowView,recording:recordingView,remote:remoteView,reminders:remindersView,update:updateView,microphone:microphoneView,dnd:dndView,nightLight:nightLightView,stayAwake:stayAwakeView})[cell.modelData.id] || null
       }
       FeedbackButton {
         objectName:"indicatorAction-"+cell.modelData.id
         anchors.centerIn:parent
-        width:parent.width+Style.space(4)
-        height:Math.max(parent.height,root.barHeight)
-        visible:!root.editing && cell.live && !!cell.entry && !cell.entry.moduleId && cell.modelData.id!=="reminders"
+        width:parent.width
+        height:root.vertical ? parent.height : root.barHeight
+        visible:!root.editing && cell.live && cell.hasBarAction
         focusable:true
         horizontalPadding:0;verticalPadding:0
         tooltipText:visible ? root.strings.t("indicator.action."+cell.modelData.id) : ""
@@ -140,6 +157,33 @@ GridLayout {
             readonly property var bar:root.bar
           }
           onDetailsRequested:cell.entry.pageIndex!==undefined ? root.pageRequested(cell.entry.pageIndex) : root.detailsRequested(cell.entry.moduleId)
+        }
+      }
+      Component {
+        id:nowView
+        FeedbackButton {
+          objectName:"islandNowIndicator"
+          readonly property var activity:NowActivity.current(root.service)
+          readonly property bool available:!!activity
+          readonly property var description:NowPresentation.describe(activity,root.strings,Commons.I18n.formatNumber)
+          LayoutMirroring.enabled:Commons.I18n.rightToLeft
+          LayoutMirroring.childrenInherit:true
+          focusable:true
+          iconText:NowActivity.glyph(activity)
+          text:root.vertical ? "" : description.label.replace(/\s+/g," ").trim()
+          Accessible.name:[description.title,description.detail].filter(Boolean).join(" · ")
+          foreground:root.foreground
+          fontFamily:root.bar ? root.bar.fontFamily : Design.fontFamily
+          iconSize:Design.type.bar
+          fontSize:Design.type.bar
+          horizontalPadding:Design.gap.tight
+          verticalPadding:0
+          implicitWidth:Math.min(_contentNaturalWidth+2*horizontalPadding+_reservedBorderLeft+_reservedBorderRight,
+                                 root.vertical ? root.barSize : Style.space(136))
+          implicitHeight:root.vertical ? Math.max(Design.inlineControlHeight,iconSize) : root.barHeight
+          onClicked:if (activity && enabled) root.nowRequested(activity)
+          onHovered:isHovered=>root.nowHovered(isHovered && enabled && available)
+          onAvailableChanged:if (!available) root.nowHovered(false)
         }
       }
     Component {id:recordingView; StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}

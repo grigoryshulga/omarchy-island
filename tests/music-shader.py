@@ -62,11 +62,11 @@ void main() {
     glGetActiveUniformsiv(program, len(names), indices, GL_UNIFORM_OFFSET, offsets)
     layout = dict(zip(names, offsets))
 
-    def frame(phase, width, height, level):
+    def frame(phase, width, height, level, style=4):
         data = bytearray(512)
         values = {'qt_Opacity':[0.7], 'size':[width,height], 'phase':[phase],
                   'level':[level], 'bass':[level], 'treble':[0], 'accent':[1,1,1,1],
-                  'monochrome':[1 if height == 26 else 0], 'reveal':[1], 'style':[4],
+                  'monochrome':[1 if height == 26 else 0], 'reveal':[1], 'style':[style],
                   'impulseTimes':[-10]*4, 'impulseStrengths':[0]*4,
                   'backgroundStyle':[0], 'paletteBlue':[0.2,0.4,0.8,1],
                   'paletteGreen':[0.2,0.8,0.4,1], 'paletteYellow':[0.8,0.6,0.2,1]}
@@ -88,6 +88,11 @@ void main() {
                 print(f'Constellations {width}x{height}, level={level}, t={phase}: {changed:.1%} visibly changed dots')
                 assert changed >= 0.15, 'Constellations appear static: too few dots visibly evolve over one second'
     assert frame(0,360,180,0.4) == frame(0,360,180,0.4), 'Fixed phase is not deterministic'
+    # A flat mid-gray input resolves into eight inked cells per 4x4 tile.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes([128,128,128,255]))
+    tile = frame(0,12,12,0,style=6)
+    assert len(set(tile)) == 2 and sum(pixel > 0 for pixel in tile) == 8, 'Incorrect halftone coverage'
+    assert tile == frame(20,12,12,1,style=6), 'Print pattern moved with the audio'
     print('MUSIC_SHADER_PASS')
 finally:
     eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)

@@ -16,7 +16,8 @@ Item {
   readonly property var impulses: service && service.visualImpulses ? service.visualImpulses : null
   readonly property real phase: service ? service.visualPhase : 0
   readonly property bool active: service !== null && service.hasMedia && service.playing && Preferences.visualizationAllowed(horizontalFade)
-  readonly property bool sampling:active && visible && opacity>0 && reveal>0 && !Preferences.reduceMotion
+  readonly property bool animatedField: visualizationStyle !== Settings.choices.musicVisualizationStyle.indexOf("bayer") && !Preferences.reduceMotion
+  readonly property bool sampling:animatedField && active && visible && opacity>0 && reveal>0
   onSamplingChanged:Preferences.watchVisualizer(root,sampling)
   Component.onCompleted:Preferences.watchVisualizer(root,sampling)
   Component.onDestruction:Preferences.watchVisualizer(root,false)
@@ -48,17 +49,17 @@ Item {
     anchors.fill: parent
     property var source: artwork
     property vector2d size: Qt.vector2d(width,height)
-    property real phase: Preferences.reduceMotion ? 0 : root.phase
+    property real phase: root.animatedField ? root.phase : 0
     property real style: root.visualizationStyle
     property real backgroundStyle: root.backgroundStyle
     property color paletteBlue: ThemePalette.blue
     property color paletteGreen: ThemePalette.green
     property color paletteYellow: ThemePalette.yellow
-    property vector4d impulseTimes: root.impulses && !Preferences.reduceMotion ? Qt.vector4d(root.impulses.times[0],root.impulses.times[1],root.impulses.times[2],root.impulses.times[3]) : Qt.vector4d(-10,-10,-10,-10)
-    property vector4d impulseStrengths: root.impulses && !Preferences.reduceMotion ? Qt.vector4d(root.impulses.strengths[0],root.impulses.strengths[1],root.impulses.strengths[2],root.impulses.strengths[3]) : Qt.vector4d(0,0,0,0)
-    property real level: root.service && !Preferences.reduceMotion ? root.service.audioLevel : 0
-    property real bass: root.service && !Preferences.reduceMotion ? root.service.audioBass : 0
-    property real treble: root.service && !Preferences.reduceMotion ? root.service.audioTreble : 0
+    property vector4d impulseTimes: root.impulses && root.animatedField ? Qt.vector4d(root.impulses.times[0],root.impulses.times[1],root.impulses.times[2],root.impulses.times[3]) : Qt.vector4d(-10,-10,-10,-10)
+    property vector4d impulseStrengths: root.impulses && root.animatedField ? Qt.vector4d(root.impulses.strengths[0],root.impulses.strengths[1],root.impulses.strengths[2],root.impulses.strengths[3]) : Qt.vector4d(0,0,0,0)
+    property real level: root.service && root.animatedField ? root.service.audioLevel : 0
+    property real bass: root.service && root.animatedField ? root.service.audioBass : 0
+    property real treble: root.service && root.animatedField ? root.service.audioTreble : 0
     property color accent: Commons.Color.accent
     property real monochrome: root.monochrome && root.backgroundStyle===0 ? 1 : 0
     property real reveal: root.horizontalFade ? 1 : root.artworkReveal

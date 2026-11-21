@@ -5,7 +5,7 @@ Island.ModulePage {
   available:!!backend && backend.allowed
   implicitHeight:content.implicitHeight
   stableHeight:presentation.selected ? content.implicitHeight : content.monthImplicitHeight
-  function back(){if(content.sourcesMode) {content.sourcesMode=false;return true};if(content.yearMode) {content.yearMode=false;return true};return false}
+  function back(){if(content.cancelReminderClear()) return true;if(content.sourcesMode) {content.sourcesMode=false;return true};if(content.yearMode) {content.yearMode=false;return true};return false}
   function enter(){content.showToday()}
   function focusPrimary(){content.focusSelectedDay();return true}
   function handleKey(event){var item=presentation.focusedItem;return !!item && "islandCalendarDay" in item && content.handleKey(event)}

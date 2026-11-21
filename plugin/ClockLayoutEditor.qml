@@ -59,12 +59,12 @@ Column {
     layoutDirection:Commons.I18n.rightToLeft ? Qt.RightToLeft : Qt.LeftToRight
     SectionHeading {width:Math.max(0,parent.width-orientation.width-reset.width-2*parent.spacing);title:root.strings.t("clock.title")}
     FeedbackButton {
-      id:orientation;objectName:"clockOrientation";text:root.vertical ? "↕" : "↔";compact:true;focusable:true
+      id:orientation;objectName:"clockOrientation";iconSize:fontSize;iconText:root.vertical ? "↕" : "↔";compact:true;focusable:true
       tooltipText:root.strings.t(root.vertical ? "clock.vertical" : "clock.horizontal")
       onClicked:{root.closeEditors();root.vertical=!root.vertical}
     }
     FeedbackButton {
-      id:reset;objectName:"clockReset";text:"↺";compact:true;focusable:true
+      id:reset;objectName:"clockReset";iconSize:fontSize;iconText:"↺";compact:true;focusable:true
       tooltipText:root.strings.t("clock.reset")
       onClicked:{root.selectedId="clock";root.settingRequested("clockLayout",null)}
     }
@@ -143,11 +143,11 @@ Column {
     }
     Row {
       id:actions;spacing:Design.gap.micro
-      FeedbackButton {visible:root.selectedId==="clock";text:"…";compact:true;focusable:true;tooltipText:root.strings.t("clock.format");onClicked:{root.customFormatOpen=!root.customFormatOpen;if(root.customFormatOpen) customFormat.forceActiveFocus()}}
-      FeedbackButton {objectName:"clockMoveBack";visible:!!root.selectedRow;text:root.vertical ? "↑" : "←";compact:true;focusable:true;tooltipText:root.strings.t("clock.previous");onClicked:root.move(-1)}
-      FeedbackButton {objectName:"clockMoveForward";visible:!!root.selectedRow;text:root.vertical ? "↓" : "→";compact:true;focusable:true;tooltipText:root.strings.t("clock.next");onClicked:root.move(1)}
-      FeedbackButton {objectName:"clockSwitchSide";visible:!!root.selectedRow;text:"⇄";compact:true;focusable:true;tooltipText:root.strings.t("clock.switchSide");onClicked:root.save(Layout.move(root.elements,root.selectedId,root.side==="left" ? "right" : "left",""))}
-      FeedbackButton {objectName:"clockRemove";visible:!!root.selectedRow;text:"×";compact:true;focusable:true;tooltipText:root.strings.t("clock.remove");onClicked:root.remove()}
+      FeedbackButton {visible:root.selectedId==="clock";iconSize:fontSize;iconText:"…";compact:true;focusable:true;tooltipText:root.strings.t("clock.format");onClicked:{root.customFormatOpen=!root.customFormatOpen;if(root.customFormatOpen) customFormat.forceActiveFocus()}}
+      FeedbackButton {objectName:"clockMoveBack";visible:!!root.selectedRow;iconSize:fontSize;iconText:root.vertical ? "↑" : "←";compact:true;focusable:true;tooltipText:root.strings.t("clock.previous");onClicked:root.move(-1)}
+      FeedbackButton {objectName:"clockMoveForward";visible:!!root.selectedRow;iconSize:fontSize;iconText:root.vertical ? "↓" : "→";compact:true;focusable:true;tooltipText:root.strings.t("clock.next");onClicked:root.move(1)}
+      FeedbackButton {objectName:"clockSwitchSide";visible:!!root.selectedRow;iconSize:fontSize;iconText:"⇄";compact:true;focusable:true;tooltipText:root.strings.t("clock.switchSide");onClicked:root.save(Layout.move(root.elements,root.selectedId,root.side==="left" ? "right" : "left",""))}
+      FeedbackButton {objectName:"clockRemove";visible:!!root.selectedRow;iconSize:fontSize;iconText:"×";compact:true;focusable:true;tooltipText:root.strings.t("clock.remove");onClicked:root.remove()}
     }
   }
   DesignDropdown {

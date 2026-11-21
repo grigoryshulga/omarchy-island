@@ -124,16 +124,16 @@ ShellRoot {
         check(widget.alertKind==="","disabled track alert appeared")
         widget.updateSetting("trackAlerts",true);service.track="two"
         check(widget.alertKind==="media","track alert not restored")
-        for(var musicStyle of ["default","ripple","flow","embers","constellations","echo"]) {
+        for(var musicStyle of ["default","ripple","flow","embers","constellations","echo","bayer"]) {
           widget.updateSetting("musicVisualizationStyle",musicStyle)
           check(fakeShell.writtenEntry.musicVisualizationStyle===musicStyle,"music style not saved")
-          check(findChild(widget,"islandClockArtwork").visualizationStyle===["default","ripple","flow","embers","constellations","echo"].indexOf(musicStyle),"clock style did not update")
+          check(findChild(widget,"islandClockArtwork").visualizationStyle===["default","ripple","flow","embers","constellations","echo","bayer"].indexOf(musicStyle),"clock style did not update")
         }
         for(var musicBackground of ["artwork","aurora","tide","plasma"]) {
           widget.updateSetting("musicVisualizationBackground",musicBackground)
           check(fakeShell.writtenEntry.musicVisualizationBackground===musicBackground,"music background not saved")
           check(findChild(widget,"islandClockArtwork").backgroundStyle===["artwork","aurora","tide","plasma"].indexOf(musicBackground),"clock background did not update")
-          check(widget.settings.musicVisualizationStyle==="echo","background selection changed style")
+          check(widget.settings.musicVisualizationStyle==="bayer","background selection changed style")
         }
         widget.updateSetting("musicVisualization","off")
         check(!findChild(widget,"islandClockArtwork").active,"disabled music effect remains active")

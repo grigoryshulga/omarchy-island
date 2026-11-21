@@ -69,6 +69,8 @@ Item {
     }
     IslandSlider {
       objectName:"mediaCompactProgress"
+      accessibleName:root.strings.t("media.playbackPosition")
+      accessibleDescription:root.strings.t("media.seconds").arg(Commons.I18n.formatNumber(Math.floor(liveValue)))
       visible:root.compactOverview && root.overviewSize==="standard" && root.player && root.player.lengthSupported && root.player.positionSupported
       Layout.fillWidth:true
       bar:root.bar
@@ -99,6 +101,8 @@ Item {
           IslandSlider {
             id: seek
             objectName: "mediaSeek"
+            accessibleName: root.strings.t("media.playbackPosition")
+            accessibleDescription: root.strings.t("media.seconds").arg(Commons.I18n.formatNumber(Math.floor(liveValue)))
             Layout.fillWidth: true
             bar: root.bar
             fillColor: Design.accent

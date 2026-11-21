@@ -53,11 +53,22 @@ BorderSurface {
   opacity: enabled ? 1 : Design.disabledOpacity
   Accessible.name: text || tooltipText
   Accessible.role: Accessible.Button
+  Accessible.onPressAction: if (enabled && visible) clicked()
   Connections {target:root;function onClicked() {if(root.feedback) root.feedback.pulseFrom(root)}}
   activeFocusOnTab: focusable
   Keys.onReturnPressed: if (focusable) root.clicked()
   Keys.onEnterPressed: if (focusable) root.clicked()
   Keys.onSpacePressed: if (focusable) root.clicked()
+  Keys.onEscapePressed: event => {
+    if (tip.opened) tooltipDismissed = true
+    else event.accepted = false
+  }
+  property bool tooltipDismissed: false
+  property bool pointerFocus: false
+  readonly property bool tooltipWanted: enabled && visible && tooltipText !== ""
+      && (mouseArea.containsMouse || (focusable && activeFocus && !pointerFocus && text !== tooltipText))
+  onTooltipWantedChanged: if (!tooltipWanted) tooltipDismissed = false
+  onActiveFocusChanged: if (!activeFocus) pointerFocus = false
 
   // Reserve focus width in every state so hover and focus never relayout siblings.
   implicitWidth: _contentNaturalWidth + horizontalPadding * 2 + _reservedBorderLeft + _reservedBorderRight
@@ -123,7 +134,9 @@ BorderSurface {
   }
 
   ToolTip {
-    visible: root.tooltipText !== "" && mouseArea.containsMouse
+    id: tip
+    objectName: "islandButtonTooltip"
+    visible: root.tooltipWanted && !root.tooltipDismissed
     text: root.tooltipText
     delay: 400
     padding: 0
@@ -199,7 +212,10 @@ BorderSurface {
     cursorShape: Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     onClicked: function(mouse) {
-      if (root.focusable) root.forceActiveFocus()
+      if (root.focusable) {
+        root.pointerFocus = true
+        root.forceActiveFocus(Qt.MouseFocusReason)
+      }
       if (mouse.button === Qt.RightButton) root.rightClicked()
       else root.clicked()
     }

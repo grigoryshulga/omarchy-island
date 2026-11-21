@@ -8,7 +8,7 @@ Island.ModulePage {
   readonly property string detailPage:content.detailPage
   navigationHidden:content.navigationHidden
   ownsKeys:content.ownsKeys
-  function openDetails(id){content.openDetails(id)}
+  function openDetails(id,target){content.openDetails(id,target)}
   implicitHeight:content.implicitHeight
   toastIcon:content.toastIcon
   interactionHovered:content.musicHovered

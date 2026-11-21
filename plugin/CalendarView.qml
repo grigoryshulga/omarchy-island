@@ -15,7 +15,8 @@ Item {
   property bool sourcesMode:false
   property var subscriptions:null
   property bool subscriptionsReady:false
-  readonly property var markedDays:reminderDays.concat(subscriptions ? subscriptions.daysForYear(viewYear) : [])
+  readonly property var eventDays:subscriptions ? subscriptions.daysForYear(viewYear) : []
+  readonly property var markedDays:reminderDays.concat(eventDays)
   function activateSubscriptions() {if(subscriptionsReady && active && visible && subscriptions) subscriptions.activate(viewYear)}
   onSubscriptionsChanged:activateSubscriptions()
   onViewYearChanged:activateSubscriptions()
@@ -44,6 +45,7 @@ Item {
   onActiveChanged: {if(!active) settingsMenu.close();else {refreshToday();activateSubscriptions()}}
   onVisibleChanged: {if(!visible) settingsMenu.close();else activateSubscriptions()}
 
+  function cancelReminderClear() {return reminderPanel.cancelClear()}
   function pulseFrom(item) {
     if(externalFeedback) {externalFeedback.pulseFrom(item);return}
     var at=item.mapToItem(root,item.width/2,item.height/2)
@@ -225,6 +227,14 @@ Item {
           horizontalPadding: 0; verticalPadding: 0
           radius: Design.controlRadius
           text: Commons.I18n.formatNumber(modelData.day)
+          Accessible.name: Calendar.localDate(modelData.year,modelData.month,modelData.day).toLocaleDateString(root.locale,Locale.LongFormat)
+          Accessible.selectable:true
+          Accessible.selected:active
+          Accessible.description:[
+            modelData.today ? root.strings.t("calendar.today") : "",
+            root.reminderDays.indexOf(modelData.key)>=0 ? root.strings.t("reminders.title") : "",
+            root.eventDays.indexOf(modelData.key)>=0 ? root.strings.t("ics.events") : ""
+          ].filter(Boolean).join(" · ")
           foreground: modelData.today ? Design.onAccent : modelData.inMonth ? Design.text : Design.secondaryText
           color: modelData.today ? Design.accent : activeFocus ? Style.focusFillFor(foreground,accent) : hot ? Style.hoverFillFor(foreground,accent) : active ? Style.selectedFillFor(foreground,accent) : "transparent"
           active: root.selectedDay.key===modelData.key
@@ -283,6 +293,7 @@ Item {
     }
     ReminderPanel {
       id:reminderPanel
+      active:root.active
       Layout.fillWidth:true
       visible:!!root.reminders && !root.sourcesMode
       strings:root.strings;reminders:root.reminders;selectedKey:root.selectedDay.key

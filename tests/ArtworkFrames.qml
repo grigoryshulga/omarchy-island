@@ -108,6 +108,17 @@ ShellRoot {
         check(reduced.equals(grabImage(artwork)),"style moves with reduced motion: "+style)
         Commons.Style.reduceMotion=false
       }
+      Island.Preferences.values=({musicVisualizationStyle:"bayer"})
+      wait(80)
+      var printFrame=grabImage(artwork)
+      var inkPixels=0, emptyPixels=0
+      for(var y=0;y<printFrame.height;y++) for(var x=0;x<printFrame.width;x++) {
+        if(printFrame.red(x,y)+printFrame.green(x,y)+printFrame.blue(x,y)>6) inkPixels++
+        else emptyPixels++
+      }
+      check(inkPixels>100 && emptyPixels>100,"halftone has no readable pattern")
+      service.visualPhase=5;service.audioBass=0.9;wait(60)
+      check(printFrame.equals(grabImage(artwork)),"halftone moved during playback")
       Island.Preferences.values=({musicVisualizationStyle:"echo"})
       service.audioLevel=0;service.audioBass=0;service.audioTreble=0
       service.visualPhase=0.6;wait(60)

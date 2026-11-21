@@ -57,7 +57,7 @@ ColumnLayout {
       compact: true
       focusable: true
       selected: root.pinIndex >= 0
-      text: selected ? "󰐃" : "󰐄"
+      iconSize:fontSize;iconText: selected ? "󰐃" : "󰐄"
       tooltipText: root.strings.t(selected ? "limits.unpin" : "limits.pin")
       Accessible.name: tooltipText + " · " + Model.displayName(root.row)
       Accessible.description: resetCaption.exactReset

@@ -67,6 +67,19 @@ void main() {
         vec3 warm = mix(accent.rgb,paletteYellow.rgb,blendB*0.65);
         cover = vec4(mix(cool,warm,blendB*0.7),1.0);
     }
+    if (style > 5.5) {
+        // Ordered halftone in the theme accent. Each source sample covers
+        // one square of the existing three-pixel grid.
+        const int ranks[16] = int[16](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);
+        ivec2 square = ivec2(floor(pixel / 3.0));
+        ivec2 tile = square % 4;
+        float threshold = (float(ranks[tile.y*4+tile.x])+0.5)/16.0;
+        float tone = dot(cover.rgb,vec3(0.2126,0.7152,0.0722))*cover.a;
+        float survival = smoothstep(0.0,0.08,reveal*1.08-noise(uvec2(square),0x5a17u));
+        float alpha = step(threshold,tone)*survival*0.32*qt_Opacity;
+        fragColor = vec4(accent.rgb*alpha,alpha);
+        return;
+    }
     float luminance = mix(dot(cover.rgb,vec3(0.2126,0.7152,0.0722)),0.5,monochrome);
     // Unicode braille bit order: 1 4 / 2 5 / 3 6 / 7 8. Changing these
     // eight bits changes the glyph, while its location and color stay put.

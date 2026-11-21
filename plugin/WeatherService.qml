@@ -22,12 +22,13 @@ Item {
   property real now:clock()
   property string locationKey: ""
   property var suggestions: []
-  property string searchQuery: ""
+  property var currentSearch:null
+  property string searchStatus:"idle"
   property bool received: false
   property bool refreshPending: false
   property string requestLocationKey: ""
   readonly property bool loading: forecast.running
-  readonly property bool searching: geocode.running
+  readonly property bool searching: searchStatus==="loading"
   readonly property bool saving: locationSave.running
   readonly property bool stale: report!==null && (error!=="" || now-report.fetchedAt>refreshMinutes*60+60)
   readonly property int refreshMinutes: Math.max(1,Math.min(120,refreshOverride || nativePreferences.refreshMinutes || 15))
@@ -52,15 +53,19 @@ Item {
     else Qt.callLater(refresh)
   }
   function search(query) {
-    searchQuery=String(query).trim().slice(0,128)
-    geocode.running=false
-    suggestions=[]
-    if(!allowed || searchQuery.length<2) return
-    geocode.command=["python3",helper,"search",searchQuery,String(Commons.I18n.formatLocale).slice(0,2).toLowerCase()]
-    geocode.running=true
+    cancelSearch()
+    var name=String(query).trim().slice(0,128)
+    if(!allowed || name.length<2) return
+    searchStatus="loading"
+    currentSearch=geocode.createObject(root,{query:name})
+    currentSearch.running=true
   }
   function cancelSearch() {
-    searchQuery="";geocode.running=false;suggestions=[]
+    var previous=currentSearch
+    currentSearch=null
+    if(previous) previous.running=false
+    suggestions=[]
+    searchStatus="idle"
   }
   function choose(place) {
     if(!allowed || !place || !Model.coordinates(place) || locationSave.running) return
@@ -81,7 +86,7 @@ Item {
     scheduleRefresh()
   }
   onAllowedChanged: {
-    if(!allowed) {refreshPending=false;forecast.running=false;geocode.running=false;locationSave.running=false;suggestions=[]}
+    if(!allowed) {refreshPending=false;forecast.running=false;cancelSearch();locationSave.running=false}
     else {locationFile.reload();nativeSettingsFile.reload();if(activated) refresh()}
   }
   Process {
@@ -130,9 +135,23 @@ Item {
     onFileChanged: reload()
     onLoaded: root.nativePreferences=Model.nativeSettings(text())
   }
-  Process {
-    id: geocode
-    stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.suggestions=Model.parseSuggestions(text,root.searchQuery) }
+  Component {
+    id:geocode
+    Process {
+      id:request
+      required property string query
+      command:["python3",root.helper,"search",query,String(Commons.I18n.formatLocale).slice(0,2).toLowerCase()]
+      stdout:StdioCollector {id:output;waitForEnd:true}
+      onExited:code=>{
+        if(root.currentSearch===request) {
+          var matches=code===0 ? Model.parseSuggestions(output.text,query) : null
+          root.suggestions=matches || []
+          root.searchStatus=matches===null ? "error" : matches.length ? "found" : "empty"
+          root.currentSearch=null
+        }
+        request.destroy()
+      }
+    }
   }
   Process {
     id: locationSave

@@ -4,6 +4,8 @@ import "../.." as Island
 Island.ModuleView {
   id:root
   available:!!backend && backend.allowed && backend.downloads.length>0 && (presentation.expanded || presentation.hovering || (presentation.alertKind==="notification" && presentation.alert && !!presentation.alert.downloadPath))
+  readonly property string targetKey:presentation && presentation.activityTarget ? presentation.activityTarget.downloadKey || "" : ""
+  readonly property var detailRow:targetKey && backend ? backend.downloads.find(function(row){return row.key===targetKey}) : null
   implicitHeight:content.implicitHeight
   Column {
     id:content;width:parent.width;objectName:"islandDownloads";spacing:Island.Design.gap.small
@@ -16,7 +18,7 @@ Island.ModuleView {
     Island.DownloadList {
       width:parent.width
       active:root.presentation.active
-      rows:root.backend ? (root.presentation.expanded || root.presentation.hovering ? root.backend.downloads : root.presentation.alert && root.presentation.alert.downloadPath ? [root.presentation.alert] : []) : []
+      rows:root.detailRow ? [root.detailRow] : root.backend ? (root.presentation.expanded || root.presentation.hovering ? root.backend.downloads : root.presentation.alert && root.presentation.alert.downloadPath ? [root.presentation.alert] : []) : []
       service:root.backend;strings:root.presentation.strings;expanded:root.presentation.expanded
     }
   }

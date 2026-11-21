@@ -176,7 +176,7 @@ const badSolar=JSON.parse(JSON.stringify(solar));
 badSolar.days[0].sunrise='2026-11-10T25:99';badSolar.days[0].sunset='2026-11-11T16:00';
 assert.equal(Weather.solarEvents(cityTime('2026-11-10T12:00'),badSolar).sunrise,null);
 assert.equal(Weather.solarEvents(cityTime('2026-11-10T12:00'),badSolar).sunset,null);
-assert.equal(Weather.parseSuggestions(JSON.stringify({query:'old',results:[{name:'City',latitude:1,longitude:2}]}),'new').length,0);
+assert.equal(Weather.parseSuggestions(JSON.stringify({query:'old',results:[{name:'City',latitude:1,longitude:2}]}),'new'),null);
 assert.equal(Weather.parseSuggestions(JSON.stringify({query:'new',results:[{name:'City',latitude:1,longitude:2},{name:'Bad',latitude:999,longitude:2}]}),'new').length,1);
 assert.equal(Weather.nativeSettings(JSON.stringify({bar:{layout:{right:[{id:'omarchy.weather',unit:'metric',refreshMinutes:20}]}}})).refreshMinutes,20);
 console.log('PASS: weather codes, bounded reports, units, coordinates and search ordering.');

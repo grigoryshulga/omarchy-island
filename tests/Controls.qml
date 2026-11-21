@@ -230,7 +230,7 @@ ShellRoot {
             check(scene.preferences[0]==="musicVisualizationBackground" && scene.preferences[1]===background.value,"music background did not persist: "+background.value)
           }
           var musicStyle=findChild(settingsView,"setting-musicVisualizationStyle")
-          check(musicStyle && musicStyle.options.length===6,"music styles are missing")
+          check(musicStyle && musicStyle.options.length===7,"music styles are missing")
           for(var option of musicStyle.options) {
             musicStyle.changed(option.value)
             check(scene.preferences[0]==="musicVisualizationStyle" && scene.preferences[1]===option.value,"music style did not persist: "+option.value)

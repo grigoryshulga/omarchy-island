@@ -32,6 +32,7 @@ OverviewDrag 1.0 OverviewDrag.qml
 OverviewEditFrame 1.0 OverviewEditFrame.qml
 IslandPopup 1.0 IslandPopup.qml
 IslandSlider 1.0 IslandSlider.qml
+SliderAccessibility 1.0 SliderAccessibility.qml
 KeyboardLayoutState 1.0 KeyboardLayoutState.qml
 KeyboardNavigation 1.0 KeyboardNavigation.qml
 MediaCard 1.0 MediaCard.qml
@@ -63,6 +64,7 @@ WeatherService 1.0 WeatherService.qml
 WeatherView 1.0 WeatherView.qml
 ChoiceButton 1.0 ChoiceButton.qml
 ReminderState 1.0 ReminderState.qml
+ClearConfirmation 1.0 ClearConfirmation.qml
 ReminderPanel 1.0 ReminderPanel.qml
 CalendarYear 1.0 CalendarYear.qml
 CalendarState 1.0 CalendarState.qml

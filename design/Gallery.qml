@@ -150,7 +150,7 @@ Rectangle {
             IslandControls.ControlSwitch {checked:true;onToggled:checked=!checked}
             Island.T3Spinner {objectName:"gallerySpinner";active:root.visible}
           }
-          Island.IslandSlider {id:demoSlider;Layout.fillWidth:true;value:0.65;onMoved:next=>demoSlider.value=next}
+          Island.IslandSlider {id:demoSlider;accessibleName:translations.t("design.progress");Layout.fillWidth:true;value:0.65;onMoved:next=>demoSlider.value=next}
           Island.DesignDropdown {id:demoDropdown;Layout.fillWidth:true;value:"visible";options:[{value:"visible",label:translations.t("settings.option.visible")},{value:"off",label:translations.t("settings.option.off")}];onChanged:next=>demoDropdown.value=next}
           RowLayout {
             Layout.fillWidth:true

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Omarchy Island — этюды обложки</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;color:var(--foreground,inherit);font:14px/1.4 var(--font-sans,system-ui)}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,195px),1fr));gap:10px}
+figure{margin:0;overflow:hidden;background:var(--card,#171c22);color:var(--foreground,#e4e8e5);border:1px solid var(--border,#4b5357);border-radius:var(--radius,4px);padding:16px}
+canvas{width:100%;height:auto;display:block}
+figcaption{margin-top:8px;font:600 14px var(--font-mono,monospace)}
+small{color:var(--muted-foreground,inherit)}
+</style>
+<main>
+<figure><canvas width="480" height="220" aria-hidden="true"></canvas><figcaption>Брайль</figcaption><small>Силуэт по плотности точек</small></figure>
+<figure><canvas width="480" height="220" aria-hidden="true"></canvas><figcaption>ASCII-гравюра</figcaption><small>Штрихи вдоль хребта</small></figure>
+<figure><canvas width="480" height="220" aria-hidden="true"></canvas><figcaption>Байер 4 × 4</figcaption><small>Полутон двумя цветами</small></figure>
+</main>
+<script>
+// Three independent static studies of the same imaginary record cover.
+const threshold = [0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+function ridge(x) {
+  return 145 - 76 * Math.exp(-Math.abs(x-260)/90) + 9*Math.sin(x/29);
+}
+function light(x,y) {
+  const sun = Math.hypot(x-337,y-72);
+  if (y < ridge(x)) return sun < 46 ? .92 : .03 + .15*y/220;
+  const fold = y-ridge(x);
+  return .12 + .6*Math.exp(-fold/30) + .20*(.5+.5*Math.cos(fold/9+x/61));
+}
+for (const [mode,canvas] of [...document.querySelectorAll('canvas')].entries()) {
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#101917';
+  ctx.fillRect(0,0,480,220);
+  ctx.fillStyle='#bed9b5';
+  if (mode === 1) {
+    ctx.font='12px monospace';
+    ctx.textBaseline='top';
+    for(let y=0;y<220;y+=12) for(let x=0;x<480;x+=8) {
+      const tone=light(x+4,y+6);
+      const glyph=Math.abs(y+6-ridge(x))<7 ? (ridge(x+6)>ridge(x) ? '\\' : '/') : ' .:-=+*#@'[Math.floor(tone*8)];
+      ctx.fillText(glyph,x,y);
+    }
+  } else {
+    const pitch=mode===0 ? 5 : 4;
+    for(let y=0;y*pitch<220;y++) for(let x=0;x*pitch<480;x++) {
+      const t=mode===0 ? ((Math.imul(x+1,73856093)^Math.imul(y+3,19349663))>>>3)%997/997 : (threshold[(y%4)*4+x%4]+.5)/16;
+      if(light(x*pitch,y*pitch)<=t) continue;
+      if(mode===2) ctx.fillRect(x*pitch,y*pitch,pitch,pitch);
+      else {
+        ctx.beginPath();
+        ctx.arc(x*pitch,y*pitch,1.7,0,2*Math.PI);
+        ctx.fill();
+      }
+    }
+  }
+}
+</script>
+</html>

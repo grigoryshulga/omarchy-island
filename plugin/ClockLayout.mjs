@@ -1,5 +1,6 @@
 // Shared by the bar and its editor. Missing modules retain their saved placement.
 export const builtins = [
+  {id:"now",titleKey:"clock.now",icon:"󰐊",side:"left",defaultVisible:false},
   {id:"recording",setting:"indicatorRecording",titleKey:"indicator.recording",icon:"●",side:"left"},
   {id:"remote",setting:"indicatorRemote",titleKey:"indicator.remote",icon:"●",side:"left"},
   {id:"reminders",titleKey:"clock.reminders",icon:"󰢌",side:"right"},

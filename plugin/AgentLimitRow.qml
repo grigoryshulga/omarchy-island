@@ -74,9 +74,10 @@ Item {
         implicitWidth:Design.inlineControlHeight
         implicitHeight:Design.inlineControlHeight
         horizontalPadding:0;verticalPadding:0
-        compact:true;text:root.pinned ? "󰐃" : "󰐄"
+        compact:true;iconSize:fontSize;iconText:root.pinned ? "󰐃" : "󰐄"
         selected:root.pinned;focusable:true;feedback:root.feedback
         tooltipText:root.strings.t(root.pinned ? "limits.unpin" : "limits.pin")
+        Accessible.name:tooltipText+" · "+Model.displayName(root.row)
         onClicked:root.pinRequested(root.row.id)
       }
     }

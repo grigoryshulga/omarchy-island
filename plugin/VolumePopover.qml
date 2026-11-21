@@ -31,6 +31,10 @@ Item {
     anchors.fill: parent
     radius: Design.controlRadius
     iconText: root.player && root.player.volumeSupported && root.player.volume === 0 ? "󰝟" : "󰕾"
+    Accessible.name: root.strings.t("media.volume")
+    Accessible.description: tooltipText
+    Accessible.expandable: root.controllable
+    Accessible.expanded: root.opened
     tooltipText: root.controllable ? "" : root.strings.t("noVolume")
     focusable: true
     enabled: root.player !== null
@@ -71,6 +75,8 @@ Item {
       IslandSlider {
         id: volume
         objectName: "mediaVolume"
+        accessibleName: root.strings.t("media.volume")
+        accessibleDescription: Commons.I18n.formatNumber(Math.round(liveValue*100))+"%"
         Layout.fillWidth: true
         Layout.preferredHeight: parent.height
         bar: root.bar

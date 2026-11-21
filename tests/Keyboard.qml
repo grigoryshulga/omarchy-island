@@ -68,6 +68,13 @@ ShellRoot {
     readonly property var modules:({controls:fakeControls,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3})
     property var t3:({allowed:false,connected:false,canRespond:false,responsesEnabled:false,rows:[]})
     property var indicators:states
+    property QtObject reminders:QtObject {
+      readonly property var rows:[{unit:"fixture",at:1900000000,label:"Follow up"}]
+      readonly property int count:rows.length
+      readonly property double now:1800000000
+      readonly property bool busy:false
+      readonly property string error:""
+    }
     property var weather:fakeWeather
     property var player:player
     property bool hasMedia:true
@@ -132,6 +139,13 @@ ShellRoot {
         check(dateButton.visible && dateButton.text.length>0 && weatherButton.visible,"summary date/weather are missing")
         dateButton.forceActiveFocus();keyClick(Qt.Key_Return);wait(280)
         check(pages.calendar,"date did not open Calendar")
+        var reminderClear=findChild(pages,"reminderClear"),cancelReminder=findChild(pages,"reminderClearPromptCancel")
+        reminderClear.clicked();check(cancelReminder.activeFocus,"reminder confirmation has no safe default")
+        check(pages.back() && pages.calendar && reminderClear.activeFocus,"panel Back skipped reminder confirmation")
+        reminderClear.clicked();keyClick(Qt.Key_4,Qt.AltModifier);wait(280)
+        check(pages.weather && !cancelReminder.visible,"page shortcut retained reminder confirmation")
+        keyClick(Qt.Key_3,Qt.AltModifier);wait(280)
+        check(pages.calendar && reminderClear.visible && !cancelReminder.visible,"return to Calendar resurrected confirmation")
         check(pages.back(),"Calendar did not handle Back");wait(280)
         check(pages.selectedPage===1 && dateButton.activeFocus,"Calendar Back did not restore date focus")
         weatherButton.forceActiveFocus();keyClick(Qt.Key_Return);wait(280)

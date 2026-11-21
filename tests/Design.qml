@@ -16,6 +16,11 @@ ShellRoot {
       Island.PlainText {id:title;typeRole:"section";text:"Заголовок / Title"}
       Island.DesignTextField {id:input;Layout.fillWidth:true;text:"Черновик $ & <b>";placeholderText:"Answer"}
       Island.FeedbackButton {id:selectedButton;text:"Выбранный вариант";selected:true;focusable:true}
+      Island.FeedbackButton {
+        id:iconAction; iconText:"+";tooltipText:"Add";focusable:true
+        property int activations:0
+        onClicked:activations++
+      }
       Island.ChoiceButton {id:choice;Layout.fillWidth:true;label:"Длинный вариант с пояснением сохраняет все слова даже при увеличении размера шрифта";description:"Описание не обрезается многоточием";onClicked:selected=!selected}
       Island.T3Spinner {id:spinner;active:true}
       Island.Surface {id:surface;Layout.fillWidth:true;implicitHeight:60}
@@ -35,6 +40,20 @@ ShellRoot {
       }
       function test_design() {
         var originalSize=Commons.Style.fontBaseSize
+        iconAction.Accessible.pressAction()
+        compare(iconAction.activations,1)
+        iconAction.enabled=false
+        iconAction.Accessible.pressAction()
+        compare(iconAction.activations,1,"Disabled button accepted an accessibility action")
+        iconAction.enabled=true
+        iconAction.forceActiveFocus(Qt.TabFocusReason)
+        var tooltip=findChild(iconAction,"islandButtonTooltip")
+        tryCompare(tooltip,"opened",true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(tooltip,"visible",false)
+        verify(iconAction.activeFocus)
+        keyClick(Qt.Key_Return)
+        compare(iconAction.activations,2)
         input.forceActiveFocus();var draft=input.text
         // Deliberately bad native selected-color overrides must not leak into text.
         Commons.Style.styleOverrides=Object.assign({},Commons.Style.styleOverrides,{"selected-color":"#aaaaaa"})

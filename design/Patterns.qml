@@ -113,7 +113,7 @@ Rectangle {
         UI.FeedbackButton { text: root.tr("quiet"); focusable: true; onClicked: root.setMode("ready") }
         UI.ControlSwitch { objectName: "patternSwitch"; checked: true; enabled: root.mode !== "disabled"; onToggled: checked = !checked; Accessible.name: root.tr("switch") }
       }
-      UI.IslandSlider { id: slider; Layout.fillWidth: true; value: 0.65; enabled: root.mode !== "disabled"; onMoved: next => slider.value = next }
+      UI.IslandSlider { id: slider; accessibleName: root.strings.t("design.progress"); Layout.fillWidth: true; value: 0.65; enabled: root.mode !== "disabled"; onMoved: next => slider.value = next }
       UI.DesignDropdown { id: dropdown; Layout.fillWidth: true; enabled: root.mode !== "disabled"; value: "ready"; options: [{value:"ready",label:root.tr("ready")},{value:"loading",label:root.tr("loading")},{value:"error",label:root.tr("error")}]; onChanged: next => { value = next; root.setMode(next) } }
       UI.PlainText { Layout.fillWidth: true; typeRole: "caption"; color: UI.Design.secondaryText; text: root.actions || root.rowActions ? root.tr("activated") + " · " + Commons.I18n.formatNumber(root.actions + root.rowActions) : " "; wrapMode: Text.Wrap }
     }

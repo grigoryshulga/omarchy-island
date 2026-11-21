@@ -7,6 +7,8 @@ import "Model.js" as Model
 import "ClockModel.js" as Clock
 import "CornerGeometry.js" as Corners
 import "ModuleCatalog.mjs" as Catalog
+import "NowActivity.mjs" as NowActivity
+import "NowPresentation.js" as NowPresentation
 import "ClockLayout.mjs" as ClockLayout
 import "SettingsModel.mjs" as Settings
 
@@ -63,7 +65,9 @@ BarWidget {
   property date now: new Date()
   readonly property bool opened: pinned
   readonly property string screenName: root.QsWindow.window && root.QsWindow.window.screen ? root.QsWindow.window.screen.name : ""
-  readonly property bool alertOnScreen: !service || !(alertKind==="herdr" ? service.herdrTargetScreen : alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) || (alertKind==="herdr" ? service.herdrTargetScreen : alertKind==="t3" ? service.t3TargetScreen : service.targetScreen) === screenName
+  readonly property string alertScreen: !service || alertKind==="media" ? ""
+    : alertKind==="herdr" ? service.herdrTargetScreen : alertKind==="t3" ? service.t3TargetScreen : service.targetScreen || ""
+  readonly property bool alertOnScreen: !alertScreen || alertScreen===screenName
   readonly property bool showAlert: alertKind !== "" && alertOnScreen
   readonly property bool notificationToast: alertKind==="notification" && !pinned && !hoverOpen
   readonly property real displayScale: root.QsWindow.window ? root.QsWindow.window.devicePixelRatio : 1
@@ -82,8 +86,13 @@ BarWidget {
     previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
   readonly property string barText: showAlert && alertKind!=="t3" && alertKind!=="herdr" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
-  readonly property bool isHovered: barHover.hovered || preview.containsMouse
-  HoverHandler {id:barHover}
+  readonly property bool isHovered: barHover.hovered || nowPointerInside || preview.containsMouse
+  HoverHandler {
+    id:barHover
+    onHoveredChanged:if(hovered) Qt.callLater(function(){
+      if(barHover.hovered && !root.nowPointerInside) root.nowHover=false
+    })
+  }
   readonly property string signature: service ? service.track + ":" + service.playing : ""
 
   function activateWeather() { if(Settings.get(settings,"weatherEnabled") && service && service.weather) service.weather.activate() }
@@ -108,9 +117,31 @@ BarWidget {
   function openWeather() {
     openPage(3)
   }
-  function openModuleDetails(moduleId) {
+  property bool nowPointerInside: false
+  property bool nowHover: false
+  readonly property var previewActivity: hoverOpen && nowHover && !pinned ? NowActivity.current(service) : null
+  onClockLayoutChanged:if(!clockLayout.some(function(row){return row.id==="now"})) {
+    nowPointerInside=false
+    nowHover=false
+  }
+  function trackNowHover(inside) {
+    nowPointerInside=inside
+    // Keep the activity preview during the pointer crossing to its surface.
+    if (inside) nowHover=true
+    else Qt.callLater(function(){if(!root.nowPointerInside && barHover.hovered && !preview.containsMouse) nowHover=false})
+  }
+  function openNow(activity) {
+    if (!activity) return
+    var target = {}
+    if (activity.kind==="t3") {
+      if (activity.count===1) target.sessionId=activity.row.id
+      else target.pendingOnly=true
+    } else if (activity.kind==="downloads") target.downloadKey=activity.row.key
+    openModuleDetails(activity.kind,target)
+  }
+  function openModuleDetails(moduleId,target) {
     openPage(1)
-    Qt.callLater(function(){previewContent.openDetails(moduleId)})
+    Qt.callLater(function(){if(root.pinned && root.selectedPage===1) previewContent.openDetails(moduleId,target)})
   }
   function openControls() {openModuleDetails("controls")}
   function toggleCalendar() { if (pinned && calendarMode) close(true); else openCalendar() }
@@ -122,6 +153,11 @@ BarWidget {
     pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop()
   }
   function toggle() { pinned ? close(true) : open() }
+  function dismissAlert(kind) {
+    if (alertKind !== kind) return
+    alertKind = ""
+    alertLife.stop()
+  }
   function showT3Activity() {
     if(!service || !service.latestT3 || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
     if(service.t3TargetScreen && service.t3TargetScreen!==screenName) return
@@ -141,7 +177,7 @@ BarWidget {
   function syncSettings() {
     Preferences.values=root.settings
     if(!Settings.get(settings,"hoverPreview") || !Settings.get(settings,"overviewEnabled")) {hoverDelay.stop();hoverOpen=false}
-    if(!Settings.get(settings,"trackAlerts") && alertKind==="media") {alertKind="";alertLife.stop()}
+    if(!Settings.get(settings,"trackAlerts")) dismissAlert("media")
     if(pinned && Settings.pages(settings).indexOf(selectedPage)<0) openControls()
     if(service && service.modules && service.modules.media) service.modules.media.allowedPlayers=Array.isArray(setting("musicApps",null)) ? setting("musicApps",[]) : []
   }
@@ -157,6 +193,7 @@ BarWidget {
   }
   onHoverOpenChanged: {
     Qt.callLater(function(){
+      if(!root.hoverOpen && !barHover.hovered) root.nowHover=false
       if(root.hoverOpen) {
         if(!root.pinned) {root.contentExpanded=false;root.selectedPage=1}
         root.activateWeather()
@@ -169,7 +206,11 @@ BarWidget {
   onServiceChanged: syncSettings()
   onSettingsChanged: syncSettings()
   onSignatureChanged: {
-    if (Settings.get(settings,"trackAlerts") && service && service.playing && !pinned && alertKind !== "notification" && alertKind !== "t3" && alertKind !== "herdr") {
+    // Route this track change once. Focus changes alone never move or replay a toast.
+    dismissAlert("media")
+    if (Settings.get(settings,"trackAlerts") && service && service.playing && !service.doNotDisturb
+        && (!service.focusedScreenName || service.focusedScreenName===screenName)
+        && !pinned && !hoverOpen && !alertKind) {
       alertKind = "media"; alertLife.interval = 3000; alertLife.restart()
     }
   }
@@ -181,7 +222,29 @@ BarWidget {
   implicitHeight: vertical ? Math.max(Style.space(80),clockMeasure.implicitHeight+leftIndicators.implicitHeight+rightIndicators.implicitHeight+Style.space(24)) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
-  Connections { target: root.service; ignoreUnknownSignals:true; function onHerdrArrival() {root.showHerdrActivity()} function onLatestHerdrChanged() {if(root.service && !root.service.latestHerdr && root.alertKind==="herdr") {root.alertKind="";alertLife.stop()}} function onT3Arrival() {root.showT3Activity()} function onLatestT3Changed() { if (root.service && !root.service.latestT3 && root.alertKind === "t3") { root.alertKind = ""; alertLife.stop() } } function onHasMediaChanged() { if (root.service && !root.service.hasMedia && root.alertKind === "media") { root.alertKind = ""; alertLife.stop() } } function onArrivalChanged() { root.showNotification() } function onLatestChanged() { if (root.service && !root.service.latest && root.alertKind === "notification") root.alertKind = "" } }
+  Connections {
+    target: root.service
+    ignoreUnknownSignals: true
+
+    function onDoNotDisturbChanged() {
+      if (root.service.doNotDisturb) root.dismissAlert("media")
+    }
+    function onHerdrArrival() { root.showHerdrActivity() }
+    function onLatestHerdrChanged() {
+      if (root.service && !root.service.latestHerdr) root.dismissAlert("herdr")
+    }
+    function onT3Arrival() { root.showT3Activity() }
+    function onLatestT3Changed() {
+      if (root.service && !root.service.latestT3) root.dismissAlert("t3")
+    }
+    function onHasMediaChanged() {
+      if (root.service && !root.service.hasMedia) root.dismissAlert("media")
+    }
+    function onArrivalChanged() { root.showNotification() }
+    function onLatestChanged() {
+      if (root.service && !root.service.latest) root.dismissAlert("notification")
+    }
+  }
   // Epoch scheduling follows Omarchy's WallClock and remains positive across
   // DST folds. Only formats displaying seconds need second-by-second work.
   Timer {
@@ -226,7 +289,7 @@ BarWidget {
       id:leftIndicators
       elements:root.clockLayout.filter(function(row){return row.side==="left"})
       service:root.service;settings:root.settings;strings:root.moduleStrings
-      vertical:root.vertical;barSize:root.barSize;barHeight:trigger.height
+      vertical:root.vertical;barSize:root.barSize;barHeight:root.vertical ? root.barSize : trigger.height
       bar:root.bar;showAlert:root.showAlert;foreground:clockLabel.color
       waveSpan:trigger.width
       z:1
@@ -237,6 +300,8 @@ BarWidget {
       onPageRequested:index=>root.openPage(index)
       onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
+      onNowRequested:activity=>root.openNow(activity)
+      onNowHovered:inside=>root.trackNowHover(inside)
     }
     Item {
       id:centerContent
@@ -302,7 +367,7 @@ BarWidget {
       id:rightIndicators
       elements:root.clockLayout.filter(function(row){return row.side==="right"})
       service:root.service;settings:root.settings;strings:root.moduleStrings
-      vertical:root.vertical;barSize:root.barSize;barHeight:trigger.height
+      vertical:root.vertical;barSize:root.barSize;barHeight:root.vertical ? root.barSize : trigger.height
       bar:root.bar;showAlert:root.showAlert;foreground:clockLabel.color
       waveSpan:trigger.width
       z:1
@@ -313,6 +378,8 @@ BarWidget {
       onPageRequested:index=>root.openPage(index)
       onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
+      onNowRequested:activity=>root.openNow(activity)
+      onNowHovered:inside=>root.trackNowHover(inside)
     }
   }
   Loader {
@@ -351,7 +418,7 @@ BarWidget {
       if(!preview.visible && !preview.open) {root.contentExpanded=false;root.selectedPage=1}
     })
     contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
-    contentHeight: fittedContentHeight(previewContent.implicitHeight)
+    contentHeight: fittedContentHeight(root.previewActivity ? nowPreview.implicitHeight : previewContent.implicitHeight)
     ToastWaves {
       id:notificationWaves
       objectName: "islandToastWaves"
@@ -408,7 +475,28 @@ BarWidget {
       artworkStrength: previewContent.musicHovered ? 1 : 0
     }
     BrailleFeedback {id:panelFeedback;surface:panelGlow;effect:panelGlow;hover:null}
+    Column {
+      id:nowPreview
+      objectName:"nowActivityPreview"
+      anchors.left:parent.left;anchors.right:parent.right
+      visible:!!root.previewActivity
+      spacing:Design.gap.tight
+      readonly property var copy:root.previewActivity ? NowPresentation.describe(root.previewActivity,strings,Commons.I18n.formatNumber) : null
+      PlainText {
+        width:parent.width
+        text:nowPreview.copy ? nowPreview.copy.title : ""
+        typeRole:"title";elide:Text.ElideRight
+      }
+      PlainText {
+        width:parent.width
+        text:nowPreview.copy ? nowPreview.copy.detail : ""
+        typeRole:"body";wrapMode:Text.Wrap;maximumLineCount:3;elide:Text.ElideRight
+      }
+      TapHandler {acceptedButtons:Qt.LeftButton;onTapped:root.openNow(root.previewActivity)}
+      TapHandler {acceptedButtons:Qt.RightButton;onTapped:root.close(true)}
+    }
     PopupPages {
+      visible:!root.previewActivity
       id: previewContent
       objectName:"islandPopupPages"
       maximumOverviewHeight:Math.max(1,Math.min(Style.space(640),preview.availableHeight-preview.insetTop-preview.insetBottom))

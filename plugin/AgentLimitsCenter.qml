@@ -38,7 +38,7 @@ Column {
       model:["limits","usage"]
       TabButton {required property string modelData;Layout.fillWidth:true;label:root.strings.t("limits.tab."+modelData);tabActive:root.tab===modelData;focusable:true;feedback:root.feedback;onClicked:root.tab=modelData}
     }
-    FeedbackButton {text:"󰑐";tooltipText:root.strings.t("limits.refresh");compact:true;focusable:true;enabled:root.backend && !root.backend.busy;onClicked:root.backend.refresh()}
+    FeedbackButton {iconSize:fontSize;iconText:"󰑐";tooltipText:root.strings.t("limits.refresh");compact:true;focusable:true;enabled:root.backend && !root.backend.busy;onClicked:root.backend.refresh()}
   }
   PlainText {
     id: status

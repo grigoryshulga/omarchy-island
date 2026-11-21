@@ -14,6 +14,8 @@ Rectangle {
   property Item viewItem:null
   property bool available:false
   property bool editing:false
+  required property bool canMoveUp
+  required property bool canMoveDown
   readonly property alias contentItem:preview
   readonly property alias handleItem:handle
   readonly property string title:definition.title || strings.t(definition.titleKey)
@@ -47,12 +49,16 @@ Rectangle {
         // The module frame already indicates focus for this drag handle.
         borderSpec:Border.none()
         hasCursor:handleDrag.containsMouse
+        onClicked:root.controller.actionsKey=root.controller.actionsKey===root.entryKey ? "" : root.entryKey
         Keys.onPressed:event=>{
           if(event.modifiers & Qt.ControlModifier && (event.key===Qt.Key_Up || event.key===Qt.Key_Down)) {
             root.stepped(event.key===Qt.Key_Up ? -1 : 1);event.accepted=true
           }
         }
-        MoveArea {id:handleDrag;anchors.fill:parent}
+        MoveArea {
+          id:handleDrag;anchors.fill:parent
+          onClicked:if(!started) handle.clicked()
+        }
       }
       DesignDropdown {
         objectName:"overviewSize-"+root.entryKey
@@ -70,6 +76,25 @@ Rectangle {
         compact:true;focusable:true;feedback:root.feedback
         horizontalPadding:Design.gap.small;iconSize:Design.type.iconLarge
         onClicked:root.changed({visible:!root.config.visible})
+      }
+    }
+    RowLayout {
+      visible:root.editing && root.controller.actionsKey===root.entryKey
+      Layout.fillWidth:true
+      spacing:Design.gap.small
+      FeedbackButton {
+        objectName:"overviewMoveEarlier-"+root.entryKey
+        Layout.fillWidth:true;Layout.minimumWidth:0
+        text:root.strings.t("overview.moveUp");enabled:root.canMoveUp
+        compact:true;focusable:true;feedback:root.feedback
+        onClicked:{root.controller.actionsKey="";root.stepped(-1)}
+      }
+      FeedbackButton {
+        objectName:"overviewMoveLater-"+root.entryKey
+        Layout.fillWidth:true;Layout.minimumWidth:0
+        text:root.strings.t("overview.moveDown");enabled:root.canMoveDown
+        compact:true;focusable:true;feedback:root.feedback
+        onClicked:{root.controller.actionsKey="";root.stepped(1)}
       }
     }
     Item {

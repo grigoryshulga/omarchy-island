@@ -34,4 +34,24 @@ for (const lang of ['en', 'ru']) {
   const strings = require(`../plugin/i18n/${lang}.json`);
   for (const entry of entries) assert.ok(entry.title || strings[entry.titleKey], entry.id);
 }
+const now = require('../plugin/NowActivity.mjs');
+assert.ok(entries.some(r => r.id === 'now') && !defaults.some(r => r.id === 'now'));
+assert.equal(layout.add(defaults, 'now', 'right').at(-1).id, 'now');
+assert.equal(now.current(null), null);
+const download = {active:true, downloadPath:'a', ts:2};
+const other = {...download, downloadPath:'b'};
+const older = {...download, ts:1, downloadPath:'z'};
+const player = {trackTitle:'Playing'};
+const service = {playing:true, player, downloads:[other, download], t3:{connected:true, rows:[{id:'a',requestId:'q'}]}};
+assert.equal(now.current(service).row.id, 'a');
+service.t3.connected = false;
+assert.equal(now.current(service).row, download);
+service.downloads.reverse();
+assert.equal(now.current(service).row, download);
+service.downloads.push(older);
+assert.equal(now.current(service).row, older);
+service.downloads = [{...download, active:false}];
+assert.equal(now.current(service).row, player);
+service.playing = false;
+assert.equal(now.current(service), null);
 console.log('PASS: clock composition, defaults, validation, movement and missing modules');

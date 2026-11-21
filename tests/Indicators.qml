@@ -76,10 +76,13 @@ ShellRoot {
     property bool playing:false
     property string track:""
     property string targetScreen:""
+    property string focusedScreenName:""
     property var latest:null
     readonly property var activeEntries: allEntries
     property var historyEntries: []
     property var allEntries:[]
+    property var allowedPlayers:[]
+    property var downloads:[]
     property var players:[]
     property var mutedSources:[]
     property string error:""
@@ -120,6 +123,17 @@ ShellRoot {
     implicitWidth:620;implicitHeight:bar.vertical ? 620 : 80
     Island.BarWidget {id:widget;execute:function(argv){scene.commands=scene.commands.concat([argv])};x:fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.width-width : (parent.width-width)/2;y:bar.vertical ? (fixedEdge==="start" ? 0 : fixedEdge==="end" ? parent.height-height : (parent.height-height)/2) : (parent.height-height)/2;width:implicitWidth;height:implicitHeight;bar:bar}
   }
+  LazyLoader {
+    id:secondOutput
+    active:!!Quickshell.env("ISLAND_PANEL_LAYOUT") && Quickshell.screens.length>1 && widget.screenName!==""
+    PanelWindow {
+      property alias activityWidget:secondWidget
+      screen:Quickshell.screens.find(output=>output.name!==widget.screenName)
+      anchors {top:true;left:true;right:true}
+      implicitHeight:30
+      Island.BarWidget {id:secondWidget;bar:widget.bar;height:30;width:implicitWidth;hoverSuppressed:true}
+    }
+  }
   TestCase {
     id:test
     when:false
@@ -139,6 +153,8 @@ ShellRoot {
       scene.mockNightLight=true;scene.mockStayAwake=true
       t3State.allowed=true;t3State.waitingCount=3
       service.reminders.rows=[{unit:"test",label:"Check the oven",at:Date.now()/1000+300}]
+      service.downloads=[{key:"demo",filename:"demo.iso",downloadPath:"/downloads/demo.iso",downloadedBytes:8192,active:true,ts:1}]
+      widget.updateSetting("clockLayout",widget.clockLayout.concat([{id:"now",kind:"indicator",side:"left"}]))
       widget.hoverSuppressed=true
       var popup=findChild(widget,"islandPopup"),clock=findChild(widget,"islandClock")
       for (var edge of ["top","bottom","left","right"]) {
@@ -149,6 +165,8 @@ ShellRoot {
           var card=findChild(popup,"islandPopupCard")
           check(card.x>=popup.margin-1 && card.x+card.width<=popup.width-popup.margin+1,"card escaped screen on "+edge)
           check(card.y>=popup.margin-1 && card.y+card.height<=popup.height-popup.margin+1,"card escaped screen vertically on "+edge)
+          var activity=findChild(widget,"islandNowIndicator")
+          check(activity.visible && (bar.vertical ? activity.text==="" : activity.text.includes("KiB")),"missing Now activity on "+edge)
           var label=findChild(widget,"islandClockText")
           for (var name of ["islandLeftIndicators","islandRightIndicators"]) {
             var indicators=findChild(widget,name)
@@ -169,6 +187,23 @@ ShellRoot {
           }
           widget.close();wait(20)
         }
+      }
+      if (secondOutput.active) {
+        tryVerify(function(){return secondOutput.item && secondOutput.item.activityWidget.screenName &&
+          secondOutput.item.activityWidget.screenName!==widget.screenName})
+        var second=secondOutput.item.activityWidget
+        service.doNotDisturb=false
+        service.targetScreen=widget.screenName
+        service.focusedScreenName=second.screenName
+        service.playing=true;service.track="track on second output"
+        check(!widget.showAlert && second.alertKind==="media" && second.showAlert,"track went to the notification output")
+        service.focusedScreenName=widget.screenName
+        service.track="track on first output"
+        check(widget.showAlert && !second.showAlert,"previous track remained on the other output")
+        service.doNotDisturb=true
+        service.track="quiet"
+        check(!widget.showAlert && !second.showAlert,"track toast bypassed DND")
+        console.log("MEDIA_OUTPUTS_PASS")
       }
       console.log("PANEL_LAYOUT_PASS")
       Qt.quit()

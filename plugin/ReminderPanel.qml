@@ -9,14 +9,27 @@ ColumnLayout {
   id:root
   required property var strings
   property var reminders:null
+  property bool active:true
+  function cancelClear() {return confirmation.cancel(true)}
   property bool editing:false
   property string selectedKey:""
   spacing:Design.gap.small
   RowLayout {
     Layout.fillWidth:true
     SectionHeading {Layout.fillWidth:true;title:root.strings.t("reminders.title");detail:root.reminders && root.reminders.count ? Commons.I18n.formatNumber(root.reminders.count) : ""}
-    FeedbackButton {objectName:"reminderAdd";text:root.strings.t("reminders.add");compact:true;focusable:true;onClicked:{root.editing=!root.editing;if(root.editing) minutes.forceActiveFocus()}}
-    FeedbackButton {objectName:"reminderClear";visible:root.reminders && root.reminders.count>0;text:root.strings.t("reminders.clear");compact:true;focusable:true;enabled:!!root.reminders && !root.reminders.busy;onClicked:root.reminders.clear()}
+    FeedbackButton {id:addButton;objectName:"reminderAdd";text:root.strings.t("reminders.add");compact:true;focusable:true;onClicked:{root.editing=!root.editing;if(root.editing) minutes.forceActiveFocus()}}
+    FeedbackButton {id:clearButton;objectName:"reminderClear";visible:root.reminders && root.reminders.count>0 && !confirmation.opened;text:root.strings.t("reminders.clear");compact:true;focusable:true;enabled:!!root.reminders && !root.reminders.busy;onClicked:confirmation.ask()}
+  }
+  ClearConfirmation {
+    id:confirmation
+    objectName:"reminderClearPrompt"
+    strings:root.strings
+    targetIds:root.reminders ? root.reminders.rows.map(row=>row.unit) : []
+    questionKey:"reminders.confirmClear"
+    trigger:clearButton
+    fallback:addButton
+    permitted:root.active && !!root.reminders && !root.reminders.busy
+    onConfirmed:root.reminders.clear()
   }
   ColumnLayout {
     Layout.fillWidth:true;visible:root.editing;spacing:Design.gap.small

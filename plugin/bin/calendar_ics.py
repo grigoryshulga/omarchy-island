@@ -128,7 +128,8 @@ def expand(raw, year, timezone=None):
     if year > 1:
         start -= dt.timedelta(days=7)
     if year < 9998:
-        end += dt.timedelta(days=7)
+        # December's 42-cell grid can include the first eleven days of January.
+        end += dt.timedelta(days=11)
     try:
         calendar = icalendar.Calendar.from_ical(raw)
         if calendar.name != 'VCALENDAR' or not calendar.get('VERSION'):

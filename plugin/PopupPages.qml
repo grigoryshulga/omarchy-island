@@ -70,7 +70,7 @@ Item {
   function pageObject(index) {var holder=pageHolder(index);return holder ? holder.view.item : null}
   function currentPage() {return pageObject(selectedPage)}
   function enterPage(index) {var page=pageObject(index);if(page) page.enter()}
-  function openDetails(id) {var page=pageObject(1);if(page && typeof page.openDetails==="function") page.openDetails(id)}
+  function openDetails(id,target) {var page=pageObject(1);if(page && typeof page.openDetails==="function") page.openDetails(id,target)}
   function showToday() {enterPage(2)}
   function back() {
     if(currentPage() && currentPage().back()) return true

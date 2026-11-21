@@ -38,6 +38,13 @@ ContainerSurface {
     else if(expanded) detailsOpen=!detailsOpen
     else expandRequested()
   }
+  function focusRequest(navigation) {
+    var field=questions.count ? questions.itemAt(0) : null
+    var targets=[]
+    if (field) navigation.collect(field,targets)
+    navigation.focusItem(targets.length ? targets[0] : titleLink)
+    return true
+  }
   function answers() {
     var result={}
     for(var i=0;i<questions.count;i++) {var q=questions.itemAt(i);if(q.answer.length) result[q.question.id]=q.answer}
