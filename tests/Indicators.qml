@@ -67,7 +67,8 @@ ShellRoot {
       property bool busy:false
       function loadCatalog(){}
     }
-    readonly property var modules:({weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
+    property var controlBackend:Island.ControlsState {panelCommand:[];outputCommand:["true"];tailscaleCommand:["true"]}
+    readonly property var modules:({controls:controlBackend,weather:("weather" in service) ? service.weather : null,calendar:{allowed:true,calendars:("calendars" in service) ? service.calendars : null,reminders:("reminders" in service) ? service.reminders : null},notifications:service,media:service,t3:t3,agentLimits:agentLimits})
     property var t3:t3State
     property var indicators:states
     property bool doNotDisturb:false
@@ -329,10 +330,24 @@ ShellRoot {
         var action=findChild(widget,"indicatorAction-"+mode)
         check(action && action.visible && action.height>=bar.barSize,"Indicator has no bar-height hit area: "+mode)
         mouseClick(action,action.width/2,action.height/2);wait(40)
+        if(mode!=="update") {
+          var pages=findChild(widget,"islandPopupPages")
+          check(pages.detailPage===(mode==="dnd" ? "notifications" : "controls"),mode+" routed to "+pages.detailPage)
+          if(mode==="microphone") check(findChild(pages,"islandControls").section==="audio","Audio section did not open")
+          if(mode==="dnd") check(service.doNotDisturb,"Navigation changed DND")
+          if(mode==="nightLight") check(backend.nightLight,"Navigation changed night light")
+          if(mode==="stayAwake") check(backend.stayAwake,"Navigation changed idle")
+          if(["nightLight","stayAwake","recording"].includes(mode)) {
+            var tile=findChild(pages,"control"+mode.charAt(0).toUpperCase()+mode.slice(1))
+            check(tile && tile.focus,"Missing focus on "+mode)
+          }
+          widget.close();wait(50)
+          if(mode!=="remote") mouseClick(action,action.width/2,action.height/2,Qt.RightButton)
+        }
         if(mode==="dnd") check(!service.doNotDisturb,"DND indicator did not turn off DND")
         if(mode==="nightLight") check(!backend.nightLight,"Night light indicator did not turn off mode")
         if(mode==="stayAwake") check(!backend.stayAwake,"Stay awake indicator did not turn off mode")
-        if(mode==="remote") check(widget.pinned && widget.controlsMode,"Remote indicator did not open controls")
+
       }
       check(JSON.stringify(scene.commands)===JSON.stringify([["omarchy-audio-input-mute"],["omarchy-capture-screenrecording","--stop-recording"],["omarchy-launch-floating-terminal-with-presentation","omarchy-update"]]),"Indicator command arguments changed")
       widget.close();wait(40)
@@ -449,7 +464,8 @@ ShellRoot {
       check(!backend.osdActive,"disabling an active OSD did not dismiss it")
       widget.updateSetting("indicatorDnd",false)
       service.doNotDisturb=true
-      check(!findChild(widget,"islandDndIndicator").visible && service.doNotDisturb,"indicator preference changed system DND state")
+      var dndIcon=findChild(widget,"islandDndIndicator")
+      check((!dndIcon || !dndIcon.visible) && service.doNotDisturb,"indicator preference changed system DND state")
       widget.updateSetting("indicatorDnd",true)
       widget.updateSetting("osdVolume",true)
       backend.detach(widget)

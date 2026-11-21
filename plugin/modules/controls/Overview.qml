@@ -7,6 +7,14 @@ Island.ModuleView {
   readonly property bool editing:content.editing
   readonly property bool inPanel:content.section!==""
   readonly property bool adding:content.adding
+  function focusActivity(navigation) {
+    var target=presentation.activityTarget
+    if (target.section) {
+      content.openSection(target.section,false)
+      return true
+    }
+    return content.focusIndicatorTile(target.tile,navigation)
+  }
   function configure(){content.configure()}
   function showAdd(){content.showAdd()}
   property var observedBackend:null

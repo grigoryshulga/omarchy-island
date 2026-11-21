@@ -37,6 +37,10 @@ QtObject {
   function focusItem(item) {
     if(!item) return
     item.forceActiveFocus(Qt.TabFocusReason)
+    revealItem(item)
+  }
+  function revealItem(item) {
+    if(!item) return
     // Keyboard navigation reveals offscreen notification rows without changing
     // the horizontal page position or relying on the pointer to scroll them.
     for(var parent=item.parent;parent && parent!==scope;parent=parent.parent) {

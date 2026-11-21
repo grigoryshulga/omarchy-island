@@ -74,13 +74,20 @@ ColumnLayout {
     selectedKey=placements.length ? placements[0].key : ""
     focusTile(selectedKey)
   }
+  function tileFor(key) {
+    for (var i=0;i<tiles.count;i++) {
+      var entry=tiles.itemAt(i)
+      if (entry.modelData.key===key) return entry.tile
+    }
+    return null
+  }
   function focusTile(key) {
     if(!host.editing && Model.sectionKey(key)) {
       var next=layout.order.slice(layout.order.indexOf(key)+1).filter(function(k){return !Model.sectionKey(k) && root.layout.hidden.indexOf(k)<0})
       key=next.length ? next[0] : ""
     }
     if(!key) {host.forceActiveFocus();return}
-    Qt.callLater(function(){for(var i=0;i<tiles.count;i++) if(tiles.itemAt(i).modelData.key===key) {tiles.itemAt(i).tile.forceActiveFocus();break}})
+    Qt.callLater(function(){var tile=root ? root.tileFor(key) : null;if(tile) tile.forceActiveFocus()})
   }
   function resize(key,w,h) {if(backend) backend.resize(key,w,h);focusTile(key)}
   function move(key,delta) {

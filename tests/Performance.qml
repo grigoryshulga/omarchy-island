@@ -180,18 +180,14 @@ ShellRoot {
         controls.visible = false
         inbox.visible = true
         inbox.overviewActive = true
-        inbox.configure()
-        findChild(inbox, "overviewSettings").clicked()
+        findChild(inbox, "overviewCustomize").clicked()
         wait(200)
-        var setting = findChild(findChild(inbox, "customizationSettings"), "setting-hoverPreview")
+        var setting = findChild(Island.IslandSettingsWindow.view, "setting-hoverPreview")
         led = findChild(setting, "controlIndicatorGlow")
         check(led.active)
-        inbox.overviewActive = false
+        Island.IslandSettingsWindow.close()
         wait(200)
-        check(!led.active, "Inactive Settings must stop switch effects")
-        phase = led.phase
-        wait(80)
-        checkEqual(led.phase, phase)
+        check(!Island.IslandSettingsWindow.view, "Closed Settings retained its effects")
         console.log("PERFORMANCE_PASS")
         Qt.quit()
       }

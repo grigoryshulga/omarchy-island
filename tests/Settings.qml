@@ -92,23 +92,50 @@ ShellRoot {
   }
   Island.PopupReveal {id:reveal;targetWidth:400;targetHeight:300}
   Island.IndicatorState {id:events}
+  Component {id:windowKeys;TestCase {when:false}}
   TestCase {
     id:test;when:false
     function check(ok,message){if(!ok) throw new Error(message)}
     function run() {
       try {
         widget.settings={id:"gshulga.island",format:"HH:mm",customMetadata:"keep"}
-        widget.updateSetting("hoverDelay",300)
+        widget.openOverview();wait(100)
+        var pages=findChild(widget,"islandPopupPages")
+        var gear=findChild(pages,"overviewCustomize")
+        check(gear && gear.visible,"settings entry missing from Overview")
+        gear.clicked();wait(120)
+        var settingsWindow=Island.IslandSettingsWindow
+        var view=settingsWindow.view
+        check(!widget.pinned && settingsWindow.visible && view,"closing the Island popup should leave Settings open")
+        check(view.Window.window!==pages.Window.window,"settings share the popup surface")
+        var keys=windowKeys.createObject(settingsWindow.contentItem)
+        var toggle=findChild(view,"setting-hoverPreview")
+        toggle.forceActiveFocus();keys.keyClick(Qt.Key_Space);wait(30)
+        check(widget.settings.hoverPreview===false && toggle.activeFocus,"Space failed to toggle a setting in the window")
+        keys.keyClick(Qt.Key_Space);wait(30)
+        findChild(view,"settingsTab-alerts").clicked();wait(30)
+        var chooser=findChild(view,"setting-notificationStyle")
+        chooser.open();wait(100)
+        keys.keyClick(Qt.Key_Down);keys.keyClick(Qt.Key_Return);wait(100)
+        check(widget.settings.notificationStyle==="bar" && !chooser.popupOpen,"dropdown did not accept keyboard selection")
+        findChild(view,"settingsTab-general").clicked()
+        findChild(view,"setting-hoverDelay").moved(300)
+        findChild(view,"settingsTab-panel").clicked()
+        widget.openOverview();wait(60);gear.clicked();wait(60)
+        check(settingsWindow.view===view && findChild(view,"settingsTab-panel").tabActive,"reopening did not reuse the same window and section")
+        keys.keyClick(Qt.Key_Escape);wait(60)
+        keys.destroy()
+        check(!settingsWindow.visible && !settingsWindow.view,"closing Settings retained its contents")
         check(fakeShell.writtenEntry.hoverDelay===300 && fakeShell.writtenEntry.customMetadata==="keep","saving lost existing settings")
         widget.updateSetting("hoverDelay",-1)
         widget.updateSetting("notificationStyle","invalid")
         widget.updateSetting("animationsEnabled","false")
-        check(widget.settings.hoverDelay===300 && widget.settings.notificationStyle===undefined && widget.settings.animationsEnabled===undefined,"invalid settings accepted")
+        check(widget.settings.hoverDelay===300 && widget.settings.notificationStyle==="bar" && widget.settings.animationsEnabled===undefined,"invalid settings accepted")
         widget.updateSetting("openingPage","last")
         widget.openCalendar();widget.close();widget.open()
         check(widget.calendarMode,"last page was not restored")
         widget.updateSetting("calendarEnabled",false)
-        check(widget.controlsMode,"disabled current page did not fall back to Controls")
+        tryVerify(function(){return widget.controlsMode},1000,"disabled current page did not fall back to Controls")
         widget.openCalendar();check(widget.selectedPage===1,"disabled page did not fall back to Overview")
         widget.updateSetting("openingPage","overview");widget.updateSetting("overviewEnabled",false)
         widget.open();check(widget.selectedPage===1 && widget.settings.overviewEnabled!==false,"Overview could be disabled, losing Controls")

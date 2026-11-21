@@ -35,6 +35,7 @@ GridLayout {
     return tips.join(" · ")
   }
   signal activate(string mode)
+  signal quickAction(string mode)
   signal pageRequested(int index)
   signal detailsRequested(string moduleId)
   signal calendarRequested()
@@ -103,6 +104,7 @@ GridLayout {
         horizontalPadding:0;verticalPadding:0
         tooltipText:visible ? root.strings.t("indicator.action."+cell.modelData.id) : ""
         onClicked:root.activate(cell.modelData.id)
+        onRightClicked:root.quickAction(cell.modelData.id)
       }
       PlainText {
         id:placeholder

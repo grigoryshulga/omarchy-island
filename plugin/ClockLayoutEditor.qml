@@ -8,6 +8,7 @@ import "ClockModel.js" as Clock
 Column {
   id:root
   required property var strings
+  required property Flickable scrollViewport
   property var settings:({})
   property var service:null
   property var bar:null
@@ -22,12 +23,12 @@ Column {
   readonly property string formatKey:vertical ? "verticalFormat" : "format"
   readonly property string format:String(settings[formatKey] || (vertical ? "HH\n—\nmm" : "dddd HH:mm"))
   property date now:new Date()
-  readonly property bool ownsKeys:addMenu.popupOpen || formats.popupOpen || customFormat.activeFocus
+  readonly property bool ownsKeys:board.dragged!=="" || addMenu.popupOpen || formats.popupOpen || customFormat.activeFocus
   signal settingRequested(string key,var value)
   signal revealFocus(var item)
   spacing:Design.gap.medium
   onElementsChanged:if(selectedId!=="clock" && !elements.some(function(row){return row.id===root.selectedId})) selectedId="clock"
-  function closeEditors() {addMenu.close();formats.close();customFormat.focus=false;customFormatOpen=false}
+  function closeEditors() {board.cancel();addMenu.close();formats.close();customFormat.focus=false;customFormatOpen=false}
   function formatted(value) {
     var week=Clock.isoWeekLiteral(now.getFullYear(),now.getMonth(),now.getDate()).split("").map(function(d){return Commons.I18n.formatNumber(d)}).join("")
     return now.toLocaleString(Qt.locale(Commons.I18n.formatLocale),value.replace(/ww/g,week))
@@ -35,7 +36,7 @@ Column {
   function save(rows,id) {
     selectedId=id || selectedId
     settingRequested("clockLayout",rows)
-    Qt.callLater(function(){left.focusElement(root.selectedId);right.focusElement(root.selectedId)})
+    Qt.callLater(function(){board.focusElement(root.selectedId)})
   }
   function add(id) {
     var rows=Layout.add(elements,id,side)
@@ -45,6 +46,8 @@ Column {
     save(elements.filter(function(row){return row.id!==root.selectedId}),"clock")
     clockButton.forceActiveFocus()
   }
+  function elementTitle(row) {return left.title(row)}
+  function reorder(id,side,before) {save(Layout.move(elements,id,side,before),id)}
   function move(step) {save(Layout.step(elements,selectedId,step))}
   function drop(id,item,dx,dy) {
     var point=item.mapToItem(stage,item.width/2+dx,item.height/2+dy)
@@ -151,13 +154,6 @@ Column {
     }
   }
   DesignDropdown {
-    id:addMenu;objectName:"clockAdd";width:parent.width
-    showLabel:false;value:"";enabled:root.elements.length<32
-    options:[{value:"",label:root.strings.t("clock.add")}].concat(root.entries.filter(function(entry){return !root.elements.some(function(row){return row.id===entry.id})}).map(function(entry){return {value:entry.id,label:entry.title || root.strings.t(entry.titleKey)}})).concat([{value:"separator",label:root.strings.t("clock.separator")},{value:"space",label:root.strings.t("clock.space")}])
-    onChanged:value=>{if(value) root.add(value);addMenu.value=""}
-    onActiveFocusChanged:if(activeFocus) root.revealFocus(this)
-  }
-  DesignDropdown {
     id:formats;objectName:"clockFormat";width:parent.width
     visible:root.selectedId==="clock";showLabel:false;value:root.format
     options:Clock.clockFormatRing(root.format,"",Clock.clockFormats(root.vertical)).map(function(format){return {value:format,label:root.formatted(format).replace(/\n/g," ")}})
@@ -174,8 +170,17 @@ Column {
     Keys.onEscapePressed:{text=root.format.replace(/\n/g,"\\n");clockButton.forceActiveFocus()}
   }
   Binding {target:customFormat;property:"text";value:root.format.replace(/\n/g,"\\n");when:!customFormat.activeFocus}
+  DesignDropdown {
+    id:addMenu;objectName:"clockAdd";width:parent.width
+    showLabel:false;value:"";enabled:root.elements.length<32
+    options:[{value:"",label:root.strings.t("clock.add")}].concat(root.entries.filter(function(entry){return !root.elements.some(function(row){return row.id===entry.id})}).map(function(entry){return {value:entry.id,label:entry.title || root.strings.t(entry.titleKey)}})).concat([{value:"separator",label:root.strings.t("clock.separator")},{value:"space",label:root.strings.t("clock.space")}])
+    onChanged:value=>{if(value) root.add(value);addMenu.value=""}
+    onActiveFocusChanged:if(activeFocus) root.revealFocus(this)
+  }
+  ClockReorderBoard {id:board;width:parent.width;editor:root;viewport:root.scrollViewport}
   Keys.onPressed:event=>{
-    if(root.selectedRow && (event.modifiers & Qt.ControlModifier) && [Qt.Key_Left,Qt.Key_Right,Qt.Key_Up,Qt.Key_Down].indexOf(event.key)>=0) {
+    if(board.dragged && event.key===Qt.Key_Escape) {board.cancel();event.accepted=true}
+    else if(root.selectedRow && (event.modifiers & Qt.ControlModifier) && [Qt.Key_Left,Qt.Key_Right,Qt.Key_Up,Qt.Key_Down].indexOf(event.key)>=0) {
       root.move(event.key===Qt.Key_Left || event.key===Qt.Key_Up ? -1 : 1);event.accepted=true
     } else if(root.selectedRow && event.key===Qt.Key_Delete) {root.remove();event.accepted=true}
   }

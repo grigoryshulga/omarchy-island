@@ -28,7 +28,17 @@ BarWidget {
   readonly property real indicatorGutter: vertical ? 0 : Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
   property var execute:function(argv){Util.execArgv(argv)}
   function activateIndicator(mode) {
-    if(mode==="remote") {openControls();return}
+    if (mode==="update") {
+      execute(["omarchy-launch-floating-terminal-with-presentation","omarchy-update"])
+    } else if (mode==="remote") {
+      openControls()
+    } else if (mode==="dnd") {
+      openModuleDetails("notifications")
+    } else {
+      openModuleDetails("controls",mode==="microphone" ? {section:"audio"} : {tile:mode})
+    }
+  }
+  function quickIndicatorAction(mode) {
     if(mode==="dnd") {if(service) service.setDoNotDisturb(false);return}
     if(mode==="nightLight" || mode==="stayAwake") {
       IpcRegistry.call(mode==="nightLight" ? "nightlight" : "idle","toggle",[])
@@ -37,8 +47,7 @@ BarWidget {
     }
     var commands={
       microphone:["omarchy-audio-input-mute"],
-      recording:["omarchy-capture-screenrecording","--stop-recording"],
-      update:["omarchy-launch-floating-terminal-with-presentation","omarchy-update"]
+      recording:["omarchy-capture-screenrecording","--stop-recording"]
     }
     if(commands[mode]) execute(commands[mode])
   }
@@ -297,6 +306,7 @@ BarWidget {
       x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2-centerContent.indicatorSpan/2-Style.space(11-5*root.osdShown)-width
       y: root.vertical ? Style.space(6) : (parent.height-height)/2
       onActivate:mode=>root.activateIndicator(mode)
+      onQuickAction:mode=>root.quickIndicatorAction(mode)
       onPageRequested:index=>root.openPage(index)
       onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
@@ -375,6 +385,7 @@ BarWidget {
       x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2+centerContent.indicatorSpan/2+Style.space(11-5*root.osdShown)
       y: root.vertical ? parent.height-height-Style.space(6) : (parent.height-height)/2
       onActivate:mode=>root.activateIndicator(mode)
+      onQuickAction:mode=>root.quickIndicatorAction(mode)
       onPageRequested:index=>root.openPage(index)
       onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
@@ -524,6 +535,7 @@ BarWidget {
     target: "island"
     function open(): void { root.open() }
     function close(): void { root.close() }
+    function settings(): void {var overview=previewContent.pageObject(1);if(overview) overview.openSettings()}
     function controls(): void { root.openControls() }
     function calendar(): void { root.openCalendar() }
     function weather(): void { root.openWeather() }

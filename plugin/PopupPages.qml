@@ -52,7 +52,6 @@ Item {
   signal expandRequested()
   signal pageRequested(int index)
   readonly property real pageProgress: wrapping ? 1 : pager.width>0 && pager.itemAt(enabledPages.indexOf(1)) ? Math.max(0,Math.min(1,Math.abs((pager.contentItem.contentX-pager.itemAt(enabledPages.indexOf(1)).x)/pager.width))) : (selectedPage!==1 ? 1 : 0)
-  readonly property bool settingsOpen:!!currentPage() && currentPage().navigationHidden
   readonly property real navigationHeight:0
   readonly property real contentTop:0
   property real maximumOverviewHeight:Style.space(640)

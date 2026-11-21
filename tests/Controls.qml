@@ -197,15 +197,15 @@ ShellRoot {
       view.openSection("settings");wait(20)
       check(view.section==="" && !loader.active,"Controls still opens the removed Settings route")
       view.visible=false;settingsHost.visible=true
-      settingsHost.configure();wait(20)
-      findChild(settingsHost,"overviewSettings").clicked();wait(40)
-      var settingsView=findChild(settingsHost,"customizationSettings")
+      findChild(settingsHost,"overviewCustomize").clicked();wait(40)
+      var settingsWindow=Island.IslandSettingsWindow,settingsView=settingsWindow.view
       check(settingsView.visible,"Customization did not open Settings")
+      check(settingsView.sidebar && findChild(settingsView,"settingsTab-overview").y>findChild(settingsView,"settingsTab-general").y,"wide window did not arrange its sections vertically")
       var settingsHeight=settingsHost.implicitHeight
       for(var windowWidth of [520,360]) {
-        controlsWindow.testWidth=windowWidth;wait(40)
-        check(settingsView.width===windowWidth-32,"settings viewport did not reach requested width: "+windowWidth)
-        for(var tabName of ["general","panel","alerts","modules"]) {
+        settingsWindow.width=windowWidth;wait(40)
+        check(settingsView.width===windowWidth-2*Island.Design.gap.large,"settings viewport did not reach requested width: "+windowWidth)
+        for(var tabName of ["general","panel","alerts","modules","overview"]) {
           var tab=findChild(settingsView,"settingsTab-"+tabName),label=findChild(tab,"tabLabel")
           check(label.text.length>0 && label.width>=label.implicitWidth,"settings tab label is clipped: "+tabName+" ("+label.width+" < "+label.implicitWidth+")")
           tab.forceActiveFocus();wait(20)
@@ -214,7 +214,7 @@ ShellRoot {
           check(at.y===0,"settings categories wrapped into another row")
         }
       }
-      controlsWindow.testWidth=520;wait(40)
+      settingsWindow.width=520;controlsWindow.testWidth=520;wait(40)
       var hover=findChild(settingsView,"setting-hoverPreview")
       hover.toggled()
       check(scene.preferences[0]==="hoverPreview" && scene.preferences[1]===false,"toggle did not persist")
@@ -250,19 +250,19 @@ ShellRoot {
       check(delay.enabled,"delay did not follow its parent switch")
       var opening=findChild(settingsView,"setting-openingPage"),openingLabel=findChild(settingsView,"settingLabel-openingPage")
       check(opening.mapToItem(settingsView,0,0).y<openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"wide choice did not stay inline")
-      controlsWindow.testWidth=360
+      settingsWindow.width=360;controlsWindow.testWidth=360
       var fontSize=Commons.Style.fontBaseSize
       Commons.Style.fontOverrides=({});Commons.Style.fontBaseSize=fontSize*1.5;wait(40)
       check(view.width===328,"narrow fixture did not resize the tested content")
       console.log("CONTROLS_LAYOUT",Commons.I18n.language,openingLabel.font.family,openingLabel.font.pixelSize,view.width)
       check(opening.width<=settingsView.width && opening.mapToItem(settingsView,0,0).y>=openingLabel.mapToItem(settingsView,0,0).y+openingLabel.height,"narrow choice did not move below label")
-      for(var tabName of ["general","panel","alerts","modules"]) {
+      for(var tabName of ["general","panel","alerts","modules","overview"]) {
         var tab=findChild(settingsView,"settingsTab-"+tabName)
         tab.forceActiveFocus();wait(20)
         var at=tab.mapToItem(settingsView,0,0)
         check(at.x>=-1 && at.x+tab.width<=settingsView.width+1,"large text tab cannot be reached")
       }
-      Commons.Style.fontBaseSize=fontSize;controlsWindow.testWidth=520;wait(40)
+      Commons.Style.fontBaseSize=fontSize;settingsWindow.width=520;controlsWindow.testWidth=520;wait(40)
       findChild(settingsView,"settingsTab-modules").clicked();wait(20)
       check(viewport.contentHeight>viewport.height,"long settings category is not scrollable")
       viewport.contentY=viewport.contentHeight-viewport.height
@@ -278,7 +278,7 @@ ShellRoot {
       view.settings={t3Enabled:true};wait(20)
       check(answer.enabled && answer.parent.parent.implicitHeight===answerHeight,"T3 responses did not follow parent or moved form")
       view.settings={}
-      settingsHost.back();settingsHost.back();settingsHost.visible=false;view.visible=true;wait(30)
+      settingsWindow.close();controlsWindow.contentItem.Window.window.requestActivate();settingsHost.visible=false;view.visible=true;wait(30)
       for(var section of ["audio","bluetooth","network","tailscale","monitors"]){
         view.openSection(section)
         check(view.implicitHeight===stableHeight,"opening a native section resized Controls: "+section)

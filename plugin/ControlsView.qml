@@ -102,6 +102,12 @@ Item {
   signal settingRequested(string key, var value)
   implicitHeight:favoriteMode ? favorites.implicitHeight : section ? detailHeight : landing.implicitHeight
 
+  function focusIndicatorTile(key,navigation) {
+    var tile=editableGrid.tileFor(key)
+    if (!tile || !tile.visible || !tile.enabled) return false
+    navigation.focusItem(tile)
+    return true
+  }
   function openSection(name,fromSummary) {
     if(name==="customize") {configure();return}
     if(!ControlLayout.safeKey(name)) return

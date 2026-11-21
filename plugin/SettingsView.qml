@@ -12,6 +12,10 @@ Item {
   property var modules:({})
   property var feedback:null
   property bool active:true
+  property bool windowMode:false
+  readonly property var sections:windowMode ? Settings.sections.concat([{id:"overview",groups:[]}]) : Settings.sections
+  readonly property bool sidebar:windowMode && width>=Style.space(620)
+  readonly property bool overviewSection:sections[category].id==="overview"
   property int category:0
   property bool ownsKeys:false
   signal settingRequested(string key,var value)
@@ -22,10 +26,24 @@ Item {
   }
   function focusContent() { if(tabs.itemAt(category)) tabs.itemAt(category).forceActiveFocus() }
   function revealTab(item) {
+    if(!item) return
+    if(sidebar) {
+      var y=item.y
+      if(y<tabViewport.contentY) tabViewport.contentY=y
+      else if(y+item.height>tabViewport.contentY+tabViewport.height) tabViewport.contentY=y+item.height-tabViewport.height
+      return
+    }
     var at=item.mapToItem(tabRow,0,0),x=tabViewport.contentX
     if(at.x<x) x=at.x
     else if(at.x+item.width>x+tabViewport.width) x=at.x+item.width-tabViewport.width
     tabViewport.contentX=Math.max(0,Math.min(Math.max(0,tabViewport.contentWidth-tabViewport.width),x))
+  }
+  function dismissEditor() {
+    if(layoutEditor.item && (layoutEditor.item.dragActive || layoutEditor.item.reorderMenuOpen)) return layoutEditor.item.back()
+    if(!ownsKeys) return false
+    closeEditors()
+    focusContent()
+    return true
   }
   function closeEditors() {
     for(var i=0;i<groups.count;i++) groups.itemAt(i).closeEditors()
@@ -42,23 +60,28 @@ Item {
   Flickable {
     id:tabViewport
     objectName:"settingsTabs"
-    width:parent.width;height:tabRow.implicitHeight
-    contentWidth:tabRow.implicitWidth;contentHeight:height
-    flickableDirection:Flickable.HorizontalFlick
+    LayoutMirroring.enabled:root.windowMode && Commons.I18n.rightToLeft
+    onWidthChanged:Qt.callLater(function(){root.revealTab(tabs.itemAt(root.category))})
+    width:root.sidebar ? Style.space(178) : parent.width;height:root.sidebar ? parent.height : tabRow.implicitHeight
+    anchors.left:parent.left
+    contentWidth:root.sidebar ? width : tabRow.implicitWidth
+    contentHeight:root.sidebar ? tabRow.implicitHeight : height
+    flickableDirection:root.sidebar ? Flickable.VerticalFlick : Flickable.HorizontalFlick
     boundsBehavior:Flickable.StopAtBounds
     clip:true
-    // One row at every scale; keyboard focus reveals tabs on narrow panels.
-    Row {
+    Grid {
+      columns:root.sidebar ? 1 : root.sections.length
       id:tabRow
       spacing:Design.gap.micro
       layoutDirection:Commons.I18n.rightToLeft ? Qt.RightToLeft : Qt.LeftToRight
       Repeater {
         id:tabs
-        model:Settings.sections
+        model:root.sections
         TabButton {
           required property var modelData
           required property int index
           objectName:"settingsTab-"+modelData.id
+          width:root.sidebar ? tabViewport.width : implicitWidth
           label:root.strings.t("settings.tab."+modelData.id)
           Accessible.name:label
           tabActive:root.category===index
@@ -75,9 +98,12 @@ Item {
   Flickable {
     id:viewport
     objectName:"settingsViewport"
-    anchors.left:parent.left;anchors.right:parent.right
-    anchors.top:tabViewport.bottom;anchors.bottom:parent.bottom
-    anchors.topMargin:Design.gap.section
+    LayoutMirroring.enabled:root.windowMode && Commons.I18n.rightToLeft
+    anchors.left:root.sidebar ? tabViewport.right : parent.left;anchors.right:parent.right
+    anchors.leftMargin:root.sidebar ? Design.gap.large : 0
+    anchors.top:root.sidebar ? parent.top : tabViewport.bottom;anchors.bottom:parent.bottom
+    anchors.topMargin:root.sidebar ? 0 : Design.gap.section
+    visible:!root.overviewSection
     contentWidth:width;contentHeight:body.implicitHeight
     clip:true;boundsBehavior:Flickable.StopAtBounds
     Column {
@@ -87,9 +113,10 @@ Item {
       Loader {
         id:clockEditor
         width:body.width-Design.gap.small
-        active:root.visible && root.active && Settings.sections[root.category].id==="panel"
+        active:root.visible && root.active && root.sections[root.category].id==="panel"
         visible:active
         sourceComponent:ClockLayoutEditor {
+          scrollViewport:viewport
           settings:root.settings;service:root.service;bar:root.bar;strings:root.strings;active:root.active
           onSettingRequested:(key,value)=>root.settingRequested(key,value)
           onRevealFocus:item=>root.revealFocus(item)
@@ -99,7 +126,7 @@ Item {
       }
       Repeater {
         id:groups
-        model:Settings.sections[root.category].groups
+        model:root.sections[root.category].groups
         Column {
           id:group
           required property var modelData
@@ -145,6 +172,19 @@ Item {
           }
         }
       }
+    }
+  }
+  Loader {
+    id:layoutEditor
+    anchors.fill:viewport
+    active:root.active && root.overviewSection
+    onActiveChanged:if(active) setSource(Qt.resolvedUrl("IslandContent.qml"),{
+      strings:Qt.binding(()=>root.strings),service:Qt.binding(()=>root.service),settings:Qt.binding(()=>root.settings),
+      bar:Qt.binding(()=>root.bar),expanded:true,configuring:true,pageHeight:Qt.binding(()=>layoutEditor.height)
+    })
+    Connections {
+      target:layoutEditor.item
+      function onSettingRequested(key,value){root.settingRequested(key,value)}
     }
   }
 }
