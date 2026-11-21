@@ -133,7 +133,11 @@ Item {
     return null
   }
   readonly property var toastIcon:alertKind==="t3" ? t3Toast.statusIcon : alertKind==="herdr" ? herdrToast.statusIcon : notificationIcon
-  implicitHeight:expanded ? (detailOpen || configuring ? pageHeight : Math.min(maximumOverviewHeight,body.implicitHeight)) : body.implicitHeight
+  implicitHeight: {
+    if (!expanded) return body.implicitHeight
+    if (configuring || (detailOpen && !(detailDefinition && detailDefinition.detail))) return pageHeight
+    return Math.min(maximumOverviewHeight,overviewScroll.y+body.implicitHeight)
+  }
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   OverviewDrag {
     id:overviewDrag;objectName:"overviewDragController"
@@ -243,7 +247,7 @@ Item {
     backend:root.service && root.service.modules && definition ? root.service.modules[definition.id] || null : null
     presentation:QtObject {
       readonly property var bar:root.bar
-      readonly property real pageHeight:root.pageHeight
+      readonly property real pageHeight:Math.max(1,root.maximumOverviewHeight-overviewScroll.y)
       readonly property var strings:root.strings
       readonly property var feedback:root.externalFeedback
       readonly property var activityTarget:root.activityTarget

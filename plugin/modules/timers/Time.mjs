@@ -53,19 +53,19 @@ export function format(seconds, digit) {
              + ":" + String(seconds%60).padStart(2,"0");
   return digit ? text.replace(/\d/g, c => digit(Number(c))) : text;
 }
-// Bare numbers are minutes. The colon form also supports sub-minute timers.
 export function parseDuration(text, zeroDigit = "0") {
   const zero = zeroDigit.charCodeAt(0);
   const normalized = Array.from(String(text).trim(), ch => {
     const digit = ch.charCodeAt(0) - zero;
     return digit >= 0 && digit <= 9 ? String(digit) : ch;
   }).join("");
-  const match = /^(\d{1,4})(?::([0-5]\d))?$/.exec(normalized);
-  const ms = match ? Number(match[1])*minute + Number(match[2] || 0)*1000 : 0;
+  const match = /^(\d{2}):([0-5]\d):([0-5]\d)$/.exec(normalized);
+  const ms = match ? (Number(match[1])*60 + Number(match[2]))*minute + Number(match[3])*1000 : 0;
   return ms >= 1000 && ms <= day ? ms : 0;
 }
 export function durationInput(ms, digit) {
-  const text = String(Math.floor(ms/minute)).padStart(2,"0") + ":" + String(Math.floor(ms/1000)%60).padStart(2,"0");
+  const parts = [Math.floor(ms/(60*minute)), Math.floor(ms/minute)%60, Math.floor(ms/1000)%60];
+  const text = parts.map(value => String(value).padStart(2,"0")).join(":");
   return digit ? text.replace(/\d/g, ch => digit(Number(ch))) : text;
 }
 export function start(state, now) {

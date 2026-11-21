@@ -10,6 +10,8 @@ Item {
   signal returnToTabs()
   signal closed()
   property bool failed: false
+  implicitHeight:panel.item && panel.item.inlineContentHeight>0
+                 ? panel.item.inlineContentHeight : message.implicitHeight + 2*Island.Design.gap.medium
   readonly property var nativeEntry: {
     var bar = presentation.bar
     var layout = bar && bar.shell && bar.shell.barConfig ? bar.shell.barConfig.layout : null
@@ -61,6 +63,7 @@ Item {
     }
   }
   Island.PlainText {
+    id:message
     anchors.centerIn:parent; width:parent.width
     horizontalAlignment:Text.AlignHCenter; wrapMode:Text.Wrap
     visible:root.failed || !panel.item

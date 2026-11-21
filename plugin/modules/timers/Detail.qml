@@ -28,16 +28,14 @@ Island.ModuleView {
   function reading(mode) {
     return backend && backend.records[mode] ? Time.format(Time.reading(mode,backend.records[mode],backend.now), Commons.I18n.formatNumber) : ""
   }
-  readonly property bool stopwatchVisible: mode === "stopwatch" && visible && !!presentation && presentation.active
+  readonly property bool showInstrument: shown && !editingPlan && mode !== "world"
   property double sampleTime: 0
   Timer {
     interval: 100; repeat: true; triggeredOnStart: true
-    running: root.stopwatchVisible && root.record.status === "running"
+    running: root.showInstrument && root.record.status === "running" && (root.mode === "stopwatch" || !Island.Preferences.reduceMotion)
     onTriggered: root.sampleTime = root.backend.clock()
   }
-  readonly property double elapsedMs: backend ? Time.elapsed(record, backend.now) : 0
-  readonly property real fraction: mode === "world" ? 0 : mode === "stopwatch" ? (Math.floor(elapsedMs/1000)%60)/60
-      : Math.min(1,elapsedMs / Time.limit(mode,record))
+  readonly property double elapsedMs: backend ? Time.elapsed(record, Math.max(sampleTime,backend.now)) : 0
   function focusActivity(navigation) {
     editingPlan=false
     var target = presentation.activityTarget
@@ -45,10 +43,16 @@ Island.ModuleView {
     navigation.focusItem(mode==="world" ? tabs.itemAt(3) : editableDuration && !target ? duration : primary)
     return true
   }
+  component TransportButton: Island.ActionButton {
+    implicitWidth:Island.Design.controlHeight; implicitHeight:implicitWidth
+    horizontalPadding:0; verticalPadding:0; iconSize:Style.font.iconLarge
+    feedback:root.presentation ? root.presentation.feedback : null
+  }
   ColumnLayout {
     id: body
     width: parent.width; spacing: Island.Design.gap.medium
     RowLayout {
+      id:modeTabs
       Layout.fillWidth: true; spacing: Island.Design.gap.tight
       Repeater {
         id:tabs; model: Time.modes.concat(["world"])
@@ -83,7 +87,7 @@ Island.ModuleView {
     }
     Loader {
       Layout.fillWidth:true
-      Layout.preferredHeight:active ? Math.max(Style.space(160),root.presentation.pageHeight-Style.space(112)) : 0
+      Layout.preferredHeight:active ? Math.min(implicitHeight,Math.max(1,root.presentation.pageHeight-modeTabs.implicitHeight-body.spacing)) : 0
       active:root.shown && root.mode==="world" && !!root.backend && root.backend.ready
       visible:active
       sourceComponent:Timers.WorldClock {
@@ -104,7 +108,7 @@ Island.ModuleView {
     Rectangle {
       visible:root.mode!=="world" && !root.editingPlan
       Layout.fillWidth:true
-      implicitHeight:Math.max(meter.implicitHeight,readout.implicitHeight,actions.implicitHeight) + 2*Island.Design.gap.medium
+      implicitHeight:readout.implicitHeight + meter.implicitHeight + 3*Island.Design.gap.medium
       color:Island.Design.surface
       radius:Island.Design.cardRadius
       MouseArea {
@@ -113,38 +117,32 @@ Island.ModuleView {
         cursorShape:Qt.IBeamCursor
         onClicked:{duration.forceActiveFocus(Qt.MouseFocusReason); duration.selectAll()}
       }
-      RowLayout {
-        anchors.fill:parent; anchors.margins:Island.Design.gap.medium
-        spacing:Island.Design.gap.medium
-        Timers.TimePrint {
-          id:meter; objectName:"timePrint"
-          implicitWidth:Style.space(88); implicitHeight:implicitWidth
-          Layout.preferredWidth:Math.min(implicitWidth,root.width*0.24)
-          Layout.preferredHeight:Layout.preferredWidth
-          mode:root.mode; step:root.record.step; rounds:root.cyclePlan.rounds
-          live:root.shown && visible
-          fraction: {
-            if (!Island.Preferences.reduceMotion || root.record.status !== "running") return root.fraction
-            return root.mode === "stopwatch" ? 0 : Math.floor(root.fraction*4)/4
-          }
+      Timers.BrailleTimeField {
+        id:meter; objectName:"timeField"
+        anchors.left:parent.left; anchors.right:parent.right; anchors.bottom:parent.bottom
+        anchors.margins:Island.Design.gap.medium
+        height:implicitHeight
+        live:root.showInstrument
+        mode:root.mode; onBreak:root.record.step%2===1
+        seconds:Island.Preferences.reduceMotion ? 0 : root.elapsedMs/1000
+        fraction:{
+          if (root.mode!=="timer") return 0
+          const progress=Math.min(1,root.elapsedMs/root.record.duration)
+          return Island.Preferences.reduceMotion ? Math.floor(progress*4)/4 : progress
         }
-        ColumnLayout {
-          id:readout
-          Layout.fillWidth:true; Layout.minimumWidth:0; spacing:Island.Design.gap.micro
-          RowLayout {
-            Layout.fillWidth:true; spacing:Island.Design.gap.micro
-            Island.PlainText {
-            Layout.fillWidth:true; typeRole:"caption"; color:Island.Design.secondaryText; wrapMode:Text.Wrap
-            text:root.mode === "pomodoro" ? root.t(Time.phase(root.record))+" · "+root.t("round").arg(Commons.I18n.formatNumber(1+Math.floor(root.record.step/2))).arg(Commons.I18n.formatNumber(root.cyclePlan.rounds))
-                : root.t(root.record.status === "done" ? "timerDone" : root.record.status === "paused" ? "paused" : root.mode === "stopwatch" ? "elapsed" : root.editableDuration ? "duration" : "remaining")
-            }
-            Island.ActionButton {
-              id:planButton; objectName:"pomodoroSettings"
-              visible:root.mode==="pomodoro"; iconText:"󰒓"; tooltipText:root.t("plan")
-              implicitWidth:Island.Design.compactControlHeight; horizontalPadding:0
-              onClicked:root.editingPlan=true
-            }
-          }
+      }
+      ColumnLayout {
+        id:readout
+        anchors.top:parent.top; anchors.left:parent.left; anchors.right:parent.right
+        anchors.margins:Island.Design.gap.medium
+        spacing:Island.Design.gap.micro
+        Island.PlainText {
+          Layout.fillWidth:true; typeRole:"caption"; color:Island.Design.secondaryText; wrapMode:Text.Wrap
+          text:root.mode === "pomodoro" ? root.t(Time.phase(root.record))+" · "+root.t("round").arg(Commons.I18n.formatNumber(1+Math.floor(root.record.step/2))).arg(Commons.I18n.formatNumber(root.cyclePlan.rounds))
+              : root.t(root.record.status === "done" ? "timerDone" : root.record.status === "paused" ? "paused" : root.mode === "stopwatch" ? "elapsed" : root.editableDuration ? "duration" : "remaining")
+        }
+        RowLayout {
+          Layout.fillWidth:true; spacing:Island.Design.gap.tight
           Island.DesignTextField {
             id:duration; objectName:"timeDuration"
             Layout.fillWidth:true; Layout.minimumWidth:0
@@ -153,9 +151,16 @@ Island.ModuleView {
             property int savedDuration:root.backend ? root.backend.records.timer.duration : 300000
             readonly property int milliseconds:Time.parseDuration(text,Commons.I18n.zeroDigit)
             text:Time.durationInput(savedDuration,Commons.I18n.formatNumber)
-            maximumLength:7
-            inputMethodHints:Qt.ImhPreferNumbers
-            font.pixelSize:Island.Design.type.hero; font.weight:Island.Design.weight("hero")
+            inputMask:"99:99:99;_"
+            inputMethodHints:Qt.ImhDigitsOnly
+            TextMetrics {
+              id:maskMetrics
+              font.family:duration.font.family; font.weight:duration.font.weight
+              font.pixelSize:Island.Design.type.hero; font.features:({"tnum":1})
+              text:Time.durationInput(0,Commons.I18n.formatNumber)
+            }
+            font.pixelSize:Math.max(1,Math.min(Island.Design.type.hero,Math.floor(Island.Design.type.hero*(width-2)/Math.max(1,maskMetrics.advanceWidth))))
+            font.weight:Island.Design.weight("hero")
             font.features:({"tnum":1})
             implicitHeight:Island.Design.lineHeight("hero")
             leftPadding:0; rightPadding:0; topPadding:0; bottomPadding:0
@@ -179,37 +184,33 @@ Island.ModuleView {
             fontSizeMode:Text.HorizontalFit; minimumPixelSize:Island.Design.type.title
             text: {
               if (root.mode === "stopwatch" && root.backend) {
-                var ms=Time.elapsed(root.record,Math.max(root.sampleTime,root.backend.now))
+                var ms=root.elapsedMs
                 return Time.format(Math.floor(ms/1000),Commons.I18n.formatNumber) + Commons.I18n.decimal
                     + Commons.I18n.formatNumber(Math.floor(ms/100)%10)
               }
               return root.reading(root.mode)
             }
           }
-        }
-        ColumnLayout {
-          id:actions; spacing:Island.Design.gap.tight
-          Island.ActionButton {
+          TransportButton {
+            id:planButton; objectName:"pomodoroSettings"
+            visible:root.mode==="pomodoro"; iconText:"󰒓"; tooltipText:root.t("plan")
+            onClicked:root.editingPlan=true
+          }
+          TransportButton {
             id:primary; objectName:"timePrimary"
-            implicitWidth:Island.Design.controlHeight; implicitHeight:implicitWidth
-            horizontalPadding:0; verticalPadding:0; iconSize:Style.font.iconLarge
             iconText:root.record.status === "running" ? Time.glyphs.pause : Time.glyphs.play
             variant:"primary"
             enabled:!!root.backend && root.backend.ready && (!root.editableDuration || !duration.invalid)
             tooltipText:root.t(root.record.status === "running" ? "pause" : root.record.status === "paused" ? "resume" : "start")
-            feedback:root.presentation ? root.presentation.feedback : null
             onClicked:{
               forceActiveFocus()
               root.backend.toggle(root.mode,duration.milliseconds)
             }
           }
-          Island.ActionButton {
+          TransportButton {
             objectName:"timeReset"
-            implicitWidth:Island.Design.controlHeight; implicitHeight:implicitWidth
-            horizontalPadding:0; verticalPadding:0; iconSize:Style.font.iconLarge
             enabled:!!root.backend && root.backend.ready && (root.record.status !== "idle" || root.record.step > 0)
             iconText:Time.glyphs.reset; tooltipText:root.t("reset")
-            feedback:root.presentation ? root.presentation.feedback : null
             onClicked:root.backend.reset(root.mode)
           }
         }
