@@ -53,6 +53,11 @@ ShellRoot {
         Island.Preferences.values=({musicVisualizationStyle:"bayer"})
         check(!bar.sampling && !popup.sampling && Island.Preferences.visualizers.length===0,"print kept an audio consumer")
         check(effect.phase===0 && effect.bass===0 && barEffect.level===0,"print retained live inputs")
+        for (var style of ["printTones","asciiInk","engraving"]) {
+          Island.Preferences.values=({musicVisualizationStyle:style})
+          wait(30)
+          check(popup.ambientMode>0 && !popup.sampling && !bar.sampling,"static ambient effect kept audio active")
+        }
         Island.Preferences.values=({musicVisualization:"open"})
         wait(220)
         check(popup.sampling && !bar.sampling,"popup-only mode sampled the bar")

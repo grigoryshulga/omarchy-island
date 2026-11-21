@@ -25,7 +25,7 @@ assert.equal(settings.valid('notificationStyle', 'bar'), true);
 assert.equal(settings.valid('notificationStyle', 'card'), true);
 assert.equal(settings.valid('musicVisualizationStyle', 'future'), false);
 assert.deepEqual(settings.choices.musicVisualizationStyle,
-  ['default', 'ripple', 'flow', 'embers', 'constellations', 'echo', 'bayer']);
+  ['default', 'ripple', 'flow', 'embers', 'constellations', 'echo', 'bayer', 'printTones', 'asciiInk', 'engraving']);
 for (const style of settings.choices.musicVisualizationStyle) {
   assert.equal(settings.get({musicVisualizationStyle: style}, 'musicVisualizationStyle'), style);
   for (const lang of ['en', 'ru']) assert.ok(require(`../plugin/i18n/${lang}.json`)[`settings.option.${style}`]);

@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Commons as Commons
 import "SettingsModel.mjs" as Settings
+import "ambient" as Ambient
 
 Item {
   id: root
@@ -12,11 +13,12 @@ Item {
   property real artworkReveal: Math.max(0,Math.min(1,reveal))
   Behavior on artworkReveal { NumberAnimation { duration: Preferences.duration(280); easing.type: Easing.OutCubic } }
   readonly property int visualizationStyle: Settings.choices.musicVisualizationStyle.indexOf(Preferences.get("musicVisualizationStyle"))
+  readonly property int ambientMode: ["printTones","asciiInk","engraving"].indexOf(Preferences.get("musicVisualizationStyle"))+1
   readonly property int backgroundStyle: Settings.choices.musicVisualizationBackground.indexOf(Preferences.get("musicVisualizationBackground"))
   readonly property var impulses: service && service.visualImpulses ? service.visualImpulses : null
   readonly property real phase: service ? service.visualPhase : 0
   readonly property bool active: service !== null && service.hasMedia && service.playing && Preferences.visualizationAllowed(horizontalFade)
-  readonly property bool animatedField: visualizationStyle !== Settings.choices.musicVisualizationStyle.indexOf("bayer") && !Preferences.reduceMotion
+  readonly property bool animatedField: !ambientMode && visualizationStyle !== Settings.choices.musicVisualizationStyle.indexOf("bayer") && !Preferences.reduceMotion
   readonly property bool sampling:animatedField && active && visible && opacity>0 && reveal>0
   onSamplingChanged:Preferences.watchVisualizer(root,sampling)
   Component.onCompleted:Preferences.watchVisualizer(root,sampling)
@@ -50,7 +52,15 @@ Item {
     property var source: artwork
     property vector2d size: Qt.vector2d(width,height)
     property real phase: root.animatedField ? root.phase : 0
-    property real style: root.visualizationStyle
+    property real style: root.ambientMode ? -1 : root.visualizationStyle
+    layer.enabled: root.ambientMode > 0 && root.active
+    layer.effect: Ambient.InkEffect {
+      fromMode: root.ambientMode
+      paper: Commons.Color.background
+      ink: Commons.Color.accent
+      highlight: Commons.Color.foreground
+      opacity: (root.horizontalFade ? 1 : root.artworkReveal)*0.56
+    }
     property real backgroundStyle: root.backgroundStyle
     property color paletteBlue: ThemePalette.blue
     property color paletteGreen: ThemePalette.green

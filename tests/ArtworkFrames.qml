@@ -119,6 +119,18 @@ ShellRoot {
       check(inkPixels>100 && emptyPixels>100,"halftone has no readable pattern")
       service.visualPhase=5;service.audioBass=0.9;wait(60)
       check(printFrame.equals(grabImage(artwork)),"halftone moved during playback")
+      service.player = {trackArtUrl: Qt.resolvedUrl("contrast.svg")}
+      var previousPrint = printFrame
+      for (var inkStyle of ["printTones","asciiInk","engraving"]) {
+        Island.Preferences.values=({musicVisualizationStyle:inkStyle})
+        wait(120)
+        var inkFrame=grabImage(artwork)
+        check(!inkFrame.equals(previousPrint),"missing printed style: "+inkStyle)
+        service.visualPhase+=1;wait(60)
+        check(inkFrame.equals(grabImage(artwork)),"printed style moved: "+inkStyle)
+        previousPrint=inkFrame
+      }
+      service.player = null
       Island.Preferences.values=({musicVisualizationStyle:"echo"})
       service.audioLevel=0;service.audioBass=0;service.audioTreble=0
       service.visualPhase=0.6;wait(60)

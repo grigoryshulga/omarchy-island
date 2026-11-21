@@ -59,3 +59,5 @@ SOFTWARE.
 ## Lobe Icons
 
 `vendor/lobe-icons/*.svg` contains the unmodified monochrome OpenAI, Claude, OpenCode, Z.ai, DeepSeek, OpenRouter, Kimi, Moonshot, MiniMax and Gemini icons from [Lobe Icons](https://github.com/lobehub/lobe-icons), revision `a177c1e817204f8ddc0c8993610ca674fc6d9767` (MIT). Island replaces `currentColor` with the live text color when rendering. Brand marks belong to their respective owners. See [license](vendor/lobe-icons/LICENSE).
+
+The shared Omarchy Ambient wallpaper effects include an altered pmndrs ASCII shader. See the [shader attribution and zlib license](ambient/THIRD_PARTY.md).

@@ -38,7 +38,7 @@ void main() {
     vec2 local = mod(pixel,vec2(6.0,12.0));
     vec2 dotIndex = clamp(floor(local/3.0),vec2(0.0),vec2(1.0,3.0));
     vec2 center = vec2(1.5)+dotIndex*3.0;
-    vec2 sampleAt = (cell*vec2(6.0,12.0)+center)/size;
+    vec2 sampleAt = style < -0.5 ? qt_TexCoord0 : (cell*vec2(6.0,12.0)+center)/size;
     vec4 cover = texture(source,clamp(sampleAt,vec2(0.01),vec2(0.99)));
     if (backgroundStyle > 0.5) {
         // Theme colors stay live. The same phase and audio envelope drive the
@@ -67,6 +67,8 @@ void main() {
         vec3 warm = mix(accent.rgb,paletteYellow.rgb,blendB*0.65);
         cover = vec4(mix(cool,warm,blendB*0.7),1.0);
     }
+    // The shared wallpaper shader consumes the unprinted color field.
+    if (style < -0.5) { fragColor = cover * qt_Opacity; return; }
     if (style > 5.5) {
         // Ordered halftone in the theme accent. Each source sample covers
         // one square of the existing three-pixel grid.
