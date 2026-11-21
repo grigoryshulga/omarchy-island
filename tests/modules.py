@@ -26,3 +26,8 @@ with ModuleHarness() as harness:
         'ISLAND_CONTROLS_HELPER':str(PROJECT / 'tests/modules/controls-process-fixture.py'),
     })
     assert not log.exists(), 'Controls bypassed the injected host/commands'
+
+with ModuleHarness() as harness:
+    harness.run(PROJECT / 'tests/Timers.qml', 'TIMERS_PASS')
+    assert (harness.storage / 'timers.json').stat().st_mode & 0o777 == 0o600
+    harness.run(PROJECT / 'tests/Timers.qml', 'TIMERS_PASS', {'TIMERS_RESTORE':'1'})

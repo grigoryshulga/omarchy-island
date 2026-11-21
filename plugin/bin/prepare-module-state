@@ -126,19 +126,21 @@ def prepare(path, legacy):
     try:
         value = read(path)
         if value != PENDING:
-            return {"data": value, "status": "loaded", "legacyPending": legacy.exists()}
+            return {"data": value, "status": "loaded", "legacyPending": (legacy is not None and legacy.exists())}
+        if legacy is None:
+            return {"data": {}, "status": "new"}
         try:
             with migration_lock(legacy):
                 return {"data": read(legacy), "status": "legacy", "legacyPending": True}
         except FileNotFoundError:
             return {"data": {}, "status": "new"}
     except (ValueError, UnicodeError):
-        return {"data": {}, "status": "corrupt", "legacyPending": legacy.exists()}
+        return {"data": {}, "status": "corrupt", "legacyPending": (legacy is not None and legacy.exists())}
 
 
 if __name__ == '__main__':
     try:
-        path, legacy = Path(sys.argv[1]), Path(sys.argv[2])
+        path, legacy = Path(sys.argv[1]), Path(sys.argv[2]) if sys.argv[2] else None
         result = retire(path, legacy, float(sys.argv[4])) if len(sys.argv) > 3 and sys.argv[3] == 'retire' else prepare(path, legacy)
         print(json.dumps(result))
     except (OSError, ValueError):

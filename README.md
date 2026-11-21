@@ -147,9 +147,13 @@ The optional Weather indicator shows the current condition and temperature, open
 
 The preview uses the real indicator components. Inactive indicators have muted placeholders so they remain selectable; editing never invokes their system actions. Module enable switches and activity conditions still control when an indicator appears on the bar. Changes save immediately in `clockLayout` and apply across monitors. This composition controls placement and visibility without changing system state. Missing modules keep their placement; new modules are offered in the add menu. Without a saved composition, the original order and legacy `indicator*` switches remain in effect. Time stays in the center and retains its existing popup, hover, mouse and OSD behavior.
 
-**Now** is an optional item in the clock widget builder. Add it to either side of the clock. It shows one activity in priority order: a connected T3 session that needs input, the oldest active download (with its actual byte count), or the selected MPRIS player while playing. It hides when all three are idle. On vertical bars it shows the icon only.
+**Now** is an optional item in the clock widget builder. Add it to either side of the clock. It shows one activity in priority order: a connected T3 session that needs input, a running time tool (timer, Pomodoro, then stopwatch), the oldest active download (with its actual byte count), or the selected MPRIS player while playing. It hides when all activities are idle. On vertical bars it shows the icon only.
 
 Hover over Now for a read-only preview of the request, file, or track. Click the indicator or its preview to pin the corresponding details. Enter or Space on the focused indicator does the same. One pending T3 session opens its form, multiple requests open the waiting list, a download opens its file card and stays on that file through completion or cancellation, and music opens the player. Other activities can update while the pinned view stays on the chosen module. Back or Escape returns to Overview.
+
+### Time tools
+
+Open **Overview → Time tools** or run `omarchy-shell island timers` to use the timer, Pomodoro and stopwatch independently. The timer accepts minutes or `min:sec` (one second to 24 hours). The stopwatch displays tenths of a second in its detail view. Start, pause, resume or reset any tool. Pomodoro uses four 25-minute focus sessions with 5-minute breaks and a 15-minute break after the fourth session. When a countdown ends, Island sends a desktop notification. Start the next Pomodoro phase when ready. Running and paused tools survive popup dismissal and shell restarts. **Now** displays a running tool and opens its controls directly.
 
 ### Keyboard
 
@@ -184,7 +188,7 @@ Google OAuth/account selection and event editing are not included. [Integration 
 ### IPC
 
 ```text
-omarchy-shell island open|close|toggle|controls|calendar|weather|settings|status
+omarchy-shell island open|close|toggle|controls|timers|calendar|weather|settings|status
 omarchy-shell notifications probe|toggleDnd|dismissAll
 omarchy-shell island-update refresh|clear
 ```

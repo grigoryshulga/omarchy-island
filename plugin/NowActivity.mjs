@@ -1,3 +1,5 @@
+import * as Time from "./modules/timers/Time.mjs";
+
 // Use only connected sources. Return the original row so opening the
 // indicator can target the same session, file or selected MPRIS player.
 export function current(service) {
@@ -7,6 +9,14 @@ export function current(service) {
   if (t3 && t3.connected) {
     const pending = t3.rows.filter(row => !!row.requestId);
     if (pending.length) return {kind:"t3", count:pending.length, row:pending[0]};
+  }
+
+  const timers = service.modules && service.modules.timers;
+  if (timers && timers.activeMode) {
+    const mode = timers.activeMode;
+    const state = timers.records[mode];
+    return {kind:"timers", count:1, row:{mode, label:mode === "pomodoro" ? Time.phase(state.step) : mode,
+      seconds:Time.reading(mode,state,timers.now)}};
   }
 
   // Watcher updates can change enumeration order. Keep the oldest active
@@ -26,5 +36,5 @@ export function current(service) {
 
 export function glyph(activity) {
   if (!activity) return "";
-  return {t3:"󰋗", downloads:"󰇚", media:"󰎆"}[activity.kind];
+  return {t3:"󰋗", timers:"󱎫", downloads:"󰇚", media:"󰎆"}[activity.kind];
 }

@@ -145,6 +145,8 @@ BarWidget {
     if (activity.kind==="t3") {
       if (activity.count===1) target.sessionId=activity.row.id
       else target.pendingOnly=true
+    } else if (activity.kind==="timers") {
+      target.mode=activity.row.mode
     } else if (activity.kind==="downloads") {
       target.downloadKey=activity.row.key
       target.downloadName=activity.row.filename
@@ -540,6 +542,7 @@ BarWidget {
     function open(): void { root.open() }
     function close(): void { root.close() }
     function settings(): void {var overview=previewContent.pageObject(1);if(overview) overview.openSettings()}
+    function timers(): void { root.openModuleDetails("timers") }
     function controls(): void { root.openControls() }
     function calendar(): void { root.openCalendar() }
     function weather(): void { root.openWeather() }
