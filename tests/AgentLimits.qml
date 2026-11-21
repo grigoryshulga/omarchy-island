@@ -126,12 +126,16 @@ ShellRoot {
       // Additional providers retain identity on refresh and never fabricate quota values.
       cache=JSON.parse(JSON.stringify(backend.cache))
       cache.providers[0].limitsCheckedAt=backend.now-180000
-      cache.providers.push({id:"deepseek",name:"DeepSeek",balance:[{currency:"USD",total:0}]})
+      cache.providers.push({id:"deepseek",name:"DeepSeek",balance:[{currency:"USD",total:"10.01",granted:"0.01",toppedUp:"10.00"}]})
       cache.providers.push({id:"openai-api",name:"OpenAI API"})
       backend.cache=cache;wait(20)
       var balanceGroup=findChild(center,"limitsProvider-deepseek")
-      check(findChild(balanceGroup,"limitsProviderBalance").visible,"zero balance hidden")
+      var balanceLabel=findChild(balanceGroup,"limitsProviderBalance")
+      check(balanceLabel.visible && balanceLabel.text===strings.t("limits.balance").arg("USD "+Commons.I18n.formatNumber(10.01,2)),"DeepSeek decimal-string balance hidden")
+      check(!findChild(balanceGroup,"limitsProviderEmpty").visible,"available balance shown as unavailable")
       check(!findChild(balanceGroup,"limitRemaining"),"balance-only provider gained quota")
+      cache.providers[1].balance[0].total="0.00";backend.cache=JSON.parse(JSON.stringify(cache));wait(20)
+      check(findChild(center,"limitsProvider-deepseek")===balanceGroup && balanceLabel.visible && balanceLabel.text===strings.t("limits.balance").arg("USD "+Commons.I18n.formatNumber(0,2)),"zero balance hidden on refresh")
       check(findChild(findChild(center,"limitsProvider-openai-api"),"limitsProviderEmpty").text===strings.t("limits.localOnly"),"local-only provider shown as failure")
       check(findChild(center,"limitFreshness").text===strings.t("limits.checkedMinutes").arg(Commons.I18n.formatNumber(3)),"freshness missing")
       cache.providers[0].status="error";backend.cache=JSON.parse(JSON.stringify(cache));wait(20)
