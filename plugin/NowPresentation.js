@@ -24,6 +24,5 @@ function describe(activity, strings, formatNumber) {
     var bytes = Downloads.sizeText(row.downloadedBytes,formatNumber)
     return {label:bytes, title:strings.t("downloads.downloading"), detail:[row.filename, bytes].join(" · ")}
   }
-  var title = row.trackTitle || strings.t("now.playing")
-  return {label:title, title:title, detail:row.trackArtist || row.identity || strings.t("media.title")}
+  return {label:"", title:"", detail:""}
 }

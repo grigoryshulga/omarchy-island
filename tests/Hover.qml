@@ -194,15 +194,19 @@ ShellRoot {
       leave()
       service.targetScreen="old-notification-screen"
       service.focusedScreenName=widget.screenName
+      service.player={trackTitle:"First",trackArtUrl:""}
       service.playing=true;service.track="first"
       compare(widget.showAlert,true)
       compare(widget.alertKind,"media")
+      verify(!indicator.visible && !nowCard.visible)
       service.focusedScreenName="other-monitor"
       compare(widget.showAlert,true,"focus alone must not move the toast")
       service.track="second"
       compare(widget.showAlert,false)
       service.focusedScreenName=widget.screenName
+      service.player={trackTitle:"Third",trackArtUrl:""}
       service.track="third";compare(widget.showAlert,true)
+      verify(!indicator.visible && !nowCard.visible)
       service.doNotDisturb=true;compare(widget.showAlert,false)
       service.track="muted";service.doNotDisturb=false
       compare(widget.showAlert,false)

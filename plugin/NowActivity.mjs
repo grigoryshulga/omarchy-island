@@ -1,7 +1,7 @@
 import * as Time from "./modules/timers/Time.mjs";
 
 // Use only connected sources. Return the original row so opening the
-// indicator can target the same session, file or selected MPRIS player.
+// indicator can target the same session or file.
 export function current(service) {
   if (!service) return null;
 
@@ -28,14 +28,11 @@ export function current(service) {
     return {kind:"downloads", count:files.length, row:first};
   }
 
-  if (service.playing && service.player) {
-    return {kind:"media", count:1, row:service.player};
-  }
   return null;
 }
 
 export function glyph(activity) {
   if (!activity) return "";
   if (activity.kind === "timers") return Time.glyphs[activity.row.mode];
-  return {t3:"󰋗", downloads:"󰇚", media:"󰎆"}[activity.kind];
+  return {t3:"󰋗", downloads:"󰇚"}[activity.kind];
 }

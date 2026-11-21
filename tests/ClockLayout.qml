@@ -122,12 +122,14 @@ ShellRoot {
         compare(liveStrip.implicitWidth,0)
         service.player={trackTitle:"Long track title ".repeat(12),trackArtist:"Artist",dbusName:"test"}
         service.playing=true;wait(20)
-        verify(now.visible && now.width<=Commons.Style.space(136))
-        mouseClick(now,now.width/2,now.height/2)
-        compare(liveStrip.openedActivity.kind,"media")
+        verify(!now.visible)
+        compare(liveStrip.implicitWidth,0)
         service.downloads=[{key:"file",downloadPath:"/downloads/file",filename:"cover",downloadedBytes:4096,active:true,ts:1}]
         wait(20)
+        verify(now.visible && now.width<=Commons.Style.space(136))
         compare(now.text,"4 KiB")
+        mouseClick(now,now.width/2,now.height/2)
+        compare(liveStrip.openedActivity.kind,"downloads")
         liveStrip.vertical=true;wait(20)
         compare(now.text,"")
         verify(now.Accessible.name.includes("cover") && now.Accessible.name.includes("4 KiB"))
