@@ -41,7 +41,7 @@ Rectangle {
       FeedbackButton {
         id:handle;objectName:"overviewDrag-"+root.entryKey
         Layout.fillWidth:true;Layout.minimumWidth:0
-        text:root.title;iconText:"⠿";leftAlign:true;horizontalPadding:0;compact:true
+        text:root.title;iconText:"⠿";leftAlign:true;horizontalPadding:Design.gap.small;compact:true
         fontSize:Design.type.caption
         tooltipText:root.strings.t("overview.reorder").arg(root.title)
         Accessible.name:tooltipText

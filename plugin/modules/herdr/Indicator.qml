@@ -12,13 +12,14 @@ Island.ModuleView {
   readonly property bool waiting:!!root.backend && root.backend.waitingCount>0
   readonly property string text:Commons.I18n.formatNumber(root.backend ? root.backend.waitingCount || root.backend.workingCount : 0)
   readonly property color color:root.presentation.showAlert ? Commons.Color.accent : root.presentation.bar ? root.presentation.bar.barForeground : Commons.Color.foreground
-  implicitWidth:root.presentation.vertical ? Math.min(root.presentation.barSize-Style.space(4),herdrIndicatorBody.implicitWidth) : herdrIndicatorBody.implicitWidth;implicitHeight:herdrIndicatorBody.implicitHeight
+  readonly property real sidePadding:presentation.vertical ? 0 : Island.Design.gap.tight
+  implicitWidth:root.presentation.vertical ? Math.min(root.presentation.barSize-Style.space(4),herdrIndicatorBody.implicitWidth) : Math.ceil(herdrIndicatorBody.implicitWidth+2*sidePadding);implicitHeight:herdrIndicatorBody.implicitHeight
   GridLayout {
     columns:root.presentation.vertical ? 1 : -1
     rows:root.presentation.vertical ? -1 : 1
     id:herdrIndicatorBody
     anchors.centerIn:parent
-    width:parent.width
+    width:Math.max(0,parent.width-2*root.sidePadding)
     columnSpacing:Style.space(4);rowSpacing:Style.space(4)
     T3Spinner {objectName:"islandHerdrSpinner";tint:root.color;visible:!root.waiting;active:root.visible && root.available;implicitWidth:herdrCount.font.pixelSize*0.75;Layout.alignment:Qt.AlignVCenter}
     PlainText {visible:root.waiting;text:"󰆍";color:root.color;typeRole:"bar";Layout.alignment:Qt.AlignVCenter;verticalAlignment:Text.AlignVCenter}

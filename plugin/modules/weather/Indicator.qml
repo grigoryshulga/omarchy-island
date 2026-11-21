@@ -15,7 +15,8 @@ Island.ModuleView {
   readonly property string temperatureText:temperature===null ? "—" : Commons.I18n.formatNumber(temperature)+(unit==="kelvin" ? " K" : "°")
   readonly property bool stale:!!backend && !!backend.stale && !!current
   tooltip:presentation.strings.t("weather.open")+(temperature===null ? "" : " · "+Commons.I18n.formatNumber(temperature)+Weather.unitSymbol(unit))+(stale ? " · "+presentation.strings.t("weather.stale") : "")
-  implicitWidth:presentation.vertical ? Math.min(presentation.barSize-Style.space(4),content.implicitWidth) : content.implicitWidth
+  readonly property real sidePadding:presentation.vertical ? 0 : Island.Design.gap.tight
+  implicitWidth:presentation.vertical ? Math.min(presentation.barSize-Style.space(4),content.implicitWidth) : Math.ceil(content.implicitWidth+2*sidePadding)
   implicitHeight:presentation.vertical ? content.implicitHeight : presentation.barHeight
   // The existing shared service owns refreshes; multiple monitors never create collectors.
   function activate() {if(backend && backend.allowed && !backend.activated) backend.activate()}
@@ -29,7 +30,7 @@ Island.ModuleView {
   }
   GridLayout {
     id:content
-    anchors.centerIn:parent;width:parent.width
+    anchors.centerIn:parent;width:Math.max(0,parent.width-2*root.sidePadding)
     columns:root.presentation.vertical ? 1 : 2
     rowSpacing:Style.space(2);columnSpacing:Style.space(4)
     Island.WeatherScene {

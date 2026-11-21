@@ -21,7 +21,7 @@ Island.ModuleView {
     fontSize:Design.type.bar
     fontFamily:root.presentation.bar ? root.presentation.bar.fontFamily : Style.font.family
     implicitHeight:root.presentation.vertical ? fontSize*2.7 : root.presentation.barHeight
-    horizontalPadding:0;verticalPadding:0
+    horizontalPadding:root.presentation.vertical ? 0 : Design.gap.tight;verticalPadding:0
     focusable:true
     tooltipText:root.tooltip
     onClicked:root.detailsRequested()

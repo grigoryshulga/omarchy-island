@@ -95,6 +95,11 @@ ShellRoot {
         wait(30)
         const a=textItem(clock,clock.text), b=textItem(date,date.text)
         verify(a && b)
+        for (const [button,label] of [[clock,a],[date,b]]) {
+          const left=label.mapToItem(button,0,0).x
+          const right=button.width-left-label.width
+          verify(Math.min(left,right)>=Island.Design.gap.small-0.5,"Header label touches its highlight at width "+width)
+        }
         if (width===520) compare(a.fontInfo.pixelSize,b.fontInfo.pixelSize)
         const timeY=a.mapToItem(overview,0,a.baselineOffset).y
         const dateY=b.mapToItem(overview,0,b.baselineOffset).y

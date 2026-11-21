@@ -53,7 +53,7 @@ ColumnLayout {
       visible:root.question.allowCustomAnswer && root.question.options.length>0 && !root.customOpen
       text:root.strings.t("t3.custom");iconText:"+"
       fontSize:Design.type.label
-      horizontalPadding:Design.gap.tight;verticalPadding:Design.gap.small
+      horizontalPadding:Design.gap.small;verticalPadding:Design.gap.small
       focusable:true;feedback:root.feedback
       onClicked:{root.customOpen=true;custom.forceActiveFocus()}
     }

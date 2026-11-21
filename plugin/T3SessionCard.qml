@@ -125,11 +125,11 @@ ContainerSurface {
             borderSpec:Border.none()
             text:"";tooltipText:root.strings.t("t3.open");Accessible.name:root.row.title
             implicitHeight:titleLabel.implicitHeight+Style.space(4)
-            horizontalPadding:0;verticalPadding:Design.gap.micro
+            horizontalPadding:Design.gap.small;verticalPadding:Design.gap.micro
             focusable:root.expanded;feedback:root.feedback;onClicked:root.bridge.openThread(root.row.id)
             Rectangle {
               objectName:"threadTitleFocusUnderline"
-              anchors.left:parent.left;anchors.bottom:parent.bottom
+              anchors.left:titleLabel.left;anchors.bottom:parent.bottom
               width:Math.min(titleLabel.paintedWidth,titleLabel.width);height:Math.max(1,Style.space(1))
               color:Design.focusRing;visible:titleLink.activeFocus
             }
@@ -137,6 +137,7 @@ ContainerSurface {
               id:titleLabel
               objectName:"t3SessionTitle"
               anchors.left:parent.left;anchors.right:parent.right;anchors.verticalCenter:parent.verticalCenter
+              anchors.leftMargin:titleLink.horizontalPadding;anchors.rightMargin:titleLink.horizontalPadding
               text:root.row.title;typeRole:"body";font.weight:Font.DemiBold;elide:Text.ElideRight
             }
           }

@@ -26,6 +26,10 @@ ShellRoot {
       Island.Surface {id:surface;Layout.fillWidth:true;implicitHeight:60}
       Item {Layout.fillHeight:true}
     }
+    Island.FeedbackButton {
+      id:narrowAction;x:480;y:12;width:125;leftAlign:true;focusable:true
+      iconText:"+";text:"Добавить напоминание"
+    }
     Island.BrailleSpotlight {id:spot; width:200;height:100;active:true}
     Island.ContainerSurface {id:cornerProbe;x:500;y:500;width:100;height:100;radius:20;color:"#ff0000";borderSpec:Commons.Border.flat("#00ff00",2)}
     TestCase {
@@ -40,6 +44,17 @@ ShellRoot {
       }
       function test_design() {
         var originalSize=Commons.Style.fontBaseSize
+        var label=visibleText(narrowAction,narrowAction.text)
+        var glyph=visibleText(narrowAction,narrowAction.iconText)
+        verify(label && glyph)
+        var left=glyph.mapToItem(narrowAction,0,0).x
+        var right=narrowAction.width-label.mapToItem(narrowAction,label.width,0).x
+        verify(label.width>0 && Math.min(left,right)>=narrowAction.horizontalPadding,"Constrained icon button lost its side padding")
+        mouseMove(narrowAction,narrowAction.width/2,narrowAction.height/2)
+        tryCompare(narrowAction,"hot",true)
+        narrowAction.forceActiveFocus(Qt.TabFocusReason)
+        compare(glyph.mapToItem(narrowAction,0,0).x,left)
+        compare(narrowAction.width-label.mapToItem(narrowAction,label.width,0).x,right)
         iconAction.Accessible.pressAction()
         compare(iconAction.activations,1)
         iconAction.enabled=false

@@ -50,7 +50,7 @@ ContainerSurface {
   ColumnLayout {
     id: content
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-    anchors.margins: root.compact ? Design.gap.micro : Design.cardPadding
+    anchors.margins: root.compact ? Design.gap.small : Design.cardPadding
     anchors.topMargin:root.verticalPadding
     spacing:Design.gap.tight
     RowLayout {

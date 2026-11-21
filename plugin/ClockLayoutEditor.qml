@@ -119,11 +119,11 @@ Column {
         }
         FeedbackButton {
           id:clockButton;objectName:"clockElement-clock"
-          width:clockText.implicitWidth+Style.space(6);height:clockText.implicitHeight+Style.space(10)
+          width:clockText.implicitWidth+2*horizontalPadding;height:clockText.implicitHeight+Style.space(10)
           x:(parent.width-width)/2
           y:root.vertical ? left.y+left.height+left.rowSpacing : (parent.height-height)/2
           selected:root.selectedId==="clock";bordered:selected;focusable:true
-          horizontalPadding:0;verticalPadding:0
+          horizontalPadding:Design.gap.small;verticalPadding:0
           Accessible.name:root.strings.t("clock.time")
           onClicked:root.selectedId="clock"
           onActiveFocusChanged:if(activeFocus) {root.selectedId="clock";preview.reveal(this)}

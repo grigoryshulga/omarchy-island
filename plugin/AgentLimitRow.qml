@@ -37,13 +37,15 @@ Item {
     onClicked:root.activated()
     Rectangle {
       anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom
+      anchors.leftMargin:Design.gap.small;anchors.rightMargin:Design.gap.small
       height:Math.max(1,Style.space(1));color:Design.focusRing
       visible:openButton.activeFocus
     }
   }
   ColumnLayout {
     id:body
-    width:parent.width
+    anchors.left:parent.left;anchors.right:parent.right
+    anchors.leftMargin:Design.gap.small;anchors.rightMargin:Design.gap.small
     spacing:Design.gap.tight
     RowLayout {
       Layout.fillWidth:true

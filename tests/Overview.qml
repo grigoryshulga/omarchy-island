@@ -154,6 +154,10 @@ ShellRoot {
         notificationsArrow.forceActiveFocus();wait(20)
         var underline=findChild(notificationsArrow,"sectionFocusUnderline")
         verify(underline.visible && underline.height<=Commons.Style.space(2) && underline.width<notificationsArrow.width,"heading focus is not a compact underline")
+        verify(underline.x>=Island.Design.gap.small,"Section focus underline touches the edge")
+        var threadTitle=findChild(findChild(overview,"t3Session-done-0"),"t3SessionTitle")
+        var titleInset=threadTitle.mapToItem(threadTitle.parent,0,0).x
+        verify(titleInset>=Island.Design.gap.small && threadTitle.parent.width-threadTitle.width-titleInset>=Island.Design.gap.small,"Thread title touches its highlight")
         var threadAction=findChild(findChild(overview,"t3Session-done-0"),"t3Details")
         verify(threadAction.iconText==="","thread still has a navigation arrow")
         mouseMove(t3Button.parent,t3Button.parent.width/2,t3Button.parent.height/2);wait(20)
@@ -183,6 +187,8 @@ ShellRoot {
         var limitOpen=findChild(limitsSection,"limitOpen")
         verify(!limitsButton.visible && limitOpen.visible,"Compact limits must replace the heading with row navigation")
         verify(limitsSection.height<standardLimitsHeight,"Compact limits retained heading space")
+        var gaugeInset=braille.mapToItem(limitOpen,0,0).x
+        verify(gaugeInset>=Island.Design.gap.small && limitOpen.width-braille.width-gaugeInset>=Island.Design.gap.small,"Quota content touches its highlight")
         mouseClick(braille,braille.width/2,braille.height/2);wait(50)
         compare(overview.detailPage,"agentLimits","Clicking the compact gauge did not open limits")
         verify(overview.back());wait(50)
@@ -420,7 +426,7 @@ ShellRoot {
         overview.height=Qt.binding(function(){return overview.implicitHeight})
         Island.Preferences.values={overviewLayout:overview.moduleDefinitions.map(function(entry){return {id:entry.id,visible:false,size:"standard"}})};wait(40)
         var emptyHeight=overview.implicitHeight
-        compare(emptyHeight,findChild(overview,"overviewHeader").height,"Empty summary retains a minimum height")
+        compare(emptyHeight,Math.ceil(findChild(overview,"overviewHeader").height),"Empty summary retains a minimum height")
         Island.Preferences.values={};wait(40)
         verify(overview.height>emptyHeight && overview.height<=overview.maximumOverviewHeight,"Summary does not grow with its content")
         overview.maximumOverviewHeight=120;wait(40)

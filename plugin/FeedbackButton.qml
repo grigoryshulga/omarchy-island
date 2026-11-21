@@ -71,7 +71,7 @@ BorderSurface {
   onActiveFocusChanged: if (!activeFocus) pointerFocus = false
 
   // Reserve focus width in every state so hover and focus never relayout siblings.
-  implicitWidth: _contentNaturalWidth + horizontalPadding * 2 + _reservedBorderLeft + _reservedBorderRight
+  implicitWidth: Math.ceil(_contentNaturalWidth + leftPadding + rightPadding + _reservedBorderLeft + _reservedBorderRight)
   implicitHeight: Math.max(compact ? Design.compactControlHeight : Design.controlHeight, row.implicitHeight + verticalPadding * 2 + _reservedBorderTop + _reservedBorderBottom)
   baselineOffset: row.y + label.y + label.baselineOffset
   radius: Design.controlRadius
@@ -107,7 +107,7 @@ BorderSurface {
   readonly property real _reservedContentLeftInset: _reservedBorderLeft + leftPadding
   readonly property real _iconRoom: root.iconText !== "" ? iconGlyph.implicitWidth + (root.text !== "" ? row.spacing : 0) : 0
   readonly property real _contentNaturalWidth: _iconRoom + (root.text !== "" ? label.implicitWidth : 0)
-  readonly property real _labelRoom: width - horizontalPadding - _reservedBorderLeft - _reservedBorderRight - _iconRoom
+  readonly property real _labelRoom: width - leftPadding - rightPadding - _reservedBorderLeft - _reservedBorderRight - _iconRoom
   readonly property var _borderSpec: _showFocusRing ? _focusBorderSpec
     : hot                      ? _hoverBorderSpec
     : selected                 ? (bordered ? _selectedBorderSpec : Border.none())

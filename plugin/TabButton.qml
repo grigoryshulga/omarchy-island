@@ -10,7 +10,7 @@ FeedbackButton {
   readonly property real leadingInset:iconText ? iconSize+Design.gap.large : 0
   // Flow uses the button's natural width; the inherited Button.text is empty
   // because this component paints its own label.
-  implicitWidth:Math.ceil(tabLabel.implicitWidth)+Style.space(24)
+  implicitWidth:Math.ceil(tabLabel.implicitWidth)+2*horizontalPadding
   implicitHeight:Design.controlHeight
   Accessible.name: label
   Accessible.role: Accessible.PageTab
@@ -22,7 +22,7 @@ FeedbackButton {
     objectName:"tabLabel"
     anchors.centerIn:parent
     anchors.horizontalCenterOffset:(root.leadingInset-root.trailingInset)/2*(Commons.I18n.rightToLeft ? -1 : 1)
-    width:Math.max(0,parent.width-Style.space(12)-root.trailingInset-root.leadingInset)
+    width:Math.max(0,parent.width-2*root.horizontalPadding-root.trailingInset-root.leadingInset)
     elide:Text.ElideRight
     text:root.label
     horizontalAlignment:root.leftAlign ? (Commons.I18n.rightToLeft ? Text.AlignRight : Text.AlignLeft) : Text.AlignHCenter
