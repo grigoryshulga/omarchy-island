@@ -21,43 +21,48 @@ Item {
   property bool islandContentHeightHint: false
   property Component content: null
   property bool contentRequested: false
-  // Other panels own their scroll areas and reveal keyboard selections there.
-  // Network lays out its header and sections in a plain Column.
-  readonly property bool scrollContent: page && page.moduleName === "omarchy.network"
+  // Eager panels declare their preferred height directly on KeyboardPanel.
+  // Network uses lazy content with a plain Column instead of its own scroll area.
+  readonly property bool scrollEagerContent: !content && islandContentHeightHint
+  readonly property bool scrollContent: scrollEagerContent || (!!page && page.moduleName === "omarchy.network")
   readonly property Item loadedContent: loader.item
   readonly property real loadedContentHeight: loader.item ? loader.item.implicitHeight : 0
   default property alias contents: holder.data
 
   function ensureContent() { contentRequested = true; return loader.item }
   function fittedContentWidth(value, cap) { return Math.min(width, cap > 0 ? Math.min(value, cap) : value) }
-  function fittedContentHeight(value, cap) { return Math.min(height, cap > 0 ? Math.min(value, cap) : value) }
+  function fittedContentHeight(value, cap) {
+    var desired = cap > 0 ? Math.min(value, cap) : value
+    return scrollEagerContent ? desired : Math.min(height, desired)
+  }
   function focusContent() { if (open && focusTarget) focusTarget.forceActiveFocus() }
   onOpenChanged: if (open) { contentRequested = true; Qt.callLater(focusContent) }
   onLoadedContentHeightChanged: if (page) page.inlineContentHeight = loadedContentHeight
   onPageChanged: if (page) page.inlineContentHeight = loadedContentHeight
   visible: open
-  Item {
-    id: holder
+  Flickable {
+    id: viewport
+    objectName: "inlinePanelViewport"
     anchors.fill: parent
-    Flickable {
-      id: viewport
-      objectName: "inlinePanelViewport"
-      anchors.fill: parent
-      contentWidth: width
-      contentHeight: root.scrollContent ? Math.max(height, root.loadedContentHeight) : height
-      interactive: root.scrollContent && contentHeight > height
-      flickableDirection: Flickable.VerticalFlick
-      boundsBehavior: Flickable.StopAtBounds
-      clip: true
-      Loader {
-        id: loader
-        width: viewport.width
-        height: viewport.contentHeight
-        active: !!root.content && (root.open || root.contentRequested)
-        sourceComponent: root.content
-        focus: true
-        onLoaded: Qt.callLater(root.focusContent)
-      }
+    contentWidth: width
+    contentHeight: root.scrollContent ? Math.max(height, root.scrollEagerContent ? root.contentHeight : root.loadedContentHeight) : height
+    interactive: root.scrollContent && contentHeight > height
+    flickableDirection: Flickable.VerticalFlick
+    boundsBehavior: Flickable.StopAtBounds
+    clip: true
+    Item {
+      id: holder
+      width: viewport.contentWidth
+      height: viewport.contentHeight
+    }
+    Loader {
+      id: loader
+      width: viewport.width
+      height: viewport.contentHeight
+      active: !!root.content && (root.open || root.contentRequested)
+      sourceComponent: root.content
+      focus: true
+      onLoaded: Qt.callLater(root.focusContent)
     }
   }
 }

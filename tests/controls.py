@@ -20,20 +20,43 @@ with tempfile.TemporaryDirectory(prefix='island-controls-') as temporary:
     (system/'shell').symlink_to('/usr/share/omarchy/shell')
     external=root/'external';external.mkdir()
     (external/'Panel.qml').write_text("""import QtQuick
-import qs.Ui
-Panel {
+import QtQuick.Controls as Controls
+import qs.Commons as Theme
+import qs.Ui as Native
+Native.Panel {
   id:root
   moduleName:"fixture.control"
-  KeyboardPanel {
+  Native.BarIconButton {id:icon; bar:root.bar; text:"VPN"}
+  Native.KeyboardPanel {
     id:panel
+    anchorItem:icon
+    bar:root.bar
     open:root.opened
-    focusTarget:panel.loadedContent
-    content:Item {implicitHeight:100}
+    focusTarget:keys
+    contentHeight:fittedContentHeight(layout.implicitHeight)
+    Native.PanelKeyCatcher {
+      id:keys
+      anchors.fill:parent
+      onActivateRequested:action.clicked()
+      onCloseRequested:root.close()
+      Column {
+        id:layout
+        Native.Button {
+          id:action
+          objectName:"fixtureAction"
+          fontSize:Theme.Style.font.body
+          text:"Refresh"
+          onClicked:foreign.highlighted=true
+        }
+        Item {width:1; height:foreign.highlighted ? 1000 : 0}
+        Controls.Button {id:foreign; objectName:"fixtureForeignButton"; text:"Region"}
+      }
+    }
   }
 }
 """)
     (external/'Bad.qml').write_text('import QtQuick\nItem {}')
-    catalog=[{'id':'fixture.control','name':'Fixture','sourceDir':str(external),'entryPoints':{'panel':'Panel.qml'},'barWidget':{'defaults':{'exampleValue':7}}},
+    catalog=[{'id':'fixture.control','name':'Fixture','sourceDir':str(external),'entryPoints':{'barWidget':'Panel.qml'},'barWidget':{'defaults':{'exampleValue':7}}},
              {'id':'fixture.unsupported','sourceDir':str(external),'entryPoints':{'panel':'Bad.qml'}}]
     helper=system/'bin/omarchy-plugin-catalog'
     helper.write_text('#!/usr/bin/env python3\nprint('+repr(json.dumps(catalog))+')\n')

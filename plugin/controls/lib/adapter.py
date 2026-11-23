@@ -60,8 +60,16 @@ class Token:
 class ObjectNode:
     type_name: str
     type_token: Token
+    qualifier: Token | None
     open_token: Token
     close_token: Token
+
+    @property
+    def type_start(self) -> int:
+        return self.qualifier.start if self.qualifier else self.type_token.start
+
+    def from_module(self, module: str, aliases: dict[str, str]) -> bool:
+        return self.qualifier is None or aliases.get(self.qualifier.value) == module
 
 
 @dataclass
@@ -145,26 +153,39 @@ def tokens(source: str) -> list[Token]:
 
 def object_nodes(token_list: list[Token]) -> list[ObjectNode]:
     """Recognize QML object blocks; JavaScript blocks do not have a type token."""
-    stack: list[tuple[Token, Token]] = []
+    stack: list[tuple[Token | None, Token | None, Token]] = []
     nodes: list[ObjectNode] = []
     for index, token in enumerate(token_list):
         if token.value == "{" and index > 0:
             previous = token_list[index - 1]
             if previous.value and (previous.value[0].isalpha() or previous.value[0] == "_"):
-                stack.append((previous, token))
+                qualifier = token_list[index - 3] if index >= 3 and token_list[index - 2].value == "." else None
+                stack.append((previous, qualifier, token))
             else:
-                stack.append((Token("", token.start, token.start), token))
+                stack.append((None, None, token))
         elif token.value == "{":
-            stack.append((Token("", token.start, token.start), token))
+            stack.append((None, None, token))
         elif token.value == "}":
             if not stack:
                 raise AdaptationError("unmatched closing brace")
-            type_token, open_token = stack.pop()
-            if type_token.value:
-                nodes.append(ObjectNode(type_token.value, type_token, open_token, token))
+            type_token, qualifier, open_token = stack.pop()
+            if type_token:
+                nodes.append(ObjectNode(type_token.value, type_token, qualifier, open_token, token))
     if stack:
         raise AdaptationError("unmatched opening brace")
     return sorted(nodes, key=lambda node: node.open_token.start)
+
+
+def import_aliases(source: str, token_list: list[Token], root: ObjectNode) -> dict[str, str]:
+    aliases = {}
+    declaration = re.compile(r"import\s+([\w.]+)(?:\s+\d+(?:\.\d+)?)?\s+as\s+(\w+)")
+    for token in token_list:
+        if token.start >= root.type_start:
+            break
+        if token.value == "import" and (match := declaration.match(source, token.start)):
+            module, alias = match.groups()
+            aliases[alias] = module
+    return aliases
 
 
 def direct_property(token_list: list[Token], node: ObjectNode, name: str) -> tuple[Token, Token] | None:
@@ -420,6 +441,7 @@ def island_replacements(
     nodes: list[ObjectNode],
     root: ObjectNode,
     root_id: str,
+    aliases: dict[str, str],
     adapter_dir: Path | None = None,
 ) -> list[tuple[int, int, str]]:
     """Disable process-global hooks that an in-process copy must not own."""
@@ -428,24 +450,38 @@ def island_replacements(
     for node in nodes:
         if not contains(root, node):
             continue
-        if node.type_name in ("IpcHandler", "ShellIpc"):
+        if ((node.type_name == "IpcHandler" and node.from_module("Quickshell.Io", aliases))
+                or (node.type_name == "ShellIpc" and node.from_module("qs.Commons", aliases))):
             verify_shim_contract(node, token_list, "IslandDisabledIpc.qml", shims)
-            replacements.append((node.type_token.start, node.type_token.end, "IslandDisabledIpc"))
+            replacements.append((node.type_start, node.type_token.end, "IslandDisabledIpc"))
+        elif node.type_name == "Shortcut" and node.from_module("QtQuick", aliases):
+            sequence = direct_property(token_list, node, "sequence")
+            if sequence is None:
+                continue
+            _, colon = sequence
+            value_index = token_list.index(colon) + 1
+            if value_index >= len(token_list):
+                continue
+            value = token_list[value_index]
+            if value.value in ('"Escape"', "'Escape'"):
+                replacements.append((value.start, value.end, f'{root_id}.islandHost ? "" : {value.value}'))
+        elif not node.from_module("qs.Ui", aliases):
+            continue
         elif node.type_name in ("BarIconButton", "WidgetButton"):
             verify_shim_contract(node, token_list, "IslandHiddenBarButton.qml", shims)
-            replacements.append((node.type_token.start, node.type_token.end, "IslandHiddenBarButton"))
+            replacements.append((node.type_start, node.type_token.end, "IslandHiddenBarButton"))
         elif node.type_name == "PanelSlider":
             accessibility = slider_accessibility(source, token_list, node, root, root_id)
             if accessibility:
                 replacements.append((node.open_token.end, node.open_token.end, accessibility))
         elif node.type_name == "ToggleSwitch":
-            replacements.append((node.type_token.start, node.type_token.end, "ControlSwitch"))
+            replacements.append((node.type_start, node.type_token.end, "ControlSwitch"))
         elif node.type_name == "PanelKeyCatcher":
             verify_shim_contract(node, token_list, "ControlKeyCatcher.qml", shims)
-            replacements.append((node.type_token.start, node.type_token.end, "ControlKeyCatcher"))
+            replacements.append((node.type_start, node.type_token.end, "ControlKeyCatcher"))
         elif node.type_name in ("PanelSectionHeader", "Text"):
             if node.type_name == "PanelSectionHeader":
-                replacements.append((node.type_token.start, node.type_token.end, "ControlSectionHeader"))
+                replacements.append((node.type_start, node.type_token.end, "ControlSectionHeader"))
             # Text implicitHeight can depend on explicit height during reflow.
             # Hidden Text in Columns already collapses out of the layout.
             binding = binding_line(source, direct_property(token_list, node, "height"))
@@ -457,18 +493,7 @@ def island_replacements(
             replacement = {"PanelSeparator": "ControlGap", "PanelActionButton": "ControlActionButton",
                            "Button": "IslandKit.FeedbackButton", "TextField": "IslandKit.DesignTextField",
                            "Dropdown": "IslandKit.DesignDropdown"}[node.type_name]
-            replacements.append((node.type_token.start, node.type_token.end, replacement))
-        elif node.type_name == "Shortcut":
-            sequence = direct_property(token_list, node, "sequence")
-            if sequence is None:
-                continue
-            _, colon = sequence
-            value_index = token_list.index(colon) + 1
-            if value_index >= len(token_list):
-                continue
-            value = token_list[value_index]
-            if value.value in ('"Escape"', "'Escape'"):
-                replacements.append((value.start, value.end, f'{root_id}.islandHost ? "" : {value.value}'))
+            replacements.append((node.type_start, node.type_token.end, replacement))
     return replacements
 
 
@@ -477,18 +502,18 @@ def transform_standard_panel(
     token_list: list[Token],
     nodes: list[ObjectNode],
     root: ObjectNode,
+    aliases: dict[str, str],
     adapter_dir: Path | None = None,
 ) -> str:
     """Adapt one constrained standard KeyboardPanel without rewriting its lifecycle."""
-    if not nodes or nodes[0].type_name != "Panel":
-        raise AdaptationError("the root object must be a standard Panel")
     root_id = direct_id(token_list, root)
 
     for unsupported in ("PanelWindow", "PopupWindow", "FloatingWindow"):
         if any(node.type_name == unsupported and contains(root, node) for node in nodes):
             raise AdaptationError(f"unsupported mapped surface: {unsupported}")
 
-    hosts = [node for node in nodes if node.type_name == "KeyboardPanel" and contains(root, node)]
+    hosts = [node for node in nodes if node.type_name == "KeyboardPanel"
+             and node.from_module("qs.Ui", aliases) and contains(root, node)]
     if len(hosts) != 1:
         raise AdaptationError("expected exactly one standard KeyboardPanel")
     host = hosts[0]
@@ -513,7 +538,7 @@ def transform_standard_panel(
             "\n  function focusContent() { islandFocus() }"
             "\n  function islandFocus() { if (islandFocusTarget) islandFocusTarget.forceActiveFocus() }",
         ),
-        (host.type_token.start, host.type_token.end, "IslandHost"),
+        (host.type_start, host.type_token.end, "IslandHost"),
         (
             host.open_token.end,
             host.open_token.end,
@@ -536,7 +561,7 @@ def transform_standard_panel(
         value = token_list[value_index]
         replacements.append((value.start, value.end, "false"))
 
-    replacements.extend(island_replacements(source, token_list, nodes, root, root_id, adapter_dir))
+    replacements.extend(island_replacements(source, token_list, nodes, root, root_id, aliases, adapter_dir))
 
     # Only rewrite syntax tokens; strings, comments and JS payloads stay literal.
     roles = {"caption": "caption", "bodySmall": "caption", "body": "body",
@@ -545,7 +570,13 @@ def transform_standard_panel(
     for i in range(len(token_list)-4):
         seq = token_list[i:i+5]
         if [t.value for t in seq[:4]] == ["Style", ".", "font", "."] and seq[4].value in roles:
-            replacements.append((seq[0].start, seq[4].end, "IslandKit.Design.type."+roles[seq[4].value]))
+            start = seq[0].start
+            if i >= 2 and token_list[i-1].value == ".":
+                qualifier = token_list[i-2]
+                if aliases.get(qualifier.value) != "qs.Commons" or (i >= 3 and token_list[i-3].value == "."):
+                    continue
+                start = qualifier.start
+            replacements.append((start, seq[4].end, "IslandKit.Design.type."+roles[seq[4].value]))
     kit = (Path(adapter_dir) if adapter_dir is not None else DEFAULT_ADAPTER_DIR).parent.resolve().as_uri()
     return "import " + json.dumps(kit) + " as IslandKit\n" + replace_ranges(source, replacements)
 
@@ -557,8 +588,9 @@ def adapt_qml(source: str, adapter_dir: Path | None = None) -> tuple[str, str]:
     if not nodes:
         raise AdaptationError("the entry point has no root object")
     root = nodes[0]
-    if root.type_name == "Panel":
-        return transform_standard_panel(source, token_list, nodes, root, adapter_dir), PADDED_LAYOUT
+    aliases = import_aliases(source, token_list, root)
+    if root.type_name == "Panel" and root.from_module("qs.Ui", aliases):
+        return transform_standard_panel(source, token_list, nodes, root, aliases, adapter_dir), PADDED_LAYOUT
     raise AdaptationError("the root object must be a standard Panel")
 
 
