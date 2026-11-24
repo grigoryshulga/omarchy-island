@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "gshulga.island-bar",
+  "name": "Island Panel",
+  "version": "1.0.0",
+  "author": "gshulga",
+  "description": "Standalone Omarchy panel with Island at the center",
+  "kinds": [
+    "bar"
+  ],
+  "entryPoints": {
+    "bar": "Bar.qml"
+  }
+}

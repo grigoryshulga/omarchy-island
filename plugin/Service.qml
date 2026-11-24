@@ -7,6 +7,8 @@ import qs.Commons
 Item {
   id:root
   property var shell: null
+  Component.onCompleted: Preferences.service = root
+  Component.onDestruction: if (Preferences.service === root) Preferences.service = null
   property var moduleStateProperties:({})
   ModuleRegistry {id:moduleRegistry;stateProperties:root.moduleStateProperties;host:root}
   readonly property var modules:moduleRegistry.backends

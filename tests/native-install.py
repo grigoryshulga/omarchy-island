@@ -60,4 +60,30 @@ with tempfile.TemporaryDirectory(prefix='island-native-') as directory:
                             capture_output=True, text=True, timeout=8)
     assert_qml_pass(result, 'ISLAND_NATIVE_REGISTRY_PASS')
 
-print('PASS: native clone, root/legacy manifests, clean git checkout, clock replacement and restoration.')
+    config = home / '.config/omarchy/shell.json'
+    layout = dict(left=[{'id': 'omarchy.workspaces'}], centerBegin=[], centerEnd=[],
+                  center=[], right=[{'id': 'gshulga.island', 'format': 'HH:mm'}], tray=[])
+    config.write_text(json.dumps({'version': 1, 'bar': {'position': 'top', 'layout': layout}}))
+    for _ in range(2):
+        subprocess.run([str(installed / 'bin/enable-panel')], env=env, check=True)
+        selected = json.loads(config.read_text())
+        assert selected['bar']['id'] == 'gshulga.island-bar'
+        assert selected['bar']['layout'] == layout, 'Selecting Island modified the widget layout'
+
+    if os.environ.get('WAYLAND_DISPLAY'):
+        plugins = installed.parent
+        for module in ['Commons', 'Ui']:
+            (plugins / module).symlink_to(Path('/usr/share/omarchy/shell') / module)
+        native_shell = plugins / 'shell.qml'
+        native_shell.write_text((project / 'tests/NativeBar.qml').read_text())
+        result = subprocess.run(['qs', '-p', str(native_shell), '--no-color'], env=dict(os.environ, HOME=str(home)),
+                                capture_output=True, text=True, timeout=10)
+        print(result.stdout + result.stderr)
+        assert_qml_pass(result, 'ISLAND_NATIVE_BAR_PASS')
+
+    subprocess.run(['omarchy', 'bar', 'use', 'omarchy.bar'], env=env, check=True)
+    restored = json.loads(config.read_text())
+    assert 'id' not in restored['bar']
+    assert restored['bar']['layout'] == layout, 'Returning to the stock bar lost the layout'
+
+print('PASS: native clone, clock replacement, standalone panel, and reversible bar selection.')

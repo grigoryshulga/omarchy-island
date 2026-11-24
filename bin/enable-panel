@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+home_plugins="$HOME/.config/omarchy/plugins"
+island="$home_plugins/gshulga.island"
+panel="$home_plugins/gshulga.island-bar"
+
+if [[ ! -f "$island/plugin/panel-bridge/manifest.json" ]]; then
+  echo "Install or update Island with the native Omarchy plugin manager first." >&2
+  exit 1
+fi
+if [[ -L "$panel" || -e "$panel/.git" ]] || {
+  [[ -e "$panel" ]] && ! jq -e '.id == "gshulga.island-bar"' "$panel/manifest.json" >/dev/null 2>&1
+}; then
+  echo "The Island panel adapter directory is managed elsewhere: $panel" >&2
+  exit 1
+fi
+
+mkdir -p -- "$panel"
+for file in Bar.qml manifest.json; do
+  if ! cmp -s -- "$island/plugin/panel-bridge/$file" "$panel/$file"; then
+    staging=$(mktemp "$panel/.install.XXXXXX")
+    install -m 644 -- "$island/plugin/panel-bridge/$file" "$staging"
+    mv -fT -- "$staging" "$panel/$file"
+  fi
+done
+omarchy plugin validate "$panel"
+omarchy bar use gshulga.island-bar
+omarchy-shell shell rescanPlugins

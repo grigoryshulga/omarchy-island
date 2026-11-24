@@ -7,6 +7,7 @@ SectionLink 1.0 SectionLink.qml
 Surface 1.0 Surface.qml
 ArtworkBackground 1.0 ArtworkBackground.qml
 BarWidget 1.0 BarWidget.qml
+NativeBar 1.0 NativeBar.qml
 BatteryGauge 1.0 BatteryGauge.qml
 BatteryOverview 1.0 BatteryOverview.qml
 BrailleClap 1.0 BrailleClap.qml

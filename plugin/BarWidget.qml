@@ -15,7 +15,7 @@ import "SettingsModel.mjs" as Settings
 BarWidget {
   id: root
   moduleName: "gshulga.island"
-  readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
+  property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
   readonly property string moduleTooltips: [leftIndicators.tooltips,rightIndicators.tooltips].filter(Boolean).join(" · ")
   readonly property var moduleStrings:strings
@@ -167,6 +167,16 @@ BarWidget {
     pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop()
   }
   function toggle() { pinned ? close(true) : open() }
+  function ipcWidget() {
+    return bar && typeof bar.islandForIpc === "function" ? bar.islandForIpc() || root : root
+  }
+  function openSettings() {
+    var overview = previewContent.pageObject(1)
+    if (overview) overview.openSettings()
+  }
+  function toggleHover() {
+    if(Settings.get(settings,"hoverPreview") && Settings.get(settings,"overviewEnabled")) hoverOpen = !hoverOpen
+  }
   function dismissAlert(kind) {
     if (alertKind !== kind) return
     alertKind = ""
@@ -543,15 +553,18 @@ BarWidget {
   }
   ShellIpc {
     target: "island"
-    function open(): void { root.open() }
-    function close(): void { root.close() }
-    function settings(): void {var overview=previewContent.pageObject(1);if(overview) overview.openSettings()}
-    function timers(): void { root.openModuleDetails("timers") }
-    function controls(): void { root.openControls() }
-    function calendar(): void { root.openCalendar() }
-    function weather(): void { root.openWeather() }
-    function toggle(): void { root.toggle() }
-    function hover(): void { if(Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) root.hoverOpen = !root.hoverOpen }
-    function status(): string { return JSON.stringify({pinned:root.pinned,page:root.controlsMode ? "controls" : root.weatherMode ? "weather" : root.calendarMode ? "calendar" : "inbox",hover:root.hoverOpen,alert:root.alertKind,service:root.service!==null,screen:root.screenName,appearance:preview.entranceStyle || "legacy"}) }
+    function open(): void { root.ipcWidget().open() }
+    function close(): void { root.ipcWidget().close() }
+    function settings(): void { root.ipcWidget().openSettings() }
+    function timers(): void { root.ipcWidget().openModuleDetails("timers") }
+    function controls(): void { root.ipcWidget().openControls() }
+    function calendar(): void { root.ipcWidget().openCalendar() }
+    function weather(): void { root.ipcWidget().openWeather() }
+    function toggle(): void { root.ipcWidget().toggle() }
+    function hover(): void { root.ipcWidget().toggleHover() }
+    function status(): string {
+      const widget = root.ipcWidget()
+      return JSON.stringify({pinned:widget.pinned,page:widget.controlsMode ? "controls" : widget.weatherMode ? "weather" : widget.calendarMode ? "calendar" : "inbox",hover:widget.hoverOpen,alert:widget.alertKind,service:!!widget.service,screen:widget.screenName,appearance:preview.entranceStyle || "legacy"})
+    }
   }
 }

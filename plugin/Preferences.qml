@@ -6,6 +6,8 @@ import "SettingsModel.mjs" as Settings
 QtObject {
   id: root
   property var values: ({})
+  // The panel adapter and the widget share the service loaded by Omarchy.
+  property Item service: null
   property var visualizers: []
   readonly property bool reduceMotion: Style.reduceMotion || !get("animationsEnabled")
   function get(key) { return Settings.get(values,key) }

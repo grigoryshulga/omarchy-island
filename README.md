@@ -37,6 +37,18 @@ Disable the built-in notification daemon before enabling Island to avoid competi
 
 The indicator installer adds the `gshulga.island-osd` adapter and adjusts user bar configuration, with backups in `~/.local/state/omarchy/island/`. Native OSD remains the fallback when Island is unavailable; existing system actions and shortcuts are preserved.
 
+### Use Island as the whole panel
+
+After the native installation above, run:
+
+```bash
+~/.config/omarchy/plugins/gshulga.island/bin/enable-panel
+```
+
+This selects **Island Panel** as Omarchy's active bar. Each monitor gets one centered Island with its clock, indicators, hover preview, and pinned popup. System controls are available inside Island. Standard bar widgets such as workspaces and the tray are hidden in this mode. The panel follows the configured screen edge and Omarchy's bar visibility toggle.
+
+Switch back to the existing widget layout with `omarchy bar use omarchy.bar`. Select Island Panel again with `omarchy bar use gshulga.island-bar`. Both modes use the same Island settings.
+
 ### Update
 
 ```bash
@@ -46,6 +58,8 @@ omarchy restart shell
 ```
 
 ### Remove
+
+If Island Panel is active, first run `omarchy bar use omarchy.bar`. If installed, remove the Island Panel adapter with `omarchy plugin remove gshulga.island-bar`.
 
 ```bash
 ~/.config/omarchy/plugins/gshulga.island/bin/enable-indicators --disable
@@ -407,6 +421,7 @@ python3 tests/live-notifications.py --live-session # Explicitly changes the runn
 python3 tests/popup-motion.py              # Wayland popup geometry and animation
 python3 tests/hover.py                     # Offscreen clock hover, dismissal and re-entry
 python3 tests/panel-layout.py              # Wayland panel orientation, edge slots, indicators and compact OSD
+bin/test-session --wayland -- python3 tests/native-install.py # Standalone panel placement, settings and popup
 python3 tests/popup-theme.py               # Wayland popup alpha/borders; no windows opened or input sent
 python3 tests/clock-layout.py              # Offscreen clock builder, dragging, focus and indicator lifecycle
 python3 tests/settings.py                  # Wayland settings, persistence and presentation with a fake shell
