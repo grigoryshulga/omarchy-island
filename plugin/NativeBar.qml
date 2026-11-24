@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "." as Island
+import "PanelGeometry.js" as Geometry
 
 Item {
   id: root
@@ -26,10 +27,16 @@ Item {
     }
     return {}
   }
-  readonly property string position: ["bottom", "left", "right"].includes(barConfig.position) ? barConfig.position : "top"
-  readonly property bool vertical: position === "left" || position === "right"
+  readonly property string position: Geometry.positions.includes(barConfig.position) ? barConfig.position : "top"
+  readonly property bool vertical: Geometry.vertical(position)
   readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
-  readonly property var screenBarSizes: ({})
+  readonly property int edgeInset: Style.space(6)
+  readonly property int panelSize: barSize + edgeInset
+  readonly property var screenBarSizes: {
+    const sizes = {}
+    for (const screen of Quickshell.screens) sizes[screen.name] = panelSize
+    return sizes
+  }
   readonly property string fontFamily: Style.font.family
   readonly property color barForeground: Commons.Color.bar.text
   readonly property color foreground: barForeground
@@ -41,6 +48,11 @@ Item {
   property var activePopout: null
   property Item tooltipTarget: null
   property string tooltipText: ""
+
+  function setPosition(edge) {
+    if (shell && edge !== position && Geometry.positions.includes(edge))
+      shell.mutateShellConfig(config => { config.bar.position = edge })
+  }
 
   function requestPopout(owner) {
     if (activePopout && activePopout !== owner) activePopout.close()
@@ -151,6 +163,8 @@ Item {
           window.workspace && window.workspace.id === workspace.id
           && window.lastIpcObject && (Number(window.lastIpcObject.fullscreen) & 2) !== 0)
       }
+      readonly property bool showingPill: !root.barHidden && !fullscreen
+      onShowingPillChanged: if (!showingPill) island.close()
 
       screen: modelData
       visible: !root.barHidden && !remap.remapping
@@ -161,45 +175,51 @@ Item {
         left: !root.vertical || root.position === "left"
         right: !root.vertical || root.position === "right"
       }
-      implicitWidth: root.vertical ? root.barSize : 0
-      implicitHeight: root.vertical ? 0 : root.barSize
+      implicitWidth: root.vertical ? root.panelSize : 0
+      implicitHeight: root.vertical ? 0 : root.panelSize
       exclusionMode: ExclusionMode.Normal
-      exclusiveZone: root.barSize
+      exclusiveZone: root.panelSize
       WlrLayershell.namespace: "omarchy-bar"
       WlrLayershell.layer: WlrLayer.Top
-      mask: Region { item: island.visible ? island : null }
+      mask: Region { item: pill.visible && island.pillInteractive ? pill : null }
 
       ScreenMoveRemap { id: remap; window: panel }
 
-      Rectangle {
-        objectName: "islandBarBackground"
-        anchors.fill: island
-        visible: island.visible
-        color: root.background
-        radius: Math.min(Design.cardRadius, width / 2, height / 2)
-      }
+      Item {
+        id: pill
+        objectName: "islandPill"
+        width: root.vertical ? root.barSize : Math.min(parent.width, Math.ceil(island.implicitWidth))
+        height: root.vertical ? Math.min(parent.height, Math.ceil(island.implicitHeight)) : root.barSize
+        x: root.vertical ? (root.position === "left" ? root.edgeInset : 0) : (parent.width - width) / 2
+        y: root.vertical ? (parent.height - height) / 2 : (root.position === "top" ? root.edgeInset : 0)
+        opacity: island.pillOpacity
+        visible: panel.showingPill && opacity > 0
 
-      Island.BarWidget {
-        id: island
-        bar: root
-        service: Preferences.service
-        ipcEnabled: false
-        anchors.centerIn: parent
-        width: root.vertical ? parent.width : Math.min(parent.width, implicitWidth)
-        height: root.vertical ? Math.min(parent.height, implicitHeight) : parent.height
-        visible: !root.barHidden && !panel.fullscreen
-        settings: root.islandSettings
-        onVisibleChanged: if (!visible) close()
-        Connections {
-          target: root
-          // Local edits are immediate, then the shell broadcasts the saved
-          // settings to every output.
-          function onIslandSettingsChanged() { island.settings = root.islandSettings }
+        ContainerSurface {
+          anchors.fill: parent
+          color: root.background
+          radius: Design.cardRadius
+        }
+
+        Island.BarWidget {
+          id: island
+          bar: root
+          service: Preferences.service
+          standalone: true
+          ipcEnabled: false
+          anchors.fill: parent
+          settings: root.islandSettings
+          Connections {
+            target: root
+            // Local edits are immediate, then the shell broadcasts the saved
+            // settings to every output.
+            function onIslandSettingsChanged() { island.settings = root.islandSettings }
+          }
         }
       }
 
       PopupWindow {
-        visible: island.visible && root.tooltipText !== "" && !!root.tooltipTarget
+        visible: pill.visible && island.pillInteractive && root.tooltipText !== "" && !!root.tooltipTarget
           && root.tooltipTarget.QsWindow.window === island.QsWindow.window
         color: "transparent"
         implicitWidth: tooltip.implicitWidth
@@ -211,7 +231,7 @@ Item {
           edges: root.position === "bottom" ? Edges.Top : root.position === "left" ? Edges.Right
             : root.position === "right" ? Edges.Left : Edges.Bottom
           gravity: tooltipAnchor.edges
-          rect: Qt.rect(island.x, island.y, island.width, island.height)
+          rect: Qt.rect(pill.x, pill.y, pill.width, pill.height)
         }
         BorderSurface {
           id: tooltip

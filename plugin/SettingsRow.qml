@@ -12,6 +12,8 @@ Item {
   property var settings:({})
   property bool active:true
   property alias editor:choice
+  property string choiceValue: String(Settings.get(settings,key))
+  property var choiceValues: Settings.choices[key] || []
   readonly property string key:spec.key
   readonly property bool delay:spec.type==="delay"
   readonly property bool percent:spec.type==="percent"
@@ -71,10 +73,14 @@ Item {
       x:root.stacked || Commons.I18n.rightToLeft ? 0 : content.width-width
       y:root.stacked ? title.height+Design.gap.small : (content.height-height)/2
       width:root.stacked ? content.width : root.choiceWidth
-      value:String(Settings.get(root.settings,root.key))
-      options:visible ? Settings.choices[root.key].filter(function(value){return root.key!=="openingPage" || value!=="overview" || Settings.get(root.settings,"overviewEnabled")}).map(function(value){return {value:value,label:root.strings.t("settings.option."+value)}}) : []
+      value:root.choiceValue
+      options:visible ? root.choiceValues.filter(function(value){return root.key!=="openingPage" || value!=="overview" || Settings.get(root.settings,"overviewEnabled")}).map(function(value){return {value:value,label:root.strings.t("settings.option."+value)}}) : []
+      Accessible.name:title.text
       showLabel:false
-      onChanged:value=>root.settingRequested(root.key,value)
+      onChanged:value=>{
+        root.settingRequested(root.key,value)
+        choice.value=Qt.binding(()=>root.choiceValue)
+      }
       onPopupOpenChanged:root.popupChanged()
     }
     IslandSlider {

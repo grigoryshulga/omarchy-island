@@ -15,7 +15,7 @@ Item {
   property bool open:dictation.showing
   readonly property var anchorWindow:anchorItem ? anchorItem.QsWindow.window : null
   readonly property string position:bar ? bar.position : "top"
-  readonly property real thickness:bar ? bar.barSize : Style.bar.sizeHorizontal
+  readonly property real thickness:bar ? ("panelSize" in bar ? bar.panelSize : bar.barSize) : Style.bar.sizeHorizontal
   readonly property point anchorPosition: {
     anchorWatcher.transform
     return anchorWindow ? anchorItem.mapToItem(anchorWindow.contentItem,0,0) : Qt.point(0,0)

@@ -1,5 +1,6 @@
 // Screen-local popup placement. Clamp the destination rectangle before
 // animating it so the card's cross-axis center does not drift near edges.
+var positions = ["top", "bottom", "left", "right"]
 function vertical(position) { return position === "left" || position === "right" }
 function available(position, sw, sh, thickness, margin) {
   return {width: Math.max(1, sw - 2 * margin - (vertical(position) ? thickness : 0)),

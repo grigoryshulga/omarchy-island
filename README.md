@@ -47,6 +47,8 @@ After the native installation above, run:
 
 This selects **Island Panel** as Omarchy's active bar. Each monitor gets one centered Island with its clock, indicators, hover preview, and pinned popup. System controls are available inside Island. Standard bar widgets such as workspaces and the tray are hidden in this mode. The panel follows the configured screen edge and Omarchy's bar visibility toggle.
 
+The capsule fits the clock, indicators, and on-screen gauges, with a small inset from the screen edge. A click or incoming toast expands the capsule into the popup. It returns to the clock when the popup closes. Hover previews leave the clock visible. Choose a screen edge under **Settings → Panel → Panel position** or use `omarchy bar position`, for example `omarchy bar position bottom`.
+
 Switch back to the existing widget layout with `omarchy bar use omarchy.bar`. Select Island Panel again with `omarchy bar use gshulga.island-bar`. Both modes use the same Island settings.
 
 ### Update
@@ -87,7 +89,7 @@ System panels are adapted from the installed Omarchy sources when opened, preser
 |---|---|
 | Hover over the clock | Preview Overview |
 | Click the clock or the free upper area of the preview | Pin the popup |
-| Click the clock again, press Escape, or click outside | Close the popup |
+| Press Escape or click outside | Close the popup. While using the stock bar, clicking the clock again also closes it. |
 | Middle-click the clock | Toggle the calendar |
 | Right-click the clock | Cycle and save the clock format |
 | Right-click a free area of the popup | Close immediately; control right-click actions are preserved |
@@ -243,7 +245,7 @@ hl.window_rule({
 | Media visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
 | Visualization style | `musicVisualizationStyle: "default"` (Shimmer); also `ripple`, `flow`, `embers`, `constellations`, `echo`, `bayer` (Dither print), `printTones`, `asciiInk`, or `engraving`; choose under Modules → Music, applied immediately to the bar and popup |
 | Visualization background | `musicVisualizationBackground: "artwork"`; also `aurora`, `tide`, or `plasma`: animated gradients from the live system palette, independently combined with any visualization style |
-| Notification style | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
+| Notification style on the stock bar | `notificationStyle: "card"`; `bar` shows the summary in the bar without opening a card |
 | T3 Code sessions | `t3Enabled: false`; opt in under Modules → T3 Code to connect to the local T3 server |
 | Answer T3 questions from Island | `t3Responses: true`; when disabled, the T3 connection is read-only |
 | Legacy indicators | `indicatorDnd`, `indicatorMicrophone`, `indicatorRecording`, `indicatorRemote`, `indicatorNightLight`, `indicatorStayAwake`, `indicatorUpdate`: all `true`; used until a custom `clockLayout` is saved |

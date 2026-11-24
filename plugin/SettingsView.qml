@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Commons as Commons
 import "SettingsModel.mjs" as Settings
+import "PanelGeometry.js" as Geometry
 
 Item {
   id:root
@@ -16,6 +17,7 @@ Item {
   readonly property var sections:windowMode ? Settings.sections.concat([{id:"overview",groups:[]}]) : Settings.sections
   readonly property bool sidebar:windowMode && width>=Style.space(620)
   readonly property bool overviewSection:sections[category].id==="overview"
+  readonly property bool standalone:!!bar && "panelSize" in bar && typeof bar.setPosition === "function"
   property int category:0
   property bool ownsKeys:false
   signal settingRequested(string key,var value)
@@ -66,10 +68,12 @@ Item {
   function closeEditors() {
     for(var i=0;i<groups.count;i++) groups.itemAt(i).closeEditors()
     if(clockEditor.item) clockEditor.item.closeEditors()
+    if(positionEditor.item) positionEditor.item.editor.close()
     ownsKeys=false
   }
   function updateOwnsKeys() {
-    var open=!!clockEditor.item && clockEditor.item.ownsKeys
+    var open=(!!clockEditor.item && clockEditor.item.ownsKeys)
+      || (!!positionEditor.item && positionEditor.item.editor.popupOpen)
     for(var i=0;i<groups.count;i++) open=open || groups.itemAt(i).hasOpenEditor()
     ownsKeys=open
   }
@@ -140,6 +144,21 @@ Item {
       width:viewport.width
       spacing:Design.gap.page
       Loader {
+        id:positionEditor
+        width:body.width-Design.gap.small
+        active:clockEditor.active && root.standalone
+        visible:active
+        sourceComponent:SettingsRow {
+          spec:({key:"panelPosition",type:"choice"})
+          strings:root.strings
+          choiceValue:root.bar.position
+          choiceValues:Geometry.positions
+          onSettingRequested:(key,value)=>root.bar.setPosition(value)
+          onPopupChanged:root.updateOwnsKeys()
+        }
+        onItemChanged:root.updateOwnsKeys()
+      }
+      Loader {
         id:clockEditor
         width:body.width-Design.gap.small
         active:root.visible && root.active && root.sections[root.category].id==="panel"
@@ -155,7 +174,7 @@ Item {
       }
       Repeater {
         id:groups
-        model:root.sections[root.category].groups
+        model:root.sections[root.category].groups.filter(group=>!root.standalone || group.id!=="notifications")
         Column {
           id:group
           required property var modelData

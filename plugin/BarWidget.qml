@@ -17,6 +17,14 @@ BarWidget {
   moduleName: "gshulga.island"
   property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   property bool ipcEnabled: true
+  property bool standalone: false
+  readonly property bool pillInteractive: !preview.morphFromAnchor && !preview.replacingAnchor
+  readonly property real pillOpacity: 1 - Math.max(preview.anchorCoverage,
+    Preferences.panelDuration(1) ? pillFade : Number(preview.morphFromAnchor && !preview.morphing))
+  property real pillFade: preview.morphFromAnchor && !preview.morphing ? 1 : 0
+  Behavior on pillFade {
+    NumberAnimation { duration: Preferences.panelDuration(root.pinned ? 140 : 170); easing.type: Easing.OutCubic }
+  }
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
   readonly property string moduleTooltips: [leftIndicators.tooltips,rightIndicators.tooltips].filter(Boolean).join(" · ")
   readonly property var moduleStrings:strings
@@ -63,7 +71,7 @@ BarWidget {
   Component.onDestruction: if(registeredIndicators) registeredIndicators.detach(root)
   property bool pinned: false
   property int lastOpenedPage:1
-  readonly property bool stripNotification: !vertical && notificationToast && Settings.get(settings,"notificationStyle")==="bar"
+  readonly property bool stripNotification: !standalone && !vertical && notificationToast && Settings.get(settings,"notificationStyle")==="bar"
   property bool contentExpanded: false
   property int selectedPage:1
   readonly property bool controlsMode:selectedPage===1 && previewContent.controls
@@ -95,10 +103,11 @@ BarWidget {
     var index=selectedPage
     previewContent.requestPage(Settings.nextPage(previewContent.enabledPages,index,step))
   }
-  readonly property string barText: showAlert && alertKind!=="t3" && alertKind!=="herdr" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
+  readonly property string barText: !standalone && showAlert && alertKind!=="t3" && alertKind!=="herdr" && service && (alertKind!=="notification" || stripNotification) ? (alertKind === "notification" && service.latest ? (service.latest.downloadPath ? "󰇚  " : "󰂚  ") + service.latest.summary : "󰝚  " + strings.t("nowPlaying")) : clockText
   readonly property bool isHovered: barHover.hovered || nowPointerInside || preview.containsMouse
   HoverHandler {
     id:barHover
+    enabled: !root.standalone || root.pillInteractive
     onHoveredChanged:if(hovered) Qt.callLater(function(){
       if(barHover.hovered && !root.nowPointerInside) root.nowHover=false
     })
@@ -243,8 +252,14 @@ BarWidget {
     if (isHovered) { leaveGrace.stop(); if (!pinned && !hoverSuppressed && Settings.get(settings,"hoverPreview") && Settings.get(settings,"overviewEnabled")) hoverDelay.restart() }
     else { hoverSuppressed = false; hoverDelay.stop(); leaveGrace.restart() }
   }
-  implicitWidth: vertical ? barSize : Math.min(Style.space(600),Math.max(Style.space(fixedEdge === "center" ? 360 : 0), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(fixedEdge === "center" ? 120 : 32), showAlert ? Style.space(420) : 0, showOsd ? osdMeasure.implicitWidth+2*indicatorGutter+Style.space(50) : 0))
-  implicitHeight: vertical ? Math.max(Style.space(80),clockMeasure.implicitHeight+leftIndicators.implicitHeight+rightIndicators.implicitHeight+Style.space(24)) : barSize
+  readonly property real clockHeight: standalone && !showOsd && osdShown <= 0
+    ? clockMeasure.implicitHeight : Math.max(clockMeasure.implicitHeight, Style.space(40))
+  readonly property real standaloneWidth: Math.max(clockMeasure.implicitWidth, showOsd || osdShown > 0 ? osdGauge.implicitWidth : 0)
+    + 2 * indicatorGutter + 2 * Design.gap.medium
+  implicitWidth: vertical ? barSize : Math.min(Style.space(600), standalone ? standaloneWidth
+    : Math.max(Style.space(fixedEdge === "center" ? 360 : 0), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(fixedEdge === "center" ? 120 : 32), showAlert ? Style.space(420) : 0, showOsd ? osdMeasure.implicitWidth+2*indicatorGutter+Style.space(50) : 0))
+  implicitHeight: vertical ? Math.max(standalone ? 0 : Style.space(80),
+    (standalone ? clockHeight : clockMeasure.implicitHeight) + leftIndicators.implicitHeight + rightIndicators.implicitHeight + Style.space(24)) : barSize
   Behavior on implicitWidth { NumberAnimation { duration: Preferences.panelDuration(180); easing.type: Easing.OutCubic } }
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
   Connections {
@@ -293,6 +308,7 @@ BarWidget {
     bar: root.bar
     labelVisible: false
     hasVisualContent: true
+    interactive: !root.standalone || root.pillInteractive
     fixedWidth: root.implicitWidth
     fixedHeight: root.implicitHeight
     pressFeedbackButtons: Qt.NoButton
@@ -338,7 +354,7 @@ BarWidget {
       id:centerContent
       objectName:"islandClockDisplay"
       width:Math.floor(Math.max(1,parent.width-(root.vertical ? Style.space(4) : 2*root.indicatorGutter+Style.space(18)))*root.displayScale)/root.displayScale
-      height:root.vertical ? Math.max(clockMeasure.implicitHeight,Style.space(40)) : Math.floor(parent.height*root.displayScale)/root.displayScale
+      height:root.vertical ? root.clockHeight : Math.floor(parent.height*root.displayScale)/root.displayScale
       x:Math.round((parent.width-width)*root.displayScale/2)/root.displayScale
       y:root.vertical ? leftIndicators.implicitHeight+Style.space(12)+(parent.height-leftIndicators.implicitHeight-rightIndicators.implicitHeight-Style.space(24)-height)/2 : Math.round((parent.height-height)*root.displayScale/2)/root.displayScale
       z:1
@@ -438,8 +454,10 @@ BarWidget {
     bar: root.bar
     owner: popupCoordinator
     triggerMode: root.pinned ? "click" : "hover"
-    centerOnBar: false
-    alignmentItem: clockLabel
+    centerOnBar: root.standalone
+    alignmentItem: root.standalone ? trigger : clockLabel
+    morphFromAnchor: root.standalone && (root.pinned || (root.showAlert && !root.hoverOpen))
+    forwardAnchorClicks: !root.standalone
     // The hover header is always present. Open before measuring its layout;
     // a hidden surface cannot polish the first preview's content height.
     open: root.pinned || root.hoverOpen || (root.showAlert && !root.stripNotification)
