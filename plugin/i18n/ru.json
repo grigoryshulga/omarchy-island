@@ -91,6 +91,7 @@
     "other": "%1 уведомления"
   },
   "notifications.active": "Уведомления",
+  "notifications.new": {"one":"%1 новое","few":"%1 новых","many":"%1 новых","other":"%1 новых"},
   "notifications.history": "История",
   "notifications.historyEmpty": "История пуста",
   "dnd": "Не беспокоить",
@@ -610,7 +611,9 @@
   "clock.now": "Сейчас",
   "now.answer": "Нужен ответ",
   "now.action": "Нужно действие",
-  "now.requests": "Запросы · %1",
+  "now.other": "Другие активности (%1)",
+  "now.title": "Текущие активности",
+  "now.empty": "Активных задач нет",
   "clock.emptySide": "Перетащите элемент сюда",
   "clock.elements": "Элементы панели",
   "clock.title": "Виджет часов",

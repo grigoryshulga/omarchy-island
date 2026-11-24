@@ -25,6 +25,7 @@ ColumnLayout {
   readonly property bool compactNotifications:!expanded && !hovering && alertKind==="notification"
   property bool historyOpen:false
   property var notificationIcon:null
+  readonly property int toastCount:compactNotifications && service && ("toastCount" in service) ? service.toastCount : 0
   signal expandRequested()
   signal detailsRequested()
   onExpandedChanged:if(!expanded) historyOpen=false
@@ -134,10 +135,12 @@ ColumnLayout {
           radialBraille: root.radialBraille
           expanded: root.expanded
           compact: root.compactNotifications
+          toastCount:root.toastCount
           externalFeedback: root.externalFeedback
           limit: root.notificationLimit
           visible: group.positions[0] < limit
           onExpandRequested: root.expanded ? root.detailsRequested() : root.expandRequested()
+          onBatchRequested:root.detailsRequested()
         }
       }
       PlainText {

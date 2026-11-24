@@ -50,6 +50,19 @@ service.downloads.reverse();
 assert.equal(now.current(service).row, download);
 service.downloads.push(older);
 assert.equal(now.current(service).row, older);
+service.t3.connected = true;
+service.t3.rows.push({id:'b',requestId:'q2'});
+service.modules = {timers:{now:1000, records:{
+  timer:{status:'running', startedAt:0, duration:60000},
+  stopwatch:{status:'running', startedAt:0}
+}}};
+const activities = now.activities(service);
+assert.deepEqual(activities.map(activity=>activity.kind), ['t3','t3','timers','timers','downloads','downloads','downloads']);
+assert.deepEqual(now.target(activities[1]), {sessionId:'b',requestId:'q2'});
+assert.equal(activities[4].row, older, 'Oldest download should stay at the top of the download group');
+assert.equal(new Set(activities.map(activity=>activity.id)).size, activities.length);
+service.t3.connected = false;
+delete service.modules;
 service.downloads = [{...download, active:false}];
 assert.equal(now.current(service), null);
 service.player = {trackTitle:"Next track"};

@@ -97,7 +97,9 @@ BarWidget {
     if (!row) return Style.space(300)
     const title = toastTitleMetrics.advanceWidth(String(row.filename || row.summary || "").slice(0, 180))
     const body = toastCaptionMetrics.advanceWidth(Model.plain(row.body).slice(0, 180))
-    const header = toastCaptionMetrics.advanceWidth(Model.source(row).slice(0, 64) + "  00:00") + Style.space(24)
+    const count = service.notifications && !row.downloadPath ? service.notifications.toastCount : 0
+    const suffix = count>1 ? strings.tn("notifications.new",count).arg(Commons.I18n.formatNumber(count)) : "00:00"
+    const header = toastCaptionMetrics.advanceWidth(Model.source(row).slice(0, 64) + "  " + suffix) + Style.space(24)
     return Math.min(Style.space(440), Math.max(Style.space(192), Math.max(title, body, header) + Style.space(40)))
   }
   property real toastOpacity: 1
@@ -151,30 +153,23 @@ BarWidget {
   }
   property bool nowPointerInside: false
   property bool nowHover: false
-  readonly property var previewActivity: hoverOpen && nowHover && !pinned ? NowActivity.current(service) : null
+  readonly property var activities:NowActivity.activities(service)
+  property var hoveredActivity:null
+  readonly property var previewActivity: hoverOpen && nowHover && !pinned && hoveredActivity
+    ? activities.find(row=>row.id===hoveredActivity.id) || hoveredActivity : null
   onClockLayoutChanged:if(!clockLayout.some(function(row){return row.id==="now"})) {
     nowPointerInside=false
     nowHover=false
   }
-  function trackNowHover(inside) {
+  function trackNowHover(inside,activity) {
     nowPointerInside=inside
     // Keep the activity preview during the pointer crossing to its surface.
-    if (inside) nowHover=true
+    if (inside) {hoveredActivity=activity;nowHover=true}
     else Qt.callLater(function(){if(!root.nowPointerInside && barHover.hovered && !preview.containsMouse) nowHover=false})
   }
   function openNow(activity) {
     if (!activity) return
-    var target = {}
-    if (activity.kind==="t3") {
-      if (activity.count===1) target.sessionId=activity.row.id
-      else target.pendingOnly=true
-    } else if (activity.kind==="timers") {
-      target.mode=activity.row.mode
-    } else if (activity.kind==="downloads") {
-      target.downloadKey=activity.row.key
-      target.downloadName=activity.row.filename
-    }
-    openModuleDetails(activity.kind,target)
+    openModuleDetails(activity.kind,NowActivity.target(activity))
   }
   function openModuleDetails(moduleId,target) {
     openPage(1)
@@ -205,26 +200,30 @@ BarWidget {
     alertKind = ""
     alertLife.stop()
   }
-  function showT3Activity() {
-    if(!service || !service.latestT3 || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
-    if(service.t3TargetScreen && service.t3TargetScreen!==screenName) return
-    contentExpanded=false;selectedPage=1
-    alertKind="t3";alertLife.interval=4000;alertLife.restart()
+  readonly property bool automaticPopupBlocked: standalone && !!bar && !!bar.activePopout
+    && bar.activePopout !== popupCoordinator && bar.activePopout.pinned === true
+  function needsAgentInput(kind,row) {
+    return !!row && (kind==="t3" ? !!row.requestId : kind==="herdr" && row.status==="blocked")
   }
-  function showHerdrActivity() {
-    if(!service || !service.latestHerdr || service.doNotDisturb || pinned || hoverOpen || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
-    if(service.herdrTargetScreen && service.herdrTargetScreen!==screenName) return
+  function showAgentActivity(kind,row,screen) {
+    if(!row || service.doNotDisturb || pinned || hoverOpen || automaticPopupBlocked || alertKind==="notification" || !Settings.get(settings,"overviewEnabled")) return
+    if(screen && screen!==screenName) return
+    const current=alertKind==="t3" ? service.latestT3 : alertKind==="herdr" ? service.latestHerdr : null
+    if (alertKind!==kind && needsAgentInput(alertKind,current) && !needsAgentInput(kind,row)) return
     contentExpanded=false;selectedPage=1
-    alertKind="herdr";alertLife.interval=4000;alertLife.restart()
+    alertKind=kind;alertLife.interval=4000;alertLife.restart()
+    Qt.callLater(notificationWaves.play)
   }
   function showNotification() {
-    if (!service || !service.latest || (service.targetScreen && service.targetScreen!==screenName) || pinned) return
-    if (adaptiveToast && preview.open && Preferences.panelDuration(1) > 0) {
+    if (!service || !service.latest || (service.targetScreen && service.targetScreen!==screenName) || pinned || automaticPopupBlocked) return
+    const sameSeries=notificationToast && !service.latest.downloadPath && service.notifications && service.notifications.toastCount>1
+    if (!sameSeries && adaptiveToast && preview.open && Preferences.panelDuration(1) > 0) {
       toastSwap.stop()
       toastOpacity = 0
       toastSwap.start()
     }
     contentExpanded = false; alertKind = "notification"; alertLife.interval = Number(setting("notificationDuration",5000)); alertLife.restart()
+    if (!sameSeries) Qt.callLater(notificationWaves.play)
   }
   function syncSettings() {
     Preferences.values=root.settings
@@ -261,7 +260,7 @@ BarWidget {
     dismissAlert("media")
     if (Settings.get(settings,"trackAlerts") && service && service.playing && !service.doNotDisturb
         && (!service.focusedScreenName || service.focusedScreenName===screenName)
-        && !pinned && !hoverOpen && !alertKind) {
+        && !pinned && !hoverOpen && !automaticPopupBlocked && !alertKind) {
       alertKind = "media"; alertLife.interval = 3000; alertLife.restart()
     }
   }
@@ -285,13 +284,16 @@ BarWidget {
     ignoreUnknownSignals: true
 
     function onDoNotDisturbChanged() {
-      if (root.service.doNotDisturb) root.dismissAlert("media")
+      if (root.service.doNotDisturb) {
+        root.dismissAlert("media")
+        root.dismissAlert("t3")
+      }
     }
-    function onHerdrArrival() { root.showHerdrActivity() }
+    function onHerdrArrival() { root.showAgentActivity("herdr",root.service.latestHerdr,root.service.herdrTargetScreen) }
     function onLatestHerdrChanged() {
       if (root.service && !root.service.latestHerdr) root.dismissAlert("herdr")
     }
-    function onT3Arrival() { root.showT3Activity() }
+    function onT3Arrival() { root.showAgentActivity("t3",root.service.latestT3,root.service.t3TargetScreen) }
     function onLatestT3Changed() {
       if (root.service && !root.service.latestT3) root.dismissAlert("t3")
     }
@@ -314,7 +316,7 @@ BarWidget {
     onTriggered: {root.now=new Date();arm()}
     Component.onCompleted: arm()
   }
-  Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.presented && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
+  Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.automaticPopupBlocked && !root.showOsd && !dictationOverlay.presented && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; objectName:"islandAlertLife"; interval: 3000; onTriggered: root.alertKind = "" }
   SequentialAnimation {
@@ -340,7 +342,7 @@ BarWidget {
     tooltipText:root.moduleTooltips
     function triggerPressAt(button,point) {
       var cell=leftIndicators.actionAt(trigger,point) || rightIndicators.actionAt(trigger,point)
-      if (cell && button!==Qt.MiddleButton) cell.triggerPress(button)
+      if (cell && button!==Qt.MiddleButton) cell.triggerPress(button,cell.mapFromItem(trigger,point))
       else triggerPress(button)
     }
     onPressed: button => { if (button === Qt.RightButton) root.cycleClockFormat(); else if (button === Qt.MiddleButton) root.toggleCalendar(); else root.toggle() }
@@ -373,7 +375,9 @@ BarWidget {
       onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
       onNowRequested:activity=>root.openNow(activity)
-      onNowHovered:inside=>root.trackNowHover(inside)
+      activities:root.activities
+      onNowListRequested:root.openModuleDetails("now")
+      onNowHovered:(inside,activity)=>root.trackNowHover(inside,activity)
     }
     Item {
       id:centerContent
@@ -453,7 +457,9 @@ BarWidget {
       onDetailsRequested:moduleId=>root.openModuleDetails(moduleId)
       onCalendarRequested:root.openCalendar()
       onNowRequested:activity=>root.openNow(activity)
-      onNowHovered:inside=>root.trackNowHover(inside)
+      activities:root.activities
+      onNowListRequested:root.openModuleDetails("now")
+      onNowHovered:(inside,activity)=>root.trackNowHover(inside,activity)
     }
   }
   Loader {
@@ -473,7 +479,7 @@ BarWidget {
     function onOpenChanged() {Qt.callLater(dictationOverlay.release)}
   }
   // Keep popout coordination without the bar marking the clock as its owner.
-  Item {id:popupCoordinator;function close(){root.close()}}
+  Item {id:popupCoordinator;readonly property bool pinned:root.pinned;function close(){root.close()}}
   IslandPopup {
     id: preview
     objectName: "islandPopup"
@@ -498,6 +504,8 @@ BarWidget {
     contentWidth: fittedContentWidth(root.adaptiveToast ? root.toastWidth
       : Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
     contentFade: root.adaptiveToast && animateMorph ? root.toastOpacity : 1
+    fitEventContent: frameSuppressed
+    fileDragActive: !!root.service && !!root.service.downloadsState && !!root.service.downloadsState.fileDragSource
     contentHeight: fittedContentHeight(root.previewActivity ? nowPreview.implicitHeight : previewContent.implicitHeight)
     ToastWaves {
       id:notificationWaves
@@ -527,7 +535,7 @@ BarWidget {
       anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
       anchors.leftMargin: -preview.padding; anchors.rightMargin: -preview.padding; anchors.topMargin: -preview.padding
       height: preview.layoutHeight
-      active: preview.frameSuppressed && preview.visible && !previewContent.mediaToast
+      active: preview.frameSuppressed && preview.paintOpen && !previewContent.mediaToast
     }
     ArtworkBackground {
       objectName: "islandPopupArtwork"

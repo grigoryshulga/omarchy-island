@@ -7,6 +7,7 @@ Island.ModuleView {
   readonly property string targetKey:presentation && presentation.detail && presentation.activityTarget ? presentation.activityTarget.downloadKey || "" : ""
   readonly property var detailRow:targetKey && backend ? backend.downloads.find(function(row){return row.key===targetKey}) : null
   implicitHeight:content.implicitHeight
+  toastIcon:!presentation.expanded && !presentation.hovering ? downloadList.firstIcon : null
   Column {
     id:content;width:parent.width;objectName:"islandDownloads";spacing:Island.Design.gap.small
     Island.SectionLink {
@@ -22,6 +23,7 @@ Island.ModuleView {
       text:visible ? root.presentation.strings.t("downloads.ended").arg(root.presentation.activityTarget.downloadName || "") : ""
     }
     Island.DownloadList {
+      id:downloadList
       width:parent.width
       active:root.presentation.active
       rows:root.targetKey ? (root.detailRow ? [root.detailRow] : []) : root.backend ? (root.presentation.expanded || root.presentation.hovering ? root.backend.downloads : root.presentation.alert && root.presentation.alert.downloadPath ? [root.presentation.alert] : []) : []

@@ -26,6 +26,7 @@ Item {
   onChanged:{if(latest && !downloads.some(function(row){return row.key===root.latest.key})) latest=null;saveSoon.restart()}
   property string downloadsDir: Quickshell.env("HOME") + "/downloads"
   property var downloads: []
+  property Item fileDragSource:null
   property int activeDownloads: 0
   property int downloadSequence: 0
   function downloadEvent(data) {

@@ -11,10 +11,10 @@ with ModuleHarness() as harness:
     source = popup.read_text().replace('PanelWindow {', 'FloatingWindow {', 1)
     source = source.replace('  anchors { top: true; bottom: true; left: true; right: true }\n', '')
     source = source.replace('  exclusionMode: ExclusionMode.Ignore\n', '')
-    source = source.replace('  mask: Region { item: !root.open ? null : root.pinned ? canvas : card }\n', '')
     source = source.replace('  WlrLayershell.keyboardFocus: open && pinned\n'
                             '    ? (focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive)\n'
                             '    : WlrKeyboardFocus.None\n', '')
-    source = '\n'.join(line for line in source.splitlines() if 'WlrLayershell.' not in line)
+    source = '\n'.join(line for line in source.splitlines()
+                       if 'WlrLayershell.' not in line and 'mask: Region' not in line)
     popup.write_text(source)
     harness.run(PROJECT / 'tests/Hover.qml', 'HOVER_PASS')

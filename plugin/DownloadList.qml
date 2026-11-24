@@ -8,6 +8,7 @@ Column {
   required property var strings
   property bool expanded:false
   property bool active:true
+  readonly property var firstIcon:cards.count>0 && cards.itemAt(0) ? cards.itemAt(0).fileIcon : null
   spacing:Design.gap.small
   // Keep delegates and pointer focus stable as byte counts change.
   function sync() {
@@ -26,6 +27,7 @@ Column {
   Component.onCompleted:sync()
   ListModel {id:items}
   Repeater {
+    id:cards
     model:items
     DownloadCard {
       required property var model

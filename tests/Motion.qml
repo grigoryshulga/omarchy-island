@@ -328,6 +328,7 @@ ShellRoot {
       if(tick===36) {
         var replacedWaves=test.findChild(widget,"islandToastWaves"),replacedIcon=replacedWaves.sourceIcon
         if(!replacedIcon) {console.log("ISLAND_MOTION_FAIL: replacement lost notification icon");Qt.quit();return}
+        if(replacedWaves.visible) {console.log("ISLAND_MOTION_FAIL: reduced motion still plays an impulse");Qt.quit();return}
         var replacedCenter=replacedIcon.mapToItem(replacedWaves,replacedIcon.width/2,replacedIcon.height/2)
         if(Math.abs(replacedWaves.origin.x-replacedCenter.x)>=1 || Math.abs(replacedWaves.origin.y-replacedCenter.y)>=1) {console.log("ISLAND_MOTION_FAIL: reduced-motion wave origin");Qt.quit();return}
         Commons.Style.reduceMotion=false

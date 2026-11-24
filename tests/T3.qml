@@ -264,6 +264,15 @@ ShellRoot {
         compare(service.t3.workingCount,1)
         snapshot([second])
         compare(service.t3.waitingCount,0,"Unavailable linked source kept a stale request")
+        snapshot([row,second])
+        pages.openDetails("t3",{sessionId:row.id,requestId:row.requestId})
+        tryCompare(pages,"detailPage","t3")
+        var ended=findChild(pages,"t3ActivityUnavailable")
+        verify(ended && !ended.visible)
+        snapshot([Object.assign({},row,{requestId:"replacement",request:null}),second])
+        tryCompare(ended,"visible",true)
+        verify(!findChild(pages,"t3SessionsScroll").visible,"A replacement must not open under the old activity")
+        verify(pages.back())
         service.t3.openUrl=savedOpen
         service.t3.allowed=false
         compare(service.t3.rows.length,0)

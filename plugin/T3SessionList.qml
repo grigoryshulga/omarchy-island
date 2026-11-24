@@ -17,10 +17,12 @@ Column {
   property bool listExpanded:false
   property bool summaryMode:false
   property var activityTarget:null
+  readonly property bool requestUnavailable:!!activityTarget && !!activityTarget.requestId
+    && !rows.some(row=>row.id===activityTarget.sessionId && row.requestId===activityTarget.requestId)
   readonly property string singleSession:activityTarget && activityTarget.sessionId && rows.some(function(row){return row.id===root.activityTarget.sessionId}) ? activityTarget.sessionId : ""
   readonly property bool pendingOnly:!!activityTarget && !!activityTarget.pendingOnly && counts.attention>0
   function focusActivity(navigation) {
-    if (!singleSession) return false
+    if (!singleSession || requestUnavailable) return false
     for (var i=0;i<sessionRows.count;i++) {
       var entry=sessionRows.itemAt(i)
       if (entry && entry.sessionId===singleSession) return entry.focusRequest(navigation)
@@ -107,12 +109,20 @@ Column {
     }
   }
   ListModel {id:items}
+  PlainText {
+    objectName:"t3ActivityUnavailable"
+    width:parent.width
+    visible:root.requestUnavailable
+    text:root.strings.t("t3.response.stale")
+    wrapMode:Text.Wrap
+    typeRole:"body"
+  }
   Controls.ScrollView {
     id:viewport
     objectName:"t3SessionsScroll"
     width:parent.width
     height:Math.min(cards.implicitHeight,root.summaryMode ? Style.space(144) : root.maximumHeight)
-    visible:root.summaryMode ? root.summaryIds.length>0 : root.rows.length>0
+    visible:!root.requestUnavailable && (root.summaryMode ? root.summaryIds.length>0 : root.rows.length>0)
     contentWidth:availableWidth
     clip:true
     Controls.ScrollBar.horizontal.policy:Controls.ScrollBar.AlwaysOff

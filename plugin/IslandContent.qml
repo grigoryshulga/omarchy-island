@@ -4,10 +4,13 @@ import QtQuick.Controls as Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "sdk" as Sdk
 import "ModuleCatalog.mjs" as Catalog
 import "SettingsModel.mjs" as Settings
 import "OverviewModel.mjs" as Overview
 import "Model.js" as Model
+import "NowActivity.mjs" as NowActivity
+import "NowPresentation.js" as NowPresentation
 
 Item {
   id: root
@@ -72,16 +75,19 @@ Item {
   readonly property real detailHeightLimit: Math.max(1, maximumOverviewHeight - overviewScroll.y)
   readonly property bool detailOpen: detailPage!==""
   readonly property var detailItem: {
+    if (detailPage==="now") return activityList
     if (detailDefinition && detailDefinition.detail) return headerDetail.item
     for(var i=0;i<moduleSections.count;i++) {var slot=moduleSections.itemAt(i);if(slot && slot.modelData.id===detailPage) return slot.item}
     return null
   }
-  readonly property bool navigationHidden:!!detailItem && detailItem.navigationHidden
-  readonly property bool ownsKeys:!!detailItem && detailItem.ownsKeys
+  readonly property bool navigationHidden:!!(detailItem && detailItem.navigationHidden)
+  readonly property bool ownsKeys:!!(detailItem && detailItem.ownsKeys)
   property var returnFocus: null
   property real summaryScrollY: 0
   KeyboardNavigation {id:detailNavigation;scope:root}
   property var activityTarget: null
+  property bool returnToActivities:false
+  property string returnActivityId:""
   onDetailPageChanged:activityTarget=null
   function openDetails(page,target) {
     if(!expanded) {
@@ -89,8 +95,11 @@ Item {
       Qt.callLater(function(){if(root.expanded) root.openDetails(page,target)})
       return
     }
-    returnFocus=page==="timers" ? timeButton : detailNavigation.focused
-    summaryScrollY=overviewScroll.contentItem.contentY
+    returnToActivities=detailPage==="now" && page!=="now"
+    if (!returnToActivities) {
+      returnFocus=page==="timers" ? timeButton : detailNavigation.focused
+      summaryScrollY=overviewScroll.contentItem.contentY
+    }
     detailPage=page
     if (detailDefinition && detailDefinition.detail) headerDetail.definition=detailDefinition
     activityTarget=target || null
@@ -126,11 +135,20 @@ Item {
         Qt.callLater(function() { detailNavigation.focusItem(limitsEditButton) })
       return true
     }
+    if (returnToActivities) {
+      returnToActivities=false
+      detailPage="now"
+      overviewScroll.contentItem.contentY=0
+      Qt.callLater(function(){
+        if(root.detailPage==="now") activityList.restoreFocus()
+      })
+      return true
+    }
     detailPage=""
     restoreSummary()
     return true
   }
-  onExpandedChanged:{currentDate=new Date();if(!expanded) {detailPage="";configuring=false}}
+  onExpandedChanged:{currentDate=new Date();if(!expanded) {detailPage="";configuring=false;returnToActivities=false}}
   onHoveringChanged:if(hovering) currentDate=new Date()
   readonly property var t3:service && service.t3 ? service.t3 : null
   readonly property var notificationIcon: {
@@ -142,7 +160,7 @@ Item {
     if (!expanded) return body.implicitHeight
     if (configuring) return pageHeight
     if (!detailOpen) return Math.min(maximumOverviewHeight,body.implicitHeight)
-    if (detailPage==="controls" || detailPage==="t3" || (detailDefinition && detailDefinition.detail))
+    if (detailPage==="now" || detailPage==="controls" || detailPage==="t3" || (detailDefinition && detailDefinition.detail))
       return Math.min(maximumOverviewHeight, overviewScroll.y + body.implicitHeight)
     return Math.min(maximumOverviewHeight, pageHeight > overviewScroll.y ? pageHeight : maximumOverviewHeight)
   }
@@ -166,7 +184,7 @@ Item {
       feedback:root.externalFeedback
       onClicked:root.back()
     }
-    SectionHeading {Layout.fillWidth:true;title:root.detailDefinition ? (root.detailDefinition.title || root.strings.t(root.detailDefinition.titleKey)) : root.strings.t("notifications.active")}
+    SectionHeading {Layout.fillWidth:true;title:root.detailPage==="now" ? root.strings.t("now.title") : root.detailDefinition ? (root.detailDefinition.title || root.strings.t(root.detailDefinition.titleKey)) : root.strings.t("notifications.active")}
     FeedbackButton {
       objectName: "limitsAddProvider"
       visible: root.detailPage === "agentLimits" && !!root.detailItem && root.detailItem.editing
@@ -264,6 +282,50 @@ Item {
       readonly property var feedback:root.externalFeedback
       readonly property var activityTarget:root.activityTarget
       readonly property bool active:root.overviewActive && root.visible && headerDetail.visible && root.expanded
+    }
+  }
+  Column {
+    id:activityList
+    objectName:"islandActivities"
+    Layout.fillWidth:true
+    visible:root.expanded && root.detailPage==="now"
+    spacing:Design.gap.small
+    readonly property var rows:visible ? NowActivity.activities(root.service) : []
+    function sync() {Model.syncKeys(activityKeys,rows.map(row=>row.id))}
+    function back() {return false}
+    function restoreFocus() {
+      const index=rows.findIndex(row=>row.id===root.returnActivityId)
+      if (index>=0 && activityRows.itemAt(index)) detailNavigation.focusItem(activityRows.itemAt(index))
+      else detailNavigation.first(rows.length ? activityList : detailHeader)
+    }
+    onRowsChanged:sync()
+    ListModel {id:activityKeys}
+    PlainText {
+      width:parent.width
+      visible:activityList.rows.length===0
+      text:root.strings.t("now.empty")
+      typeRole:"body"
+      color:Design.secondaryText
+    }
+    Repeater {
+      id:activityRows
+      model:activityKeys
+      Sdk.ListRow {
+        required property string entryKey
+        readonly property var activity:activityList.rows.find(row=>row.id===entryKey)
+        readonly property var copy:NowPresentation.describe(activity,root.strings,Commons.I18n.formatNumber)
+        objectName:"islandActivity-"+entryKey
+        width:activityList.width
+        title:activity && activity.kind==="downloads" ? activity.row.filename : copy.title
+        description:activity && activity.kind==="downloads" ? copy.label : copy.detail
+        iconText:NowActivity.glyph(activity)
+        interactive:!!activity
+        feedback:root.externalFeedback
+        onClicked:if(activity) {
+          root.returnActivityId=activity.id
+          root.openDetails(activity.kind,NowActivity.target(activity))
+        }
+      }
     }
   }
   T3SessionCard {

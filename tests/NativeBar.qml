@@ -100,6 +100,18 @@ ShellRoot {
         tryVerify(() => controlPanel && controlPanel.visible && !!controlPanel.item, 3500)
         tryVerify(() => controlPanel.height >= Island.Design.controlHeight && popup.drawnHeight > 100,
           1200, "The embedded Controls panel must have room to display inside the popup")
+        const otherWidget = bar.moduleWidgets("gshulga.island").find(candidate=>candidate!==widget)
+        if (otherWidget) {
+          service.latestT3 = {id:"background-request", title:"Background request", project:"Island",
+            status:"working", requestId:"question", request:null, summary:""}
+          service.t3TargetScreen = otherWidget.screenName
+          service.t3Arrival()
+          wait(100)
+          verify(widget.pinned && popup.open && controlPanel.visible, "An event on another monitor replaced pinned details")
+          verify(!findChild(otherWidget, "islandPopup").open)
+          compare(service.latestT3.id, "background-request")
+          service.latestT3 = null
+        }
         widget.close()
         tryCompare(popup, "visible", false)
 
@@ -122,6 +134,7 @@ ShellRoot {
         tryVerify(() => popup.drawnWidth > compactWidth && popup.drawnWidth < popup.layoutWidth - 2)
         tryCompare(popup, "shown", 1)
         compare(pill.opacity, 0)
+        verify(!!findChild(widget,"islandToastWaves").sourceIcon, "The download pulse should start at its icon")
         for (const other of bar.moduleWidgets("gshulga.island")) {
           if (other !== widget) compare(other.parent.opacity, 1)
         }
@@ -131,6 +144,16 @@ ShellRoot {
         service.latestDownload = Object.assign({}, shortNotice, {filename:"A considerably longer notification file name that takes more room.zip"})
         service.arrival++
         tryVerify(() => popup.drawnWidth > shortWidth + 2 && popup.drawnWidth < popup.layoutWidth - 2)
+        const stoppedWidth=popup.drawnWidth
+        const center=popup.cardOrigin.x+stoppedWidth/2
+        service.latestDownload=shortNotice
+        service.arrival++
+        verify(Math.abs(popup.drawnWidth-stoppedWidth)<=1 && popup.shown===1,
+          "Interrupting a resize should preserve the visible contour")
+        tryVerify(() => Math.abs(popup.drawnWidth-shortWidth)<=1)
+        verify(Math.abs(popup.cardOrigin.x+popup.drawnWidth/2-center)<=1, "The event card shifted away from its center")
+        service.latestDownload = Object.assign({}, shortNotice, {filename:"A considerably longer notification file name that takes more room.zip"})
+        service.arrival++
         tryVerify(() => popup.drawnWidth >= popup.layoutWidth - 1 && popup.drawnWidth > shortWidth + 30)
         compare(popup.shown, 1)
         compare(pill.opacity, 0)
@@ -166,6 +189,26 @@ ShellRoot {
         verify(!popup.open, "Right-clicking a T3 activity should dismiss its popup")
         compare(service.latestT3.id, "activity-fixture")
         tryCompare(popup, "visible", false)
+
+        const notifications=service.notifications
+        const batch=[1,2,3].map(index=>({key:"message-"+index,app:"Island fixture",summary:"Message "+index,
+          body:"",ts:Date.now()/1000+index}))
+        notifications.entries=batch
+        notifications.latest=batch[2]
+        notifications.targetScreen=widget.screenName
+        notifications.toastKeys=batch.map(entry=>entry.key)
+        notifications.arrival++
+        tryCompare(popup,"shown",1)
+        let count=findChild(pages,"notificationBatch")
+        tryVerify(()=>count && count.visible)
+        verify(count.text.includes("3"),"The toast should show an accessible count of the series")
+        mouseClick(count)
+        tryCompare(pages,"detailPage","notifications")
+        compare(service.activeEntries.length,3)
+        widget.close()
+        tryCompare(popup,"visible",false)
+        notifications.entries=[]
+        notifications.latest=null
 
         const handlers = IpcRegistry.handlers.filter(handler => handler.target === "island" && handler.enabled)
         compare(handlers.length, 1, "IPC should be shared across outputs")

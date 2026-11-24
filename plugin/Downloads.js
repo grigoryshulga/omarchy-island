@@ -4,6 +4,11 @@ function validPath(path, directory) {
   return typeof path === "string" && path.length <= 4096 && path.indexOf(directory+"/") === 0
     && !/[\x00-\x1f\x7f]/.test(path) && !path.split("/").some(function(p){return p===".." || p==="."})
 }
+function fileUrl(row, directory) {
+  if (!row || row.active || !validPath(row.downloadPath,directory) || row.downloadPath.endsWith("/")) return ""
+  try { return "file://"+row.downloadPath.split("/").map(encodeURIComponent).join("/") }
+  catch (error) { return "" }
+}
 function bytes(value) {return typeof value==="number" && isFinite(value) && value>=0 ? Math.floor(value) : 0}
 function retain(rows, directory, now) {
   if(!Array.isArray(rows)) return []

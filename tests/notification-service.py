@@ -67,8 +67,19 @@ def run(root):
         s = wait_for(lambda s: len(s['active']) == 1)
         assert s['latest'], 'T3 focus suppressed another notification source'
         key = s['active'][0]['key']
+        arrival = s['arrival']
         send('Updated', first)
-        wait_for(lambda s: len(s['active']) == 1 and s['active'][0]['summary'] == 'Updated')
+        s = wait_for(lambda s: len(s['active']) == 1 and s['active'][0]['summary'] == 'Updated')
+        assert s['latest']['summary'] == 'Updated' and s['latest']['key'] == key
+        assert s['arrival'] == arrival and s['toastCount'] == 1, 'A replacement announced a new event'
+        others = [send('Second message'), send('Third message')]
+        s = wait_for(lambda s: len(s['active']) == 3)
+        assert s['arrival'] == arrival + 2 and s['toastCount'] == 3
+        send('Third message edited', others[-1])
+        s = wait_for(lambda s: s['latest']['summary'] == 'Third message edited')
+        assert s['arrival'] == arrival + 2 and s['toastCount'] == 3
+        for identifier in others:
+            api.CloseNotification(dbus.UInt32(identifier))
         api.CloseNotification(dbus.UInt32(first))
         wait_for(lambda s: not s['active'] and not s['history'] and not s['latest'])
 
@@ -181,7 +192,7 @@ ShellRoot {
   Connections {target:service; function onT3Arrival(){t3Arrivals++}}
   IpcHandler {
     target:"test"
-    function state():string {return JSON.stringify({loaded:service.loaded,active:service.activeEntries,history:service.historyEntries,refs:Object.keys(service.refs).length,latest:service.latest,latestT3:service.latestT3,t3Focused:service.t3Focused,t3Arrivals:t3Arrivals})}
+    function state():string {return JSON.stringify({loaded:service.loaded,active:service.activeEntries,history:service.historyEntries,refs:Object.keys(service.refs).length,latest:service.latest,arrival:service.arrival,toastCount:service.notifications.toastCount,latestT3:service.latestT3,t3Focused:service.t3Focused,t3Arrivals:t3Arrivals})}
     function focusApp(appId:string):void {service.activeAppId=appId}
     function t3Activity():void {service.t3.activityChanged({id:"thread",status:"completed"})}
     function age(key:string):void {service.notifications.entries=service.entries.map(function(r){if(r.key===key){r.ts=Date.now()/1000-400;r.duration=1}return r})}

@@ -12,6 +12,7 @@ GridLayout {
   id:root
   property var elements:[]
   property var service:null
+  property var activities:NowActivity.activities(service)
   property var settings:({})
   required property var strings
   property var bar:null
@@ -40,7 +41,8 @@ GridLayout {
   signal detailsRequested(string moduleId)
   signal calendarRequested()
   signal nowRequested(var activity)
-  signal nowHovered(bool hovered)
+  signal nowListRequested()
+  signal nowHovered(bool hovered, var activity)
   signal selected(string id)
   signal dropped(string id,var item,real dx,real dy)
   signal revealFocus(var item)
@@ -81,7 +83,7 @@ GridLayout {
       property var registeredBar:null
       function syncRegistration() {
         if (!root || !cell) return
-        var next=interactive && root.bar && root.bar.registerClickTarget ? root.bar : null
+        var next=interactive && modelData.id!=="now" && root.bar && root.bar.registerClickTarget ? root.bar : null
         if (next===registeredBar) return
         if (registeredBar) registeredBar.unregisterClickTarget(cell)
         registeredBar=next
@@ -91,13 +93,14 @@ GridLayout {
       onInteractiveChanged:Qt.callLater(syncRegistration)
       Connections {target:root;function onBarChanged(){Qt.callLater(cell.syncRegistration)}}
       Component.onDestruction:if(registeredBar) registeredBar.unregisterClickTarget(cell)
-      function triggerPress(button) {
+      function triggerPress(button,point) {
         if (!interactive) return
         if (hasBarAction) {
           if (button===Qt.RightButton) root.quickAction(modelData.id)
           else if (button===Qt.LeftButton) root.activate(modelData.id)
         } else if (button===Qt.LeftButton) {
           if (entry && entry.moduleId) view.item.detailsRequested()
+          else if (cell.modelData.id==="now") view.item.openAt(point ? view.item.mapFromItem(cell,point) : null)
           else view.item.clicked()
         }
       }
@@ -193,29 +196,75 @@ GridLayout {
       }
       Component {
         id:nowView
-        FeedbackButton {
-          objectName:"islandNowIndicator"
-          readonly property var activity:NowActivity.current(root.service)
+        GridLayout {
+          id:nowGroup
+          columns:root.vertical ? 1 : 2
+          columnSpacing:0
+          rowSpacing:0
+          readonly property var activity:root.activities[0] || null
           readonly property bool available:!!activity
+          readonly property int otherCount:Math.max(0,root.activities.length-1)
           readonly property var description:NowPresentation.describe(activity,root.strings,Commons.I18n.formatNumber)
-          LayoutMirroring.enabled:Commons.I18n.rightToLeft
-          LayoutMirroring.childrenInherit:true
-          focusable:true
-          iconText:NowActivity.glyph(activity)
-          text:root.vertical ? "" : description.label.replace(/\s+/g," ").trim()
-          Accessible.name:[description.title,description.detail].filter(Boolean).join(" · ")
-          foreground:root.foreground
-          fontFamily:root.bar ? root.bar.fontFamily : Design.fontFamily
-          iconSize:Design.type.bar
-          fontSize:Design.type.bar
-          horizontalPadding:Design.gap.tight
-          verticalPadding:0
-          implicitWidth:Math.min(_contentNaturalWidth+2*horizontalPadding+_reservedBorderLeft+_reservedBorderRight,
-                                 root.vertical ? root.barSize : Style.space(136))
-          implicitHeight:root.vertical ? Math.max(Design.inlineControlHeight,iconSize) : root.barHeight
-          onClicked:if (activity && enabled) root.nowRequested(activity)
-          onHovered:isHovered=>root.nowHovered(isHovered && enabled && available)
-          onAvailableChanged:if (!available) root.nowHovered(false)
+          LayoutMirroring.enabled: Commons.I18n.rightToLeft
+          LayoutMirroring.childrenInherit: true
+          function openPrimary() {if (activity && enabled) root.nowRequested(activity)}
+          function openAt(point) {
+            if (point && more.visible && more.contains(more.mapFromItem(nowGroup,point))) more.clicked()
+            else openPrimary()
+          }
+          readonly property var clickBar:root.bar && root.bar.registerClickTarget ? root.bar : null
+          property var registeredBar:null
+          function registerButtons() {
+            if (registeredBar===clickBar) return
+            unregisterButtons()
+            registeredBar=clickBar
+            if (registeredBar) {registeredBar.registerClickTarget(primary);registeredBar.registerClickTarget(more)}
+          }
+          function unregisterButtons() {
+            if (registeredBar) {registeredBar.unregisterClickTarget(more);registeredBar.unregisterClickTarget(primary)}
+          }
+          onClickBarChanged:Qt.callLater(registerButtons)
+          Component.onCompleted:Qt.callLater(registerButtons)
+          Component.onDestruction:unregisterButtons()
+          onAvailableChanged:if (!available) root.nowHovered(false,null)
+          FeedbackButton {
+            id:primary
+            objectName:"islandNowIndicator"
+            focusable:true
+            iconText:NowActivity.glyph(nowGroup.activity)
+            text:root.vertical ? "" : nowGroup.description.label.replace(/\s+/g," ").trim()
+            Accessible.name:[nowGroup.description.title,nowGroup.description.detail].filter(Boolean).join(" · ")
+            foreground:root.foreground
+            fontFamily:root.bar ? root.bar.fontFamily : Design.fontFamily
+            iconSize:Design.type.bar
+            fontSize:Design.type.bar
+            horizontalPadding:Design.gap.tight
+            verticalPadding:0
+            implicitWidth:Math.min(_contentNaturalWidth+2*horizontalPadding+_reservedBorderLeft+_reservedBorderRight,
+                                   root.vertical ? root.barSize : Style.space(136))
+            implicitHeight:root.vertical ? Math.max(Design.inlineControlHeight,iconSize) : root.barHeight
+            onClicked:nowGroup.openPrimary()
+            function triggerPress(button) {if(button===Qt.LeftButton) clicked()}
+            onHovered:inside=>root.nowHovered(inside && enabled && nowGroup.available,nowGroup.activity)
+          }
+          FeedbackButton {
+            id:more
+            objectName:"islandNowMore"
+            visible:nowGroup.otherCount>0
+            focusable:true
+            text:"+"+Commons.I18n.formatNumber(nowGroup.otherCount)
+            tooltipText:root.strings.t("now.other").arg(Commons.I18n.formatNumber(nowGroup.otherCount))
+            Accessible.name:tooltipText
+            foreground:root.foreground
+            fontFamily:root.bar ? root.bar.fontFamily : Design.fontFamily
+            fontSize:Design.type.bar
+            horizontalPadding:Design.gap.tight
+            verticalPadding:0
+            Layout.maximumWidth:root.vertical ? root.barSize-Style.space(4) : implicitWidth
+            implicitHeight:root.vertical ? Design.inlineControlHeight : root.barHeight
+            onClicked:root.nowListRequested()
+            function triggerPress(button) {if(button===Qt.LeftButton) clicked()}
+          }
         }
       }
     Component {id:recordingView; StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}

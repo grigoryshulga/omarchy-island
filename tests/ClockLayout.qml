@@ -46,6 +46,8 @@ ShellRoot {
       property var actions:[]
       property var openedActivity:null
       onNowRequested:activity=>openedActivity=activity
+      property bool openedActivities:false
+      onNowListRequested:openedActivities=true
       property string openedModule:""
       onActivate:mode=>actions=actions.concat([mode])
       onDetailsRequested:moduleId=>openedModule=moduleId
@@ -143,9 +145,13 @@ ShellRoot {
         compare(liveStrip.openedActivity.row.id,"thread")
         service.t3.rows=service.t3.rows.concat([{id:"other",requestId:"r"}])
         liveStrip.vertical=false;wait(20)
-        verify(now.text.includes(Commons.I18n.formatNumber(2)))
+        var more=findChild(liveStrip,"islandNowMore")
+        verify(more.visible)
+        compare(more.text,"+"+Commons.I18n.formatNumber(2))
         now.forceActiveFocus();keyClick(Qt.Key_Return)
-        compare(liveStrip.openedActivity.count,2)
+        compare(liveStrip.openedActivity.row.id,"thread")
+        more.forceActiveFocus();keyClick(Qt.Key_Return)
+        verify(liveStrip.openedActivities)
         liveStrip.editing=true;wait(20)
         verify(!now.enabled)
         liveStrip.openedActivity=null

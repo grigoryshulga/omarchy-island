@@ -6,10 +6,6 @@ function describe(activity, strings, formatNumber) {
   if (!activity) return {label:"", title:"", detail:""}
   var row = activity.row
   if (activity.kind === "t3") {
-    if (activity.count > 1) {
-      var count = strings.t("now.requests").arg(formatNumber(activity.count))
-      return {label:count, title:count, detail:"T3 Code"}
-    }
     var question = row.requestKind === "user_input"
     var label = strings.t(question ? "now.answer" : "now.action")
     var questions = row.request && row.request.questions || []

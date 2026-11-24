@@ -25,6 +25,8 @@ PanelWindow {
   property bool forwardAnchorClicks: true
   property bool morphFromAnchor: false
   property real contentFade: 1
+  property bool fitEventContent: false
+  property bool fileDragActive: false
   property bool morphing: false
   readonly property bool animateMorph: Preferences.panelDuration(1) > 0
   readonly property real morphTarget: paintOpen && morphing ? 1 : 0
@@ -75,8 +77,8 @@ PanelWindow {
   readonly property real shown: morphing ? morphProgress : reveal.shown
   // Reveal full-width content once the card is large enough to read it.
   readonly property real contentOpacity: morphing ? Math.max(0, (morphProgress - 0.93) / 0.07) : reveal.contentShown
-  readonly property real widthFit: morphing && contentFade < 1
-    ? 1 - Math.min(1, Math.max(0, layoutWidth - drawnWidth - 2 * padding) / Style.space(32)) : 1
+  readonly property real contentFit: morphing && fitEventContent
+    ? 1 - Math.min(1, Math.max(0, layoutWidth - drawnWidth, layoutHeight - drawnHeight) / Style.space(12)) : 1
   readonly property real entranceOffset: morphing ? 0 : reveal.offsetY
   readonly property color anchorColor: morphing && bar ? bar.background : Design.canvas
   readonly property color cardColor: morphing ? Qt.rgba(
@@ -103,7 +105,7 @@ PanelWindow {
   visible: open || shown > 0
   // Hover previews only take input over the card; a pinned panel also gets
   // outside clicks for dismissal. The closing fade takes no input.
-  mask: Region { item: !root.open ? null : root.pinned ? canvas : card }
+  mask: Region { item: !root.open || root.fileDragActive ? null : root.pinned ? canvas : card }
 
   function syncLayout() {
     // Hover/alert flags also choose the requested size. Wait for the whole
@@ -154,7 +156,7 @@ PanelWindow {
     else { focusPrime.stop(); focusPrimed = false }
   }
   Timer { id: focusPrime; interval: 75; onTriggered: root.focusPrimed = true }
-  readonly property bool resizeWhileOpen: paintOpen && (morphing ? morphProgress > 0 : reveal.stretch >= 1)
+  readonly property bool resizeWhileOpen: morphing ? open && morphProgress > 0 : paintOpen && reveal.stretch >= 1
   readonly property int resizeDuration: morphing ? Preferences.panelDuration(200) : Preferences.duration(200)
   Behavior on settledWidth {
     enabled: root.resizeWhileOpen
@@ -241,7 +243,7 @@ PanelWindow {
         id: contentHolder
         x: (card.width-root.layoutWidth)/2+root.insetLeft
         y: root.insetTop
-        opacity: root.contentOpacity * root.contentFade * root.widthFit
+        opacity: root.contentOpacity * root.contentFade * root.contentFit
         transform: Translate { y: root.morphing ? Design.gap.tight * (1 - root.contentOpacity) : 0 }
         // Measure content at its destination width. No re-wrapping on every
         // animation frame, and no size/height feedback loop through the host.

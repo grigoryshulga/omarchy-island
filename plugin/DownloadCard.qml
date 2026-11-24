@@ -13,6 +13,7 @@ ContainerSurface {
   required property var strings
   property bool expanded:false
   property bool active:true
+  property alias fileIcon:downloadIcon
   objectName:"download-"+row.key
   color:Design.surface
   border.width: 0
@@ -27,8 +28,35 @@ ContainerSurface {
     RowLayout {
       Layout.fillWidth:true
       spacing:Design.gap.small
-      PlainText {text:"󰇚";color:Design.accent;font.pixelSize:Style.font.icon}
-      PlainText {objectName:"downloadFilename";Layout.fillWidth:true;Layout.minimumWidth:0;text:root.row.filename;typeRole:"title";elide:Text.ElideMiddle;maximumLineCount:1}
+      PlainText {id:downloadIcon;text:"󰇚";color:Design.accent;font.pixelSize:Style.font.icon}
+      PlainText {
+        id:filename
+        objectName:"downloadFilename"
+        Layout.fillWidth:true;Layout.minimumWidth:0
+        text:root.row.filename;typeRole:"title";elide:Text.ElideMiddle;maximumLineCount:1
+        readonly property string fileUrl:root.service && ("downloadsDir" in root.service) ? Downloads.fileUrl(root.row,root.service.downloadsDir) : ""
+        Accessible.description:fileUrl ? root.strings.t("downloads.dragFile") : ""
+        Drag.dragType:Drag.Automatic
+        Drag.supportedActions:Qt.CopyAction
+        Drag.mimeData:({"text/uri-list":fileUrl+"\r\n"})
+        Drag.active:fileDrag.active
+        Drag.onDragStarted:if (root.service && "fileDragSource" in root.service) root.service.fileDragSource=filename
+        Drag.onDragFinished:finishDrag()
+        Component.onDestruction:finishDrag()
+        function finishDrag() {
+          if (root.service && root.service.fileDragSource===filename) root.service.fileDragSource=null
+        }
+        HoverHandler {
+          enabled:!!filename.fileUrl
+          cursorShape:fileDrag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+        }
+        DragHandler {
+          id:fileDrag
+          target:null
+          acceptedButtons:Qt.LeftButton
+          enabled:!!filename.fileUrl
+        }
+      }
       PlainText {text:new Date(root.row.ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm");color:Design.secondaryText;typeRole:"caption"}
     }
     RowLayout {

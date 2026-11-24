@@ -17,6 +17,7 @@ ContainerSurface {
   readonly property bool keyboardFocused:focusWatch.contains(root,focusWatch.focused)
   property alias notificationIcon: sourceIcon
   property bool compact: false
+  property int toastCount:0
   property real toolsShown:!compact && (hover.hovered || keyboardFocused) ? 1 : 0
   Behavior on toolsShown {NumberAnimation {duration:Preferences.duration(150);easing.type:Easing.OutCubic}}
   property var externalFeedback: null
@@ -33,6 +34,7 @@ ContainerSurface {
   ListModel {id:rowItems}
   readonly property var feedback: externalFeedback || brailleFeedback
   signal expandRequested()
+  signal batchRequested()
   function dismissGroup() {
     var backend=service,keys=group.rows.map(function(row){return row.key})
     keys.forEach(function(key){backend.remove(key)})
@@ -64,7 +66,18 @@ ContainerSurface {
         Image { id: icon; anchors.fill: parent; source: root.group.rows.length && root.group.rows[0].appIcon ? Quickshell.iconPath(root.group.rows[0].appIcon,true) : ""; asynchronous: true; fillMode: Image.PreserveAspectFit }
       }
       PlainText { Layout.fillWidth: true; Layout.minimumWidth:0; text: root.group.source; color: Design.accent; typeRole:"caption" }
-      PlainText { objectName:"groupTime";visible: root.compact || root.mergedRows.length===1; text: root.group.rows.length ? new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm") : ""; color: Design.secondaryText; typeRole:"caption" }
+      PlainText { objectName:"groupTime";visible: root.toastCount<2 && (root.compact || root.mergedRows.length===1); text: root.group.rows.length ? new Date(root.group.rows[0].ts*1000).toLocaleTimeString(Qt.locale(Commons.I18n.formatLocale),"HH:mm") : ""; color: Design.secondaryText; typeRole:"caption" }
+      FeedbackButton {
+        objectName:"notificationBatch"
+        visible:root.compact && root.toastCount>1
+        text:visible ? root.strings.tn("notifications.new",root.toastCount).arg(Commons.I18n.formatNumber(root.toastCount)) : ""
+        tooltipText:visible ? root.strings.t("notifications.active") : ""
+        compact:true
+        horizontalPadding:Design.gap.tight
+        verticalPadding:0
+        fontSize:Design.type.caption
+        onClicked:root.batchRequested()
+      }
       Item {
         visible:root.toolsShown>0
         Layout.preferredWidth:tools.implicitWidth*root.toolsShown

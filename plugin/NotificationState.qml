@@ -30,6 +30,9 @@ Item {
   property int arrival: 0
   property var latest: null
   property string targetScreen: ""
+  property var toastKeys:[]
+  property real lastToastArrival:0
+  readonly property int toastCount:latest ? entries.filter(row=>toastKeys.includes(row.key)).length : 0
   property string error: ""
   readonly property var activeEntries: Model.collect(entries, [])
   readonly property var historyEntries: Model.collect([], history)
@@ -40,7 +43,8 @@ Item {
     if(!allowed) return
     n.tracked = true
     var key = Object.keys(refs).find(function(k) { return refs[k] === n }) || "n" + sessionKey + "_" + n.id
-    if (!refs[key]) watch(n, key)
+    const replacing = !!refs[key]
+    if (!replacing) watch(n, key)
     refs[key] = n
     revision++
     var row = Store.snapshot(n, key, NotificationUrgency)
@@ -53,9 +57,18 @@ Item {
     if (entries.length > Store.LIVE_LIMIT) archive(entries[entries.length-1].key, "expired")
     pruneHistory()
     if (mutedSources.indexOf(Model.source(row)) < 0 && !doNotDisturb) {
-      targetScreen = focusedScreen()
-      latest = row
-      arrival++
+      if (replacing) {
+        if (latest && latest.key===key) latest=row
+      } else {
+        const screen=focusedScreen()
+        const consecutive=latest && screen===targetScreen && Model.source(latest)===Model.source(row)
+          && row.urgency===latest.urgency && row.ts>=lastToastArrival && row.ts-lastToastArrival<=0.8
+        toastKeys=consecutive ? toastKeys.slice(-99).concat([key]) : [key]
+        targetScreen=screen
+        lastToastArrival=row.ts
+        latest=row
+        arrival++
+      }
     }
     saveSoon.restart()
   }
@@ -129,7 +142,13 @@ Item {
     if (latest && Model.source(latest) === source && mutedSources.indexOf(source) >= 0) latest = null
     saveSoon.restart()
   }
-  function setDoNotDisturb(value) {if(doNotDisturb===!!value)return;doNotDisturb=!!value;if(host && host.indicators) host.indicators.announceMode("dnd",doNotDisturb);saveSoon.restart()}
+  function setDoNotDisturb(value) {
+    if (doNotDisturb===!!value) return
+    doNotDisturb=!!value
+    if (doNotDisturb) { latest=null; toastKeys=[] }
+    if (host && host.indicators) host.indicators.announceMode("dnd",doNotDisturb)
+    saveSoon.restart()
+  }
   function actions(row) {
     if(!allowed) return []
     var tick = revision
