@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import Quickshell
+import qs.Commons
 import "gshulga.island/plugin" as Island
 import "gshulga.island-bar" as Adapter
 
@@ -52,6 +53,12 @@ ShellRoot {
         verify(widget.pinned, "Clicking the clock must pin the popup")
         mouseClick(clock)
         verify(!widget.pinned, "Clicking the clock again must dismiss the popup")
+
+        const handlers = IpcRegistry.handlers.filter(handler => handler.target === "island" && handler.enabled)
+        compare(handlers.length, 1, "IPC should be shared across outputs")
+        verify(IpcRegistry.call("island", "open", []).ran)
+        verify(JSON.parse(IpcRegistry.call("island", "status", []).output).pinned)
+        verify(IpcRegistry.call("island", "close", []).ran)
 
         widget.updateSetting("hoverDelay", 300)
         compare(host.config.layout.right[0].hoverDelay, 300)

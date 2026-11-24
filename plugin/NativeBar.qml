@@ -127,6 +127,7 @@ Item {
     target: "omarchy.bar"
     function syncHidden(): void { hiddenProbe.running = true }
   }
+  IslandIpc { widget: root.islandForIpc() }
 
   Connections {
     target: Hyprland
@@ -182,6 +183,7 @@ Item {
         id: island
         bar: root
         service: Preferences.service
+        ipcEnabled: false
         anchors.centerIn: parent
         width: root.vertical ? parent.width : Math.min(parent.width, implicitWidth)
         height: root.vertical ? Math.min(parent.height, implicitHeight) : parent.height

@@ -16,6 +16,7 @@ BarWidget {
   id: root
   moduleName: "gshulga.island"
   property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
+  property bool ipcEnabled: true
   readonly property var indicators: service && ("indicators" in service) ? service.indicators : null
   readonly property string moduleTooltips: [leftIndicators.tooltips,rightIndicators.tooltips].filter(Boolean).join(" · ")
   readonly property var moduleStrings:strings
@@ -167,8 +168,8 @@ BarWidget {
     pinned = false; hoverOpen = false; alertKind = ""; hoverDelay.stop()
   }
   function toggle() { pinned ? close(true) : open() }
-  function ipcWidget() {
-    return bar && typeof bar.islandForIpc === "function" ? bar.islandForIpc() || root : root
+  function ipcStatus() {
+    return JSON.stringify({pinned:pinned,page:controlsMode ? "controls" : weatherMode ? "weather" : calendarMode ? "calendar" : "inbox",hover:hoverOpen,alert:alertKind,service:!!service,screen:screenName,appearance:preview.entranceStyle || "legacy"})
   }
   function openSettings() {
     var overview = previewContent.pageObject(1)
@@ -551,20 +552,5 @@ BarWidget {
       onPageRequested:index=>root.openPage(index)
     }
   }
-  ShellIpc {
-    target: "island"
-    function open(): void { root.ipcWidget().open() }
-    function close(): void { root.ipcWidget().close() }
-    function settings(): void { root.ipcWidget().openSettings() }
-    function timers(): void { root.ipcWidget().openModuleDetails("timers") }
-    function controls(): void { root.ipcWidget().openControls() }
-    function calendar(): void { root.ipcWidget().openCalendar() }
-    function weather(): void { root.ipcWidget().openWeather() }
-    function toggle(): void { root.ipcWidget().toggle() }
-    function hover(): void { root.ipcWidget().toggleHover() }
-    function status(): string {
-      const widget = root.ipcWidget()
-      return JSON.stringify({pinned:widget.pinned,page:widget.controlsMode ? "controls" : widget.weatherMode ? "weather" : widget.calendarMode ? "calendar" : "inbox",hover:widget.hoverOpen,alert:widget.alertKind,service:!!widget.service,screen:widget.screenName,appearance:preview.entranceStyle || "legacy"})
-    }
-  }
+  IslandIpc { enabled: root.ipcEnabled; widget: root }
 }
