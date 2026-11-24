@@ -162,8 +162,13 @@ ShellRoot {
         verify(threadAction.iconText==="","thread still has a navigation arrow")
         mouseMove(t3Button.parent,t3Button.parent.width/2,t3Button.parent.height/2);wait(20)
         verify(t3Button.hot,"Header whitespace has no hover feedback")
+        overview.pageHeight=0
         mouseClick(t3Button.parent,t3Button.parent.width/2,t3Button.parent.height/2);wait(50)
         compare(overview.detailPage,"t3","Header whitespace did not open T3 details")
+        var sessions=findChild(overview,"t3SessionsScroll")
+        var firstSession=findChild(overview,"t3Session-done-0")
+        tryVerify(function(){return sessions.height>=firstSession.height && firstSession.height>0},
+          1000,"T3 must show a complete session when other pages have no measured height")
         verify(!findChild(overview,"islandMediaPlayer").visible,"T3 details did not replace music")
         var backButton=findChild(overview,"overviewBack")
         verify(backButton.visible && backButton.activeFocus,"Detail view did not focus Back")
@@ -176,7 +181,9 @@ ShellRoot {
         tryCompare(backButton,"x",0)
         compare(backButton.iconText,"󰁍")
         verify(findChild(overview,"t3Session-done-29").visible,"Full T3 list is incomplete")
-        compare(overview.implicitHeight,height,"Full T3 list grew the panel")
+        compare(overview.implicitHeight,overview.maximumOverviewHeight,"Full T3 list must scroll within the popup height limit")
+        verify(sessions.contentItem.contentHeight>sessions.height,"Long T3 list cannot scroll")
+        overview.pageHeight=height
         keyClick(Qt.Key_Return);wait(50)
         verify(t3Button.activeFocus,"Back did not restore focus")
         var finishedBadge=findChild(overview,"t3Count-finished")

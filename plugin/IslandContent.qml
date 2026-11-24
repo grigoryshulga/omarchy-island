@@ -69,6 +69,7 @@ Item {
   readonly property var detailDefinition:Catalog.definition(detailPage)
   property real pageHeight: Style.space(520)
   property real maximumOverviewHeight:Style.space(640)
+  readonly property real detailHeightLimit: Math.max(1, maximumOverviewHeight - overviewScroll.y)
   readonly property bool detailOpen: detailPage!==""
   readonly property var detailItem: {
     if (detailDefinition && detailDefinition.detail) return headerDetail.item
@@ -258,7 +259,7 @@ Item {
     backend:root.service && root.service.modules && definition ? root.service.modules[definition.id] || null : null
     presentation:QtObject {
       readonly property var bar:root.bar
-      readonly property real pageHeight:Math.max(1,root.maximumOverviewHeight-overviewScroll.y)
+      readonly property real pageHeight:root.detailHeightLimit
       readonly property var strings:root.strings
       readonly property var feedback:root.externalFeedback
       readonly property var activityTarget:root.activityTarget
@@ -331,7 +332,7 @@ Item {
           readonly property bool detail:root.detailPage===moduleFrame.entryKey
           readonly property bool active:root.overviewActive && root.visible && moduleSection.visible
           readonly property real pageHeight:detail && moduleFrame.entryKey==="t3"
-              ? Math.max(1,Math.min(root.maximumOverviewHeight,root.pageHeight)-overviewScroll.y) : overviewScroll.height
+              ? root.detailHeightLimit : overviewScroll.height
         }
         readonly property bool moduleEnabled:!!backend && ("allowed" in backend ? backend.allowed : true)
         onAvailableChanged:if(!available && root.activityTarget && root.detailPage===moduleFrame.entryKey) Qt.callLater(function(){
