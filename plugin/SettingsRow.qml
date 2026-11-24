@@ -14,6 +14,7 @@ Item {
   property alias editor:choice
   property string choiceValue: String(Settings.get(settings,key))
   property var choiceValues: Settings.choices[key] || []
+  property string choiceLabelPrefix: "settings.option."
   readonly property string key:spec.key
   readonly property bool delay:spec.type==="delay"
   readonly property bool percent:spec.type==="percent"
@@ -74,7 +75,7 @@ Item {
       y:root.stacked ? title.height+Design.gap.small : (content.height-height)/2
       width:root.stacked ? content.width : root.choiceWidth
       value:root.choiceValue
-      options:visible ? root.choiceValues.filter(function(value){return root.key!=="openingPage" || value!=="overview" || Settings.get(root.settings,"overviewEnabled")}).map(function(value){return {value:value,label:root.strings.t("settings.option."+value)}}) : []
+      options:visible ? root.choiceValues.filter(function(value){return root.key!=="openingPage" || value!=="overview" || Settings.get(root.settings,"overviewEnabled")}).map(function(value){return {value:value,label:root.strings.t(root.choiceLabelPrefix+value)}}) : []
       Accessible.name:title.text
       showLabel:false
       onChanged:value=>{

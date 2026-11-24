@@ -3,7 +3,7 @@ import "../.." as Island
 Island.ModuleView {
   id:root
   available:!!presentation && (presentation.expanded || presentation.hovering) && !!backend
-  implicitHeight:presentation.detail ? Math.max(content.implicitHeight,presentation.pageHeight) : content.implicitHeight
+  implicitHeight:content.implicitHeight
   readonly property bool editing:content.editing
   readonly property bool inPanel:content.section!==""
   readonly property bool adding:content.adding
@@ -30,7 +30,11 @@ Island.ModuleView {
   Component.onDestruction:if(observedBackend) observedBackend.watch(root,false)
   function back(){if(content.section || content.editing || content.adding) {content.back();return true}return false}
   Island.ControlsView {
-    id:content;objectName:"islandControls";anchors.fill:parent
+    id:content;objectName:"islandControls"
+    anchors { top: parent.top; left: parent.left; right: parent.right }
+    // The grid reports its preferred size to the popup. An open native
+    // panel can fill a larger viewport without feeding it back into sizing.
+    height:root.inPanel ? Math.max(root.height,root.presentation.pageHeight) : root.height
     service:root.presentation.service;strings:root.presentation.strings;bar:root.presentation.bar
     settings:root.presentation.settings;externalFeedback:root.presentation.feedback
     favoritesInteractive:root.presentation.expanded

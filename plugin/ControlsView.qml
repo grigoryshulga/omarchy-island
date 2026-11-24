@@ -114,7 +114,10 @@ Item {
     if(favoriteMode) {sectionRequested(name);return}
     if(["audio","bluetooth","network","tailscale","monitors"].indexOf(name)<0 && controlLayout.main.indexOf(name)<0) return
     editing=false;adding=false
-    if(!section) {detailHeight=landing.implicitHeight;sectionFromSummary=!!fromSummary}
+    if (!section) {
+      detailHeight = Math.max(landing.implicitHeight, detailBack.implicitHeight + Design.gap.small + 2 * Design.controlHeight)
+      sectionFromSummary = !!fromSummary
+    }
     changing=true
     if(nativeLoader.item) nativeLoader.item.close()
     nativeLoader.source=""
@@ -132,6 +135,7 @@ Item {
     if(editableGrid.dismissEditor()) return
     if(editing) {configure();return}
     var previous=section
+    if (!previous) return
     var returnToSummary=previous!=="" && sectionFromSummary
     sectionFromSummary=false
     changing=true

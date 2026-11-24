@@ -141,8 +141,9 @@ Item {
     if (!expanded) return body.implicitHeight
     if (configuring) return pageHeight
     if (!detailOpen) return Math.min(maximumOverviewHeight,body.implicitHeight)
-    return detailPage==="t3" || (detailDefinition && detailDefinition.detail)
-        ? Math.min(maximumOverviewHeight,overviewScroll.y+body.implicitHeight) : pageHeight
+    if (detailPage==="controls" || detailPage==="t3" || (detailDefinition && detailDefinition.detail))
+      return Math.min(maximumOverviewHeight, overviewScroll.y + body.implicitHeight)
+    return Math.min(maximumOverviewHeight, pageHeight > overviewScroll.y ? pageHeight : maximumOverviewHeight)
   }
   MouseArea { anchors.fill: parent; acceptedButtons:Qt.LeftButton | Qt.RightButton; onClicked: mouse => {if(mouse.button===Qt.RightButton) {root.closeRequested();return}if(root.externalFeedback) root.externalFeedback.pulseFrom(root,Qt.point(mouse.x,mouse.y));if(!root.expanded) root.expandRequested()} }
   OverviewDrag {

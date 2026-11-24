@@ -23,6 +23,15 @@ assert.equal(settings.valid('__proto__', true), false);
 assert.equal(settings.valid('notificationStyle', 'invalid'), false);
 assert.equal(settings.valid('notificationStyle', 'bar'), true);
 assert.equal(settings.valid('notificationStyle', 'card'), true);
+assert.equal(settings.get({}, 'panelShape'), 'pill');
+assert.equal(settings.get({}, 'panelBackground'), 'theme');
+for (const key of ['panelShape', 'panelBackground']) {
+  assert.equal(settings.valid(key, 'unknown'), false);
+  for (const option of settings.choices[key]) {
+    assert.equal(settings.get({[key]:option}, key), option);
+    for (const lang of ['en', 'ru']) assert.ok(require(`../plugin/i18n/${lang}.json`)[`settings.appearance.${option}`]);
+  }
+}
 assert.equal(settings.valid('musicVisualizationStyle', 'future'), false);
 assert.deepEqual(settings.choices.musicVisualizationStyle,
   ['default', 'ripple', 'flow', 'embers', 'constellations', 'echo', 'bayer', 'printTones', 'asciiInk', 'engraving']);

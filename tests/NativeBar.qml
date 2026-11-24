@@ -11,7 +11,8 @@ ShellRoot {
     property var config: ({
       position: "top",
       layout: { left: [{ id: "omarchy.workspaces" }], right: [
-        { id: "gshulga.island", format: "HH:mm", hoverDelay: 120, weatherEnabled: false, notificationDuration: 1000 }
+        { id: "gshulga.island", format: "HH:mm", hoverDelay: 120, weatherEnabled: false,
+          notificationDuration: 1000, clockLayout: [], osdModes: false }
       ] }
     })
 
@@ -25,6 +26,7 @@ ShellRoot {
       mutate(next)
       config = next.bar
     }
+    function firstPartyServiceFor(id) { return null }
   }
 
   Island.Service { id: service }
@@ -60,6 +62,15 @@ ShellRoot {
 
         const popup = findChild(widget, "islandPopup")
         const clock = findChild(widget, "islandClock")
+        const label = findChild(clock, "islandClockText")
+        const idleMargin = label.mapToItem(pill, 0, 0).x
+        widget.updateSetting("clockLayout", [{id:"dnd", kind:"indicator", side:"right"}])
+        service.setDoNotDisturb(true)
+        tryVerify(() => pill.width > compactWidth + 10)
+        tryVerify(() => Math.abs(label.mapToItem(pill, 0, 0).x - idleMargin) <= 1,
+          1000, "A right indicator should leave the left padding intact")
+        service.setDoNotDisturb(false)
+        tryCompare(pill, "width", compactWidth)
         mouseClick(clock)
         verify(widget.pinned, "Clicking the clock must pin the popup")
         verify(popup.pinned)
@@ -73,6 +84,24 @@ ShellRoot {
         tryCompare(pill, "opacity", 1)
         tryCompare(popup, "visible", false)
         compare(pill.width, compactWidth)
+
+        const pages = findChild(widget, "islandPopupPages")
+        // Parked Calendar and Weather pages may have no measured height yet.
+        for (const index of [2, 3]) pages.pageObject(index).stableHeight = 0
+        widget.openControls()
+        const viewport = findChild(widget, "overviewScroll")
+        tryVerify(() => widget.controlsMode && !!viewport)
+        tryVerify(() => viewport.height > 100 && popup.drawnHeight > viewport.y + 100,
+          1200, "The Controls grid must size the popup even when sibling pages are unmeasured")
+        const audioTile = findChild(viewport, "controlOpen-audio")
+        verify(!!audioTile && audioTile.visible)
+        audioTile.clicked()
+        const controlPanel = findChild(viewport, "islandNativeControl")
+        tryVerify(() => controlPanel && controlPanel.visible && !!controlPanel.item, 3500)
+        tryVerify(() => controlPanel.height >= Island.Design.controlHeight && popup.drawnHeight > 100,
+          1200, "The embedded Controls panel must have room to display inside the popup")
+        widget.close()
+        tryCompare(popup, "visible", false)
 
         widget.toggleHover()
         tryCompare(popup, "shown", 1)
@@ -95,6 +124,22 @@ ShellRoot {
         for (const other of bar.moduleWidgets("gshulga.island")) {
           if (other !== widget) compare(other.parent.opacity, 1)
         }
+
+        const shortWidth = popup.drawnWidth
+        const shortNotice = service.latestDownload
+        service.latestDownload = Object.assign({}, shortNotice, {filename:"A considerably longer notification file name that takes more room.zip"})
+        service.arrival++
+        tryVerify(() => popup.drawnWidth > shortWidth + 2 && popup.drawnWidth < popup.layoutWidth - 2)
+        tryVerify(() => popup.drawnWidth >= popup.layoutWidth - 1 && popup.drawnWidth > shortWidth + 30)
+        compare(popup.shown, 1)
+        compare(pill.opacity, 0)
+        const longWidth = popup.drawnWidth
+        service.latestDownload = shortNotice
+        service.arrival++
+        tryVerify(() => popup.drawnWidth < longWidth - 2 && popup.drawnWidth > shortWidth + 2)
+        tryVerify(() => Math.abs(popup.drawnWidth - shortWidth) <= 1)
+        compare(popup.shown, 1)
+
         tryCompare(popup, "open", false)
         tryVerify(() => popup.drawnWidth > compactWidth && popup.drawnWidth < popup.layoutWidth - 2)
         const returningWidth = popup.drawnWidth
@@ -121,6 +166,27 @@ ShellRoot {
         findChild(settings, "settingsTab-panel").clicked()
         const placement = findChild(settings, "setting-panelPosition")
         verify(!!placement, "Panel settings should offer an edge selector")
+        const shape = findChild(settings, "setting-panelShape")
+        const background = findChild(settings, "setting-panelBackground")
+        verify(!!shape && !!background)
+        shape.changed("notch")
+        tryVerify(() => pill.y === 0 && findChild(pill, "islandNotchBackdrop").visible)
+        const notch = findChild(pill, "islandNotchBackdrop")
+        compare(notch.topLeftRadius, 0)
+        compare(notch.topRightRadius, 0)
+        shape.changed("bar")
+        const backdrop = findChild(strip, "islandBarBackdrop")
+        verify(backdrop.visible && backdrop.width === strip.width && pill.width < backdrop.width)
+        background.changed("oledBlack")
+        compare(backdrop.color, Qt.rgba(0,0,0,1))
+        background.changed("transparent")
+        compare(backdrop.color.a, 0)
+        background.changed("hyprland")
+        tryVerify(() => Math.abs(backdrop.color.a - 0.6) < 0.01)
+        shape.changed("pill")
+        background.changed("theme")
+        compare(host.config.layout.right[0].panelShape, "pill")
+        compare(host.config.layout.right[0].panelBackground, "theme")
         compare(placement.value, "top")
         placement.changed("left")
         tryCompare(widget, "configuredFormat", "HH\nmm")

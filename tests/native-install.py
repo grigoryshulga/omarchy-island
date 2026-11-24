@@ -76,7 +76,14 @@ with tempfile.TemporaryDirectory(prefix='island-native-') as directory:
             (plugins / module).symlink_to(Path('/usr/share/omarchy/shell') / module)
         native_shell = plugins / 'shell.qml'
         native_shell.write_text((project / 'tests/NativeBar.qml').read_text())
-        result = subprocess.run(['qs', '-p', str(native_shell), '--no-color'], env=dict(os.environ, HOME=str(home)),
+        hyprctl = commands / 'hyprctl'
+        hyprctl.write_text('#!/bin/sh\n'
+                           'if [ "$*" = "-j getoption decoration:active_opacity" ]; then\n'
+                           '  echo \'{"float":0.6}\'\n'
+                           'else\n  exec /usr/bin/hyprctl "$@"\nfi\n')
+        hyprctl.chmod(0o755)
+        result = subprocess.run(['qs', '-p', str(native_shell), '--no-color'],
+                                env=dict(os.environ, HOME=str(home), PATH=env['PATH']),
                                 capture_output=True, text=True, timeout=10)
         print(result.stdout + result.stderr)
         assert_qml_pass(result, 'ISLAND_NATIVE_BAR_PASS')

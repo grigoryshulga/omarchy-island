@@ -158,23 +158,10 @@ Item {
         }
         onItemChanged:root.updateOwnsKeys()
       }
-      Loader {
-        id:clockEditor
-        width:body.width-Design.gap.small
-        active:root.visible && root.active && root.sections[root.category].id==="panel"
-        visible:active
-        sourceComponent:ClockLayoutEditor {
-          scrollViewport:viewport
-          settings:root.settings;service:root.service;bar:root.bar;strings:root.strings;active:root.active
-          onSettingRequested:(key,value)=>root.settingRequested(key,value)
-          onRevealFocus:item=>root.revealFocus(item)
-          onOwnsKeysChanged:root.updateOwnsKeys()
-        }
-        onItemChanged:root.updateOwnsKeys()
-      }
       Repeater {
         id:groups
-        model:root.sections[root.category].groups.filter(group=>!root.standalone || group.id!=="notifications")
+        model:root.sections[root.category].groups.filter(group=>
+          root.standalone ? group.id!=="notifications" : group.id!=="appearance")
         Column {
           id:group
           required property var modelData
@@ -200,6 +187,7 @@ Item {
               width:group.width
               spec:modelData
               strings:root.strings;settings:root.settings;active:root.active
+              choiceLabelPrefix:group.modelData.id==="appearance" ? "settings.appearance." : "settings.option."
               onSettingRequested:(key,value)=>root.settingRequested(key,value)
               onPopupChanged:root.updateOwnsKeys()
             }
@@ -220,6 +208,20 @@ Item {
             onSettingRequested:(key,value)=>root.settingRequested(key,value)
           }
         }
+      }
+      Loader {
+        id:clockEditor
+        width:body.width-Design.gap.small
+        active:root.visible && root.active && root.sections[root.category].id==="panel"
+        visible:active
+        sourceComponent:ClockLayoutEditor {
+          scrollViewport:viewport
+          settings:root.settings;service:root.service;bar:root.bar;strings:root.strings;active:root.active
+          onSettingRequested:(key,value)=>root.settingRequested(key,value)
+          onRevealFocus:item=>root.revealFocus(item)
+          onOwnsKeysChanged:root.updateOwnsKeys()
+        }
+        onItemChanged:root.updateOwnsKeys()
       }
     }
   }

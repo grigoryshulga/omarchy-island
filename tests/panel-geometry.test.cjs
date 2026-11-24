@@ -1,5 +1,10 @@
 const assert = require('node:assert/strict');
 const g = require('../plugin/PanelGeometry.js');
+assert.equal(g.parseOpacity('{"float":0.65}', 1), 0.65);
+assert.equal(g.parseOpacity('{"float":0}', 1), 0);
+for (const raw of ['bad', '{}', '{"float":1.1}', '{"float":-0.1}', '{"float":"0.3"}']) {
+  assert.equal(g.parseOpacity(raw, 0.8), 0.8);
+}
 for (const edge of ['top','bottom','left','right']) {
   const vertical = g.vertical(edge);
   assert.deepEqual(g.available(edge,1000,800,30,10),vertical ? {width:950,height:780} : {width:980,height:750});

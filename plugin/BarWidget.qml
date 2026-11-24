@@ -35,6 +35,9 @@ BarWidget {
   readonly property bool osdTransitioning: osdShown>0 && osdShown<1 && !Preferences.reduceMotion && Preferences.get("panelAnimation")
   Behavior on osdShown {NumberAnimation {duration:Preferences.panelDuration(root.showOsd ? 240 : 200);easing.type:Easing.OutCubic}}
   readonly property real indicatorGutter: vertical ? 0 : Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)>0 ? Math.max(leftIndicators.implicitWidth,rightIndicators.implicitWidth)+Style.space(11) : 0
+  readonly property real indicatorGap: Style.space(11 - 5 * osdShown)
+  readonly property real leftInset: Design.gap.medium + (leftIndicators.implicitWidth > 0 ? leftIndicators.implicitWidth + indicatorGap : 0)
+  readonly property real rightInset: Design.gap.medium + (rightIndicators.implicitWidth > 0 ? rightIndicators.implicitWidth + indicatorGap : 0)
   property var execute:function(argv){Util.execArgv(argv)}
   function activateIndicator(mode) {
     if (mode==="update") {
@@ -88,6 +91,16 @@ BarWidget {
   readonly property bool alertOnScreen: !alertScreen || alertScreen===screenName
   readonly property bool showAlert: alertKind !== "" && alertOnScreen
   readonly property bool notificationToast: alertKind==="notification" && !pinned && !hoverOpen
+  readonly property bool adaptiveToast: standalone && notificationToast
+  readonly property real toastWidth: {
+    const row = adaptiveToast && service ? service.latest : null
+    if (!row) return Style.space(300)
+    const title = toastTitleMetrics.advanceWidth(String(row.filename || row.summary || "").slice(0, 180))
+    const body = toastCaptionMetrics.advanceWidth(Model.plain(row.body).slice(0, 180))
+    const header = toastCaptionMetrics.advanceWidth(Model.source(row).slice(0, 64) + "  00:00") + Style.space(24)
+    return Math.min(Style.space(440), Math.max(Style.space(192), Math.max(title, body, header) + Style.space(40)))
+  }
+  property real toastOpacity: 1
   readonly property real displayScale: root.QsWindow.window ? root.QsWindow.window.devicePixelRatio : 1
   readonly property string configuredFormat: String(setting(vertical ? "verticalFormat" : "format",vertical ? "HH\n—\nmm" : "dddd HH:mm"))
   readonly property string clockText: formattedClock(configuredFormat)
@@ -206,6 +219,11 @@ BarWidget {
   }
   function showNotification() {
     if (!service || !service.latest || (service.targetScreen && service.targetScreen!==screenName) || pinned) return
+    if (adaptiveToast && preview.open && Preferences.panelDuration(1) > 0) {
+      toastSwap.stop()
+      toastOpacity = 0
+      toastSwap.start()
+    }
     contentExpanded = false; alertKind = "notification"; alertLife.interval = Number(setting("notificationDuration",5000)); alertLife.restart()
   }
   function syncSettings() {
@@ -255,7 +273,7 @@ BarWidget {
   readonly property real clockHeight: standalone && !showOsd && osdShown <= 0
     ? clockMeasure.implicitHeight : Math.max(clockMeasure.implicitHeight, Style.space(40))
   readonly property real standaloneWidth: Math.max(clockMeasure.implicitWidth, showOsd || osdShown > 0 ? osdGauge.implicitWidth : 0)
-    + 2 * indicatorGutter + 2 * Design.gap.medium
+    + leftInset + rightInset
   implicitWidth: vertical ? barSize : Math.min(Style.space(600), standalone ? standaloneWidth
     : Math.max(Style.space(fixedEdge === "center" ? 360 : 0), clockMeasure.implicitWidth + 2*indicatorGutter + Style.space(fixedEdge === "center" ? 120 : 32), showAlert ? Style.space(420) : 0, showOsd ? osdMeasure.implicitWidth+2*indicatorGutter+Style.space(50) : 0))
   implicitHeight: vertical ? Math.max(standalone ? 0 : Style.space(80),
@@ -299,6 +317,13 @@ BarWidget {
   Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; objectName:"islandAlertLife"; interval: 3000; onTriggered: root.alertKind = "" }
+  SequentialAnimation {
+    id: toastSwap
+    PauseAnimation { duration: Preferences.panelDuration(55) }
+    NumberAnimation { target: root; property: "toastOpacity"; to: 1; duration: Preferences.panelDuration(145); easing.type: Easing.OutCubic }
+  }
+  FontMetrics { id: toastTitleMetrics; font.family: Design.fontFamily; font.pixelSize: Design.type.body }
+  FontMetrics { id: toastCaptionMetrics; font.family: Design.fontFamily; font.pixelSize: Design.type.caption }
   PlainText {id:osdMeasure;visible:false;text:root.indicators && ("osdMessage" in root.indicators) ? root.indicators.osdMessage : "";typeRole:"bar"}
   PlainText { id: clockMeasure; typeRole:"bar"; text: root.clockText; visible: false }
   WidgetButton {
@@ -340,7 +365,7 @@ BarWidget {
       waveSpan:trigger.width
       z:1
       objectName:"islandLeftIndicators"
-      x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2-centerContent.indicatorSpan/2-Style.space(11-5*root.osdShown)-width
+      x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2-centerContent.indicatorSpan/2-root.indicatorGap-width
       y: root.vertical ? Style.space(6) : (parent.height-height)/2
       onActivate:mode=>root.activateIndicator(mode)
       onQuickAction:mode=>root.quickIndicatorAction(mode)
@@ -353,9 +378,10 @@ BarWidget {
     Item {
       id:centerContent
       objectName:"islandClockDisplay"
-      width:Math.floor(Math.max(1,parent.width-(root.vertical ? Style.space(4) : 2*root.indicatorGutter+Style.space(18)))*root.displayScale)/root.displayScale
+      width:Math.floor(Math.max(1,parent.width-(root.vertical ? Style.space(4) : root.standalone
+        ? root.leftInset+root.rightInset : 2*root.indicatorGutter+Style.space(18)))*root.displayScale)/root.displayScale
       height:root.vertical ? root.clockHeight : Math.floor(parent.height*root.displayScale)/root.displayScale
-      x:Math.round((parent.width-width)*root.displayScale/2)/root.displayScale
+      x:Math.round((root.standalone && !root.vertical ? root.leftInset : (parent.width-width)/2)*root.displayScale)/root.displayScale
       y:root.vertical ? leftIndicators.implicitHeight+Style.space(12)+(parent.height-leftIndicators.implicitHeight-rightIndicators.implicitHeight-Style.space(24)-height)/2 : Math.round((parent.height-height)*root.displayScale/2)/root.displayScale
       z:1
       readonly property real indicatorSpan: Math.min(width,clockLabel.contentWidth)*(1-root.osdShown)+osdGauge.contentWidth*root.osdShown
@@ -419,7 +445,7 @@ BarWidget {
       waveSpan:trigger.width
       z:1
       objectName:"islandRightIndicators"
-      x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2+centerContent.indicatorSpan/2+Style.space(11-5*root.osdShown)
+      x: root.vertical ? (parent.width-width)/2 : centerContent.x+centerContent.width/2+centerContent.indicatorSpan/2+root.indicatorGap
       y: root.vertical ? parent.height-height-Style.space(6) : (parent.height-height)/2
       onActivate:mode=>root.activateIndicator(mode)
       onQuickAction:mode=>root.quickIndicatorAction(mode)
@@ -467,7 +493,9 @@ BarWidget {
     onVisibleChanged: if (!visible) Qt.callLater(function(){
       if(!preview.visible && !preview.open) {root.contentExpanded=false;root.selectedPage=1}
     })
-    contentWidth: fittedContentWidth(Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
+    contentWidth: fittedContentWidth(root.adaptiveToast ? root.toastWidth
+      : Style.space(root.contentExpanded ? 480 : root.notificationToast ? 300 : 440))
+    contentFade: root.adaptiveToast && animateMorph ? root.toastOpacity : 1
     contentHeight: fittedContentHeight(root.previewActivity ? nowPreview.implicitHeight : previewContent.implicitHeight)
     ToastWaves {
       id:notificationWaves

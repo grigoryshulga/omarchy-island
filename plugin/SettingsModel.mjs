@@ -5,6 +5,7 @@ const validators = {clockLayout:ClockLayout.valid};
 // Settings accepted by the Island UI. Unknown shell-entry metadata is preserved.
 var defaults = {
   clockLayout: null,
+  panelShape: "pill", panelBackground: "theme",
   hoverPreview: true, hoverDelay: 140, openingPage: "overview",
   panelAnimation: true, animationsEnabled: true, cursorEffectsEnabled: true,
   indicatorRecording: true, indicatorRemote: true, indicatorUpdate: true,
@@ -14,6 +15,8 @@ var defaults = {
 }
 var choices = {
   openingPage: ["overview", "last"],
+  panelShape: ["notch", "pill", "bar"],
+  panelBackground: ["theme", "oledBlack", "transparent", "hyprland"],
 }
 function valid(key, value) {
   if (!Object.prototype.hasOwnProperty.call(defaults, key)) return false
@@ -50,7 +53,10 @@ var sections = [
     {id:"opening",rows:[{key:"hoverPreview"},{key:"hoverDelay",type:"delay",dependsOn:"hoverPreview"},{key:"openingPage",type:"choice"}]},
     {id:"animations",rows:[{key:"panelAnimation"},{key:"animationsEnabled"},{key:"cursorEffectsEnabled"}]}
   ]},
-  {id:"panel",groups:[]},
+  {id:"panel",groups:[{id:"appearance",rows:[
+    {key:"panelShape",type:"choice"},
+    {key:"panelBackground",type:"choice"}
+  ]}]},
   {id:"alerts",groups:[
     {id:"events",description:true,rows:[{key:"osdVolume"},{key:"osdBrightness"},{key:"osdKeyboard"},{key:"osdLayout"},{key:"osdMicrophone"},{key:"osdModes"}]}
   ]},

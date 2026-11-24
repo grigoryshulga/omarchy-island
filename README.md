@@ -49,6 +49,10 @@ This selects **Island Panel** as Omarchy's active bar. Each monitor gets one cen
 
 The capsule fits the clock, indicators, and on-screen gauges, with a small inset from the screen edge. A click or incoming toast expands the capsule into the popup. It returns to the clock when the popup closes. Hover previews leave the clock visible. Choose a screen edge under **Settings → Panel → Panel position** or use `omarchy bar position`, for example `omarchy bar position bottom`.
 
+Each side takes the space needed by its visible indicators. When notifications arrive in succession, the open card resizes to fit the latest one.
+
+Under **Settings → Panel → Appearance**, choose **Notch** (attached to the screen edge), **Pill** (floating capsule), or **Bar** (a full-length strip with a compact clock in its center). The fill can follow the Omarchy theme, use pure OLED black, be transparent, or use Hyprland's `decoration:active_opacity` with the theme color. The Hyprland value is refreshed on configuration reload and applies to the fill.
+
 Switch back to the existing widget layout with `omarchy bar use omarchy.bar`. Select Island Panel again with `omarchy bar use gshulga.island-bar`. Both modes use the same Island settings.
 
 ### Update

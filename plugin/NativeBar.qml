@@ -8,6 +8,8 @@ import qs.Commons as Commons
 import qs.Ui
 import "." as Island
 import "PanelGeometry.js" as Geometry
+import "SettingsModel.mjs" as Settings
+import "DesignTokens.js" as Tokens
 
 Item {
   id: root
@@ -30,7 +32,9 @@ Item {
   readonly property string position: Geometry.positions.includes(barConfig.position) ? barConfig.position : "top"
   readonly property bool vertical: Geometry.vertical(position)
   readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
-  readonly property int edgeInset: Style.space(6)
+  readonly property string panelShape: Settings.get(islandSettings, "panelShape")
+  readonly property string panelBackground: Settings.get(islandSettings, "panelBackground")
+  readonly property int edgeInset: panelShape === "pill" ? Style.space(6) : 0
   readonly property int panelSize: barSize + edgeInset
   readonly property var screenBarSizes: {
     const sizes = {}
@@ -38,13 +42,23 @@ Item {
     return sizes
   }
   readonly property string fontFamily: Style.font.family
-  readonly property color barForeground: Commons.Color.bar.text
+  readonly property color barForeground: panelBackground === "oledBlack"
+    ? Design.color(Tokens.readable(Commons.Color.bar.text, background, 7)) : Commons.Color.bar.text
   readonly property color foreground: barForeground
-  readonly property color background: Commons.Color.bar.background
+  readonly property color background: {
+    const theme = Commons.Color.bar.background
+    switch (panelBackground) {
+    case "oledBlack": return "black"
+    case "transparent": return Qt.rgba(theme.r, theme.g, theme.b, 0)
+    case "hyprland": return Qt.rgba(theme.r, theme.g, theme.b, hyprlandOpacity)
+    default: return theme
+    }
+  }
   readonly property color urgent: Commons.Color.bar.active
   readonly property bool foregroundAnimationEnabled: !Style.reduceMotion
 
   property bool barHidden: false
+  property real hyprlandOpacity: 1
   property var activePopout: null
   property Item tooltipTarget: null
   property string tooltipText: ""
@@ -141,10 +155,24 @@ Item {
   }
   IslandIpc { widget: root.islandForIpc() }
 
+  function refreshOpacity() {
+    if (panelBackground === "hyprland") opacityQuery.running = true
+  }
+  Component.onCompleted: refreshOpacity()
+  onPanelBackgroundChanged: refreshOpacity()
+  Process {
+    id: opacityQuery
+    command: ["hyprctl", "-j", "getoption", "decoration:active_opacity"]
+    stdout: StdioCollector {
+      onStreamFinished: root.hyprlandOpacity = Geometry.parseOpacity(text, root.hyprlandOpacity)
+    }
+  }
+
   Connections {
     target: Hyprland
     function onRawEvent(event) {
       if (event && event.name === "fullscreen") Hyprland.refreshToplevels()
+      if (event && event.name === "configreloaded") root.refreshOpacity()
     }
   }
 
@@ -185,6 +213,14 @@ Item {
 
       ScreenMoveRemap { id: remap; window: panel }
 
+      Rectangle {
+        objectName: "islandBarBackdrop"
+        anchors.fill: parent
+        visible: root.panelShape === "bar" && pill.visible
+        opacity: pill.opacity
+        color: root.background
+      }
+
       Item {
         id: pill
         objectName: "islandPill"
@@ -197,8 +233,21 @@ Item {
 
         ContainerSurface {
           anchors.fill: parent
+          visible: root.panelShape === "pill"
           color: root.background
           radius: Design.cardRadius
+        }
+
+        Rectangle {
+          objectName: "islandNotchBackdrop"
+          anchors.fill: parent
+          visible: root.panelShape === "notch"
+          color: root.background
+          radius: Design.cardRadius
+          topLeftRadius: root.position === "top" || root.position === "left" ? 0 : radius
+          topRightRadius: root.position === "top" || root.position === "right" ? 0 : radius
+          bottomLeftRadius: root.position === "bottom" || root.position === "left" ? 0 : radius
+          bottomRightRadius: root.position === "bottom" || root.position === "right" ? 0 : radius
         }
 
         Island.BarWidget {
