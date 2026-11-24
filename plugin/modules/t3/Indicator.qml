@@ -29,7 +29,7 @@ Island.ModuleView {
   }
   FeedbackButton {
     objectName:"moduleIndicatorAction"
-    anchors.fill:parent;focusable:true
+    anchors.fill:parent;focusable:true;focusOnClick:false
     horizontalPadding:0;verticalPadding:0
     tooltipText:"T3 Code · "+root.tooltip
     onClicked:root.detailsRequested()

@@ -131,7 +131,7 @@ GridLayout {
         visible:cell.live && (!root.editing || (implicitWidth<=cell.width && implicitHeight<=cell.height))
         sourceComponent:cell.modelData.kind!=="indicator" ? null : cell.entry && cell.entry.moduleId ? moduleView : ({now:nowView,recording:recordingView,remote:remoteView,reminders:remindersView,update:updateView,microphone:microphoneView,dnd:dndView,nightLight:nightLightView,stayAwake:stayAwakeView})[cell.modelData.id] || null
       }
-      FeedbackButton {
+      IndicatorButton {
         objectName:"indicatorAction-"+cell.modelData.id
         anchors.centerIn:parent
         width:parent.width
@@ -227,7 +227,7 @@ GridLayout {
           Component.onCompleted:Qt.callLater(registerButtons)
           Component.onDestruction:unregisterButtons()
           onAvailableChanged:if (!available) root.nowHovered(false,null)
-          FeedbackButton {
+          IndicatorButton {
             id:primary
             objectName:"islandNowIndicator"
             focusable:true
@@ -247,7 +247,7 @@ GridLayout {
             function triggerPress(button) {if(button===Qt.LeftButton) clicked()}
             onHovered:inside=>root.nowHovered(inside && enabled && nowGroup.available,nowGroup.activity)
           }
-          FeedbackButton {
+          IndicatorButton {
             id:more
             objectName:"islandNowMore"
             visible:nowGroup.otherCount>0
@@ -269,7 +269,7 @@ GridLayout {
       }
     Component {id:recordingView; StatusBeacon {id:recordingBeacon;objectName:"islandRecordingIndicator"; implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRecording") && root.indicators && root.indicators.recording;tint:Design.barDanger;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}
     Component {id:remoteView; StatusBeacon {id:remoteBeacon;objectName:"islandRemoteIndicator";implicitHeight:root.vertical ? Style.space(18) : root.barHeight;property bool available:root.preference("indicatorRemote") && root.indicators && root.indicators.remoteActive;tint:Design.barAccent;waveWidth:root.vertical ? 0 : Math.max(0,root.waveSpan-root.x-cell.x)}}
-    Component {id:remindersView; FeedbackButton {
+    Component {id:remindersView; IndicatorButton {
         objectName:"islandReminderIndicator"
         readonly property var reminders:root.service && ("reminders" in root.service) ? root.service.reminders : null
         property bool available:Settings.get(root.settings,"calendarEnabled") && !!reminders && reminders.count>0
@@ -297,5 +297,8 @@ GridLayout {
     Component {id:nightLightView; PlainText {objectName:"islandNightLightIndicator"; property bool available:root.preference("indicatorNightLight") && root.indicators && root.indicators.nightLight;text:"󰔎";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
     Component {id:stayAwakeView; PlainText {objectName:"islandStayAwakeIndicator"; property bool available:root.preference("indicatorStayAwake") && root.indicators && root.indicators.stayAwake;text:"";font.pixelSize:Math.round(Style.font.icon*0.85);color:root.foreground}}
     }
+  }
+  component IndicatorButton: FeedbackButton {
+    focusOnClick:false
   }
 }

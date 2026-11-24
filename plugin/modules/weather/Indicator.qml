@@ -23,7 +23,7 @@ Island.ModuleView {
   onBackendChanged:Qt.callLater(activate)
   Connections {target:root.backend;function onAllowedChanged(){root.activate()}}
   Island.FeedbackButton {
-    anchors.fill:parent;focusable:true
+    anchors.fill:parent;focusable:true;focusOnClick:false
     tooltipText:root.tooltip
     horizontalPadding:0;verticalPadding:0
     onClicked:root.detailsRequested()

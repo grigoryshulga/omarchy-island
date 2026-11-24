@@ -114,9 +114,14 @@ ShellRoot {
           verify(moduleAction.visible)
           mouseClick(moduleAction,moduleAction.width/2,moduleAction.height/2)
           compare(liveStrip.openedModule,moduleId)
+          compare(Commons.Border.left(moduleAction.borderSpec),0,"A pointer click should leave no outline on "+moduleId)
           liveStrip.openedModule=""
-          moduleAction.forceActiveFocus();keyClick(Qt.Key_Space)
+          moduleAction.forceActiveFocus(Qt.TabFocusReason)
+          verify(Commons.Border.left(moduleAction.borderSpec)>0,"Keyboard focus should remain visible on "+moduleId)
+          keyClick(Qt.Key_Space)
           compare(liveStrip.openedModule,moduleId)
+          mouseClick(moduleAction,moduleAction.width/2,moduleAction.height/2)
+          compare(Commons.Border.left(moduleAction.borderSpec),0,"Clicking a keyboard-focused indicator should clear its outline")
         }
         liveStrip.elements=[{id:"now",kind:"indicator",side:"right"}]
         wait(20)
@@ -132,6 +137,7 @@ ShellRoot {
         compare(now.text,"4 KiB")
         mouseClick(now,now.width/2,now.height/2)
         compare(liveStrip.openedActivity.kind,"downloads")
+        compare(Commons.Border.left(now.borderSpec),0)
         liveStrip.vertical=true;wait(20)
         compare(now.text,"")
         verify(now.Accessible.name.includes("cover") && now.Accessible.name.includes("4 KiB"))
@@ -152,6 +158,10 @@ ShellRoot {
         compare(liveStrip.openedActivity.row.id,"thread")
         more.forceActiveFocus();keyClick(Qt.Key_Return)
         verify(liveStrip.openedActivities)
+        liveStrip.openedActivities=false
+        mouseClick(more,more.width/2,more.height/2)
+        verify(liveStrip.openedActivities)
+        compare(Commons.Border.left(more.borderSpec),0)
         liveStrip.editing=true;wait(20)
         verify(!now.enabled)
         liveStrip.openedActivity=null

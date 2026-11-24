@@ -19,6 +19,7 @@ BorderSurface {
   property bool active: false
   property bool hasCursor: false
   property bool focusable: false
+  property bool focusOnClick: true
   property bool bordered: false
   // Content and border items are decoration; composite controls can opt out.
   property bool islandSpotlightLeaf: true
@@ -213,9 +214,11 @@ BorderSurface {
     cursorShape: Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     onClicked: function(mouse) {
-      if (root.focusable) {
+      if (root.focusable && root.focusOnClick) {
         root.pointerFocus = true
         root.forceActiveFocus(Qt.MouseFocusReason)
+      } else if (!root.focusOnClick && root.activeFocus) {
+        root.focus = false
       }
       if (mouse.button === Qt.RightButton) root.rightClicked()
       else root.clicked()
