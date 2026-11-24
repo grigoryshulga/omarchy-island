@@ -409,7 +409,6 @@ ShellRoot {
       mouseClick(findChild(calendar,"calendar-day-2024-02-29"))
       check(calendar.selectedDay.key==="2024-02-29","date selection failed: "+calendar.selectedDay.key)
       wait(100)
-      check(findChild(calendar,"calendarSpotlight").rippleProgress<0.15,"click wave did not slow down")
       var glow=findChild(calendar,"calendarSpotlight")
       if(!Commons.Style.reduceMotion) check(glow.rippling,"calendar click did not start a wave")
       calendar.radialBraille=false

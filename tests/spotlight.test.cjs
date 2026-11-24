@@ -70,6 +70,15 @@ hit = model.collision({x: 140, y: 95}, {x: 140, y: 32}, box, 0, 25);
 assert.ok(hit && hit.ny === -1 && hit.nx === 0, 'square corners retain correct normals');
 assert.equal(model.collision({x: 0, y: 0}, {x: 1, y: 1}, {...box, width: 0}, 0, 25), null);
 console.log('PASS: rim collisions, outward approach, curved/square corners and no repeated bursts.');
+hit = model.entry({x: 275, y: 90}, {x: 245, y: 90}, box, 18, 2);
+assert.deepEqual({...hit,ny:Math.abs(hit.ny)}, {x: 258, y: 90, nx: 1, ny: 0}, 'entry lands on the receiving rim');
+hit = model.entry({x: 275, y: 20}, {x: 240, y: 51}, box, 18, 4);
+assert.ok(hit && hit.nx > 0 && hit.ny < 0, 'diagonal entry follows the rounded corner');
+assert.equal(model.entry({x: 230, y: 90}, {x: 250, y: 90}, box, 18, 2), null,
+  'movement inside the button does not replay its entry');
+assert.equal(model.entry({x: 275, y: 90}, {x: 272, y: 90}, box, 18, 2), null,
+  'passing nearby does not count as entering');
+console.log('PASS: actual boundary crossings trigger a localized entry impulse.');
 
 function surface(x, y, props = {}) {
   return item({islandSpotlightSurface: true, mapToItem: () => ({x, y}), ...props});

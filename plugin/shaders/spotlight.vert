@@ -55,6 +55,10 @@ layout(std140, binding = 0) uniform buf {
   vec4 neighborPowers;
   float cornerPower;
   float focusPower;
+  float buttonHovered;
+  float bloomStrength;
+  vec4 rippleBounds;
+  vec2 rippleCorner;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

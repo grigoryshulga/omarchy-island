@@ -34,4 +34,4 @@ __attribute__((constructor)) static void format() {
     env['LD_PRELOAD']=str(library)+((':'+env['LD_PRELOAD']) if env.get('LD_PRELOAD') else '')
     result=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=25)
     print(result.stdout)
-    assert_qml_pass(result, 'ARTWORK_FRAMES_PASS')
+    assert_qml_pass(result, 'SPOTLIGHT_FRAMES_PASS' if env.get('ISLAND_SPOTLIGHT_ONLY') == '1' else 'ARTWORK_FRAMES_PASS')

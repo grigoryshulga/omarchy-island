@@ -6,6 +6,13 @@ function radius(item) {
 function power(item) {
   return typeof item.roundingPower === "number" ? Math.max(1,Math.min(10,item.roundingPower)) : 2
 }
+function isButton(item) {
+  return typeof item.clicked === "function" && typeof item.radius === "number"
+}
+function bounds(item, source) {
+  var at = item.mapToItem(source, 0, 0)
+  return {x: at.x, y: at.y, width: item.width, height: item.height}
+}
 function contains(item, point, rounded) {
   if (point.x < 0 || point.y < 0 || point.x >= item.width || point.y >= item.height) return false
   var r = rounded ? radius(item) : 0
@@ -25,8 +32,7 @@ function pick(item, source, point) {
     if (found) return found
   }
   // qs.Ui buttons (including adapted native panels) expose clicked and radius.
-  var surface = item.islandSpotlightSurface === true ||
-                (typeof item.clicked === "function" && typeof item.radius === "number")
+  var surface = item.islandSpotlightSurface === true || isButton(item)
   return surface && contains(item, local, true) ? item : null
 }
 
@@ -60,6 +66,24 @@ function collision(previous, point, rect, corner, reach, exponent) {
           y: point.y - now.ny * (now.distance + 2), nx: now.nx, ny: now.ny}
 }
 
+function entry(previous, point, rect, corner, exponent) {
+  if (rect.width <= 0 || rect.height <= 0 || edgeAt(previous,rect,corner,exponent).distance <= 0
+      || edgeAt(point,rect,corner,exponent).distance > 0) return null
+  // Resolve the crossing along the pointer segment against the rounded rim.
+  var outside = 0, inside = 1
+  var dx = point.x - previous.x, dy = point.y - previous.y
+  for (var i = 0; i < 8; ++i) {
+    var middle = (outside + inside) / 2
+    var probe = {x: previous.x + dx*middle, y: previous.y + dy*middle}
+    if (edgeAt(probe,rect,corner,exponent).distance > 0) outside = middle
+    else inside = middle
+  }
+  var hit = {x: previous.x + dx*inside, y: previous.y + dy*inside}
+  var edge = edgeAt(hit,rect,corner,exponent)
+  return {x: hit.x - edge.nx * (edge.distance + 2),
+          y: hit.y - edge.ny * (edge.distance + 2), nx: edge.nx, ny: edge.ny}
+}
+
 // Nearby rims share the cursor light without making layout wrappers surfaces.
 // Fully clipped/partly clipped cards are omitted rather than inventing a rim
 // along the viewport cut. Four uniforms bound the per-pixel shader work.
@@ -75,8 +99,7 @@ function neighbors(root, source, point, reach) {
       clip = {x: Math.max(at.x, clip ? clip.x : at.x), y: Math.max(at.y, clip ? clip.y : at.y),
               right: Math.min(right, clip ? clip.right : right), bottom: Math.min(bottom, clip ? clip.bottom : bottom)}
     }
-    var surface = item.islandSpotlightSurface === true ||
-                  (typeof item.clicked === "function" && typeof item.radius === "number")
+    var surface = item.islandSpotlightSurface === true || isButton(item)
     if (surface && item.width > 0 && item.height > 0 &&
         (!clip || (at.x >= clip.x && at.y >= clip.y && right <= clip.right && bottom <= clip.bottom))) {
       var r = radius(item), distance = edgeAt(point, rect, r, power(item)).distance

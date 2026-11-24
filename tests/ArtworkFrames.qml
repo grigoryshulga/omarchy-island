@@ -58,6 +58,129 @@ ShellRoot {
     function check(ok,message) {
       if(!ok) {console.log("ARTWORK_FRAMES_FAIL:",message);Qt.quit();throw new Error(message)}
     }
+    function captureSpotlight(image,name) {
+      const folder=Quickshell.env("ISLAND_SPOTLIGHT_CAPTURES")
+      if(folder) image.save(folder+"/"+name+".png")
+    }
+    function test_spotlight() {
+      spotScene.visible=true
+      Commons.Style.reduceMotion=true;wait(80)
+      check(spot.hoveredSurface===spotCard,"cursor did not pick the card")
+      spot.pointer=Qt.point(44,80);wait(80)
+      var edgeFrame=grabImage(spotScene),inside=0
+      for(var y=0;y<edgeFrame.height;y++) for(var x=0;x<edgeFrame.width;x++) {
+        var ink=edgeFrame.red(x,y)+edgeFrame.green(x,y)+edgeFrame.blue(x,y)
+        if(x<40 || x>=260 || y<30 || y>=160) check(ink===0,"spotlight leaked outside the card")
+        else inside+=ink
+      }
+      check(inside>100,"scoped GPU spotlight is empty")
+      check(edgeFrame.red(40,30)===0,"spotlight leaked through a rounded corner")
+      spotButton.visible=true
+      spot.pointer=Qt.point(170,80);wait(60)
+      check(spot.hoveredSurface===spotButton,"nested qs.Ui button did not override the card")
+      check(spot.focusRect.x===140 && spot.focusRect.y===55 && spot.focusRect.z===70,"nested button bounds were mapped incorrectly")
+      var buttonFrame=grabImage(spot),peak=0
+      for(var y=0;y<buttonFrame.height;y++) for(var x=0;x<buttonFrame.width;x++) {
+        var light=buttonFrame.red(x,y)
+        if(x<140 || x>=210 || y<55 || y>=95) check(light===0,"intense spotlight leaked outside the button")
+        if(Math.abs(x-170)<10 && Math.abs(y-80)<10) peak=Math.max(peak,light)
+      }
+      check(peak>180,"focused button spotlight is too faint: "+peak)
+      spot.bloomStrength=0
+      wait(40)
+      var bareDots=grabImage(spotScene)
+      spot.bloomStrength=0.16
+      wait(40)
+      var glowingDots=grabImage(spotScene),bloomPixels=0
+      for(var y=0;y<glowingDots.height;y++) for(var x=0;x<glowingDots.width;x++) {
+        var glow=glowingDots.red(x,y)-bareDots.red(x,y)
+        if(glow>0) {
+          check(x>=140 && x<210 && y>=55 && y<95 && glow<=50,"dot bloom escaped the button or washed out its dots")
+          bloomPixels++
+        }
+      }
+      check(bloomPixels>10,"dot bloom is missing from the rendered spotlight")
+      captureSpotlight(bareDots,"before-bloom")
+      captureSpotlight(glowingDots,"hover-bloom")
+      Commons.Style.reduceMotion=false
+      spot.pointer=Qt.point(129,75);wait(70)
+      spot.pointer=Qt.point(160,75);wait(55)
+      check(spot.edgeProgress<1 && spot.edgeImpact.z===-1,"entering the button did not scatter at its leading rim")
+      captureSpotlight(grabImage(spotScene),"boundary-entry")
+      spot.active=false;wait(160)
+      spot.pulse(Qt.point(170,77));wait(45)
+      check(spot.rippling,"click feedback did not start")
+      var clickFrame=grabImage(spot),clickLight=0
+      for(var y=0;y<clickFrame.height;y++) for(var x=0;x<clickFrame.width;x++) {
+        var light=clickFrame.red(x,y)
+        if(x<140 || x>=210 || y<55 || y>=95) check(light===0,"click wave escaped its original button")
+        else clickLight+=light
+      }
+      check(clickLight>300,"the click wave produced no visible ink")
+      captureSpotlight(clickFrame,"click")
+      Commons.Style.reduceMotion=true
+      check(!spot.rippling,"reduced motion did not stop the current click wave")
+      spot.active=Qt.binding(function(){return spotScene.visible})
+      spotButton.visible=false
+      spot.pointer=Qt.point(44,80)
+      spotCard.radius=0;wait(60)
+      check(spot.focusRadius===0,"square corners were not respected")
+      Commons.Style.reduceMotion=false
+      spot.pointer=Qt.point(180,80);wait(80)
+      check(spot.trailSamples.length>0,"trail did not retain pointer positions")
+      wait(240)
+      var wakeFrame=grabImage(spot),wakeLight=0
+      // This patch is behind the pointer and outside the main spotlight.
+      for(var y=65;y<95;y++) for(var x=45;x<95;x++) wakeLight+=wakeFrame.red(x,y)
+      check(wakeLight>1200,"cursor left no visible fading trail: "+wakeLight)
+      wait(550)
+      var fadedWake=grabImage(spot),fadedLight=0
+      for(var y=65;y<95;y++) for(var x=45;x<95;x++) fadedLight+=fadedWake.red(x,y)
+      check(fadedLight<wakeLight*0.15,"cursor trail did not fade away")
+      // The real pointer path triggers a two-sided split at the right rim.
+      spot.pointer=Qt.point(254,80);wait(200)
+      check(spot.edgeProgress<0.8,"approaching the rim did not scatter pixels")
+      var burstFrame=grabImage(spot)
+      spot.clearEdge();wait(20)
+      var plainEdge=grabImage(spot),upperScatter=0,lowerScatter=0
+      for(var y=40;y<125;y++) for(var x=250;x<260;x++) {
+        var added=burstFrame.red(x,y)-plainEdge.red(x,y)
+        if(added>60) {if(y<80) upperScatter++;else lowerScatter++}
+      }
+      check(upperScatter>2 && lowerScatter>2,"edge pixels did not split in both directions")
+      for(var y=0;y<burstFrame.height;y++) for(var x=260;x<burstFrame.width;x++)
+        check(burstFrame.red(x,y)===0,"scattered pixels escaped the card")
+      spot.pointer=Qt.point(180,80);wait(65)
+      spot.pointer=Qt.point(254,80);wait(70)
+      check(spot.edgeProgress<1,"second collision did not restart the burst")
+      Commons.Style.reduceMotion=true
+      check(spot.edgeProgress===1 && spot.edgeEnabled===0,"reduced motion kept the edge scatter")
+      spot.pointer=Qt.point(100,80);wait(30)
+      check(spot.trailSamples.length===0,"reduced motion kept the trail")
+      var staticSpot=grabImage(spotScene);wait(100)
+      check(staticSpot.equals(grabImage(spotScene)),"reduced-motion spotlight kept moving")
+      neighborCard.visible=true
+      spot.pointer=Qt.point(254,80);wait(60)
+      check(spot.nearbySurfaces.length===1,"adjacent card was not selected for rim glow")
+      var neighborFrame=grabImage(spot),nearLight=0,farLight=0
+      for(var y=65;y<95;y++) {
+        for(var x=271;x<278;x++) nearLight+=neighborFrame.red(x,y)
+        for(var x=305;x<312;x++) farLight+=neighborFrame.red(x,y)
+        for(var x=260;x<270;x++) check(neighborFrame.red(x,y)===0,"neighbor glow filled the gap")
+      }
+      check(nearLight>800 && nearLight>farLight*3,"adjacent facing rim did not catch the cursor light")
+      check(neighborFrame.red(270,30)===0,"neighbor glow leaked through rounded corners")
+      wait(60)
+      check(neighborFrame.equals(grabImage(spot)),"neighbor glow moved under reduced motion")
+      neighborCard.radius=0;wait(30)
+      check(spot.neighborRadii.x===0,"neighbor ignored square theme corners")
+      neighborCard.visible=false;wait(30)
+      check(spot.nearbySurfaces.length===0,"hidden neighbor retained glow")
+      spotScene.visible=false;wait(30)
+      var stoppedPhase=spot.phase;wait(60)
+      check(spot.phase===stoppedPhase,"hidden spotlight kept animating")
+      console.log("SPOTLIGHT_FRAMES_PASS")
+    }
     function test_frames() {
       Commons.Style.reduceMotion=false
       wait(120)
@@ -242,88 +365,8 @@ ShellRoot {
       var pausedPhase=clap.phase;wait(100)
       check(clap.phase===pausedPhase,"hidden overview kept clapping")
       console.log("CLAP_FRAMES_PASS")
-      clap.visible=false;spotScene.visible=true
-      Commons.Style.reduceMotion=true;wait(80)
-      check(spot.hoveredSurface===spotCard,"cursor did not pick the card")
-      spot.pointer=Qt.point(44,80);wait(80)
-      var edgeFrame=grabImage(spotScene),inside=0
-      for(var y=0;y<edgeFrame.height;y++) for(var x=0;x<edgeFrame.width;x++) {
-        var ink=edgeFrame.red(x,y)+edgeFrame.green(x,y)+edgeFrame.blue(x,y)
-        if(x<40 || x>=260 || y<30 || y>=160) check(ink===0,"spotlight leaked outside the card")
-        else inside+=ink
-      }
-      check(inside>100,"scoped GPU spotlight is empty")
-      check(edgeFrame.red(40,30)===0,"spotlight leaked through a rounded corner")
-      spotButton.visible=true
-      spot.pointer=Qt.point(170,80);wait(60)
-      check(spot.hoveredSurface===spotButton,"nested qs.Ui button did not override the card")
-      check(spot.focusRect.x===140 && spot.focusRect.y===55 && spot.focusRect.z===70,"nested button bounds were mapped incorrectly")
-      var buttonFrame=grabImage(spot),peak=0
-      for(var y=0;y<buttonFrame.height;y++) for(var x=0;x<buttonFrame.width;x++) {
-        var light=buttonFrame.red(x,y)
-        if(x<140 || x>=210 || y<55 || y>=95) check(light===0,"intense spotlight leaked outside the button")
-        if(Math.abs(x-170)<10 && Math.abs(y-80)<10) peak=Math.max(peak,light)
-      }
-      check(peak>180,"focused button spotlight is too faint: "+peak)
-      spotButton.visible=false
-      spot.pointer=Qt.point(44,80)
-      spotCard.radius=0;wait(60)
-      check(spot.focusRadius===0,"square corners were not respected")
-      Commons.Style.reduceMotion=false
-      spot.pointer=Qt.point(180,80);wait(80)
-      check(spot.trailSamples.length>0,"trail did not retain pointer positions")
-      wait(240)
-      var wakeFrame=grabImage(spot),wakeLight=0
-      // This patch is behind the pointer and outside the main spotlight.
-      for(var y=65;y<95;y++) for(var x=45;x<95;x++) wakeLight+=wakeFrame.red(x,y)
-      check(wakeLight>1200,"cursor left no visible fading trail: "+wakeLight)
-      wait(550)
-      var fadedWake=grabImage(spot),fadedLight=0
-      for(var y=65;y<95;y++) for(var x=45;x<95;x++) fadedLight+=fadedWake.red(x,y)
-      check(fadedLight<wakeLight*0.15,"cursor trail did not fade away")
-      // The real pointer path triggers a two-sided split at the right rim.
-      spot.pointer=Qt.point(254,80);wait(200)
-      check(spot.edgeProgress<0.8,"approaching the rim did not scatter pixels")
-      var burstFrame=grabImage(spot)
-      spot.clearEdge();wait(20)
-      var plainEdge=grabImage(spot),upperScatter=0,lowerScatter=0
-      for(var y=40;y<125;y++) for(var x=250;x<260;x++) {
-        var added=burstFrame.red(x,y)-plainEdge.red(x,y)
-        if(added>60) {if(y<80) upperScatter++;else lowerScatter++}
-      }
-      check(upperScatter>2 && lowerScatter>2,"edge pixels did not split in both directions")
-      for(var y=0;y<burstFrame.height;y++) for(var x=260;x<burstFrame.width;x++)
-        check(burstFrame.red(x,y)===0,"scattered pixels escaped the card")
-      spot.pointer=Qt.point(180,80);wait(65)
-      spot.pointer=Qt.point(254,80);wait(70)
-      check(spot.edgeProgress<1,"second collision did not restart the burst")
-      Commons.Style.reduceMotion=true
-      check(spot.edgeProgress===1 && spot.edgeEnabled===0,"reduced motion kept the edge scatter")
-      spot.pointer=Qt.point(100,80);wait(30)
-      check(spot.trailSamples.length===0,"reduced motion kept the trail")
-      var staticSpot=grabImage(spotScene);wait(100)
-      check(staticSpot.equals(grabImage(spotScene)),"reduced-motion spotlight kept moving")
-      neighborCard.visible=true
-      spot.pointer=Qt.point(254,80);wait(60)
-      check(spot.nearbySurfaces.length===1,"adjacent card was not selected for rim glow")
-      var neighborFrame=grabImage(spot),nearLight=0,farLight=0
-      for(var y=65;y<95;y++) {
-        for(var x=271;x<278;x++) nearLight+=neighborFrame.red(x,y)
-        for(var x=305;x<312;x++) farLight+=neighborFrame.red(x,y)
-        for(var x=260;x<270;x++) check(neighborFrame.red(x,y)===0,"neighbor glow filled the gap")
-      }
-      check(nearLight>800 && nearLight>farLight*3,"adjacent facing rim did not catch the cursor light")
-      check(neighborFrame.red(270,30)===0,"neighbor glow leaked through rounded corners")
-      wait(60)
-      check(neighborFrame.equals(grabImage(spot)),"neighbor glow moved under reduced motion")
-      neighborCard.radius=0;wait(30)
-      check(spot.neighborRadii.x===0,"neighbor ignored square theme corners")
-      neighborCard.visible=false;wait(30)
-      check(spot.nearbySurfaces.length===0,"hidden neighbor retained glow")
-      spotScene.visible=false;wait(30)
-      var stoppedPhase=spot.phase;wait(60)
-      check(spot.phase===stoppedPhase,"hidden spotlight kept animating")
-      console.log("SPOTLIGHT_FRAMES_PASS")
+      clap.visible=false
+      test_spotlight()
       progressProbe.visible=true;wait(60)
       var quarter=grabImage(progressProbe),leftInk=0,rightInk=0
       for(var y=0;y<quarter.height;y++) {
@@ -396,5 +439,15 @@ ShellRoot {
       Qt.quit()
     }
   }
-  Timer {interval:400;running:true;onTriggered:test.test_frames()}
+  Timer {
+    interval:400
+    running:true
+    onTriggered:{
+      if(Quickshell.env("ISLAND_SPOTLIGHT_ONLY")==="1") {
+        artwork.visible=false;gauge.visible=false
+        test.test_spotlight()
+        Qt.quit()
+      } else test.test_frames()
+    }
+  }
 }

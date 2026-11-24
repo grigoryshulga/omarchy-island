@@ -35,6 +35,7 @@ ShaderEffect {
   property real cornerPower: surfaceRoot ? Spotlight.power(surfaceRoot) : 2
   readonly property real focusPower: hoveredSurface ? Spotlight.power(hoveredSurface) : cornerPower
   readonly property real focused: hoveredSurface ? 1 : 0
+  readonly property real buttonHovered: hoveredSurface && Spotlight.isButton(hoveredSurface) ? 1 : 0
   readonly property vector4d focusRect: {
     if (!hoveredSurface) return Qt.vector4d(0,0,width,height)
     var at=hoveredSurface.mapToItem(root,0,0)
@@ -79,23 +80,30 @@ ShaderEffect {
   property real edgeProgress: 1
   readonly property real edgeEnabled: focused && effectActive && !Preferences.reduceMotion ? 1 : 0
   function clearEdge() {edgeBurst.stop();edgeProgress=1}
+  function scatter(hit) {
+    if (!hit) return
+    edgeImpact=Qt.vector4d(hit.x,hit.y,hit.nx,hit.ny)
+    edgeBurst.restart()
+  }
   function collide(previous, point) {
     if(!hoveredSurface || Preferences.reduceMotion) return
     var rect={x:focusRect.x,y:focusRect.y,width:focusRect.z,height:focusRect.w}
     var hit=Spotlight.collision(previous,point,rect,focusRadius,spotRadius*0.32,focusPower)
-    if(!hit) return
-    edgeImpact=Qt.vector4d(hit.x,hit.y,hit.nx,hit.ny)
-    edgeBurst.restart()
+    scatter(hit)
   }
-  NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Preferences.duration(800);easing.type:Easing.Linear}
+  NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Preferences.duration(550);easing.type:Easing.Linear}
   onEffectActiveChanged: {clearTrail();clearEdge()}
-  onEffectsEnabledChanged: {
-    if (!effectsEnabled) {wave.stop();rippleProgress=1}
+  onEffectsEnabledChanged: if (!effectsEnabled) clearRipple()
+  onHoveredSurfaceChanged: {
+    const target=effectActive && !Preferences.reduceMotion ? hoveredSurface : null
+    const hit=target ? Spotlight.entry(lastTrailPoint,pointer,Spotlight.bounds(target,root),Spotlight.radius(target),Spotlight.power(target)) : null
+    clearTrail()
+    clearEdge()
+    scatter(hit)
   }
-  onHoveredSurfaceChanged: {clearTrail();clearEdge()}
   Connections {
     target: Preferences
-    function onReduceMotionChanged() {root.clearTrail();root.clearEdge()}
+    function onReduceMotionChanged() {root.clearTrail();root.clearEdge();root.clearRipple()}
   }
   Timer {
     objectName:"spotlightTrailClock"
@@ -115,6 +123,8 @@ ShaderEffect {
   property real artworkMix: artworkUrl.toString()!=="" && cover.status===Image.Ready ? artworkStrength : 0
   property point pointer: Qt.point(width/2,height/2)
   property point rippleOrigin: Qt.point(width/2,height/2)
+  property vector4d rippleBounds: Qt.vector4d(0,0,0,0)
+  property vector2d rippleCorner: Qt.vector2d(0,2)
   property real shown: effectActive ? 1 : 0
   property vector2d size: Qt.vector2d(width,height)
   property vector2d center: Qt.vector2d(pointer.x,pointer.y)
@@ -125,11 +135,13 @@ ShaderEffect {
   property color accent: Commons.Color.accent
   property real profile: adaptive ? 1 : 0
   property real intensity: 1
+  property real bloomStrength: 0.16
   property real hoverOpacity: shown*intensity
   Behavior on intensity {NumberAnimation {duration:Preferences.duration(140);easing.type:Easing.OutCubic}}
   property real rippleProgress: 1
-  readonly property bool rippling: rippleProgress < 0.24
+  readonly property bool rippling: rippleProgress < 1
   visible: effectsEnabled && (shown > 0 || rippling)
+  onVisibleChanged: if (!visible && rippling) clearRipple()
   vertexShader: Qt.resolvedUrl("shaders/spotlight.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/spotlight.frag.qsb")
   Image {
@@ -145,12 +157,17 @@ ShaderEffect {
   Behavior on artworkMix { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   function pulse(point) {
     if (!effectsEnabled || Preferences.reduceMotion) return
+    const surface=Spotlight.pick(surfaceRoot,root,point)
+    const rect=surface ? Spotlight.bounds(surface,root) : null
+    rippleBounds=rect ? Qt.vector4d(rect.x,rect.y,rect.width,rect.height) : Qt.vector4d(0,0,0,0)
+    rippleCorner=surface ? Qt.vector2d(Spotlight.radius(surface),Spotlight.power(surface)) : Qt.vector2d(0,2)
     rippleOrigin=point
     rippleProgress=0
     wave.restart()
   }
+  function clearRipple() {wave.stop();rippleProgress=1}
   Behavior on shown { NumberAnimation { duration: Preferences.duration(root.active ? 160 : 120); easing.type: Easing.OutCubic } }
   NumberAnimation on phase { running: root.visible && !Preferences.reduceMotion; from: 0; to: 1200; duration: 1200000; loops: Animation.Infinite }
   // A time cursor lets travel and brightness ease independently in the shader.
-  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Preferences.duration(1560); easing.type: Easing.Linear }
+  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Preferences.duration(330); easing.type: Easing.Linear }
 }
