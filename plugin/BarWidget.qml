@@ -314,7 +314,7 @@ BarWidget {
     onTriggered: {root.now=new Date();arm()}
     Component.onCompleted: arm()
   }
-  Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.requested && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
+  Timer { id: hoverDelay; interval: Settings.get(root.settings,"hoverDelay"); onTriggered: if (!root.pinned && !root.showOsd && !dictationOverlay.presented && root.isHovered && Settings.get(root.settings,"hoverPreview") && Settings.get(root.settings,"overviewEnabled")) { root.contentExpanded = false; root.hoverOpen = true } }
   Timer { id: leaveGrace; interval: 220; onTriggered: if (!root.pinned && !root.isHovered) root.hoverOpen = false }
   Timer { id: alertLife; objectName:"islandAlertLife"; interval: 3000; onTriggered: root.alertKind = "" }
   SequentialAnimation {
@@ -462,6 +462,7 @@ BarWidget {
     function release() {if(item && !item.open && item.shown===0) retaining=false}
     readonly property var dictation:root.service && ("dictation" in root.service) ? root.service.dictation : null
     readonly property bool requested:!!dictation && dictation.showing && (!dictation.screenName || dictation.screenName===root.screenName)
+    readonly property bool presented:item ? item.presented : requested
     active:requested || retaining
     onLoaded:retaining=true
     Component.onCompleted:setSource(Qt.resolvedUrl("DictationOsd.qml"),{dictation:Qt.binding(function(){return dictationOverlay.dictation}),anchorItem:trigger,bar:root.bar,open:Qt.binding(function(){return dictationOverlay.requested})})
@@ -487,6 +488,7 @@ BarWidget {
     // The hover header is always present. Open before measuring its layout;
     // a hidden surface cannot polish the first preview's content height.
     open: root.pinned || root.hoverOpen || (root.showAlert && !root.stripNotification)
+    dismissOnRightClick: root.showAlert && !root.pinned && !root.hoverOpen
     frameless: root.notificationToast || bareCard
     bareCard: (root.alertKind==="t3" || root.alertKind==="herdr" || root.alertKind==="media") && !root.pinned && !root.hoverOpen
     onBackgroundClicked: position => {previewContent.cancelEdits();panelGlow.pulse(Qt.point(position.x+(preview.layoutWidth-preview.drawnWidth)/2,position.y))}

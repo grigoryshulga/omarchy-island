@@ -13,6 +13,13 @@ Item {
   required property Item anchorItem
   required property QtObject bar
   property bool open:dictation.showing
+  property bool dismissed:false
+  readonly property bool presented:open && !dismissed
+  onOpenChanged:if(!open) dismissed=false
+  Connections {
+    target:root.dictation
+    function onRecordingChanged() {if(root.dictation.recording) root.dismissed=false}
+  }
   readonly property var anchorWindow:anchorItem ? anchorItem.QsWindow.window : null
   readonly property string position:bar ? bar.position : "top"
   readonly property real thickness:bar ? ("panelSize" in bar ? bar.panelSize : bar.barSize) : Style.bar.sizeHorizontal
@@ -22,13 +29,13 @@ Item {
   }
   TransformWatcher {id:anchorWatcher;a:root.anchorWindow ? root.anchorWindow.contentItem : null;b:root.anchorItem}
   property real shown: 0
-  Component.onCompleted:shown=Qt.binding(function(){return root.open ? 1 : 0})
-  Behavior on shown {NumberAnimation {duration:Preferences.duration(root.open ? 220 : 180);easing.type:Easing.OutCubic}}
+  Component.onCompleted:shown=Qt.binding(function(){return root.presented ? 1 : 0})
+  Behavior on shown {NumberAnimation {duration:Preferences.duration(root.presented ? 220 : 180);easing.type:Easing.OutCubic}}
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("i18n")}
   PanelWindow {
     id: panel
     objectName:"islandDictationSurface"
-    visible:root.open || root.shown>0
+    visible:root.presented || root.shown>0
     screen:root.anchorWindow ? root.anchorWindow.screen : null
     anchors {top:true;bottom:true;left:true;right:true}
     color:"transparent"
@@ -36,7 +43,7 @@ Item {
     WlrLayershell.namespace:"omarchy-island-popup"
     WlrLayershell.layer:WlrLayer.Overlay
     WlrLayershell.keyboardFocus:WlrKeyboardFocus.None
-    mask:Region {}
+    mask:Region {item:root.presented && card.opacity>0 ? card : null}
     ContainerSurface {
       id:card
       objectName:"islandDictationOsd"
@@ -81,6 +88,12 @@ Item {
           processing:!root.dictation.recording
           active:panel.visible
         }
+      }
+      MouseArea {
+        anchors.fill:parent
+        enabled:root.presented
+        acceptedButtons:Qt.RightButton
+        onClicked:root.dismissed=true
       }
     }
   }

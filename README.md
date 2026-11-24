@@ -96,6 +96,7 @@ System panels are adapted from the installed Omarchy sources when opened, preser
 | Press Escape or click outside | Close the popup. While using the stock bar, clicking the clock again also closes it. |
 | Middle-click the clock | Toggle the calendar |
 | Right-click the clock | Cycle and save the clock format |
+| Right-click any part of an event popup | Hide the popup while keeping the notification or activity. Dictation continues in the background. |
 | Right-click a free area of the popup | Close immediately; control right-click actions are preserved |
 | Scroll over the clock | Open the full popup and cycle tabs |
 | Horizontal swipe, touchpad scroll, or Shift + wheel in the popup | Switch pages |

@@ -114,6 +114,7 @@ ShellRoot {
           body: "Ready to open", ts: Date.now() / 1000, downloadPath: "/tmp/example.zip",
           filename: "example.zip", active: false, downloadedBytes: 1024
         }
+        service.downloadsState.downloads = [service.latestDownload]
         service.downloadAlert = true
         service.downloadTargetScreen = widget.screenName
         service.arrival++
@@ -147,8 +148,23 @@ ShellRoot {
         verify(Math.abs(popup.drawnWidth - returningWidth) <= 1,
           "Reopening changed the width from " + returningWidth + " to " + popup.drawnWidth)
         tryCompare(popup, "shown", 1)
-        tryCompare(popup, "open", false)
+        const folderButton = findChild(pages, "downloadOpenFolder")
+        verify(folderButton && folderButton.visible)
+        mouseClick(folderButton, folderButton.width / 2, folderButton.height / 2, Qt.RightButton)
+        verify(!popup.open, "Right-clicking a download action should dismiss the toast immediately")
+        compare(service.downloads[0].key, shortNotice.key, "Dismissing the toast should keep the download")
         tryCompare(pill, "opacity", 1)
+        tryCompare(popup, "visible", false)
+        service.latestT3 = {id:"activity-fixture", title:"Activity fixture", project:"Island",
+          status:"completed", requestId:"", request:null, summary:""}
+        service.t3TargetScreen = widget.screenName
+        service.t3Arrival()
+        tryCompare(popup, "shown", 1)
+        const activityCard = findChild(pages, "t3ActivityToast")
+        verify(activityCard && activityCard.visible)
+        mouseClick(activityCard, activityCard.width / 2, activityCard.height / 2, Qt.RightButton)
+        verify(!popup.open, "Right-clicking a T3 activity should dismiss its popup")
+        compare(service.latestT3.id, "activity-fixture")
         tryCompare(popup, "visible", false)
 
         const handlers = IpcRegistry.handlers.filter(handler => handler.target === "island" && handler.enabled)

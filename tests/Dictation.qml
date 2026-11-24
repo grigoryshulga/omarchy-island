@@ -58,12 +58,23 @@ ShellRoot {
       tryCompare(field,"morph",1)
       fake.showing=false
       tryCompare(loader,"item",null)
+      fake.recording=true
       fake.showing=true
       tryCompare(loader,"status",Loader.Ready)
       hud=loader.item
+      card=findChild(hud,"islandDictationOsd")
+      surface=findChild(hud,"islandDictationSurface")
+      tryCompare(hud,"shown",1)
+      mouseClick(card,card.width/2,card.height/2,Qt.RightButton)
+      tryCompare(surface,"visible",false)
+      verify(fake.showing && fake.recording,"Hiding the popup interrupted the dictation")
+      fake.recording=false
+      wait(250)
+      verify(!surface.visible,"Transcribing reopened the dismissed popup")
       field=findChild(hud,"islandDictationField")
       Commons.Style.reduceMotion=true
       fake.recording=true
+      tryCompare(surface,"visible",true)
       tryCompare(field,"morph",0)
       fake.showing=false
       tryCompare(loader,"item",null)

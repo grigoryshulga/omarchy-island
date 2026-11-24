@@ -15,6 +15,7 @@ PanelWindow {
   property var owner: null
   readonly property string entranceStyle: "seed-drop-stretch"
   property bool open: false
+  property bool dismissOnRightClick: false
   property bool frameless: false
   property bool bareCard:false
   property bool bareCardShown:false
@@ -248,6 +249,14 @@ PanelWindow {
         height: Math.max(1,root.layoutHeight-root.insetTop-root.insetBottom)
         LayoutMirroring.enabled: Commons.I18n.rightToLeft
         LayoutMirroring.childrenInherit: true
+      }
+      // Event cards dismiss even over controls that handle right clicks.
+      MouseArea {
+        anchors.fill: parent
+        enabled: root.open && root.dismissOnRightClick
+        acceptedButtons: Qt.RightButton
+        onClicked: root.close()
+        onWheel: wheel => wheel.accepted = false
       }
       HoverHandler { id: cardHover }
     }
