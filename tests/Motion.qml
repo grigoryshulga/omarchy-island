@@ -363,7 +363,7 @@ ShellRoot {
       if(tick===90) {
         if(!widget.pinned || !widget.calendarMode) { console.log("ISLAND_MOTION_FAIL: middle click did not open calendar"); widget.close(); Qt.quit(); return }
         test.onPage("calendarBack").clicked()
-        if(!Commons.Style.reduceMotion && !test.findChild(widget,"islandPanelSpotlight").rippling) {console.log("ISLAND_MOTION_FAIL: tab click did not use the shared wave");Qt.quit();return}
+        if(!Commons.Style.reduceMotion && !test.findChild(widget,"islandPanelSpotlight").scattering) {console.log("ISLAND_MOTION_FAIL: tab click did not scatter the shared spotlight");Qt.quit();return}
       }
       if(tick===106) {
         if(widget.calendarMode || !widget.pinned || Math.abs(test.onPage("islandMediaPlayer").mapToItem(test.findChild(widget,"islandPageSwipe"),0,0).x)>1) { console.log("ISLAND_MOTION_FAIL: calendar back changed panel lifetime"); widget.close(); Qt.quit(); return }

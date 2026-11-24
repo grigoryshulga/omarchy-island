@@ -12,8 +12,8 @@ layout(std140, binding = 0) uniform buf {
   vec4 accent;
   float profile;
   float hoverOpacity;
-  vec2 rippleCenter;
-  float rippleProgress;
+  vec2 burstCenter;
+  float burstProgress;
   float artworkMix;
   vec4 focusRect;
   float focusRadius;
@@ -55,8 +55,9 @@ layout(std140, binding = 0) uniform buf {
   float focusPower;
   float buttonHovered;
   float bloomStrength;
-  vec4 rippleBounds;
-  vec2 rippleCorner;
+  vec4 burstBounds;
+  vec2 burstCorner;
+  float holdAmount;
 };
 layout(binding = 1) uniform sampler2D source;
 uint mixBits(uint v) {
@@ -67,12 +68,12 @@ uint mixBits(uint v) {
 float noise(uvec2 position, uint frame) {
   return float(mixBits(mixBits(position.x ^ 0x9e3779b9u) ^ mixBits(position.y ^ 0x68bc21ebu) ^ mixBits(frame ^ 0x02e5be93u)) >> 8) / 16777216.0;
 }
-vec2 dots(vec2 local,float core,float a,float b,float blend) {
+vec2 dots(vec2 local,float core,float pressure,float a,float b,float blend) {
   // The pitch never changes: profile affects radius and how many fixed sites
   // are lit, not the coordinates of the lattice or its spacing.
-  float radius=mix(1.08,mix(0.45,1.25,core),profile);
+  float radius=mix(1.08,mix(0.45,1.25,core),profile)+pressure*0.15;
   float softness=mix(0.32,0.22,profile);
-  float coverage=mix(0.60,mix(0.18,0.90,core),profile);
+  float coverage=mix(mix(0.60,mix(0.18,0.90,core),profile),1.0,pressure*0.90);
   float pattern=mix(step(1.0-coverage,a),step(1.0-coverage,b),blend);
   float distanceFromDot=length(local);
   float ink=1.0-smoothstep(radius,radius+softness,distanceFromDot);
@@ -89,20 +90,36 @@ float roundedDistance(vec2 pixel, vec4 rect, float radius, float power) {
   float norm=scale>0.0 ? scale*pow(pow(q.x/scale,power)+pow(q.y/scale,power),1.0/power) : 0.0;
   return norm+min(max(box.x,box.y),0.0)-r;
 }
-float clickRing(float distanceFromClick,float radius,float width) {
-  float band=(distanceFromClick-radius)/width;
-  return exp(-band*band);
-}
-float clickTravel(float progress) {
-  float remaining=1.0-progress;
-  return 1.0-remaining*remaining*remaining;
+float clickFragments(vec2 pixel,float spread) {
+  const int count=20;
+  float t=burstProgress;
+  float travel=1.0-(1.0-t)*(1.0-t)*(1.0-t);
+  float fade=1.0-smoothstep(0.20,1.0,t);
+  float brightest=0.0;
+  for(int i=0;i<count;i++) {
+    float seed=noise(uvec2(uint(i),43u),17u);
+    float angle=(float(i)+seed*0.88)*6.283185/float(count);
+    vec2 direction=vec2(cos(angle),sin(angle));
+    float start=mix(3.0,13.0,noise(uvec2(uint(i),59u),4u))*spread;
+    // The fragments start on the braille lattice and move off it on release.
+    vec2 origin=floor((burstCenter+direction*start)/3.0)*3.0+vec2(1.5);
+    float distance=mix(11.0,39.0,seed)*spread*travel;
+    float drift=(seed-0.5)*36.0*spread*t*(1.0-t);
+    vec2 at=origin+direction*distance+vec2(-direction.y,direction.x)*drift;
+    float offset=length(pixel-at);
+    float radius=mix(0.75,1.40,seed)*mix(1.0,0.65,t);
+    float ink=1.0-smoothstep(radius,radius+0.65,offset);
+    float halo=1.0-smoothstep(radius,radius+1.55,offset);
+    brightest=max(brightest,(ink+halo*bloomStrength)*mix(0.65,0.94,seed));
+  }
+  return brightest*fade;
 }
 void main() {
   vec2 pixel=qt_TexCoord0*size;
   vec2 delta=pixel-center;
   float angle=atan(delta.y,delta.x);
   float edge=1.0+0.045*sin(angle*3.0+phase*0.8)+0.025*sin(angle*7.0-phase*0.6)+0.012*sin(angle*11.0+phase*0.3);
-  float radius=spotRadius*mix(1.0,0.58,focused);
+  float radius=spotRadius*mix(1.0,0.58,focused)*mix(1.0,0.64,holdAmount);
   float normalized=length(delta)/(radius*edge);
   // A rounded brightness profile avoids a flat hot center and abrupt shoulder.
   float falloff=exp(-3.2*normalized*normalized)*(1.0-smoothstep(0.75,1.35,normalized));
@@ -127,7 +144,8 @@ void main() {
   float boundary=roundedDistance(pixel,focusRect,focusRadius,focusPower);
   float depth=max(0.0,-boundary);
   float rim=exp(-depth*depth/32.0)*focused;
-  vec2 hoverDots=dots(local,max(core,wake),a,b,blend);
+  float pressure=holdAmount*core;
+  vec2 hoverDots=dots(local,max(core,wake),pressure,a,b,blend);
   float ink=hoverDots.x;
   float alpha=ink*field*hoverOpacity*mix(0.18,0.85,focused);
   alpha+=wake*hoverOpacity*mix(0.025,0.08,focused);
@@ -135,6 +153,7 @@ void main() {
   alpha+=field*rim*hoverOpacity*(0.24+ink*0.55);
   alpha+=hoverDots.y*bloomStrength*field*hoverOpacity*mix(0.45,1.0,focused);
   alpha+=buttonHovered*hoverOpacity*exp(-6.0*normalized*normalized)*(ink*0.13+hoverDots.y*bloomStrength*0.34);
+  alpha+=pressure*hoverOpacity*(ink*0.48+hoverDots.y*bloomStrength*0.70);
 
   // A collision splits into small pixels travelling both ways along the rim.
   // Project their centers inward so rounded corners guide the spread too.
@@ -167,24 +186,21 @@ void main() {
   // The antialias band is entirely inside the surface, including square corners.
   mask*=mix(1.0,1.0-smoothstep(-1.0,0.0,boundary),focused);
   alpha=clamp(alpha,0.0,1.0)*mask;
-  if(rippleProgress<1.0) {
-    bool onSurface=rippleBounds.z>0.0 && rippleBounds.w>0.0;
+  float clickDistance=length(pixel-burstCenter);
+  float spread=clamp(spotRadius/80.0,0.45,2.20);
+  if(burstProgress<1.0 && clickDistance<56.0*spread+4.0) {
+    bool onSurface=burstBounds.z>0.0 && burstBounds.w>0.0;
     float clip=onSurface
-      ? 1.0-smoothstep(-1.0,0.0,roundedDistance(pixel,rippleBounds,rippleCorner.x,rippleCorner.y)) : 1.0;
-    vec2 farthest=onSurface ? max(rippleCenter-rippleBounds.xy,rippleBounds.xy+rippleBounds.zw-rippleCenter)
-                            : max(rippleCenter,size-rippleCenter);
-    float reach=clamp(length(farthest),1.0,max(1.0,spotRadius*1.6));
-    float distanceFromClick=length(pixel-rippleCenter);
-    float waveWidth=clamp(spotRadius*0.045,2.0,4.5);
-    float tail=clamp((rippleProgress-0.15)/0.85,0.0,1.0);
-    float first=clickRing(distanceFromClick,reach*clickTravel(rippleProgress),waveWidth);
-    float second=clickRing(distanceFromClick,reach*clickTravel(tail),waveWidth*1.35)*smoothstep(0.0,0.14,tail);
-    float flashRadius=max(1.0,min(reach*0.46,spotRadius*0.24));
-    float flash=exp(-distanceFromClick*distanceFromClick/(flashRadius*flashRadius))*(1.0-smoothstep(0.0,0.36,rippleProgress));
-    float fade=1.0-smoothstep(0.04,0.97,rippleProgress);
-    vec2 clickDots=dots(local,0.92,a,b,blend);
-    float response=(first*0.53+second*0.22)*fade+flash*0.46;
-    alpha+=(clickDots.x+clickDots.y*bloomStrength*1.6)*response*clip*outerMask;
+      ? 1.0-smoothstep(-1.0,0.0,roundedDistance(pixel,burstBounds,burstCorner.x,burstCorner.y)) : 1.0;
+    if(clip>0.0) {
+      float localDistance=clickDistance/spread;
+      float dispersing=smoothstep(0.0,0.10,burstProgress)*(1.0-smoothstep(0.25,0.90,burstProgress));
+      // Dim the source briefly so the moving dots read as part of the spot.
+      alpha*=1.0-clip*dispersing*0.72*(1.0-smoothstep(5.0,32.0,localDistance));
+      float flash=exp(-localDistance*localDistance/95.0)*(1.0-smoothstep(0.0,0.27,burstProgress));
+      float fragments=clickFragments(pixel,spread);
+      alpha+=(fragments+ink*flash*0.25)*clip*outerMask;
+    }
   }
   // Neighbor rims catch the same light, independently of the focused mask.
   // Only a narrow inner bloom is drawn: gaps and nested containers stay clear.

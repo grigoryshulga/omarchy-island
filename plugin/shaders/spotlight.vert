@@ -14,8 +14,8 @@ layout(std140, binding = 0) uniform buf {
   vec4 accent;
   float profile;
   float hoverOpacity;
-  vec2 rippleCenter;
-  float rippleProgress;
+  vec2 burstCenter;
+  float burstProgress;
   float artworkMix;
   vec4 focusRect;
   float focusRadius;
@@ -57,8 +57,9 @@ layout(std140, binding = 0) uniform buf {
   float focusPower;
   float buttonHovered;
   float bloomStrength;
-  vec4 rippleBounds;
-  vec2 rippleCorner;
+  vec4 burstBounds;
+  vec2 burstCorner;
+  float holdAmount;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;

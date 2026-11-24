@@ -146,7 +146,7 @@ The existing adapter validates and caches a private copy, disables duplicate IPC
 
 Cards and control tiles use a subtle fill without permanent outlines; nested action buttons stay transparent until interaction. Transparent page wrappers and grouped notification rows do not introduce additional spotlight boundaries.
 
-The cursor spotlight becomes tighter inside cards and adds a brighter cluster of dots over hovered buttons. A light bloom surrounds the braille dots. Clicks produce a short flash and two fading rings, clipped to the surface where the click started. Crossing into a surface or approaching its rim from inside scatters a few pixels along the edge. The fading cursor trail stays inside the hovered surface, including its corners. Nearby elements catch a soft glow on their facing inner rims. Reduced motion keeps the spotlight and dot bloom static and disables the trail, click wave, and edge scatter.
+The cursor spotlight becomes tighter inside cards and adds a brighter cluster of dots over hovered buttons. A light bloom surrounds the braille dots. Holding the left mouse button draws the light into a smaller, brighter spot. On click, individual dots scatter outward at different speeds and fade within the clicked surface. Moving far enough to start a drag releases the held spotlight. Crossing into a surface or approaching its rim from inside scatters a few pixels along the edge. The fading cursor trail stays inside the hovered surface, including its corners. Nearby elements catch a soft glow on their facing inner rims. Reduced motion keeps the spotlight and dot bloom static and disables the hold, click, trail, and edge animations.
 
 The popup follows the clock on top, bottom, left, and right panels, staying inside the current monitor. It opens inward from the panel and keeps its cross-axis center stable during expansion, including near screen corners. Side panels stack clock indicators above and below the time and show a compact OSD; notification summaries use a popup card even when the horizontal bar style is selected. Horizontal clock slots at the start or end of the bar use a compact width.
 
@@ -244,7 +244,7 @@ hl.window_rule({
 | Opening page | `openingPage: "overview"`; also `last` (last page during this shell session); a disabled destination falls back to Overview |
 | Bar animations | `panelAnimation: true`; controls bar artwork, beacon waves, and bar transitions |
 | Interface animations | `animationsEnabled: true`; system reduced motion always takes precedence; embedded system panels retain native Omarchy behavior |
-| Cursor effects | `cursorEffectsEnabled: true`; controls hover spotlights, the cursor trail, edge scatter, and click ripples under General → Animations |
+| Cursor effects | `cursorEffectsEnabled: true`; controls hover spotlights, the cursor trail, held spotlight, and click and edge particles under General → Animations |
 | Sections | `calendarEnabled`, `weatherEnabled`: both `true`; Overview is always available |
 | Track announcements | `trackAlerts: true` |
 | Media visualization | `musicVisualization: "visible"`; also `open` (popup only) or `off`; audio analysis stops when no animated visualization is visible |
@@ -453,7 +453,7 @@ ISLAND_TEST_GPU=1 python3 tests/dictation.py # Dictation with GPU shaders
 python3 tests/audio-recovery.py            # Private MPRIS, audio recovery, backoff and suspended retries
 python3 tests/music-visualization.py       # Offscreen style/background combinations and audio-consumer lifecycle
 python3 tests/artwork-render.py            # GPU artwork frames, styles, backgrounds and reduced motion
-ISLAND_SPOTLIGHT_ONLY=1 python3 tests/artwork-render.py # Braille bloom, edge entry and click clipping
+ISLAND_SPOTLIGHT_ONLY=1 python3 tests/artwork-render.py # Braille bloom, edge entry, hold and click particles
 python3 tests/music-shader.py              # Surfaceless EGL: visible constellation motion in popup and bar
 python3 tests/performance.py               # QML timings, delegate reuse, focus and inactive-page work
 ISLAND_TEST_GPU=1 python3 tests/weather-summary.py # Weather GPU, themes, layout and reduced motion

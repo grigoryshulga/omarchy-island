@@ -34,8 +34,14 @@ ShellRoot {
       id:spotScene
       anchors.fill:parent
       visible:false
+      property int clicks: 0
       Rectangle {id:spotCard;x:40;y:30;width:220;height:130;radius:18;color:"black";property bool islandSpotlightSurface:true
-        Island.ActionButton {id:spotButton;x:100;y:25;width:70;height:40;visible:false}
+        Island.ActionButton {
+          id:spotButton
+          x:100;y:25;width:70;height:40;visible:false
+          color:"transparent";focusOnClick:false
+          onClicked:spotScene.clicks++
+        }
       }
       Rectangle {id:neighborCard;x:270;y:30;width:45;height:130;radius:12;color:"black";visible:false;property bool islandSpotlightSurface:true}
       Island.BrailleSpotlight {id:spot;anchors.fill:parent;surfaceRoot:spotScene;active:spotScene.visible;pointer:Qt.point(90,80);accent:"white"}
@@ -107,20 +113,65 @@ ShellRoot {
       spot.pointer=Qt.point(160,75);wait(55)
       check(spot.edgeProgress<1 && spot.edgeImpact.z===-1,"entering the button did not scatter at its leading rim")
       captureSpotlight(grabImage(spotScene),"boundary-entry")
+      spot.pointer=Qt.point(175,75);wait(600)
+      var restingSpot=grabImage(spot),restingCenter=0,restingRim=0,heldCenter=0,heldRim=0
+      mousePress(spotButton,35,20,Qt.LeftButton)
+      wait(210)
+      check(spot.holdAmount>0.93,"left press did not reach the spotlight")
+      var heldSpot=grabImage(spot)
+      for(var y=59;y<91;y++) for(var x=145;x<205;x++) {
+        var distance=Math.hypot(x-175,y-75)
+        if(distance<8) {restingCenter+=restingSpot.red(x,y);heldCenter+=heldSpot.red(x,y)}
+        if(distance>23) {restingRim+=restingSpot.red(x,y);heldRim+=heldSpot.red(x,y)}
+      }
+      captureSpotlight(restingSpot,"resting-spot")
+      captureSpotlight(heldSpot,"held-spot")
+      check(heldCenter>restingCenter && heldRim<restingRim*0.65,
+        "holding the button did not concentrate the spotlight: center "+restingCenter+" → "+heldCenter+", rim "+restingRim+" → "+heldRim)
+      check(spotScene.clicks===0,"holding activated the button before release")
+      mouseRelease(spotButton,35,20,Qt.LeftButton)
+      wait(150)
+      check(spot.holdAmount===0,"spotlight did not settle after release")
+      check(spotScene.clicks===1,"release did not deliver one button click: "+spotScene.clicks)
+      mousePress(spotButton,35,20,Qt.RightButton);wait(160)
+      check(spot.holdAmount===0,"right button entered the held state")
+      mouseRelease(spotButton,35,20,Qt.RightButton)
+      mousePress(spotButton,35,20,Qt.LeftButton)
+      wait(110)
+      check(spot.holdAmount>0.7,"second press did not re-enter the held state")
+      mouseMove(spotButton,-20,20,30,Qt.LeftButton)
+      wait(150)
+      check(spot.holdAmount===0,"dragging did not release the held spotlight")
+      mouseRelease(spotButton,-20,20,Qt.LeftButton)
+      check(spotScene.clicks===1,"dragging out of the button produced a click")
       spot.active=false;wait(160)
       spot.pulse(Qt.point(170,77));wait(45)
-      check(spot.rippling,"click feedback did not start")
+      check(spot.scattering,"click feedback did not start")
       var clickFrame=grabImage(spot),clickLight=0
       for(var y=0;y<clickFrame.height;y++) for(var x=0;x<clickFrame.width;x++) {
         var light=clickFrame.red(x,y)
-        if(x<140 || x>=210 || y<55 || y>=95) check(light===0,"click wave escaped its original button")
+        if(x<140 || x>=210 || y<55 || y>=95) check(light===0,"click scatter escaped its original button")
         else clickLight+=light
       }
-      check(clickLight>300,"the click wave produced no visible ink")
+      check(clickLight>300,"the click scatter produced no visible ink")
       captureSpotlight(clickFrame,"click")
+      spot.clearBurst()
+      spot.pulse(Qt.point(113,94))
+      wait(95)
+      var scatteredSpot=grabImage(spot),quadrants=[0,0,0,0]
+      for(var y=48;y<141;y++) for(var x=67;x<160;x++) {
+        var dx=x-113,dy=y-94
+        if(Math.abs(dx)>5 && Math.abs(dy)>5 && Math.hypot(dx,dy)>16 && scatteredSpot.red(x,y)>100)
+          quadrants[(dx>0 ? 1 : 0)+(dy>0 ? 2 : 0)]++
+      }
+      check(quadrants.every(function(count){return count>=2}),"click particles did not spread in all directions: "+quadrants)
+      captureSpotlight(scatteredSpot,"scattered-spot")
       Commons.Style.reduceMotion=true
-      check(!spot.rippling,"reduced motion did not stop the current click wave")
+      check(!spot.scattering,"reduced motion did not stop the current click scatter")
       spot.active=Qt.binding(function(){return spotScene.visible})
+      mousePress(spotButton,35,20,Qt.LeftButton);wait(180)
+      check(spot.holdAmount===0,"reduced motion allowed the held spotlight to animate")
+      mouseRelease(spotButton,35,20,Qt.LeftButton)
       spotButton.visible=false
       spot.pointer=Qt.point(44,80)
       spotCard.radius=0;wait(60)

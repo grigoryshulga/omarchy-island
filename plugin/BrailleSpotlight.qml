@@ -9,6 +9,7 @@ ShaderEffect {
   property bool active: false
   readonly property bool effectsEnabled: Preferences.get("cursorEffectsEnabled")
   readonly property bool effectActive: active && effectsEnabled
+  readonly property bool motionAllowed: effectsEnabled && !Preferences.reduceMotion
   property bool adaptive: true
   property Item surfaceRoot: null
   readonly property var hoveredSurface: effectActive && surfaceRoot ? Spotlight.pick(surfaceRoot,root,pointer) : null
@@ -92,8 +93,12 @@ ShaderEffect {
     scatter(hit)
   }
   NumberAnimation {id:edgeBurst;target:root;property:"edgeProgress";from:0;to:1;duration:Preferences.duration(550);easing.type:Easing.Linear}
-  onEffectActiveChanged: {clearTrail();clearEdge()}
-  onEffectsEnabledChanged: if (!effectsEnabled) clearRipple()
+  onEffectActiveChanged: {
+    clearTrail()
+    clearEdge()
+    if (!effectActive) clearHold()
+  }
+  onMotionAllowedChanged: if (!motionAllowed) {clearBurst();clearHold()}
   onHoveredSurfaceChanged: {
     const target=effectActive && !Preferences.reduceMotion ? hoveredSurface : null
     const hit=target ? Spotlight.entry(lastTrailPoint,pointer,Spotlight.bounds(target,root),Spotlight.radius(target),Spotlight.power(target)) : null
@@ -103,8 +108,33 @@ ShaderEffect {
   }
   Connections {
     target: Preferences
-    function onReduceMotionChanged() {root.clearTrail();root.clearEdge();root.clearRipple()}
+    function onReduceMotionChanged() {root.clearTrail();root.clearEdge()}
   }
+  // Observe the press without taking it away from buttons, sliders or swipes.
+  PointHandler {
+    enabled: root.effectActive && root.motionAllowed && root.surfaceRoot !== null
+    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+    acceptedButtons: Qt.LeftButton
+    property bool dragged: false
+    readonly property bool held: active && !dragged && (point.pressedButtons & Qt.LeftButton) !== 0
+    onActiveChanged: if (!active) dragged=false
+    onPointChanged: {
+      if (!active || dragged) return
+      const dx=point.scenePosition.x-point.scenePressPosition.x
+      const dy=point.scenePosition.y-point.scenePressPosition.y
+      if (Math.hypot(dx,dy)>=Qt.styleHints.startDragDistance) dragged=true
+    }
+    onHeldChanged: {
+      if (!enabled) return
+      holdSettle.to = held ? 1 : 0
+      holdSettle.duration = Preferences.duration(held ? 165 : 115)
+      holdSettle.restart()
+    }
+  }
+  NumberAnimation {id:holdSettle;target:root;property:"pressAmount";easing.type:Easing.OutCubic}
+  property real pressAmount: 0
+  readonly property real holdAmount: effectActive && motionAllowed ? pressAmount : 0
+  function clearHold() {holdSettle.stop();pressAmount=0}
   Timer {
     objectName:"spotlightTrailClock"
     interval:32;repeat:true
@@ -122,13 +152,13 @@ ShaderEffect {
   property real artworkStrength: 1
   property real artworkMix: artworkUrl.toString()!=="" && cover.status===Image.Ready ? artworkStrength : 0
   property point pointer: Qt.point(width/2,height/2)
-  property point rippleOrigin: Qt.point(width/2,height/2)
-  property vector4d rippleBounds: Qt.vector4d(0,0,0,0)
-  property vector2d rippleCorner: Qt.vector2d(0,2)
+  property point burstOrigin: Qt.point(width/2,height/2)
+  property vector4d burstBounds: Qt.vector4d(0,0,0,0)
+  property vector2d burstCorner: Qt.vector2d(0,2)
   property real shown: effectActive ? 1 : 0
   property vector2d size: Qt.vector2d(width,height)
   property vector2d center: Qt.vector2d(pointer.x,pointer.y)
-  property vector2d rippleCenter: Qt.vector2d(rippleOrigin.x,rippleOrigin.y)
+  property vector2d burstCenter: Qt.vector2d(burstOrigin.x,burstOrigin.y)
   property real phase: 0
   property real spotRadius: Style.space(80)
   property real cornerRadius: surfaceRoot && typeof surfaceRoot.effectiveRadius === "number" ? Spotlight.radius(surfaceRoot) : Style.cornerRadius
@@ -138,10 +168,10 @@ ShaderEffect {
   property real bloomStrength: 0.16
   property real hoverOpacity: shown*intensity
   Behavior on intensity {NumberAnimation {duration:Preferences.duration(140);easing.type:Easing.OutCubic}}
-  property real rippleProgress: 1
-  readonly property bool rippling: rippleProgress < 1
-  visible: effectsEnabled && (shown > 0 || rippling)
-  onVisibleChanged: if (!visible && rippling) clearRipple()
+  property real burstProgress: 1
+  readonly property bool scattering: burstProgress < 1
+  visible: effectsEnabled && (shown > 0 || scattering)
+  onVisibleChanged: if (!visible && scattering) clearBurst()
   vertexShader: Qt.resolvedUrl("shaders/spotlight.vert.qsb")
   fragmentShader: Qt.resolvedUrl("shaders/spotlight.frag.qsb")
   Image {
@@ -156,18 +186,18 @@ ShaderEffect {
   }
   Behavior on artworkMix { NumberAnimation { duration: Preferences.duration(180); easing.type: Easing.OutCubic } }
   function pulse(point) {
-    if (!effectsEnabled || Preferences.reduceMotion) return
+    if (!motionAllowed) return
     const surface=Spotlight.pick(surfaceRoot,root,point)
     const rect=surface ? Spotlight.bounds(surface,root) : null
-    rippleBounds=rect ? Qt.vector4d(rect.x,rect.y,rect.width,rect.height) : Qt.vector4d(0,0,0,0)
-    rippleCorner=surface ? Qt.vector2d(Spotlight.radius(surface),Spotlight.power(surface)) : Qt.vector2d(0,2)
-    rippleOrigin=point
-    rippleProgress=0
-    wave.restart()
+    burstBounds=rect ? Qt.vector4d(rect.x,rect.y,rect.width,rect.height) : Qt.vector4d(0,0,0,0)
+    burstCorner=surface ? Qt.vector2d(Spotlight.radius(surface),Spotlight.power(surface)) : Qt.vector2d(0,2)
+    burstOrigin=point
+    burstProgress=0
+    clickBurst.restart()
   }
-  function clearRipple() {wave.stop();rippleProgress=1}
+  function clearBurst() {clickBurst.stop();burstProgress=1}
   Behavior on shown { NumberAnimation { duration: Preferences.duration(root.active ? 160 : 120); easing.type: Easing.OutCubic } }
   NumberAnimation on phase { running: root.visible && !Preferences.reduceMotion; from: 0; to: 1200; duration: 1200000; loops: Animation.Infinite }
   // A time cursor lets travel and brightness ease independently in the shader.
-  NumberAnimation { id: wave; target: root; property: "rippleProgress"; from: 0; to: 1; duration: Preferences.duration(330); easing.type: Easing.Linear }
+  NumberAnimation { id: clickBurst; target: root; property: "burstProgress"; from: 0; to: 1; duration: Preferences.duration(290); easing.type: Easing.Linear }
 }
