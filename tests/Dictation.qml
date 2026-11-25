@@ -44,6 +44,10 @@ ShellRoot {
       }))
       tryVerify(function(){return saved})
     }
+    function checkIconCenter(icon,card) {
+      verify(Math.abs(icon.paintedCenterX-icon.width/2)<0.5,"Dictation glyph is off center in its slot")
+      verify(Math.abs(icon.y+icon.paintedCenterY-card.height/2)<=0.5,"Dictation glyph is off the card's center line")
+    }
     function test_flow() {
       compare(loader.item,null)
       fake.showing=true
@@ -64,6 +68,10 @@ ShellRoot {
       compare(backend.mode,"idle")
       var field=findChild(hud,"islandDictationField"), label=findChild(hud,"islandDictationLabel")
       var time=findChild(hud,"islandDictationTime")
+      var icon=findChild(hud,"islandDictationIcon"), recordingIcon=icon.text
+      var iconSlot=Qt.rect(icon.x,icon.y,icon.width,icon.height)
+      var labelX=label.x, fieldX=field.x, timeX=time.x
+      checkIconCenter(icon,card)
       verify(label.x+label.width<=field.x && field.x+field.width<=time.x)
       verify(!label.truncated)
       compare(time.text,"1:05")
@@ -90,6 +98,12 @@ ShellRoot {
       fake.recording=false
       compare(field.processing,true)
       tryCompare(field,"morph",1)
+      verify(icon.text!==recordingIcon)
+      compare(Qt.rect(icon.x,icon.y,icon.width,icon.height),iconSlot)
+      checkIconCenter(icon,card)
+      compare(label.x,labelX)
+      compare(field.x,fieldX)
+      compare(time.x,timeX)
       compare(field.width,fieldWidth)
       verify(!label.truncated)
       capture(field,"processing")

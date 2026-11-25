@@ -67,10 +67,15 @@ Item {
         anchors.rightMargin:Design.gap.medium
         spacing:Design.gap.tight
         LayoutMirroring.enabled:Commons.I18n.rightToLeft
-        PlainText {
+        OpticalGlyph {
+          objectName:"islandDictationIcon"
+          Layout.preferredWidth:paintedSize
+          Layout.preferredHeight:paintedSize
+          Layout.alignment:Qt.AlignVCenter
           text:root.dictation.recording ? "󰍬" : "󰔟"
           color:root.dictation.recording ? Design.danger : Design.accent
-          font.pixelSize:Style.font.iconSmall
+          fontSize:Design.type.iconSmall
+          paintedSize:Design.type.iconSmall
           Accessible.ignored:true
         }
         PlainText {
