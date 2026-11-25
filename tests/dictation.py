@@ -11,7 +11,14 @@ with tempfile.TemporaryDirectory(prefix='island-dictation-qml-') as temporary:
     (root/'Island').symlink_to(project/'plugin')
     (root/'Bridge').symlink_to(project/'plugin/osd-bridge')
     (root/'shell.qml').write_text((project/'tests/Dictation.qml').read_text())
-    env=dict(os.environ,QT_QPA_PLATFORM='wayland',QT_QUICK_BACKEND='rhi' if os.environ.get('ISLAND_TEST_GPU') else 'software')
+    env=dict(os.environ,QT_QPA_PLATFORM='wayland',QT_QUICK_BACKEND='rhi' if os.environ.get('ISLAND_TEST_GPU') else 'software',
+             ISLAND_DICTATION_CAPTURE=str(root))
     r=subprocess.run(['qs','-p',str(root),'--no-color'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=15)
     print(r.stdout)
     assert_qml_pass(r, 'DICTATION_PASS')
+    def frame(name):
+        return (root/f'{name}.png').read_bytes()
+
+    assert frame('recording-first') != frame('recording-next'), 'The recording wave did not move'
+    assert frame('recording-next') != frame('processing'), 'Transcription did not change the wave'
+    assert frame('reduced-first') == frame('reduced-next'), 'Reduced motion allowed the dot field to change'

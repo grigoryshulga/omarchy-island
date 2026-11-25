@@ -15,7 +15,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder while keeping the entry in the list. A brief alert announces a download, and **Now** shows its ongoing progress. Completed items remain for up to 30 minutes, capped at 30. **Remove from list** removes the completed entry and keeps the file. File copies also trigger detection; the activity indicator does not represent a download percentage.
 - **Agent limits (optional):** pinned quota windows, automatic low-quota cards, an optional clock indicator, and an expandable Limits / Usage / Cost center with provider connections. Shares configuration and aggregate caches with Agent Limits; no separate plugin is required.
 - **T3 Code (optional):** live session cards in Overview, a bar indicator for completed threads, failures, and pending requests, and inline answers to questions. Cards preserve drafts and focus while sessions update. Click a thread row’s background to open inline details; its title opens the thread in T3. Permission and authentication requests open in T3.
-- **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Optional Voxtype integration shows recording and transcription status without taking focus.
+- **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Voxtype and Superwhisper dictation show a compact status, timer, and flowing braille waveform without taking focus.
 
 ## Installation
 
@@ -281,7 +281,18 @@ Weather uses a summary layout: current temperature and conditions beside a theme
 
 Visualization style controls the dot motion; background controls its colors. Shimmer preserves the original effect. Ripples expand from audio attacks, Flow lights curved streams, Embers retain local heat, Constellations assemble and dissolve groups of stars along slowly turning arcs, and Echo holds fading impressions. Aurora, Tide and Plasma replace the cover colors with flowing system-theme gradients while keeping the dot grid. Dither print uses a fine Bayer grid. A slow band passes through the image, bass fills in the midtones, and the theme ink picks up a little of the cover color. The tint is softer on the bar. Palette print, Tonal ASCII and Contour engraving use the same shader and glyph atlas as Omarchy Ambient. All three are static and release the audio sampler. Both choices save immediately and work together. Reduced motion freezes the field; hiding all visualizations stops audio analysis. If the playback monitor fails, visible visualizations retry automatically with a delay increasing from 1 to 30 seconds; a successful audio frame clears the error. Retries stop while hidden, paused, or reduced motion is active.
 
-For a single dictation OSD, disable other dictation visualizers and the native Voxtype OSD with `voxtype config set osd.enabled false`. Dictation settings and shortcuts remain in Voxtype.
+### Dictation
+
+Island detects running Voxtype and [Superwhisper for Linux](https://superwhisper.com/linux) automatically. The first active source keeps the indicator through transcription. Choose your default dictation app in Omarchy under **Setup → Defaults → Dictation**. Island observes Superwhisper's session D-Bus indicator and requires `python-gobject` for that integration.
+
+The one-line OSD stays on the monitor where dictation began. The braille wave follows the app's audio meter and becomes a travelling wave during transcription. Reduced motion keeps the dots still and switches states immediately. Right-click hides the indicator for the current dictation.
+
+For a single dictation OSD, disable the native overlay through the app you use:
+
+| App | Command |
+|---|---|
+| Voxtype | `voxtype config set osd.enabled false` |
+| Superwhisper | `superwhisper audio set showRecordingIndicator false` |
 
 ### Agent limits
 
@@ -359,7 +370,7 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. All detached Islan
 - Each module imports its own data from the old `state.json` once, when its new store is absent. After a successful save, migration removes that module's legacy fields; the file disappears when no pending data remains. Unmigrated history and downloads still expire under their retention limits. Clearing a new store does not import old entries again; a corrupt new store recovers empty.
 - Expired notifications enter history; sender withdrawal removes them from both lists while Island retains the sender reference. After restart, saved entries are history only. Transient notifications are not saved.
 - Verification-code notifications are redacted before persistence. Copied codes use a sensitive clipboard selection and are cleared after one minute unless the clipboard has changed.
-- Playback audio is read through `parec` and processed in memory without saving PCM. Voxtype uses its existing audio bridge during recording; Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
+- Playback audio is read through `parec` and processed in memory without saving PCM. For dictation, Island uses Voxtype's audio bridge or Superwhisper's D-Bus meter. Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
 - T3 integration is off by default. When enabled, session data, draft answers, and the scoped access token stay in memory. Opening a session uses T3's desktop deep link. See [T3 Code session cards](#t3-code-session-cards) for permissions and lifecycle.
 - Weather requests begin on first opening or hovering, with no requests beforehand. Automatic location uses `geo.omarchy.org`; search and forecasts use [Open-Meteo](https://open-meteo.com/). Requests use HTTPS, timeouts, and response limits. On failure, the last forecast remains marked stale; the cache is `~/.local/state/omarchy/island/weather.json`.
 
@@ -406,7 +417,7 @@ After editing fragment shaders, run `bin/build-shaders` with Qt `qsb` installed.
 bin/test
 ```
 
-The suite covers JS models, module registration and lifecycle, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js 22.12 or newer, Python, `dbus-run-session`, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`. Native accessibility checks also use a C++ compiler, `pkg-config`, Qt 6 development headers and `moc`.
+The suite covers JS models, module registration and lifecycle, redaction and URL policy, notification and weather services, installation, and QML interactions. It requires Node.js 22.12 or newer, Python, `dbus-run-session`, `qs`, and Omarchy shell modules at `/usr/share/omarchy/shell`. The Superwhisper fixture uses `python-gobject`. Native accessibility checks also use a C++ compiler, `pkg-config`, Qt 6 development headers and `moc`.
 
 `bin/test` runs through `bin/test-session`: disposable HOME, temporary files and runtime directory, a private D-Bus session, and offscreen Qt rendering. Desktop display/IPC variables are not inherited. Python checks also enter this session when invoked directly. The runner cleans up its process group and temporary files on exit. This separates tests from the desktop; it is not a filesystem or network security sandbox.
 

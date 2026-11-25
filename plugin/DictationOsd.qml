@@ -18,7 +18,7 @@ Item {
   onOpenChanged:if(!open) dismissed=false
   Connections {
     target:root.dictation
-    function onRecordingChanged() {if(root.dictation.recording) root.dismissed=false}
+    function onSessionIdChanged() {root.dismissed=false}
   }
   readonly property var anchorWindow:anchorItem ? anchorItem.QsWindow.window : null
   readonly property string position:bar ? bar.position : "top"
@@ -28,9 +28,10 @@ Item {
     return anchorWindow ? anchorItem.mapToItem(anchorWindow.contentItem,0,0) : Qt.point(0,0)
   }
   TransformWatcher {id:anchorWatcher;a:root.anchorWindow ? root.anchorWindow.contentItem : null;b:root.anchorItem}
-  property real shown: 0
-  Component.onCompleted:shown=Qt.binding(function(){return root.presented ? 1 : 0})
-  Behavior on shown {NumberAnimation {duration:Preferences.duration(root.presented ? 220 : 180);easing.type:Easing.OutCubic}}
+  readonly property real shown: Preferences.reduceMotion ? (presented ? 1 : 0) : animatedShown
+  property real animatedShown: 0
+  Component.onCompleted:animatedShown=Qt.binding(function(){return root.presented ? 1 : 0})
+  Behavior on animatedShown {NumberAnimation {duration:Preferences.duration(root.presented ? 220 : 180);easing.type:Easing.OutCubic}}
   Commons.Translations {id:strings;directory:Qt.resolvedUrl("i18n")}
   PanelWindow {
     id: panel
@@ -54,39 +55,52 @@ Item {
       readonly property real offset:Style.space(6)*(1-root.shown)
       x:Math.round(targetOrigin.x)+(vertical ? (root.position==="right" ? 1 : -1)*offset : 0)
       y:Math.round(targetOrigin.y)+(vertical ? 0 : (root.position==="bottom" ? 1 : -1)*offset)
-      width:Math.min(Style.space(320),available.width)
-      height:Math.min(Style.space(88),available.height)
+      width:Math.min(Style.space(256),available.width)
+      height:Math.min(Math.max(Style.space(40),Design.lineHeight("caption")+2*Design.gap.tight),available.height)
       radius:Design.cardRadius
       color:Design.canvas
       borderSpec:Design.popupBorder
       opacity:panel.screen && panel.width===panel.screen.width && panel.height===panel.screen.height ? root.shown : 0
-      ColumnLayout {
+      RowLayout {
         anchors.fill:parent
-        anchors.margins:Design.gap.large
-        spacing:Design.gap.small
-        RowLayout {
-          Layout.fillWidth:true
-          spacing:Design.gap.small
-          PlainText {text:root.dictation.recording ? "󰍬" : "󰔟";color:Design.accent;font.pixelSize:Style.font.icon}
-          PlainText {
-            objectName:"islandDictationLabel"
-            Layout.fillWidth:true
-            text:strings.t(root.dictation.recording ? "dictation.listening" : "dictation.transcribing")
-            typeRole:"caption"
-          }
-          PlainText {
-            text:Math.floor(root.dictation.elapsed/60)+":"+String(root.dictation.elapsed%60).padStart(2,"0")
-            color:Design.accent
-            typeRole:"caption"
-          }
+        anchors.leftMargin:Design.gap.medium
+        anchors.rightMargin:Design.gap.medium
+        spacing:Design.gap.tight
+        LayoutMirroring.enabled:Commons.I18n.rightToLeft
+        PlainText {
+          text:root.dictation.recording ? "󰍬" : "󰔟"
+          color:root.dictation.recording ? Design.danger : Design.accent
+          font.pixelSize:Style.font.iconSmall
+          Accessible.ignored:true
+        }
+        PlainText {
+          id:statusLabel
+          objectName:"islandDictationLabel"
+          Layout.preferredWidth:Math.ceil(Math.max(listening.advanceWidth,transcribing.advanceWidth))
+          text:root.dictation.recording ? listening.text : transcribing.text
+          typeRole:"caption"
+          TextMetrics {id:listening;font:statusLabel.font;text:strings.t("dictation.listening")}
+          TextMetrics {id:transcribing;font:statusLabel.font;text:strings.t("dictation.transcribing")}
         }
         DictationField {
           objectName:"islandDictationField"
           Layout.fillWidth:true
-          Layout.fillHeight:true
+          Layout.preferredHeight:Math.max(0,Math.min(Style.space(28),card.height-2*Design.gap.tight))
           history:root.dictation.history
           processing:!root.dictation.recording
-          active:panel.visible
+          active:root.presented && card.opacity>0
+        }
+        PlainText {
+          objectName:"islandDictationTime"
+          Layout.preferredWidth:Math.max(implicitWidth,Style.space(30))
+          horizontalAlignment:Text.AlignTrailing
+          readonly property var locale:Qt.locale(Commons.I18n.formatLocale)
+          readonly property int seconds:root.dictation.elapsed%60
+          text:Math.floor(root.dictation.elapsed/60).toLocaleString(locale,"f",0)+":"
+            +(seconds<10 ? (0).toLocaleString(locale,"f",0) : "")+seconds.toLocaleString(locale,"f",0)
+          color:Design.secondaryText
+          font.features:({"tnum":1})
+          typeRole:"caption"
         }
       }
       MouseArea {

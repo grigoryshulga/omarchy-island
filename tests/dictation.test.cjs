@@ -7,6 +7,14 @@ for(const raw of ['{}','null','[]','broken','{"peak":"1"}','{"status":"connected
 assert.equal(m.frame('{"peak":0.4,"rms":0.2,"vad":1}'),0.4);
 assert.equal(m.frame('{"peak":2}'),1);
 assert.equal(m.frame('{"peak":-2}'),0);
+assert.deepEqual(m.superwhisper('{"mode":"recording","peak":0.6}'),{mode:"recording",peak:0.6});
+assert.deepEqual(m.superwhisper('{"mode":"recording","peak":null}'),{mode:"recording",peak:0});
+assert.deepEqual(m.superwhisper('{"mode":"warming","peak":"0.5"}'),{mode:"idle",peak:0});
+assert.equal(m.superwhisper('{"peak":0.7}'),null);
+assert.equal(m.source("superwhisper","recording","transcribing"),"superwhisper");
+assert.equal(m.source("voxtype","recording","recording"),"voxtype");
+assert.equal(m.source("voxtype","idle","recording"),"superwhisper");
+assert.equal(m.source("superwhisper","idle","idle"),"");
 let history=m.empty();
 for(let i=0;i<60;i++) history=m.push(history,i/100);
 assert.equal(history.length,48);assert.equal(history[0],0.12);assert.equal(history[47],0.59);

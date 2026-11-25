@@ -7,11 +7,15 @@ layout(std140,binding=0) uniform buf {
   mat4 qt_Matrix;
   float qt_Opacity;
   vec2 size;
-  float amplitude;
+  float cellSize;
   float morph;
   float phase;
-  float column;
+  float still;
+  mat4 samplesA;
+  mat4 samplesB;
+  mat4 samplesC;
   vec4 accent;
+  vec4 highlight;
 };
 void main() {
   qt_TexCoord0 = qt_MultiTexCoord0;
