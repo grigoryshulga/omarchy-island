@@ -7,13 +7,14 @@ layout(std140,binding=0) uniform buf {
   mat4 qt_Matrix;
   float qt_Opacity;
   vec2 size;
-  float cellSize;
+  vec2 grid;
+  float pitch;
   float morph;
   float phase;
+  float sampleOffset;
   float still;
   mat4 samplesA;
   mat4 samplesB;
-  mat4 samplesC;
   vec4 accent;
   vec4 highlight;
 };

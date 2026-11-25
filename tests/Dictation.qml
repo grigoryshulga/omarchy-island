@@ -12,7 +12,7 @@ ShellRoot {
     property int sessionId:0
     property string screenName:""
     property int elapsed:65
-    property var history:Array(48).fill(0.2)
+    property var history:Array(48).fill(0)
   }
   QtObject {id:bar;property string position:"top";property int barSize:40}
   FloatingWindow {
@@ -69,15 +69,32 @@ ShellRoot {
       compare(time.text,"1:05")
       var fieldWidth=field.width
       compare(field.software,!Quickshell.env("ISLAND_TEST_GPU"))
+      compare(field.flowing,false)
+      capture(field,"quiet")
+      wait(120)
+      capture(field,"quiet-next")
+      fake.history=Array(42).fill(0).concat([0.35,0.72,0.9,0.92,0.78,0.56])
+      tryCompare(field,"flowing",true)
+      tryCompare(field,"sampleOffset",0)
       capture(field,"recording-first")
-      wait(200)
+      for(var sample=0;sample<12;sample++) {
+        fake.history=fake.history.slice(1).concat([0])
+        wait(50)
+      }
       capture(field,"recording-next")
+      fake.history=Array(48).fill(0)
+      tryCompare(field,"flowing",false)
+      capture(field,"settled")
+      fake.history=Array(42).fill(0).concat([0.35,0.72,0.9,0.92,0.78,0.56])
+      tryCompare(field,"sampleOffset",0)
       fake.recording=false
       compare(field.processing,true)
       tryCompare(field,"morph",1)
       compare(field.width,fieldWidth)
       verify(!label.truncated)
       capture(field,"processing")
+      wait(240)
+      capture(field,"processing-next")
       fake.showing=false
       tryCompare(loader,"item",null)
       fake.recording=true
@@ -89,6 +106,7 @@ ShellRoot {
       tryCompare(hud,"shown",1)
       mouseClick(card,card.width/2,card.height/2,Qt.RightButton)
       compare(findChild(hud,"islandDictationField").active,false)
+      compare(findChild(hud,"islandDictationField").flowing,false)
       tryCompare(surface,"visible",false)
       verify(fake.showing && fake.recording,"Hiding the popup interrupted the dictation")
       fake.recording=false
@@ -108,6 +126,9 @@ ShellRoot {
       capture(field,"reduced-next")
       fake.recording=false
       compare(field.morph,1)
+      capture(field,"reduced-processing")
+      wait(170)
+      capture(field,"reduced-processing-next")
       fake.showing=false
       tryCompare(loader,"item",null)
       console.log("DICTATION_PASS")

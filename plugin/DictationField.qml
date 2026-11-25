@@ -8,21 +8,49 @@ Item {
   property bool processing: false
   property bool active: false
   readonly property bool still: Preferences.reduceMotion
-  readonly property real morph: still ? (processing ? 1 : 0) : animatedMorph
+  readonly property bool moving: active && visible && !still
+  readonly property bool sampling: moving && !processing
+  readonly property bool flowing: moving && (processing || morph>0 || samples!==null)
+  readonly property real morph: moving ? animatedMorph : (processing ? 1 : 0)
   readonly property real phase: still ? 0 : animatedPhase
-  readonly property real cellSize: Style.space(9)
+  readonly property real pitch: Style.space(3)
+  readonly property int columns: Math.floor(width/pitch)
+  // Keep a row of pixels centered on the quiet ribbon.
+  readonly property int rows: Math.max(0,2*Math.floor((height/pitch-1)/2)+1)
   readonly property bool software: GraphicsInfo.api===GraphicsInfo.Software
   Accessible.ignored: true
 
+  readonly property var silence: Model.empty()
+  property var samples: null
+  Binding on samples {
+    when: root.sampling
+    value: Model.hasSignal(root.history) ? root.history : null
+    restoreMode: Binding.RestoreNone
+  }
+  onSamplesChanged: if(sampling && samples!==null) sampleScroll.restart()
+  onSamplingChanged: if(!sampling) sampleScroll.stop()
+  property real sampleOffset: 0
+  NumberAnimation {
+    id: sampleScroll
+    target: root
+    property: "sampleOffset"
+    from: 1
+    to: 0
+    duration: Preferences.duration(45)
+  }
+
   property real animatedMorph: processing ? 1 : 0
   Behavior on animatedMorph {
-    enabled: root.active && !root.still
-    NumberAnimation {duration: Preferences.duration(300); easing.type: Easing.InOutCubic}
+    enabled: root.moving
+    NumberAnimation {duration: Preferences.duration(240); easing.type: Easing.OutCubic}
   }
   property real animatedPhase: 0
   NumberAnimation on animatedPhase {
-    running: root.active && !root.still
-    from: 0; to: 2*Math.PI; duration: 15000; loops: Animation.Infinite
+    running: root.flowing
+    from: 0
+    to: 2*Math.PI
+    duration: Preferences.duration(3800)
+    loops: Animation.Infinite
   }
 
   Loader {
@@ -30,13 +58,14 @@ Item {
     active: !root.software
     sourceComponent: ShaderEffect {
       property vector2d size: Qt.vector2d(width,height)
-      property real cellSize: root.cellSize
+      property vector2d grid: Qt.vector2d(root.columns,root.rows)
+      property real pitch: root.pitch
       property real morph: root.morph
       property real phase: root.phase
+      property real sampleOffset: root.sampleOffset
       property real still: root.still ? 1 : 0
-      property matrix4x4 samplesA: root.still ? Qt.matrix4x4() : Model.matrix(root.history,0)
-      property matrix4x4 samplesB: root.still ? Qt.matrix4x4() : Model.matrix(root.history,16)
-      property matrix4x4 samplesC: root.still ? Qt.matrix4x4() : Model.matrix(root.history,32)
+      property matrix4x4 samplesA: Model.matrix(root.samples || root.silence,16)
+      property matrix4x4 samplesB: Model.matrix(root.samples || root.silence,32)
       property color accent: Design.accent
       property color highlight: Design.text
       vertexShader: Qt.resolvedUrl("shaders/dictation.vert.qsb")
@@ -49,41 +78,33 @@ Item {
     active: root.software
     sourceComponent: Canvas {
       readonly property color accent: Design.accent
-      readonly property real phase: root.phase
-      readonly property real morph: root.morph
-      readonly property real pitch: root.cellSize
-      readonly property var samples: root.still ? null : root.history
-      onAccentChanged: requestPaint()
-      onPhaseChanged: requestPaint()
-      onMorphChanged: requestPaint()
-      onPitchChanged: requestPaint()
-      onSamplesChanged: if(root.active) requestPaint()
+      readonly property color highlight: Design.text
+      readonly property var frame: [root.pitch,root.columns,root.rows,root.still,root.samples,
+                                    root.sampleOffset,root.phase,root.morph,accent,highlight]
+      onFrameChanged: requestPaint()
+      onWidthChanged: requestPaint()
+      onHeightChanged: requestPaint()
       onPaint: {
         var ctx=getContext("2d")
         ctx.clearRect(0,0,width,height)
-        var columns=Math.floor(width/pitch), rows=Math.floor(height/pitch)
-        if(!columns || !rows) return
-        var left=(width-columns*pitch)/2, top=(height-rows*pitch)/2
-        ctx.fillStyle=accent
-        for(var column=0;column<columns*2;column++) {
-          var x=left+(Math.floor(column/2)+(column%2 ? 0.64 : 0.36))*pitch
-          var u=x/width
-          var sample=samples ? samples[Math.round(u*47)] : 0.10
-          var energy=Math.min(1,Math.sqrt(sample)*1.6)
-          var taper=Math.sin(Math.PI*u)
-          var center=Math.sin(u*12-phase*3)*(0.10+0.12*energy)*taper
-          var span=(0.09+0.22*energy)*taper*(1-morph)
-          var processing=Math.sin(u*12-phase*4)*0.19*taper
-          center+=(processing-center)*morph
-          for(var row=0;row<rows*4;row++) {
-            var y=top+(Math.floor(row/4)+0.17+(row%4)*0.22)*pitch
-            var distance=Math.abs(y/height-0.5-center)
-            var ink=Math.max(0,1-distance/(0.095+span))
-            var radius=pitch*(0.039+0.060*ink)
-            ctx.globalAlpha=taper*(0.12+0.88*ink)
-            ctx.beginPath()
-            ctx.arc(x,y,radius,0,2*Math.PI)
-            ctx.fill()
+        if(!root.columns || !root.rows) return
+        var pitch=root.pitch, tile=pitch*0.78
+        var left=(width-root.columns*pitch)/2, top=(height-root.rows*pitch)/2
+        for(var column=0;column<root.columns;column++) {
+          var x=left+(column+0.5)*pitch, u=x/width
+          var peak=root.still || !root.samples || root.morph===1 ? 0 : Model.samplePeak(root.samples,u,root.sampleOffset)
+          var ribbon=Model.ribbonAt(u,peak,root.phase,root.morph)
+          for(var row=0;row<root.rows;row++) {
+            var y=top+(row+0.5)*pitch
+            var depth=y/height-0.5-ribbon.center
+            var ink=1-Model.smoothstep(ribbon.thickness-0.044,ribbon.thickness+0.044,Math.abs(depth))
+            if(ink<=0) continue
+            var shine=Model.ribbonShine(depth,ribbon)
+            ctx.fillStyle=Qt.rgba(accent.r+(highlight.r-accent.r)*shine,
+                                  accent.g+(highlight.g-accent.g)*shine,
+                                  accent.b+(highlight.b-accent.b)*shine,
+                                  ink*ribbon.opacity*(0.52+0.48*shine))
+            ctx.fillRect(x-tile/2,y-tile/2,tile,tile)
           }
         }
       }

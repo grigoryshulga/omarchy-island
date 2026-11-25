@@ -18,4 +18,17 @@ assert.equal(m.source("superwhisper","idle","idle"),"");
 let history=m.empty();
 for(let i=0;i<60;i++) history=m.push(history,i/100);
 assert.equal(history.length,48);assert.equal(history[0],0.12);assert.equal(history[47],0.59);
-console.log('PASS: dictation states, malformed audio frames, bounded history.');
+const silent=m.empty();
+assert.equal(m.hasSignal(silent),false);
+assert.equal(m.hasSignal(m.push(silent,0.01)),false);
+const spoken=m.push(silent,0.9);
+assert.equal(m.hasSignal(spoken),true);
+assert.equal(m.samplePeak(spoken,0.5,0),0);
+assert.equal(m.samplePeak(spoken,0.84,1),0);
+assert.ok(Math.abs(m.samplePeak(spoken,0.84,0.5)-0.45)<1e-9);
+assert.equal(m.samplePeak(spoken,0.84,0),0.9);
+const shifted=m.push(spoken,0.4);
+for(const u of [0.2,0.5,0.8,0.83,0.84,0.96]) {
+  assert.ok(Math.abs(m.samplePeak(spoken,u,0)-m.samplePeak(shifted,u,1))<1e-9);
+}
+console.log('PASS: dictation states, malformed audio frames, bounded history and continuous meter scrolling.');
