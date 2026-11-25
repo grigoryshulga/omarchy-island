@@ -28,26 +28,36 @@ void main() {
     fragColor=vec4(0.0);
     return;
   }
-  vec2 samplePoint=(origin+(dotIndex*pitch+1.0)*pixel)/size;
-  float u=mix(samplePoint.x,1.0-samplePoint.x,inputOnLeft);
-  float y=samplePoint.y-0.5;
+  vec2 samplePoint=origin+(dotIndex*pitch+1.0)*pixel;
+  float x=samplePoint.x/size.x;
+  float u=mix(x,1.0-x,inputOnLeft);
+  float centerY=origin.y+(grid.y*pitch-1.0)*pixel*0.5;
+  float y=(samplePoint.y-centerY)/size.y;
+  float rowStep=pitch*pixel/size.y;
 
   // The two edges diffuse through the filled interior on a fixed braille grid.
   float taper=smoothstep(0.0,0.10,u)*(1.0-smoothstep(0.90,1.0,u));
-  float crest=0.5+0.5*sin(12.5663706144*u-2.0*phase);
-  float undertow=0.5+0.5*sin(9.1*u+phase+1.1);
-  float progress=0.5+0.5*sin(14.0*u-phase);
-  float center=0.042*sin(11.0*u-2.0*phase)+0.045*energy*(2.0*undertow-1.0);
-  float width=0.054+energy*(0.10+0.244*(0.72*crest+0.28*undertow));
-  center=mix(center,0.026*sin(11.0*u-phase),morph)*taper;
-  width=mix(width,0.058+0.084*progress,morph)*taper;
-  float top=(center-width*(0.91+0.09*undertow))*reveal;
-  float bottom=(center+width*(0.87+0.13*crest))*reveal;
-  float edge=1.0-smoothstep(0.015,0.088,min(abs(y-top),abs(y-bottom)));
-  float fill=smoothstep(top-0.032,top+0.019,y)*(1.0-smoothstep(bottom-0.024,bottom+0.024,y));
+  float angle=12.5663706144*u-2.0*phase;
+  float drift=sin(6.2831853072*u-phase+0.9);
+  float upper=energy*(0.103+0.218*(0.5+0.5*sin(angle)));
+  float lower=energy*(0.108+0.200*(0.5+0.5*sin(angle-0.69)));
+  float voiceCenter=energy*(0.047*sin(angle-0.32)+0.023*drift);
+  float workAngle=12.5663706144*u-phase;
+  float workWidth=0.023+0.086*(0.5+0.5*sin(workAngle));
+  float workCenter=0.019*sin(workAngle-0.55);
+  float center=mix(voiceCenter,workCenter,morph)*taper;
+  float upperWidth=0.5*rowStep+mix(upper,workWidth,morph)*taper;
+  float lowerWidth=0.5*rowStep+mix(lower,workWidth,morph)*taper;
+  float top=(center-upperWidth)*reveal;
+  float bottom=(center+lowerWidth)*reveal;
+  float definition=mix(smoothstep(0.0,0.28,energy),0.72,morph);
+  float distance=min(abs(y-top),abs(y-bottom))/rowStep;
+  float edge=1.0-smoothstep(0.12,1.39-0.46*definition,distance);
+  float fill=0.28*smoothstep(top-0.028,top+0.023,y)*(1.0-smoothstep(bottom-0.023,bottom+0.028,y));
+  float stroke=(0.43+0.52*definition)*edge;
   float background=0.075-0.027*smoothstep(0.0,0.5,abs(y));
-  float alpha=min(1.0,reveal*2.0)*taper*max(background,fill*(0.32+0.66*edge));
-  float shine=0.20+0.52*edge;
+  float alpha=min(1.0,reveal*2.0)*taper*max(background,fill+(1.0-fill)*stroke);
+  float shine=0.12+(0.30+0.42*definition)*edge;
   vec3 color=mix(accent.rgb,highlight.rgb,shine);
   fragColor=vec4(color*alpha,alpha)*qt_Opacity;
 }

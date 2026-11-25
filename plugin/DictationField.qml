@@ -10,6 +10,7 @@ Item {
   property real reveal: 1
   readonly property bool still: Preferences.reduceMotion
   readonly property bool moving: active && visible && !still
+  readonly property bool flowing: moving && (energy>0 || processing || morph>0)
   readonly property real morph: still ? (processing ? 1 : 0) : animatedMorph
   readonly property real phase: still ? 0 : animatedPhase
   readonly property real energy: still ? 0 : smoothedEnergy
@@ -44,10 +45,10 @@ Item {
   }
   property real animatedPhase: 0
   NumberAnimation on animatedPhase {
-    running: root.moving
+    running: root.flowing
     from: 0
     to: 2*Math.PI
-    duration: Preferences.duration(4800)
+    duration: Preferences.duration(4200)
     loops: Animation.Infinite
   }
 
@@ -88,17 +89,18 @@ Item {
         var pixel=root.pixel, pitch=root.pitch, side=2*pixel
         var left=Math.floor((width-root.columns*pitch+pixel)/2)
         var top=Math.floor((height-root.rows*pitch+pixel)/2)
+        var centerY=top+(root.rows*pitch-pixel)/2
         for(var column=0;column<root.columns;column++) {
           var x=left+column*pitch
           var position=(x+pixel)/width
           var u=root.inputOnLeft ? 1-position : position
-          var wave=Model.waveAt(u,root.energy,root.phase,root.morph,root.reveal)
+          var wave=Model.waveAt(u,root.energy,root.phase,root.morph,root.reveal,pitch/height)
           for(var row=0;row<root.rows;row++) {
             var y=top+row*pitch
-            var heightPosition=(y+pixel)/height-0.5
+            var heightPosition=(y+pixel-centerY)/height
             var ink=Model.waveInk(heightPosition,wave)
             if(ink<=0) continue
-            var shine=0.20+0.52*Model.waveEdge(heightPosition,wave)
+            var shine=0.12+(0.30+0.42*wave.definition)*Model.waveEdge(heightPosition,wave)
             ctx.fillStyle=Qt.rgba(accent.r+(highlight.r-accent.r)*shine,
                                   accent.g+(highlight.g-accent.g)*shine,
                                   accent.b+(highlight.b-accent.b)*shine,ink)

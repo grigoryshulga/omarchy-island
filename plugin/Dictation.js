@@ -46,30 +46,39 @@ function smoothstep(low,high,value) {
   return t*t*(3-2*t)
 }
 // Keep the Canvas fallback in step with shaders/dictation.frag.
-function waveAt(u,energy,phase,morph,reveal) {
+function waveAt(u,energy,phase,morph,reveal,rowStep) {
   var taper=smoothstep(0,0.10,u)*(1-smoothstep(0.90,1,u))
-  var crest=0.5+0.5*Math.sin(4*Math.PI*u-2*phase)
-  var undertow=0.5+0.5*Math.sin(9.1*u+phase+1.1)
-  var progress=0.5+0.5*Math.sin(14*u-phase)
-  var center=0.042*Math.sin(11*u-2*phase)+0.045*energy*(2*undertow-1)
-  var width=0.054+energy*(0.10+0.244*(0.72*crest+0.28*undertow))
-  center=(center*(1-morph)+0.026*Math.sin(11*u-phase)*morph)*taper
-  width=(width*(1-morph)+(0.058+0.084*progress)*morph)*taper
+  var angle=4*Math.PI*u-2*phase
+  var drift=Math.sin(2*Math.PI*u-phase+0.9)
+  var upper=energy*(0.103+0.218*(0.5+0.5*Math.sin(angle)))
+  var lower=energy*(0.108+0.200*(0.5+0.5*Math.sin(angle-0.69)))
+  var voiceCenter=energy*(0.047*Math.sin(angle-0.32)+0.023*drift)
+  var workAngle=4*Math.PI*u-phase
+  var workWidth=0.023+0.086*(0.5+0.5*Math.sin(workAngle))
+  var workCenter=0.019*Math.sin(workAngle-0.55)
+  var center=(voiceCenter*(1-morph)+workCenter*morph)*taper
+  var halfStep=0.5*rowStep
+  var upperWidth=halfStep+(upper*(1-morph)+workWidth*morph)*taper
+  var lowerWidth=halfStep+(lower*(1-morph)+workWidth*morph)*taper
   return {
-    top:(center-width*(0.91+0.09*undertow))*reveal,
-    bottom:(center+width*(0.87+0.13*crest))*reveal,
-    opacity:Math.min(1,reveal*2)*taper
+    top:(center-upperWidth)*reveal,
+    bottom:(center+lowerWidth)*reveal,
+    opacity:Math.min(1,reveal*2)*taper,
+    definition:smoothstep(0,0.28,energy)*(1-morph)+0.72*morph,
+    rowStep:rowStep
   }
 }
 function waveEdge(y,wave) {
-  var distance=Math.min(Math.abs(y-wave.top),Math.abs(y-wave.bottom))
-  return 1-smoothstep(0.015,0.088,distance)
+  // Soften the line by lighting the adjacent rows, while keeping each dot sharp.
+  var distance=Math.min(Math.abs(y-wave.top),Math.abs(y-wave.bottom))/wave.rowStep
+  return 1-smoothstep(0.12,1.39-0.46*wave.definition,distance)
 }
 function waveInk(y,wave) {
-  var fill=smoothstep(wave.top-0.032,wave.top+0.019,y)
-    *(1-smoothstep(wave.bottom-0.024,wave.bottom+0.024,y))
+  var fill=0.28*smoothstep(wave.top-0.028,wave.top+0.023,y)
+    *(1-smoothstep(wave.bottom-0.023,wave.bottom+0.028,y))
+  var stroke=(0.43+0.52*wave.definition)*waveEdge(y,wave)
   var grid=0.075-0.027*smoothstep(0,0.5,Math.abs(y))
-  return wave.opacity*Math.max(grid,fill*(0.32+0.66*waveEdge(y,wave)))
+  return wave.opacity*Math.max(grid,fill+(1-fill)*stroke)
 }
 if(typeof module!=="undefined") module.exports={state:state,frame:frame,superwhisper:superwhisper,source:source,
   empty:empty,push:push,superwhisperInput:superwhisperInput,meterPeak:meterPeak,voiceStrength:voiceStrength,

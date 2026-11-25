@@ -30,16 +30,25 @@ assert.equal(m.superwhisperInput([{target:{name:"voice-chat"},source:appInput}])
 assert.equal(m.meterPeak(0,0.08),0.08);
 assert.equal(m.meterPeak(0.6,0.8),0.6);
 assert.equal(m.meterPeak(0,-1),0);
-const quiet=m.waveAt(0.625,0,0,0,1);
-const voice=m.waveAt(0.625,m.voiceStrength(m.meterPeak(0,0.04)),0,0,1);
+const rowStep=3/28;
+const quiet=m.waveAt(0.625,0,0,0,1,rowStep);
+for(const u of [0.10,0.4,0.8,0.95]) for(const phase of [0,1,4]) {
+  const still=m.waveAt(u,0,phase,0,1,rowStep);
+  assert.equal(still.top,-rowStep/2);
+  assert.equal(still.bottom,rowStep/2);
+}
+const voice=m.waveAt(0.625,m.voiceStrength(m.meterPeak(0,0.04)),0,0,1,rowStep);
 assert.ok(voice.bottom>quiet.bottom+0.06);
-assert.ok(m.waveInk(0.14,voice)>0.8);
-assert.ok(m.waveInk(0.14,quiet)<0.1);
-assert.ok(m.waveInk(0,voice)>0.3); // Filled between the two contours.
-assert.equal(m.waveInk(-0.14,voice),m.waveInk(-0.14,quiet));
-const entered=m.waveAt(0.625,1,0,0,1);
-const halfway=m.waveAt(0.625,1,0,0,0.5);
+assert.ok(m.waveInk(voice.bottom,voice)>0.8);
+assert.ok(m.waveInk(quiet.bottom,quiet)<0.55);
+assert.ok(m.waveInk(quiet.bottom+rowStep,quiet)>0.08); // A soft shoulder in silence.
+const entered=m.waveAt(0.625,1,0,0,1,rowStep);
+assert.ok(m.waveInk(0,entered)>0.26); // Filled between the two contours.
+const travelling=m.waveAt(0.625,1,Math.PI/2,0,1,rowStep);
+assert.ok(Math.abs(travelling.top-entered.top)>0.10);
+assert.ok(Math.abs(travelling.bottom-entered.bottom)>0.10);
+const halfway=m.waveAt(0.625,1,0,0,0.5,rowStep);
 assert.equal(halfway.bottom,entered.bottom/2);
-assert.equal(m.waveAt(0.625,1,0,0,0).opacity,0);
-assert.equal(m.waveAt(0,1,0,0,1).opacity,0);
-console.log('PASS: dictation states, routed peak fallback, quiet speech, filled wave and center-line reveal.');
+assert.equal(m.waveAt(0.625,1,0,0,0,rowStep).opacity,0);
+assert.equal(m.waveAt(0,1,0,0,1,rowStep).opacity,0);
+console.log('PASS: dictation states, routed peak fallback, soft stationary silence, bright flowing contours and center-line reveal.');

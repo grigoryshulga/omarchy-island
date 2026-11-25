@@ -285,7 +285,7 @@ Visualization style controls the dot motion; background controls its colors. Shi
 
 Island detects running Voxtype and [Superwhisper for Linux](https://superwhisper.com/linux) automatically. The first active source keeps the indicator through transcription. Choose your default dictation app in Omarchy under **Setup → Defaults → Dictation**. Island observes Superwhisper's session D-Bus indicator and requires `python-gobject` for that integration.
 
-The one-line OSD stays on the monitor where dictation began. On a crisp braille grid, voice opens two bright contours around a filled wave. The wave expands and closes around its center line, and flows more slowly during transcription. Reduced motion uses a static shape for each state and switches immediately. Right-click hides the indicator for the current dictation.
+The one-line OSD stays on the monitor where dictation began. On a crisp braille grid, two straight, softly lit lines brighten and curve with the voice. The filled wave expands and closes around its center line, and flows more slowly during transcription. Reduced motion uses a static shape for each state and switches immediately. Right-click hides the indicator for the current dictation.
 
 For a single dictation OSD, disable the native overlay through the app you use:
 
