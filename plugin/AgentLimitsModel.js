@@ -110,11 +110,13 @@ function freshness(row, now, strings, formatNumber) {
 }
 
 function balances(provider, formatNumber) {
-  return (Array.isArray(provider.balance) ? provider.balance : []).filter(function(balance) {
-    return balance && finite(balance.total) && typeof balance.currency === "string"
-  }).map(function(balance) {
-    return text(balance.currency, 12) + " " + formatNumber(balance.total, 2)
-  }).join(" · ")
+  return (Array.isArray(provider.balance) ? provider.balance : []).map(function(balance) {
+    if (!balance || typeof balance.currency !== "string") return ""
+    // DeepSeek keeps decimal strings in the shared snapshot; other providers use numbers.
+    var total = balance.total
+    if (typeof total === "string" && total.trim() !== "") total = Number(total)
+    return finite(total) ? text(balance.currency, 12) + " " + formatNumber(total, 2) : ""
+  }).filter(function(value) { return value !== "" }).join(" · ")
 }
 
 if(typeof module!=="undefined") module.exports={syncIdentities:syncIdentities,movePin:movePin,windowLabel:windowLabel,freshness:freshness,balances:balances,displayName:displayName,resetCountdown:resetCountdown,parse:parse,key:key,windows:windows,attention:attention,summary:summary,tightest:tightest,toggle:toggle,validPins:validPins,metrics:metrics}
