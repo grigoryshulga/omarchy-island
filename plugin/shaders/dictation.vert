@@ -8,15 +8,12 @@ layout(std140,binding=0) uniform buf {
   float qt_Opacity;
   vec2 size;
   vec2 grid;
-  float pitch;
+  float pixel;
   float morph;
   float phase;
+  float energy;
   float inputOnLeft;
   float reveal;
-  float sampleOffset;
-  float still;
-  mat4 samplesA;
-  mat4 samplesB;
   vec4 accent;
   vec4 highlight;
 };

@@ -1,11 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Services.Pipewire
 import Quickshell.Wayland
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "PanelGeometry.js" as Geometry
+import "Dictation.js" as Model
 
 Item {
   id: root
@@ -15,6 +17,13 @@ Item {
   property bool open:dictation.showing
   property bool dismissed:false
   readonly property bool presented:open && !dismissed
+  readonly property bool inputMeterWanted:presented && card.opacity>0 && !Preferences.reduceMotion
+    && dictation.source==="superwhisper" && dictation.recording && !!dictation.superwhisperInputMeter
+  PwNodePeakMonitor {
+    id:inputMeter
+    node:root.inputMeterWanted ? Model.superwhisperInput(Pipewire.linkGroups.values) : null
+    enabled:root.inputMeterWanted && !!node
+  }
   onOpenChanged:if(!open) dismissed=false
   Connections {
     target:root.dictation
@@ -97,7 +106,7 @@ Item {
           objectName:"islandDictationField"
           Layout.fillWidth:true
           Layout.preferredHeight:Math.max(0,Math.min(Style.space(28),card.height-2*Design.gap.tight))
-          history:root.dictation.history
+          peak:Model.meterPeak(root.dictation.history[47],inputMeter.enabled ? inputMeter.peak : 0)
           processing:!root.visibleState.recording
           active:root.presented && card.opacity>0
           reveal:root.shown

@@ -44,7 +44,7 @@ def serve_indicator(control, loop):
             'Phase': GLib.Variant('s', state['phase']),
             'Level': GLib.Variant('d', state.get('peak', -1)),
             'Waveform': GLib.Variant('ad', state.get('wave', [2]*6)),
-            'Visible': GLib.Variant('b', False),
+            'Visible': GLib.Variant('b', state.get('visible', False)),
         }
         changed = {key: value for key, value in next_values.items() if value != values.get(key)}
         values = next_values

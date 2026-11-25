@@ -7,9 +7,9 @@ for(const raw of ['{}','null','[]','broken','{"peak":"1"}','{"status":"connected
 assert.equal(m.frame('{"peak":0.4,"rms":0.2,"vad":1}'),0.4);
 assert.equal(m.frame('{"peak":2}'),1);
 assert.equal(m.frame('{"peak":-2}'),0);
-assert.deepEqual(m.superwhisper('{"mode":"recording","peak":0.6}'),{mode:"recording",peak:0.6});
-assert.deepEqual(m.superwhisper('{"mode":"recording","peak":null}'),{mode:"recording",peak:0});
-assert.deepEqual(m.superwhisper('{"mode":"warming","peak":"0.5"}'),{mode:"idle",peak:0});
+assert.deepEqual(m.superwhisper('{"mode":"recording","peak":0.6}'),{mode:"recording",peak:0.6,inputMeter:false});
+assert.deepEqual(m.superwhisper('{"mode":"recording","peak":null}'),{mode:"recording",peak:0,inputMeter:false});
+assert.deepEqual(m.superwhisper('{"mode":"warming","peak":"0.5"}'),{mode:"idle",peak:0,inputMeter:false});
 assert.equal(m.superwhisper('{"peak":0.7}'),null);
 assert.equal(m.source("superwhisper","recording","transcribing"),"superwhisper");
 assert.equal(m.source("voxtype","recording","recording"),"voxtype");
@@ -18,32 +18,28 @@ assert.equal(m.source("superwhisper","idle","idle"),"");
 let history=m.empty();
 for(let i=0;i<60;i++) history=m.push(history,i/100);
 assert.equal(history.length,48);assert.equal(history[0],0.12);assert.equal(history[47],0.59);
-const silent=m.empty();
-assert.equal(m.hasSignal(silent),false);
-assert.equal(m.hasSignal(m.push(silent,0.01)),false);
-const spoken=m.push(silent,0.9);
-assert.equal(m.hasSignal(spoken),true);
-assert.equal(m.samplePeak(spoken,0.5,0),0);
-assert.equal(m.samplePeak(spoken,0.84,1),0);
-assert.ok(Math.abs(m.samplePeak(spoken,0.84,0.5)-0.45)<1e-9);
-assert.equal(m.samplePeak(spoken,0.84,0),0.9);
-const shifted=m.push(spoken,0.4);
-for(const u of [0.2,0.5,0.8,0.83,0.84,0.96]) {
-  assert.ok(Math.abs(m.samplePeak(spoken,u,0)-m.samplePeak(shifted,u,1))<1e-9);
-}
-const wakePhase=(Math.PI/2-57*0.5)/4;
-const crest=m.ribbonAt(0.5,0.9,wakePhase,0,1);
-assert.ok(m.ribbonInk(-crest.thickness-crest.dropletGap,crest)>0.7);
-assert.ok(m.ribbonInk(-crest.thickness-crest.dropletGap/2,crest)<0.1);
-assert.equal(m.ribbonInk(-0.3,m.ribbonAt(0.5,0,wakePhase,0,1)),0);
-const workPhase=(Math.PI/2-16*0.5)/2;
-const split=m.ribbonAt(0.5,0,workPhase,1,1);
-assert.ok(m.ribbonInk(0,split)<0.1);
-assert.ok(m.ribbonInk(-split.thickness*0.65,split)>0.9);
-assert.ok(m.ribbonInk(split.thickness*0.65,split)>0.9);
-assert.equal(m.ribbonAt(0.95,0,0,0,0).opacity,0);
-assert.equal(m.ribbonAt(0.25,0,0,0,0.5).opacity,0);
-assert.ok(m.ribbonAt(0.76,0,0,0,0.5).opacity>0);
-assert.ok(m.ribbonAt(0.51,0,0,0,0.5).thickness>0.15);
-assert.ok(m.ribbonAt(0.25,0,0,0,1).opacity>0);
-console.log('PASS: dictation states, meter continuity, voice droplets, processing strands and ribbon reveal.');
+assert.deepEqual(m.superwhisper('{"mode":"recording","peak":0,"inputMeter":true}'),
+  {mode:"recording",peak:0,inputMeter:true});
+const appInput={name:"chosen-microphone"};
+const linkedInput=m.superwhisperInput([
+  {target:{name:"voice-chat"},source:{name:"default-microphone"}},
+  {target:{name:"superwhisper-capture"},source:appInput}
+]);
+assert.equal(linkedInput,appInput);
+assert.equal(m.superwhisperInput([{target:{name:"voice-chat"},source:appInput}]),null);
+assert.equal(m.meterPeak(0,0.08),0.08);
+assert.equal(m.meterPeak(0.6,0.8),0.6);
+assert.equal(m.meterPeak(0,-1),0);
+const quiet=m.waveAt(0.625,0,0,0,1);
+const voice=m.waveAt(0.625,m.voiceStrength(m.meterPeak(0,0.04)),0,0,1);
+assert.ok(voice.bottom>quiet.bottom+0.06);
+assert.ok(m.waveInk(0.14,voice)>0.8);
+assert.ok(m.waveInk(0.14,quiet)<0.1);
+assert.ok(m.waveInk(0,voice)>0.3); // Filled between the two contours.
+assert.equal(m.waveInk(-0.14,voice),m.waveInk(-0.14,quiet));
+const entered=m.waveAt(0.625,1,0,0,1);
+const halfway=m.waveAt(0.625,1,0,0,0.5);
+assert.equal(halfway.bottom,entered.bottom/2);
+assert.equal(m.waveAt(0.625,1,0,0,0).opacity,0);
+assert.equal(m.waveAt(0,1,0,0,1).opacity,0);
+console.log('PASS: dictation states, routed peak fallback, quiet speech, filled wave and center-line reveal.');

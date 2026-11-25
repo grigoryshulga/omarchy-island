@@ -19,6 +19,7 @@ Item {
   property real voxtypePeak: 0
   property double voxtypeFrameAt: 0
   property real superwhisperPeak: 0
+  property bool superwhisperInputMeter: false
   property double startedAt: 0
   property int elapsed: 0
   property var history: Model.empty()
@@ -50,6 +51,7 @@ Item {
       voxtypeMode="idle"
       superwhisperMode="idle"
       superwhisperPeak=0
+      superwhisperInputMeter=false
       retry.stop()
     }
   }
@@ -102,10 +104,12 @@ Item {
           var update=Model.superwhisper(line)
           if(update===null) return
           root.superwhisperPeak=update.peak
+          root.superwhisperInputMeter=update.inputMeter
           root.superwhisperMode=update.mode
         } }
         onExited: {
           root.superwhisperPeak=0
+          root.superwhisperInputMeter=false
           root.superwhisperMode="idle"
           observerRetry.restart()
         }

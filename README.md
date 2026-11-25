@@ -285,7 +285,7 @@ Visualization style controls the dot motion; background controls its colors. Shi
 
 Island detects running Voxtype and [Superwhisper for Linux](https://superwhisper.com/linux) automatically. The first active source keeps the indicator through transcription. Choose your default dictation app in Omarchy under **Setup → Defaults → Dictation**. Island observes Superwhisper's session D-Bus indicator and requires `python-gobject` for that integration.
 
-The one-line OSD stays on the monitor where dictation began. A bright pixel bead unfurls the ribbon from the status icon and retracts it on dismissal. Voice ripples travel along the ribbon, shedding small droplets at louder peaks. In silence it settles into a thin seam. During transcription it splits into two flowing strands beside the hourglass. Reduced motion uses a static shape for each state and switches immediately. Right-click hides the indicator for the current dictation.
+The one-line OSD stays on the monitor where dictation began. On a crisp braille grid, voice opens two bright contours around a filled wave. The wave expands and closes around its center line, and flows more slowly during transcription. Reduced motion uses a static shape for each state and switches immediately. Right-click hides the indicator for the current dictation.
 
 For a single dictation OSD, disable the native overlay through the app you use:
 
@@ -370,7 +370,7 @@ Apply with `hyprctl reload` and check `hyprctl configerrors`. All detached Islan
 - Each module imports its own data from the old `state.json` once, when its new store is absent. After a successful save, migration removes that module's legacy fields; the file disappears when no pending data remains. Unmigrated history and downloads still expire under their retention limits. Clearing a new store does not import old entries again; a corrupt new store recovers empty.
 - Expired notifications enter history; sender withdrawal removes them from both lists while Island retains the sender reference. After restart, saved entries are history only. Transient notifications are not saved.
 - Verification-code notifications are redacted before persistence. Copied codes use a sensitive clipboard selection and are cleared after one minute unless the clipboard has changed.
-- Playback audio is read through `parec` and processed in memory without saving PCM. For dictation, Island uses Voxtype's audio bridge or Superwhisper's D-Bus meter. Island opens no separate microphone stream and saves neither dictation audio nor recognized text.
+- Playback audio is read through `parec` and processed in memory without saving PCM. For dictation, Island uses Voxtype's audio bridge or Superwhisper's D-Bus meter. With Superwhisper's native overlay hidden, Island uses Quickshell's PipeWire peak monitor on the input routed to Superwhisper, only while Island's recording animation is visible. Island saves neither dictation audio nor recognized text.
 - T3 integration is off by default. When enabled, session data, draft answers, and the scoped access token stay in memory. Opening a session uses T3's desktop deep link. See [T3 Code session cards](#t3-code-session-cards) for permissions and lifecycle.
 - Weather requests begin on first opening or hovering, with no requests beforehand. Automatic location uses `geo.omarchy.org`; search and forecasts use [Open-Meteo](https://open-meteo.com/). Requests use HTTPS, timeouts, and response limits. On failure, the last forecast remains marked stale; the cache is `~/.local/state/omarchy/island/weather.json`.
 

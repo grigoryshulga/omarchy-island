@@ -41,9 +41,12 @@ def main():
                     peak = sum(max(0, min(1, (value - 2) / 16)) for value in wave) / len(wave)
         elif isinstance(phase, str) and phase in PROCESSING:
             mode = "transcribing"
-        snapshot = (mode, peak)
+        # With its native indicator hidden, Superwhisper reports recording but
+        # leaves Level and Waveform at zero. Island can meter its routed input.
+        input_meter = mode == "recording" and read("Visible") is False
+        snapshot = (mode, peak, input_meter)
         if snapshot != previous:
-            print(json.dumps({"mode": mode, "peak": peak}), flush=True)
+            print(json.dumps({"mode": mode, "peak": peak, "inputMeter": input_meter}), flush=True)
             previous = snapshot
 
     proxy.connect("g-properties-changed", publish)

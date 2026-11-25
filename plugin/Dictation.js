@@ -18,7 +18,8 @@ function frame(raw) {
 }
 function superwhisper(raw) {
   var data=parse(raw)
-  return data && typeof data.mode==="string" ? {mode:state(data.mode),peak:level(data.peak) || 0} : null
+  return data && typeof data.mode==="string"
+    ? {mode:state(data.mode),peak:level(data.peak) || 0,inputMeter:data.inputMeter===true} : null
 }
 function source(current,voxtype,superwhisper) {
   if(current==="superwhisper" && superwhisper!=="idle") return current
@@ -27,72 +28,49 @@ function source(current,voxtype,superwhisper) {
 }
 function empty() {return Array(48).fill(0)}
 function push(history,level) {return history.slice(1).concat([Math.max(0,Math.min(1,level))])}
-function hasSignal(history) {
-  for(var i=16;i<48;i++) if(history[i]>0.015) return true
-  return false
+function superwhisperInput(groups) {
+  // Meter the source connected to the recording, including device overrides.
+  for(var group of groups) {
+    if(group.target && group.target.name==="superwhisper-capture" && group.source) return group.source
+  }
+  return null
+}
+function meterPeak(provider,input) {
+  return level(provider) || level(input) || 0
+}
+function voiceStrength(peak) {
+  return Math.sqrt(Math.max(0,Math.min(1,(peak-0.008)/0.57)))
 }
 function smoothstep(low,high,value) {
   var t=Math.max(0,Math.min(1,(value-low)/(high-low)))
   return t*t*(3-2*t)
 }
-function samplePeak(history,u,offset) {
-  // The latest sample enters inside the taper near the icon. Compensate for the
-  // history shift by one sample, then scroll it into place between updates.
-  var position=Math.max(0,Math.min(31,u*31/0.84)-offset)
-  var i=Math.floor(position)+16
-  return history[i]+(history[Math.min(i+1,47)]-history[i])*(position%1)
-}
 // Keep the Canvas fallback in step with shaders/dictation.frag.
-function ribbonAt(u,peak,phase,morph,reveal) {
-  var taper=smoothstep(0,0.16,u)*(1-smoothstep(0.86,1,u))
-  var energy=Math.pow(smoothstep(0.015,0.9,peak),0.55)
-  var pressure=energy*taper
-  var ripple=Math.sin(10*u+phase)
-  var eddy=Math.sin(21*u+2*phase)
-  var pulse=Math.pow(0.5+0.5*Math.sin(16*u+2*phase),2)
-  var voiceCenter=pressure*(0.095*ripple+0.044*eddy-0.012)
-  var workCenter=0.058*ripple*taper
-  var voiceThickness=0.034+0.228*pressure
-  var workThickness=0.042+0.17*pulse*taper
-  var voiceWeight=1-morph
-  var sheen=0.42+0.32*pressure*voiceWeight+0.22*pulse*morph
-  var intensity=pressure*voiceWeight+(0.44+0.56*pulse)*morph
-  var wake=0.5+0.5*Math.sin(57*u+4*phase)
-  // The leading bead reveals the fixed grid, then retraces it on dismissal.
-  var front=1.10-1.18*reveal
-  var visibility=smoothstep(front-0.05,front+0.04,u)
-  var bead=1-smoothstep(0.012,0.074,Math.abs(u-front))
+function waveAt(u,energy,phase,morph,reveal) {
+  var taper=smoothstep(0,0.10,u)*(1-smoothstep(0.90,1,u))
+  var crest=0.5+0.5*Math.sin(4*Math.PI*u-2*phase)
+  var undertow=0.5+0.5*Math.sin(9.1*u+phase+1.1)
+  var progress=0.5+0.5*Math.sin(14*u-phase)
+  var center=0.042*Math.sin(11*u-2*phase)+0.045*energy*(2*undertow-1)
+  var width=0.054+energy*(0.10+0.244*(0.72*crest+0.28*undertow))
+  center=(center*(1-morph)+0.026*Math.sin(11*u-phase)*morph)*taper
+  width=(width*(1-morph)+(0.058+0.084*progress)*morph)*taper
   return {
-    center:voiceCenter*voiceWeight+workCenter*morph,
-    thickness:voiceThickness*voiceWeight+workThickness*morph+0.14*bead*taper,
-    sheen:Math.max(sheen,0.84*bead),
-    reflection:0.42*intensity,
-    split:morph*taper*smoothstep(0.25,0.76,pulse),
-    droplets:voiceWeight*smoothstep(0.32,0.84,pressure)*smoothstep(0.58,0.95,wake),
-    dropletGap:0.066+0.058*wake,
-    opacity:visibility*taper*Math.max(0.58+0.42*intensity,0.88*bead)
+    top:(center-width*(0.91+0.09*undertow))*reveal,
+    bottom:(center+width*(0.87+0.13*crest))*reveal,
+    opacity:Math.min(1,reveal*2)*taper
   }
 }
-function ribbonInk(depth,ribbon) {
-  var distance=Math.abs(depth)
-  var body=1-smoothstep(ribbon.thickness-0.044,ribbon.thickness+0.044,distance)
-  var channel=ribbon.split*(1-smoothstep(0.017,0.076,distance))
-  var dropletDistance=Math.abs(depth+ribbon.thickness+ribbon.dropletGap)
-  var droplet=ribbon.droplets*(1-smoothstep(0.012,0.057,dropletDistance))
-  return Math.max(body*(1-0.91*channel),0.83*droplet)
+function waveEdge(y,wave) {
+  var distance=Math.min(Math.abs(y-wave.top),Math.abs(y-wave.bottom))
+  return 1-smoothstep(0.015,0.088,distance)
 }
-function ribbonShine(depth,ribbon) {
-  var surface=1-smoothstep(0.014,0.093,Math.abs(depth+ribbon.thickness*0.52))
-  var reflection=1-smoothstep(0.014,0.054,Math.abs(depth-ribbon.thickness*0.64))
-  return Math.max(ribbon.sheen*surface,ribbon.reflection*reflection)
+function waveInk(y,wave) {
+  var fill=smoothstep(wave.top-0.032,wave.top+0.019,y)
+    *(1-smoothstep(wave.bottom-0.024,wave.bottom+0.024,y))
+  var grid=0.075-0.027*smoothstep(0,0.5,Math.abs(y))
+  return wave.opacity*Math.max(grid,fill*(0.32+0.66*waveEdge(y,wave)))
 }
-function matrix(history,start) {
-  // Qt takes rows, while GLSL indexes the resulting matrix by column.
-  return Qt.matrix4x4(
-    history[start],history[start+4],history[start+8],history[start+12],
-    history[start+1],history[start+5],history[start+9],history[start+13],
-    history[start+2],history[start+6],history[start+10],history[start+14],
-    history[start+3],history[start+7],history[start+11],history[start+15]
-  )
-}
-if(typeof module!=="undefined") module.exports={state:state,frame:frame,superwhisper:superwhisper,source:source,empty:empty,push:push,hasSignal:hasSignal,samplePeak:samplePeak,ribbonAt:ribbonAt,ribbonInk:ribbonInk}
+if(typeof module!=="undefined") module.exports={state:state,frame:frame,superwhisper:superwhisper,source:source,
+  empty:empty,push:push,superwhisperInput:superwhisperInput,meterPeak:meterPeak,voiceStrength:voiceStrength,
+  waveAt:waveAt,waveInk:waveInk}

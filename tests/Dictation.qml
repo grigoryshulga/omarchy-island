@@ -84,24 +84,17 @@ ShellRoot {
       tryCompare(time,"text","1:05")
       var fieldWidth=field.width
       compare(field.software,!Quickshell.env("ISLAND_TEST_GPU"))
-      compare(field.flowing,false)
+      compare(field.moving,true)
       capture(field,"quiet")
       wait(120)
       capture(field,"quiet-next")
       fake.history=Array(42).fill(0).concat([0.35,0.72,0.9,0.92,0.78,0.56])
-      tryCompare(field,"flowing",true)
-      tryCompare(field,"sampleOffset",0)
+      tryVerify(function(){return field.energy>0.8},300,"Voice should increase the wave's height")
       capture(field,"recording-first")
-      for(var sample=0;sample<12;sample++) {
-        fake.history=fake.history.slice(1).concat([0])
-        wait(50)
-      }
+      wait(160)
       capture(field,"recording-next")
       fake.history=Array(48).fill(0)
-      tryCompare(field,"flowing",false)
-      capture(field,"settled")
-      fake.history=Array(42).fill(0).concat([0.35,0.72,0.9,0.92,0.78,0.56])
-      tryCompare(field,"sampleOffset",0)
+      tryCompare(field,"energy",0)
       fake.recording=false
       tryCompare(field,"processing",true)
       tryCompare(field,"morph",1)
@@ -135,7 +128,7 @@ ShellRoot {
       tryCompare(hud,"shown",1)
       mouseClick(card,card.width/2,card.height/2,Qt.RightButton)
       compare(findChild(hud,"islandDictationField").active,false)
-      compare(findChild(hud,"islandDictationField").flowing,false)
+      compare(findChild(hud,"islandDictationField").moving,false)
       tryCompare(surface,"visible",false)
       verify(fake.showing && fake.recording,"Hiding the popup interrupted the dictation")
       fake.recording=false

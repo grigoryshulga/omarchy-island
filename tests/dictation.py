@@ -19,10 +19,10 @@ with tempfile.TemporaryDirectory(prefix='island-dictation-qml-') as temporary:
     def frame(name):
         return (root/f'{name}.png').read_bytes()
 
-    assert frame('quiet') == frame('quiet-next') == frame('settled'), 'Silence should stay still and recover its resting shape'
-    assert frame('quiet') != frame('recording-first'), 'The ribbon did not react to the meter'
-    assert frame('recording-first') != frame('recording-next'), 'The voice ripple did not travel'
-    assert frame('recording-next') != frame('processing'), 'Transcription did not change the ribbon'
+    assert frame('quiet') != frame('quiet-next'), 'The quiet sine wave did not move'
+    assert frame('quiet') != frame('recording-first'), 'The wave did not react to the meter'
+    assert frame('recording-first') != frame('recording-next'), 'The recording sine wave did not move'
+    assert frame('recording-next') != frame('processing'), 'Transcription did not change the wave'
     assert frame('processing') != frame('processing-next'), 'The transcription pulse did not move'
     assert frame('reduced-first') == frame('reduced-next'), 'Reduced recording reacted to audio'
     assert frame('reduced-next') != frame('reduced-processing'), 'Reduced motion hid the change of state'
