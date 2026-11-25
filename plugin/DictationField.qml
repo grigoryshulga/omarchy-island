@@ -7,12 +7,14 @@ Item {
   property var history: Model.empty()
   property bool processing: false
   property bool active: false
+  property real reveal: 1
   readonly property bool still: Preferences.reduceMotion
   readonly property bool moving: active && visible && !still
   readonly property bool sampling: moving && !processing
   readonly property bool flowing: moving && (processing || morph>0 || samples!==null)
-  readonly property real morph: moving ? animatedMorph : (processing ? 1 : 0)
+  readonly property real morph: still ? (processing ? 1 : 0) : animatedMorph
   readonly property real phase: still ? 0 : animatedPhase
+  readonly property bool inputOnLeft: !I18n.rightToLeft
   readonly property real pitch: Style.space(3)
   readonly property int columns: Math.floor(width/pitch)
   // Keep a row of pixels centered on the quiet ribbon.
@@ -62,6 +64,8 @@ Item {
       property real pitch: root.pitch
       property real morph: root.morph
       property real phase: root.phase
+      property real inputOnLeft: root.inputOnLeft ? 1 : 0
+      property real reveal: root.reveal
       property real sampleOffset: root.sampleOffset
       property real still: root.still ? 1 : 0
       property matrix4x4 samplesA: Model.matrix(root.samples || root.silence,16)
@@ -79,8 +83,8 @@ Item {
     sourceComponent: Canvas {
       readonly property color accent: Design.accent
       readonly property color highlight: Design.text
-      readonly property var frame: [root.pitch,root.columns,root.rows,root.still,root.samples,
-                                    root.sampleOffset,root.phase,root.morph,accent,highlight]
+      readonly property var frame: [root.pitch,root.columns,root.rows,root.inputOnLeft,root.still,root.samples,
+                                    root.sampleOffset,root.phase,root.morph,root.reveal,accent,highlight]
       onFrameChanged: requestPaint()
       onWidthChanged: requestPaint()
       onHeightChanged: requestPaint()
@@ -91,13 +95,15 @@ Item {
         var pitch=root.pitch, tile=pitch*0.78
         var left=(width-root.columns*pitch)/2, top=(height-root.rows*pitch)/2
         for(var column=0;column<root.columns;column++) {
-          var x=left+(column+0.5)*pitch, u=x/width
+          var x=left+(column+0.5)*pitch
+          var u=root.inputOnLeft ? 1-x/width : x/width
           var peak=root.still || !root.samples || root.morph===1 ? 0 : Model.samplePeak(root.samples,u,root.sampleOffset)
-          var ribbon=Model.ribbonAt(u,peak,root.phase,root.morph)
+          var ribbon=Model.ribbonAt(u,peak,root.phase,root.morph,root.reveal)
+          if(ribbon.opacity<=0) continue
           for(var row=0;row<root.rows;row++) {
             var y=top+(row+0.5)*pitch
             var depth=y/height-0.5-ribbon.center
-            var ink=1-Model.smoothstep(ribbon.thickness-0.044,ribbon.thickness+0.044,Math.abs(depth))
+            var ink=Model.ribbonInk(depth,ribbon)
             if(ink<=0) continue
             var shine=Model.ribbonShine(depth,ribbon)
             ctx.fillStyle=Qt.rgba(accent.r+(highlight.r-accent.r)*shine,

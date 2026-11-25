@@ -53,10 +53,16 @@ ShellRoot {
       fake.showing=true
       tryCompare(loader,"status",Loader.Ready)
       var hud=loader.item
-      tryCompare(hud,"shown",1)
       var card=findChild(hud,"islandDictationOsd"),surface=findChild(hud,"islandDictationSurface")
       verify(card!==null)
+      var field=findChild(hud,"islandDictationField")
+      tryVerify(function(){return card.opacity>0 && card.opacity<1},500,"The OSD should animate in")
+      verify(field.reveal>0 && field.reveal<1)
+      verify(card.scale<1)
+      var enteringBounds=Qt.rect(card.x,card.y,card.width,card.height)
       tryCompare(card,"opacity",1)
+      compare(field.reveal,1)
+      compare(Qt.rect(card.x,card.y,card.width,card.height),enteringBounds)
       compare(surface.WlrLayershell.keyboardFocus,WlrKeyboardFocus.None)
       compare(card.width,Commons.Style.space(256))
       verify(card.height<=Commons.Style.space(42))
@@ -66,15 +72,16 @@ ShellRoot {
       wait(50)
       compare(card.x,Math.round(hud.anchorPosition.x+anchor.width/2-card.width/2))
       compare(backend.mode,"idle")
-      var field=findChild(hud,"islandDictationField"), label=findChild(hud,"islandDictationLabel")
       var time=findChild(hud,"islandDictationTime")
       var icon=findChild(hud,"islandDictationIcon"), recordingIcon=icon.text
+      var recordingStatus=icon.Accessible.name
       var iconSlot=Qt.rect(icon.x,icon.y,icon.width,icon.height)
-      var labelX=label.x, fieldX=field.x, timeX=time.x
+      var fieldX=field.x, timeX=time.x
       checkIconCenter(icon,card)
-      verify(label.x+label.width<=field.x && field.x+field.width<=time.x)
-      verify(!label.truncated)
-      compare(time.text,"1:05")
+      verify(recordingStatus.length>0)
+      verify(icon.x+icon.width<=field.x && field.x+field.width<=time.x)
+      verify(field.width>=card.width*0.6,"The ribbon should occupy the space between the icon and timer")
+      tryCompare(time,"text","1:05")
       var fieldWidth=field.width
       compare(field.software,!Quickshell.env("ISLAND_TEST_GPU"))
       compare(field.flowing,false)
@@ -96,22 +103,30 @@ ShellRoot {
       fake.history=Array(42).fill(0).concat([0.35,0.72,0.9,0.92,0.78,0.56])
       tryCompare(field,"sampleOffset",0)
       fake.recording=false
-      compare(field.processing,true)
+      tryCompare(field,"processing",true)
       tryCompare(field,"morph",1)
       verify(icon.text!==recordingIcon)
+      verify(icon.Accessible.name.length>0 && icon.Accessible.name!==recordingStatus)
       compare(Qt.rect(icon.x,icon.y,icon.width,icon.height),iconSlot)
       checkIconCenter(icon,card)
-      compare(label.x,labelX)
       compare(field.x,fieldX)
       compare(time.x,timeX)
       compare(field.width,fieldWidth)
-      verify(!label.truncated)
       capture(field,"processing")
       wait(240)
       capture(field,"processing-next")
+      var leavingBounds=Qt.rect(card.x,card.y,card.width,card.height)
+      var processingIcon=icon.text
+      fake.elapsed=0
       fake.showing=false
+      tryVerify(function(){return card.opacity>0 && card.opacity<1},500,"The OSD should animate out")
+      verify(field.reveal>0 && field.reveal<1)
+      compare(Qt.rect(card.x,card.y,card.width,card.height),leavingBounds)
+      compare(icon.text,processingIcon)
+      compare(time.text,"1:05")
       tryCompare(loader,"item",null)
       fake.recording=true
+      fake.elapsed=65
       fake.showing=true
       tryCompare(loader,"status",Loader.Ready)
       hud=loader.item
@@ -139,11 +154,13 @@ ShellRoot {
       wait(170)
       capture(field,"reduced-next")
       fake.recording=false
+      tryCompare(field,"processing",true)
       compare(field.morph,1)
       capture(field,"reduced-processing")
       wait(170)
       capture(field,"reduced-processing-next")
       fake.showing=false
+      compare(hud.shown,0)
       tryCompare(loader,"item",null)
       console.log("DICTATION_PASS")
       Qt.quit()

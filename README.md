@@ -15,7 +15,7 @@ A native Quickshell plugin that replaces the Omarchy bar clock with notification
 - **Downloads:** watches `~/downloads` recursively, shows active file sizes, and opens the containing folder while keeping the entry in the list. A brief alert announces a download, and **Now** shows its ongoing progress. Completed items remain for up to 30 minutes, capped at 30. **Remove from list** removes the completed entry and keeps the file. File copies also trigger detection; the activity indicator does not represent a download percentage.
 - **Agent limits (optional):** pinned quota windows, automatic low-quota cards, an optional clock indicator, and an expandable Limits / Usage / Cost center with provider connections. Shares configuration and aggregate caches with Agent Limits; no separate plugin is required.
 - **T3 Code (optional):** live session cards in Overview, a bar indicator for completed threads, failures, and pending requests, and inline answers to questions. Cards preserve drafts and focus while sessions update. Click a thread row’s background to open inline details; its title opens the thread in T3. Permission and authentication requests open in T3.
-- **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Voxtype and Superwhisper dictation show a compact status, timer, and flowing pixel ribbon without taking focus.
+- **Braille effects:** audio-reactive artwork, weather scenes, hover spotlights, and click ripples, with support for reduced motion. Voxtype and Superwhisper dictation show a status icon, timer, and flowing pixel ribbon without taking focus.
 
 ## Installation
 
@@ -285,7 +285,7 @@ Visualization style controls the dot motion; background controls its colors. Shi
 
 Island detects running Voxtype and [Superwhisper for Linux](https://superwhisper.com/linux) automatically. The first active source keeps the indicator through transcription. Choose your default dictation app in Omarchy under **Setup → Defaults → Dictation**. Island observes Superwhisper's session D-Bus indicator and requires `python-gobject` for that integration.
 
-The one-line OSD stays on the monitor where dictation began. The pixel ribbon swells with the app's audio meter and settles into a thin seam in silence. During transcription, pulses travel through the ribbon. Reduced motion uses a static shape for each state and switches immediately. Right-click hides the indicator for the current dictation.
+The one-line OSD stays on the monitor where dictation began. A bright pixel bead unfurls the ribbon from the status icon and retracts it on dismissal. Voice ripples travel along the ribbon, shedding small droplets at louder peaks. In silence it settles into a thin seam. During transcription it splits into two flowing strands beside the hourglass. Reduced motion uses a static shape for each state and switches immediately. Right-click hides the indicator for the current dictation.
 
 For a single dictation OSD, disable the native overlay through the app you use:
 

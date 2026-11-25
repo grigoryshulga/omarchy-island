@@ -31,4 +31,19 @@ const shifted=m.push(spoken,0.4);
 for(const u of [0.2,0.5,0.8,0.83,0.84,0.96]) {
   assert.ok(Math.abs(m.samplePeak(spoken,u,0)-m.samplePeak(shifted,u,1))<1e-9);
 }
-console.log('PASS: dictation states, malformed audio frames, bounded history and continuous meter scrolling.');
+const wakePhase=(Math.PI/2-57*0.5)/4;
+const crest=m.ribbonAt(0.5,0.9,wakePhase,0,1);
+assert.ok(m.ribbonInk(-crest.thickness-crest.dropletGap,crest)>0.7);
+assert.ok(m.ribbonInk(-crest.thickness-crest.dropletGap/2,crest)<0.1);
+assert.equal(m.ribbonInk(-0.3,m.ribbonAt(0.5,0,wakePhase,0,1)),0);
+const workPhase=(Math.PI/2-16*0.5)/2;
+const split=m.ribbonAt(0.5,0,workPhase,1,1);
+assert.ok(m.ribbonInk(0,split)<0.1);
+assert.ok(m.ribbonInk(-split.thickness*0.65,split)>0.9);
+assert.ok(m.ribbonInk(split.thickness*0.65,split)>0.9);
+assert.equal(m.ribbonAt(0.95,0,0,0,0).opacity,0);
+assert.equal(m.ribbonAt(0.25,0,0,0,0.5).opacity,0);
+assert.ok(m.ribbonAt(0.76,0,0,0,0.5).opacity>0);
+assert.ok(m.ribbonAt(0.51,0,0,0,0.5).thickness>0.15);
+assert.ok(m.ribbonAt(0.25,0,0,0,1).opacity>0);
+console.log('PASS: dictation states, meter continuity, voice droplets, processing strands and ribbon reveal.');

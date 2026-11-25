@@ -9,6 +9,8 @@ layout(std140,binding=0) uniform buf {
   float pitch;
   float morph;
   float phase;
+  float inputOnLeft;
+  float reveal;
   float sampleOffset;
   float still;
   mat4 samplesA;
@@ -31,7 +33,11 @@ void main() {
     return;
   }
   vec2 center=(origin+(cell+0.5)*pitch)/size;
-  float u=center.x;
+  float u=mix(center.x,1.0-center.x,inputOnLeft);
+  float front=1.10-1.18*reveal;
+  float visibility=smoothstep(front-0.05,front+0.04,u);
+  if(visibility<=0.0) {fragColor=vec4(0.0);return;}
+  float bead=1.0-smoothstep(0.012,0.074,abs(u-front));
   float distance=max(abs(fract(coord.x)-0.5),abs(fract(coord.y)-0.5));
   float tile=1.0-smoothstep(0.23,0.40,distance);
 
@@ -47,16 +53,27 @@ void main() {
   float pressure=pow(smoothstep(0.015,0.9,peak),0.55)*taper;
   float ripple=sin(10.0*u+phase);
   float eddy=sin(21.0*u+2.0*phase);
-  float pulse=pow(0.5+0.5*sin(13.0*u+2.0*phase),3.0);
-  float voiceCenter=pressure*(0.12*ripple+0.047*eddy-0.024);
-  float workCenter=0.09*ripple*taper;
-  float thickness=mix(0.034+0.238*pressure,0.04+0.125*pulse*taper,morph);
+  float pulse=pow(0.5+0.5*sin(16.0*u+2.0*phase),2.0);
+  float voiceCenter=pressure*(0.095*ripple+0.044*eddy-0.012);
+  float workCenter=0.058*ripple*taper;
+  float thickness=mix(0.034+0.228*pressure,0.042+0.17*pulse*taper,morph);
+  thickness+=0.14*bead*taper;
   float depth=center.y-0.5-mix(voiceCenter,workCenter,morph);
-  float ink=1.0-smoothstep(thickness-0.044,thickness+0.044,abs(depth));
-  // The bright seam runs just below the upper surface of the ribbon.
-  float sheen=0.42+mix(0.32*pressure,0.22*pulse,morph);
-  float shine=sheen*(1.0-smoothstep(0.016,0.105,abs(depth+thickness*0.46)));
-  float opacity=taper*(0.58+0.42*mix(pressure,0.44+0.56*pulse,morph));
+  float body=1.0-smoothstep(thickness-0.044,thickness+0.044,abs(depth));
+  // Processing curls into twin strands. Loud crests instead shed little drops.
+  float split=morph*taper*smoothstep(0.25,0.76,pulse);
+  float channel=split*(1.0-smoothstep(0.017,0.076,abs(depth)));
+  float wake=0.5+0.5*sin(57.0*u+4.0*phase);
+  float droplets=(1.0-morph)*smoothstep(0.32,0.84,pressure)*smoothstep(0.58,0.95,wake);
+  float dropletDistance=abs(depth+thickness+0.066+0.058*wake);
+  float droplet=droplets*(1.0-smoothstep(0.012,0.057,dropletDistance));
+  float ink=max(body*(1.0-0.91*channel),0.83*droplet);
+  float sheen=max(0.42+mix(0.32*pressure,0.22*pulse,morph),0.84*bead);
+  float intensity=mix(pressure,0.44+0.56*pulse,morph);
+  float surface=sheen*(1.0-smoothstep(0.014,0.093,abs(depth+thickness*0.52)));
+  float reflection=0.42*intensity*(1.0-smoothstep(0.014,0.054,abs(depth-thickness*0.64)));
+  float shine=max(surface,reflection);
+  float opacity=visibility*taper*max(0.58+0.42*intensity,0.88*bead);
   float alpha=tile*ink*opacity*(0.52+0.48*shine);
   vec3 color=mix(accent.rgb,highlight.rgb,shine);
   fragColor=vec4(color*alpha,alpha)*qt_Opacity;

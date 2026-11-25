@@ -11,6 +11,8 @@ layout(std140,binding=0) uniform buf {
   float pitch;
   float morph;
   float phase;
+  float inputOnLeft;
+  float reveal;
   float sampleOffset;
   float still;
   mat4 samplesA;
