@@ -18,10 +18,11 @@ Item {
   property bool dismissed:false
   readonly property bool presented:open && !dismissed
   readonly property bool inputMeterWanted:presented && card.opacity>0 && !Preferences.reduceMotion
-    && dictation.source==="superwhisper" && dictation.recording && !!dictation.superwhisperInputMeter
+    && dictation.recording && (dictation.source==="hex"
+      || (dictation.source==="superwhisper" && !!dictation.superwhisperInputMeter))
   PwNodePeakMonitor {
     id:inputMeter
-    node:root.inputMeterWanted ? Model.superwhisperInput(Pipewire.linkGroups.values) : null
+    node:root.inputMeterWanted ? Model.captureInput(Pipewire.linkGroups.values,root.dictation.source) : null
     enabled:root.inputMeterWanted && !!node
   }
   onOpenChanged:if(!open) dismissed=false

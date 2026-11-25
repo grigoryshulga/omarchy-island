@@ -8,6 +8,7 @@ ShellRoot {
   Island.DictationState {id:backend;runtimeDir:Quickshell.env("ISLAND_DICTATION_RUNTIME")}
   FileView {id:stateFile;path:backend.runtimeDir+"/voxtype/state"}
   FileView {id:indicator;path:backend.runtimeDir+"/indicator.json";printErrors:false}
+  FileView {id:hexStatus;path:backend.runtimeDir+"/hex-status.json";printErrors:false}
   TestCase {
     id:test
     when:false
@@ -67,6 +68,24 @@ ShellRoot {
       backend.active=true
       tryCompare(backend,"mode","recording")
       indicator.setText('{"phase":"idle"}')
+      tryCompare(backend,"mode","idle")
+      hexStatus.setText('{"capture":{"state":"recording","recording":"dictation"},"meeting":{"state":"idle"}}')
+      tryCompare(backend,"mode","recording")
+      compare(backend.source,"hex")
+      var hexSession=backend.sessionId
+      stateFile.setText("recording\n")
+      tryCompare(backend,"voxtypeMode","recording")
+      compare(backend.source,"hex")
+      hexStatus.setText('{"capture":{"state":"transcribing"}}')
+      tryCompare(backend,"mode","transcribing")
+      compare(backend.sessionId,hexSession)
+      stateFile.setText("idle\n")
+      tryCompare(backend,"voxtypeMode","idle")
+      hexStatus.setText('{"capture":{"state":"idle"},"meeting":{"state":"recording"}}')
+      tryCompare(backend,"mode","idle")
+      hexStatus.setText('{"capture":{"state":"recording"}}')
+      tryCompare(backend,"source","hex")
+      hexStatus.setText('invalid')
       tryCompare(backend,"mode","idle")
       console.log("DICTATION_STATE_PASS")
       Qt.quit()

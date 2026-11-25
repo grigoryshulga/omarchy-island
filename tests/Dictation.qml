@@ -9,6 +9,7 @@ ShellRoot {
     id:fake
     property bool showing:false
     property bool recording:true
+    property string source:"hex"
     property int sessionId:0
     property string screenName:""
     property int elapsed:65
@@ -61,6 +62,7 @@ ShellRoot {
       verify(card.scale<1)
       var enteringBounds=Qt.rect(card.x,card.y,card.width,card.height)
       tryCompare(card,"opacity",1)
+      compare(hud.inputMeterWanted,true)
       compare(field.reveal,1)
       compare(Qt.rect(card.x,card.y,card.width,card.height),enteringBounds)
       compare(surface.WlrLayershell.keyboardFocus,WlrKeyboardFocus.None)
@@ -101,6 +103,7 @@ ShellRoot {
       capture(field,"settled")
       fake.recording=false
       tryCompare(field,"processing",true)
+      compare(hud.inputMeterWanted,false)
       tryCompare(field,"morph",1)
       verify(icon.text!==recordingIcon)
       verify(icon.Accessible.name.length>0 && icon.Accessible.name!==recordingStatus)
@@ -133,6 +136,7 @@ ShellRoot {
       mouseClick(card,card.width/2,card.height/2,Qt.RightButton)
       compare(findChild(hud,"islandDictationField").active,false)
       compare(findChild(hud,"islandDictationField").moving,false)
+      compare(hud.inputMeterWanted,false)
       tryCompare(surface,"visible",false)
       verify(fake.showing && fake.recording,"Hiding the popup interrupted the dictation")
       fake.recording=false

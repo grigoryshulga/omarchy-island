@@ -83,6 +83,13 @@ while :; do
 done
 """)
     bridge.chmod(0o755)
+    hex_cli=root/'bin/hex'
+    hex_cli.write_text('''#!/bin/sh
+[ "$*" = "status --json" ] || exit 2
+test -f "$ISLAND_DICTATION_RUNTIME/hex-status.json" || exit 3
+cat "$ISLAND_DICTATION_RUNTIME/hex-status.json"
+''')
+    hex_cli.chmod(0o755)
     env=dict(os.environ, QT_QPA_PLATFORM='offscreen', QT_QUICK_BACKEND='software',
              ISLAND_DICTATION_RUNTIME=str(root), PATH=str(root/'bin')+':'+os.environ['PATH'])
     loop = GLib.MainLoop()

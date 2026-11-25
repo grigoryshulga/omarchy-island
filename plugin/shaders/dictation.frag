@@ -51,13 +51,16 @@ void main() {
   float top=(center-upperWidth)*reveal;
   float bottom=(center+lowerWidth)*reveal;
   float definition=mix(smoothstep(0.0,0.28,energy),0.72,morph);
+  float pass=1.22-1.44*fract(phase/3.1415926536);
+  float trail=u-pass;
+  float sweep=morph*smoothstep(-0.08,0.0,trail)*(1.0-smoothstep(0.04,0.20,trail));
   float distance=min(abs(y-top),abs(y-bottom))/rowStep;
   float edge=1.0-smoothstep(0.12,1.39-0.46*definition,distance);
   float fill=0.28*smoothstep(top-0.028,top+0.023,y)*(1.0-smoothstep(bottom-0.023,bottom+0.028,y));
-  float stroke=(0.43+0.52*definition)*edge;
-  float background=0.075-0.027*smoothstep(0.0,0.5,abs(y));
+  float stroke=(0.43+0.52*definition+0.18*sweep)*edge;
+  float background=0.075-0.027*smoothstep(0.0,0.5,abs(y))+0.07*sweep;
   float alpha=min(1.0,reveal*2.0)*taper*max(background,fill+(1.0-fill)*stroke);
-  float shine=0.12+(0.30+0.42*definition)*edge;
+  float shine=0.12+(0.30+0.42*definition+0.17*sweep)*edge;
   vec3 color=mix(accent.rgb,highlight.rgb,shine);
   fragColor=vec4(color*alpha,alpha)*qt_Opacity;
 }

@@ -14,6 +14,7 @@ Item {
   readonly property real morph: still ? (processing ? 1 : 0) : animatedMorph
   readonly property real phase: still ? 0 : animatedPhase
   readonly property real energy: still ? 0 : smoothedEnergy
+  readonly property real voiceEnergy: Model.voiceStrength(peak)
   readonly property bool inputOnLeft: !I18n.rightToLeft
   // Fit whole braille cells while keeping a single pitch across their boundaries.
   readonly property int pixel: Math.max(1,Math.min(Style.space(1),Math.floor(height/24)))
@@ -31,12 +32,12 @@ Item {
   property real smoothedEnergy: 0
   Binding on smoothedEnergy {
     when: root.moving && !root.processing
-    value: Model.voiceStrength(root.peak)
+    value: root.voiceEnergy
     restoreMode: Binding.RestoreNone
   }
   Behavior on smoothedEnergy {
     enabled: root.moving
-    NumberAnimation {duration: Preferences.duration(90); easing.type: Easing.OutCubic}
+    NumberAnimation {duration: Preferences.duration(root.voiceEnergy>0 ? 65 : 155); easing.type: Easing.OutCubic}
   }
   property real animatedMorph: processing ? 1 : 0
   Behavior on animatedMorph {
@@ -100,7 +101,7 @@ Item {
             var heightPosition=(y+pixel-centerY)/height
             var ink=Model.waveInk(heightPosition,wave)
             if(ink<=0) continue
-            var shine=0.12+(0.30+0.42*wave.definition)*Model.waveEdge(heightPosition,wave)
+            var shine=0.12+(0.30+0.42*wave.definition+0.17*wave.sweep)*Model.waveEdge(heightPosition,wave)
             ctx.fillStyle=Qt.rgba(accent.r+(highlight.r-accent.r)*shine,
                                   accent.g+(highlight.g-accent.g)*shine,
                                   accent.b+(highlight.b-accent.b)*shine,ink)

@@ -21,17 +21,20 @@ function superwhisper(raw) {
   return data && typeof data.mode==="string"
     ? {mode:state(data.mode),peak:level(data.peak) || 0,inputMeter:data.inputMeter===true} : null
 }
-function source(current,voxtype,superwhisper) {
+function source(current,voxtype,superwhisper,hex) {
+  if(current==="hex" && hex!=="idle") return current
   if(current==="superwhisper" && superwhisper!=="idle") return current
   if(voxtype!=="idle") return "voxtype"
-  return superwhisper!=="idle" ? "superwhisper" : ""
+  if(superwhisper!=="idle") return "superwhisper"
+  return hex!=="idle" ? "hex" : ""
 }
 function empty() {return Array(48).fill(0)}
 function push(history,level) {return history.slice(1).concat([Math.max(0,Math.min(1,level))])}
-function superwhisperInput(groups) {
+function captureInput(groups,provider) {
   // Meter the source connected to the recording, including device overrides.
+  var name=provider==="hex" ? "hex" : "superwhisper-capture"
   for(var group of groups) {
-    if(group.target && group.target.name==="superwhisper-capture" && group.source) return group.source
+    if(group.target && group.target.name===name && group.source) return group.source
   }
   return null
 }
@@ -60,11 +63,15 @@ function waveAt(u,energy,phase,morph,reveal,rowStep) {
   var halfStep=0.5*rowStep
   var upperWidth=halfStep+(upper*(1-morph)+workWidth*morph)*taper
   var lowerWidth=halfStep+(lower*(1-morph)+workWidth*morph)*taper
+  var pass=1.22-1.44*((phase/Math.PI)%1)
+  var trail=u-pass
+  var sweep=morph*smoothstep(-0.08,0,trail)*(1-smoothstep(0.04,0.20,trail))
   return {
     top:(center-upperWidth)*reveal,
     bottom:(center+lowerWidth)*reveal,
     opacity:Math.min(1,reveal*2)*taper,
     definition:smoothstep(0,0.28,energy)*(1-morph)+0.72*morph,
+    sweep:sweep,
     rowStep:rowStep
   }
 }
@@ -76,10 +83,10 @@ function waveEdge(y,wave) {
 function waveInk(y,wave) {
   var fill=0.28*smoothstep(wave.top-0.028,wave.top+0.023,y)
     *(1-smoothstep(wave.bottom-0.023,wave.bottom+0.028,y))
-  var stroke=(0.43+0.52*wave.definition)*waveEdge(y,wave)
-  var grid=0.075-0.027*smoothstep(0,0.5,Math.abs(y))
+  var stroke=(0.43+0.52*wave.definition+0.18*wave.sweep)*waveEdge(y,wave)
+  var grid=0.075-0.027*smoothstep(0,0.5,Math.abs(y))+0.07*wave.sweep
   return wave.opacity*Math.max(grid,fill+(1-fill)*stroke)
 }
 if(typeof module!=="undefined") module.exports={state:state,frame:frame,superwhisper:superwhisper,source:source,
-  empty:empty,push:push,superwhisperInput:superwhisperInput,meterPeak:meterPeak,voiceStrength:voiceStrength,
+  empty:empty,push:push,captureInput:captureInput,meterPeak:meterPeak,voiceStrength:voiceStrength,
   waveAt:waveAt,waveInk:waveInk}
