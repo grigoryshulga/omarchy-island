@@ -17,20 +17,18 @@ layout(std140,binding=0) uniform buf {
 };
 
 void main() {
-  const vec2 cellSize=vec2(7.0,13.0);
-  vec2 origin=floor((size-grid*cellSize*pixel)*0.5);
+  const float pitch=3.0;
+  vec2 origin=floor((size-(grid*pitch-1.0)*pixel)*0.5);
   vec2 coord=(qt_TexCoord0*size-origin)/pixel;
-  vec2 cell=floor(coord/cellSize);
-  vec2 local=coord-cell*cellSize;
-  vec2 dotIndex=clamp(floor((local-1.0)/3.0),vec2(0.0),vec2(1.0,3.0));
-  vec2 start=1.0+dotIndex*3.0;
-  // The blanks between and within braille cells stay fully transparent.
-  if(reveal<=0.0 || any(lessThan(cell,vec2(0.0))) || any(greaterThanEqual(cell,grid))
-     || any(lessThan(local,start)) || any(greaterThanEqual(local,start+2.0))) {
+  vec2 dotIndex=floor(coord/pitch);
+  vec2 local=coord-dotIndex*pitch;
+  // Leave one blank pixel between squares in both directions.
+  if(reveal<=0.0 || any(lessThan(dotIndex,vec2(0.0))) || any(greaterThanEqual(dotIndex,grid))
+     || any(greaterThanEqual(local,vec2(2.0)))) {
     fragColor=vec4(0.0);
     return;
   }
-  vec2 samplePoint=(origin+(cell*cellSize+start+1.0)*pixel)/size;
+  vec2 samplePoint=(origin+(dotIndex*pitch+1.0)*pixel)/size;
   float u=mix(samplePoint.x,1.0-samplePoint.x,inputOnLeft);
   float y=samplePoint.y-0.5;
 

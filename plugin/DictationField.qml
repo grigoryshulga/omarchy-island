@@ -14,10 +14,11 @@ Item {
   readonly property real phase: still ? 0 : animatedPhase
   readonly property real energy: still ? 0 : smoothedEnergy
   readonly property bool inputOnLeft: !I18n.rightToLeft
-  // Each braille cell has two columns and four rows of square pixels.
-  readonly property int pixel: Math.max(1,Math.min(Style.space(1),Math.floor(height/26)))
-  readonly property int columns: Math.floor(width/(7*pixel))
-  readonly property int rows: Math.floor(height/(13*pixel))
+  // Fit whole braille cells while keeping a single pitch across their boundaries.
+  readonly property int pixel: Math.max(1,Math.min(Style.space(1),Math.floor(height/24)))
+  readonly property int pitch: 3*pixel
+  readonly property int columns: 2*Math.floor(width/(2*pitch))
+  readonly property int rows: 4*Math.floor(height/(4*pitch))
   readonly property bool software: GraphicsInfo.api===GraphicsInfo.Software
   readonly property real processingTint: 0.62*morph
   readonly property color waveColor: Qt.rgba(
@@ -84,16 +85,16 @@ Item {
         var ctx=getContext("2d")
         ctx.clearRect(0,0,width,height)
         if(!root.columns || !root.rows || root.reveal<=0) return
-        var pixel=root.pixel, side=2*pixel
-        var left=Math.floor((width-root.columns*7*pixel)/2)
-        var top=Math.floor((height-root.rows*13*pixel)/2)
-        for(var column=0;column<root.columns*2;column++) {
-          var x=left+(Math.floor(column/2)*7+1+column%2*3)*pixel
+        var pixel=root.pixel, pitch=root.pitch, side=2*pixel
+        var left=Math.floor((width-root.columns*pitch+pixel)/2)
+        var top=Math.floor((height-root.rows*pitch+pixel)/2)
+        for(var column=0;column<root.columns;column++) {
+          var x=left+column*pitch
           var position=(x+pixel)/width
           var u=root.inputOnLeft ? 1-position : position
           var wave=Model.waveAt(u,root.energy,root.phase,root.morph,root.reveal)
-          for(var row=0;row<root.rows*4;row++) {
-            var y=top+(Math.floor(row/4)*13+1+row%4*3)*pixel
+          for(var row=0;row<root.rows;row++) {
+            var y=top+row*pitch
             var heightPosition=(y+pixel)/height-0.5
             var ink=Model.waveInk(heightPosition,wave)
             if(ink<=0) continue
